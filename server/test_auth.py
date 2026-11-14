@@ -37,6 +37,28 @@ class AccountTests(unittest.TestCase):
         self.assertEqual(self.auth.login({"identifier":"ShortPass","password":"abcd"},"client-login")[0],200)
         self.assertEqual(self.auth.register({"username":"TooShort","email":"short2@example.test","password":"abc"},"client-short2")[0],400)
 
+    def test_rate_limit_survives_memory_reset_and_process_restart(self):
+        payload = {"identifier": "missing", "password": "bad"}
+        for _ in range(12):
+            self.assertEqual(self.auth.login(payload, "persistent-client")[0], 401)
+        self.auth._attempts.clear()
+        self.assertEqual(self.auth.login(payload, "persistent-client")[0], 429)
+        with self.auth._db() as db:
+            row = db.execute(
+                "SELECT attempts FROM auth_attempts WHERE attempt_key=?",
+                ("login:persistent-client",),
+            ).fetchone()
+            self.assertEqual(row[0], 13)
+
+    def test_rate_limit_window_resets(self):
+        payload = {"identifier": "missing", "password": "bad"}
+        with patch.object(self.auth.time, "time", return_value=1_800_000_000):
+            for _ in range(13):
+                result = self.auth.login(payload, "window-client")[0]
+            self.assertEqual(result, 429)
+        with patch.object(self.auth.time, "time", return_value=1_800_000_601):
+            self.assertEqual(self.auth.login(payload, "window-client")[0], 401)
+
     def test_duplicate_and_validation(self):
         payload = {"username":"Farmer123","email":"farmer@example.test","password":"safe-test-password"}
         self.assertEqual(self.auth.register(payload,"client-a")[0],200)
