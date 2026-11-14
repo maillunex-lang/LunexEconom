@@ -10,6 +10,20 @@ func _ready() -> void:
     $HUD/Top/ZoomOut.pressed.connect(func() -> void: world.set_zoom(world.camera.zoom.x / 1.25))
     $HUD/Top/Expand.pressed.connect(_expand)
     $HUD/Top/Connect.pressed.connect(_connect)
+    _connect_server()
+    var updater = load("res://updater.gd").new()
+    updater.name = "Updater"
+    add_child(updater)
+    updater.state_changed.connect(_on_update_state)
+    $HUD/Top/Update.pressed.connect(func() -> void:
+        if not updater.downloaded_apk.is_empty():
+            updater.install_apk()
+        elif not updater.manifest.is_empty() and int(updater.manifest["apk"]["version_code"]) > 3:
+            updater.download_apk()
+        else:
+            updater.check()
+    )
+    updater.check()
 func set_selection(cell: Vector2i) -> void:
     info.text = "Регион 01 · Участок %d:%d" % [cell.x, cell.y]
 func _update_safe_area() -> void:
@@ -43,3 +57,25 @@ func _connect() -> void:
         info.text = "Дорога подключена · маршрут %d клеток" % path.size()
     else:
         info.text = "Подключение невозможно"
+
+func _connect_server() -> void:
+    var req := HTTPRequest.new()
+    add_child(req)
+    req.timeout = 8.0
+    req.request_completed.connect(func(result: int, code: int, _headers: PackedStringArray, body: PackedByteArray) -> void:
+        if result == HTTPRequest.RESULT_SUCCESS and code == 200:
+            var data = JSON.parse_string(body.get_string_from_utf8())
+            info.text = "Сервер: подключён · Мир: %s" % str(data.get("world_id", "?")) if data is Dictionary else "Ошибка данных сервера"
+        else:
+            info.text = "Сервер недоступен · HTTP %d" % code
+        req.queue_free()
+    )
+    var err := req.request("https://rikagro.ru/lunexeconom/api/world")
+    if err != OK:
+        info.text = "Ошибка соединения: %d" % err
+        req.queue_free()
+
+func _on_update_state(message: String, can_install: bool) -> void:
+    $HUD/Top/Update.text = "Установить" if can_install else "Обновить"
+    $HUD/Top/Update.tooltip_text = message
+    $HUD/Top/UpdateStatus.text = message
