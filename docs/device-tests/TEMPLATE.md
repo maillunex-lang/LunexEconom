@@ -7,7 +7,7 @@ Device: Указать модель, Android API, разрешение, орие
 APK SHA256: Указать 64 шестнадцатеричных символа
 Build run ID: Указать ID GitHub Actions для подписанного APK
 Commit SHA: Указать полный SHA коммита
-Version code: Указать целое число из APK
+Version code: Указать целое число из build_info.json (должно совпадать с APK)
 Signing certificate SHA256: Указать отпечаток сертификата из apksigner
 
 ## Проверки
