@@ -55,6 +55,25 @@ class ArtCatalog:
             if os.path.exists(name):
                 os.unlink(name)
 
+    def public_manifest(self):
+        data = self._read()
+        files = []
+        for ident in sorted(ALLOWED):
+            item = data["items"].get(ident, {})
+            mode = item.get("mode", "default")
+            sha = item.get("custom_sha256") if mode == "custom" else item.get("default_sha256")
+            folder = "custom" if mode == "custom" else "defaults"
+            if not sha or not re.fullmatch(r"[0-9a-f]{64}", sha):
+                continue
+            path = self.root / folder / (sha + ".png")
+            if path.is_file() and hashlib.sha256(path.read_bytes()).hexdigest() == sha:
+                files.append({"id": ident, "sha256": sha, "url": "/lunexeconom/assets/art-catalog/" + folder + "/" + sha + ".png"})
+        return {"revision": data["revision"], "files": files}
+
+    def publish_manifest(self):
+        payload = json.dumps(self.public_manifest(), separators=(",", ":")).encode()
+        AssetPublisher._atomic(self.root / "manifest.json", payload)
+
     def view(self):
         data = self._read()
         return {"revision": data["revision"], "items": [
@@ -109,6 +128,7 @@ class ArtCatalog:
         item["mode"] = "custom"
         data["revision"] += 1
         self._save(data)
+        self.publish_manifest()
         return {"id": ident, "revision": data["revision"], **item}
 
     def set_mode(self, ident, mode):
@@ -121,4 +141,5 @@ class ArtCatalog:
         item["mode"] = mode
         data["revision"] += 1
         self._save(data)
+        self.publish_manifest()
         return {"id": ident, "revision": data["revision"], **item}
