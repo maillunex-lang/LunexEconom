@@ -12,6 +12,7 @@ func _run() -> void:
     print("DEBUG viewport=", viewport.get_visible_rect(), " root=",root.get_global_rect()," toolbar=",toolbar.get_global_rect())
     for b in toolbar.get_children():
         print("DEBUG button ",b.text," rect=",b.get_global_rect()," visible=",b.is_visible_in_tree()," mouse=",b.mouse_filter)
+    print("DEBUG root mouse=",root.mouse_filter," focus=",viewport.gui_get_focus_owner())
     world.selected = Vector2i(1, 1)
     var farm = toolbar.get_child(0)
     var confirm = toolbar.get_child(3)
@@ -30,6 +31,7 @@ func _run() -> void:
     press.pressed = false
     viewport.push_input(press,true)
     await process_frame
+    print("DEBUG hover=",viewport.gui_get_hovered_control())
     print("DEBUG after farm ",world.build_type, " selection=",world.selected," info=",root.info.text)
     p = confirm.get_global_rect().get_center()
     press = InputEventMouseButton.new()
