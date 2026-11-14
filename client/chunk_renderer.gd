@@ -6,6 +6,8 @@ const CHUNK := 12
 const TOPOLOGY = preload("res://road_topology.gd")
 const CITY_LAYOUT = preload("res://city_layout.gd")
 const SEASONS = preload("res://season_visual.gd")
+const TEST_SPRITES = preload("res://test_sprite_visuals.gd")
+var test_sprites = TEST_SPRITES.new()
 const COLORS := [Color("#63865b"), Color("#72915e"), Color("#8ca66a"), Color("#b6a36d"), Color("#527f8d"), Color("#547c54"), Color("#b46f49")]
 var world: Node2D
 var chunk_coord: Vector2i
@@ -51,7 +53,7 @@ func _draw() -> void:
                 var owner := ""
                 if world.server_cells.has(cell):
                     owner = str(world.server_cells[cell].get("owner", ""))
-                _draw_building(p, world.building_at(cell), owner)
+                _draw_test_building_or_fallback(p, cell, owner)
             if not footprint.is_empty() and Vector2i(x, y) in footprint:
                 var tint := Color(0.22, 0.95, 0.50, 0.45) if preview_ok else Color(0.98, 0.22, 0.22, 0.45)
                 draw_colored_polygon(pts, tint)
@@ -75,11 +77,45 @@ func _draw_road(p: Vector2, cell: Vector2i) -> void:
         p + Vector2(0, TILE_H * 0.5),
         p + Vector2(-TILE_W * 0.5, 0)
     ])
+    var road_texture: Texture2D = test_sprites.texture_for("road")
+    if road_texture != null:
+        draw_texture_rect(road_texture, Rect2(p - Vector2(TILE_W * 0.5, TILE_H * 0.5), Vector2(TILE_W, TILE_H)), false)
+        return
     draw_colored_polygon(diamond, Color("#454b50"))
     # Restrained, non-repeating grain; no lane markings on road tiles.
     if mask >= 0:
         var grain := float(posmod(cell.x * 37 + cell.y * 53, 9)) / 255.0
         draw_circle(p + Vector2(-8, 1), 1.2, Color(0.36 + grain, 0.38 + grain, 0.40 + grain, 0.20))
+
+func _draw_test_building_or_fallback(p: Vector2, cell: Vector2i, owner: String) -> void:
+    var kind: String = world.building_at(cell)
+    if kind not in ["house", "shop"]:
+        _draw_building(p, kind, owner)
+        return
+    var record: Dictionary = world.server_cells.get(cell, {})
+    var object_id: String = str(record.get("object_id", ""))
+    var anchor := cell
+    var width := 1
+    if not object_id.is_empty():
+        for dx in range(-1, 2):
+            for dy in range(-1, 2):
+                var other := cell + Vector2i(dx, dy)
+                if str(world.server_cells.get(other, {}).get("object_id", "")) == object_id:
+                    if other.x < anchor.x or (other.x == anchor.x and other.y < anchor.y):
+                        anchor = other
+        if anchor != cell: return
+        var right := cell + Vector2i(1, 0)
+        var down := cell + Vector2i(0, 1)
+        if str(world.server_cells.get(right, {}).get("object_id", "")) == object_id or str(world.server_cells.get(down, {}).get("object_id", "")) == object_id:
+            width = 2
+    var key := "grocery" if kind == "shop" else test_sprites.house_variant(object_id, cell, width == 2)
+    var tex: Texture2D = test_sprites.texture_for(key)
+    if tex == null:
+        _draw_building(p, kind, owner)
+        return
+    var sprite_width: float = 170.0 if width == 2 else 88.0
+    var sprite_height: float = sprite_width * tex.get_height() / tex.get_width()
+    draw_texture_rect(tex, Rect2(p - Vector2(sprite_width * 0.5, sprite_height - 15.0), Vector2(sprite_width, sprite_height)), false)
 
 func _owner_color(owner: String) -> Color:
     if owner.is_empty(): return Color("#9ca3a8")
