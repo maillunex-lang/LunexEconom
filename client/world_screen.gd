@@ -19,7 +19,7 @@ func _ready() -> void:
     $HUD/Top/Update.pressed.connect(func() -> void:
         if not updater.downloaded_apk.is_empty():
             updater.install_apk()
-        elif not updater.manifest.is_empty() and int(updater.manifest["apk"]["version_code"]) > 5:
+        elif not updater.manifest.is_empty() and int(updater.manifest["apk"]["version_code"]) > 6:
             updater.download_apk()
         else:
             updater.check()
