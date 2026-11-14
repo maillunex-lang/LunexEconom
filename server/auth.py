@@ -9,6 +9,12 @@ import psycopg
 import postgres_db
 import threading
 import time
+import smtplib
+import ssl
+import json
+import urllib.request
+import urllib.error
+from email.message import EmailMessage
 
 DB_PATH = os.environ.get("LUNEX_AUTH_DB", "/home/gamedev/projects/LunexEconom-runtime/accounts.sqlite3")
 USE_POSTGRES = os.environ.get("LUNEX_DB_ENGINE") == "postgres"
@@ -24,6 +30,9 @@ def _db():
     db.execute("PRAGMA journal_mode=WAL")
     db.execute("CREATE TABLE IF NOT EXISTS users (id INTEGER PRIMARY KEY, username TEXT UNIQUE NOT NULL, email TEXT UNIQUE NOT NULL, salt BLOB NOT NULL, password_hash BLOB NOT NULL, created_at INTEGER NOT NULL)")
     db.execute("CREATE TABLE IF NOT EXISTS sessions (token_hash TEXT PRIMARY KEY, user_id INTEGER NOT NULL REFERENCES users(id), expires_at INTEGER NOT NULL)")
+    db.execute("CREATE TABLE IF NOT EXISTS auth_attempts (attempt_key TEXT PRIMARY KEY, window_start BIGINT NOT NULL, attempts INTEGER NOT NULL)")
+    db.execute("CREATE TABLE IF NOT EXISTS auth_tokens (token_hash TEXT PRIMARY KEY, user_id BIGINT NOT NULL REFERENCES users(id), purpose TEXT NOT NULL, expires_at BIGINT NOT NULL)")
+    db.execute("CREATE TABLE IF NOT EXISTS email_verified (user_id BIGINT PRIMARY KEY REFERENCES users(id), verified_at BIGINT NOT NULL)")
     db.commit()
     return db
 
@@ -31,17 +40,35 @@ def _hash_password(password, salt):
     return hashlib.pbkdf2_hmac("sha256", password.encode("utf-8"), salt, ITERATIONS)
 
 def _rate_limit(key):
-    now = time.monotonic()
-    with _lock:
-        entries = [t for t in _attempts.get(key, []) if now-t < 600]
-        if len(entries) >= 12:
-            _attempts[key] = entries
-            return False
-        entries.append(now)
-        _attempts[key] = entries
-        if len(_attempts) > 10000:
-            _attempts.clear()
-        return True
+    """Persistent fixed-window throttle shared by workers and surviving restarts."""
+    now = int(time.time())
+    window = now // 600
+    with _lock, _db() as db:
+        ph = "%s" if USE_POSTGRES else "?"
+        if USE_POSTGRES:
+            # Serialize competing workers for this key using an atomic UPSERT.
+            row = db.execute(
+                "INSERT INTO auth_attempts(attempt_key,window_start,attempts) "
+                "VALUES(%s,%s,1) ON CONFLICT(attempt_key) DO UPDATE SET "
+                "window_start=EXCLUDED.window_start, "
+                "attempts=CASE WHEN auth_attempts.window_start=EXCLUDED.window_start "
+                "THEN auth_attempts.attempts+1 ELSE 1 END RETURNING attempts",
+                (key, window),
+            ).fetchone()
+            count = row[0]
+        else:
+            db.execute(
+                "INSERT INTO auth_attempts(attempt_key,window_start,attempts) "
+                "VALUES(?,?,1) ON CONFLICT(attempt_key) DO UPDATE SET "
+                "window_start=excluded.window_start, "
+                "attempts=CASE WHEN auth_attempts.window_start=excluded.window_start "
+                "THEN auth_attempts.attempts+1 ELSE 1 END",
+                (key, window),
+            )
+            count = db.execute("SELECT attempts FROM auth_attempts WHERE attempt_key=?", (key,)).fetchone()[0]
+        db.commit()
+        return count <= 12
+
 
 def _session(db, user_id, username):
     token = secrets.token_urlsafe(32)
@@ -95,3 +122,192 @@ def logout(token):
             db.execute("DELETE FROM sessions WHERE token_hash="+("%s" if USE_POSTGRES else "?"),(hashlib.sha256(token.encode()).hexdigest(),))
             db.commit()
     return 200, {"ok":True}
+
+# Transactional one-time account tokens. Only SHA-256 hashes are persisted.
+def _digest(token):
+    return hashlib.sha256(token.encode("utf-8")).hexdigest()
+
+
+def _send_resend_email(address, subject, message):
+    """HTTPS delivery using a verified domain and a protected API key file."""
+    sender = os.environ.get("LUNEX_EMAIL_FROM")
+    key_file = os.environ.get("LUNEX_RESEND_API_KEY_FILE")
+    if not sender or not key_file:
+        return False
+    try:
+        with open(key_file, encoding="utf-8") as handle:
+            api_key = handle.read().strip()
+        if not api_key:
+            return False
+        payload = json.dumps({
+            "from": sender, "to": [address],
+            "subject": subject, "text": message,
+        }).encode("utf-8")
+        request = urllib.request.Request(
+            "https://api.resend.com/emails",
+            data=payload,
+            headers={
+                "Authorization": "Bearer " + api_key,
+                "Content-Type": "application/json",
+                "User-Agent": "LunexEconom/1.0",
+            },
+            method="POST",
+        )
+        with urllib.request.urlopen(request, timeout=10) as response:
+            return response.status == 200
+    except (OSError, ValueError, urllib.error.URLError):
+        return False
+
+
+def _send_account_email(address, subject, message):
+    """Send using authenticated SMTP over TLS; fail closed if unavailable.
+
+    Mail.ru uses implicit TLS on port 465. The application password is read
+    from a root-managed file, never committed to the repository.
+    """
+    if os.environ.get("LUNEX_EMAIL_PROVIDER") == "resend":
+        return _send_resend_email(address, subject, message)
+    host = os.environ.get("LUNEX_SMTP_HOST")
+    sender = os.environ.get("LUNEX_SMTP_FROM")
+    user = os.environ.get("LUNEX_SMTP_USER")
+    password_file = os.environ.get("LUNEX_SMTP_PASSWORD_FILE")
+    if not all((host, sender, user, password_file)):
+        return False
+    try:
+        with open(password_file, encoding="utf-8") as handle:
+            password = handle.read().strip()
+        if not password:
+            return False
+        port = int(os.environ.get("LUNEX_SMTP_PORT", "465"))
+        email = EmailMessage()
+        email["From"], email["To"], email["Subject"] = sender, address, subject
+        email.set_content(message)
+        context = ssl.create_default_context()
+        if port == 465:
+            with smtplib.SMTP_SSL(host, port, timeout=10, context=context) as smtp:
+                smtp.login(user, password)
+                smtp.send_message(email)
+        else:
+            with smtplib.SMTP(host, port, timeout=10) as smtp:
+                smtp.ehlo()
+                smtp.starttls(context=context)
+                smtp.ehlo()
+                smtp.login(user, password)
+                smtp.send_message(email)
+        return True
+    except (OSError, ValueError, smtplib.SMTPException, ssl.SSLError):
+        return False
+
+
+
+def _issue_email_token(identifier, purpose, client):
+    if not _rate_limit(purpose + ":" + client):
+        return 429, {"error": "rate_limited"}
+    # No account enumeration; do not reveal whether an address exists.
+    generic = (200, {"ok": True, "message": "If the account exists, an email will be sent"})
+    if not isinstance(identifier, str) or len(identifier) > 254:
+        return generic
+    with _lock, _db() as db:
+        ph = "%s" if USE_POSTGRES else "?"
+        row = db.execute("SELECT id,email FROM users WHERE lower(email)=" + ph, (identifier.strip().lower(),)).fetchone()
+        if not row:
+            return generic
+        if purpose == "verify" and db.execute("SELECT 1 FROM email_verified WHERE user_id=" + ph, (row[0],)).fetchone():
+            return generic
+        token = secrets.token_urlsafe(32)
+        expires = int(time.time()) + 1800
+        # Mail first, then persist. A failed SMTP send never exposes a usable token.
+        message = "Your LunexEconom " + purpose + " code (valid 30 minutes): " + token
+        if not _send_account_email(row[1], "LunexEconom account " + purpose, message):
+            return 503, {"error": "email_unavailable"}
+        db.execute("DELETE FROM auth_tokens WHERE user_id=" + ph + " AND purpose=" + ph, (row[0], purpose))
+        db.execute("INSERT INTO auth_tokens(token_hash,user_id,purpose,expires_at) VALUES(" +
+                   ("%s,%s,%s,%s" if USE_POSTGRES else "?,?,?,?") + ")",
+                   (_digest(token), row[0], purpose, expires))
+        db.commit()
+    return generic
+
+
+def request_verification(payload, client):
+    return _issue_email_token(payload.get("email"), "verify", client)
+
+
+def request_password_reset(payload, client):
+    return _issue_email_token(payload.get("email"), "reset", client)
+
+
+def _consume_token(db, token, purpose):
+    if not isinstance(token, str) or len(token) > 256:
+        return None
+    ph = "%s" if USE_POSTGRES else "?"
+    row = db.execute("SELECT user_id,expires_at FROM auth_tokens WHERE token_hash=" + ph +
+                     " AND purpose=" + ph, (_digest(token), purpose)).fetchone()
+    if row is None or row[1] < int(time.time()):
+        return None
+    db.execute("DELETE FROM auth_tokens WHERE token_hash=" + ph, (_digest(token),))
+    return row[0]
+
+
+def confirm_email(payload, client):
+    if not _rate_limit("confirm:" + client):
+        return 429, {"error": "rate_limited"}
+    with _lock, _db() as db:
+        user_id = _consume_token(db, payload.get("token"), "verify")
+        if user_id is None:
+            return 400, {"error": "invalid_or_expired_token"}
+        db.execute("INSERT INTO email_verified(user_id,verified_at) VALUES(" +
+                   ("%s,%s" if USE_POSTGRES else "?,?") +
+                   ") ON CONFLICT(user_id) DO UPDATE SET verified_at=excluded.verified_at",
+                   (user_id, int(time.time())))
+        db.commit()
+    return 200, {"ok": True}
+
+
+def reset_password(payload, client):
+    if not _rate_limit("reset-confirm:" + client):
+        return 429, {"error": "rate_limited"}
+    password = payload.get("password")
+    if not isinstance(password, str) or not 4 <= len(password) <= 128:
+        return 400, {"error": "invalid_password"}
+    with _lock, _db() as db:
+        user_id = _consume_token(db, payload.get("token"), "reset")
+        if user_id is None:
+            return 400, {"error": "invalid_or_expired_token"}
+        ph = "%s" if USE_POSTGRES else "?"
+        salt = secrets.token_bytes(16)
+        db.execute("UPDATE users SET salt=" + ph + ",password_hash=" + ph + " WHERE id=" + ph,
+                   (salt, _hash_password(password, salt), user_id))
+        db.execute("DELETE FROM sessions WHERE user_id=" + ph, (user_id,))
+        db.execute("DELETE FROM auth_tokens WHERE user_id=" + ph, (user_id,))
+        db.commit()
+    return 200, {"ok": True}
+
+
+def rotate_token(token):
+    if not token:
+        return 401, {"error": "unauthorized"}
+    with _lock, _db() as db:
+        ph = "%s" if USE_POSTGRES else "?"
+        row = db.execute("SELECT s.user_id,u.username,s.expires_at FROM sessions s "
+                         "JOIN users u ON u.id=s.user_id WHERE s.token_hash=" + ph,
+                         (_digest(token),)).fetchone()
+        if not row or row[2] < int(time.time()):
+            return 401, {"error": "unauthorized"}
+        deleted = db.execute("DELETE FROM sessions WHERE token_hash=" + ph, (_digest(token),))
+        if deleted.rowcount != 1:
+            return 401, {"error": "unauthorized"}
+        return _session(db, row[0], row[1])
+
+
+def logout_all(token):
+    if not token:
+        return 401, {"error": "unauthorized"}
+    with _lock, _db() as db:
+        ph = "%s" if USE_POSTGRES else "?"
+        row = db.execute("SELECT user_id,expires_at FROM sessions WHERE token_hash=" + ph,
+                         (_digest(token),)).fetchone()
+        if not row or row[1] < int(time.time()):
+            return 401, {"error": "unauthorized"}
+        db.execute("DELETE FROM sessions WHERE user_id=" + ph, (row[0],))
+        db.commit()
+    return 200, {"ok": True}

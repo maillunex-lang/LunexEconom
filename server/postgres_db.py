@@ -5,9 +5,15 @@ import psycopg
 
 def connect():
     password_file = Path(os.environ.get("LUNEX_PG_PASSWORD_FILE", "/home/gamedev/projects/LunexEconom-server/secrets/postgres-password"))
-    password = password_file.read_text().strip()
-    return psycopg.connect(host="127.0.0.1", port=15439, dbname=os.environ.get("LUNEX_PG_DB", "lunexeconom"),
-                           user="lunexeconom", password=password, connect_timeout=5)
+    # CI uses an isolated PostgreSQL 16 service; production keeps its secret file.
+    password = os.environ.get("LUNEX_PG_PASSWORD")
+    if password is None:
+        password = password_file.read_text().strip()
+    return psycopg.connect(host=os.environ.get("LUNEX_PG_HOST", "127.0.0.1"),
+                           port=int(os.environ.get("LUNEX_PG_PORT", "15439")),
+                           dbname=os.environ.get("LUNEX_PG_DB", "lunexeconom"),
+                           user=os.environ.get("LUNEX_PG_USER", "lunexeconom"),
+                           password=password, connect_timeout=5)
 
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS users (
@@ -58,6 +64,9 @@ CREATE TABLE IF NOT EXISTS company_status (owner TEXT PRIMARY KEY, missed INTEGE
 CREATE TABLE IF NOT EXISTS npc_state (owner TEXT PRIMARY KEY, acted_through BIGINT NOT NULL);
 CREATE TABLE IF NOT EXISTS company_state (owner TEXT PRIMARY KEY, settled_through BIGINT NOT NULL);
 CREATE TABLE IF NOT EXISTS monthly_reports (owner TEXT NOT NULL, month_index BIGINT NOT NULL, revenue BIGINT NOT NULL, upkeep BIGINT NOT NULL, profit BIGINT NOT NULL, buildings INTEGER NOT NULL, PRIMARY KEY(owner, month_index));
+CREATE TABLE IF NOT EXISTS auth_attempts (attempt_key TEXT PRIMARY KEY, window_start BIGINT NOT NULL, attempts INTEGER NOT NULL);
+CREATE TABLE IF NOT EXISTS auth_tokens (token_hash TEXT PRIMARY KEY, user_id BIGINT NOT NULL REFERENCES users(id), purpose TEXT NOT NULL, expires_at BIGINT NOT NULL);
+CREATE TABLE IF NOT EXISTS email_verified (user_id BIGINT PRIMARY KEY REFERENCES users(id), verified_at BIGINT NOT NULL);
 CREATE TABLE IF NOT EXISTS commands (
  owner TEXT NOT NULL, request_id TEXT NOT NULL, response TEXT NOT NULL,
  PRIMARY KEY(owner,request_id)

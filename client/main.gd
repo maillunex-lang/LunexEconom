@@ -7,6 +7,9 @@ var status_label: Label
 var username: LineEdit
 var email: LineEdit
 var password: LineEdit
+var security_email: LineEdit
+var security_code: LineEdit
+var new_password: LineEdit
 var login_id: LineEdit
 var token := ""
 var mode := "home"
@@ -125,6 +128,8 @@ func _show_login() -> void:
     login_id = _field("Логин или электронная почта")
     password = _field("Пароль", true)
     _button("ВОЙТИ", func(): _submit_login())
+    _button("ЗАБЫЛИ ПАРОЛЬ?", func(): _show_recovery())
+    _button("ПОДТВЕРДИТЬ EMAIL", func(): _show_verification())
     _button("НАЗАД", func(): _show_home())
     _layout()
 
@@ -136,6 +141,27 @@ func _show_register() -> void:
     password = _field("Пароль (минимум 4 символа)", true)
     _button("ЗАРЕГИСТРИРОВАТЬСЯ", func(): _submit_register())
     _button("НАЗАД", func(): _show_home())
+    _layout()
+
+func _show_recovery() -> void:
+    mode = "recovery"
+    _panel()
+    security_email = _field("Email аккаунта")
+    security_code = _field("Код из письма (для смены пароля)")
+    new_password = _field("Новый пароль (от 4 символов)", true)
+    _button("ПОЛУЧИТЬ КОД", func(): _send("/auth/password/request", {"email":security_email.text.strip_edges()}))
+    _button("СМЕНИТЬ ПАРОЛЬ", func(): _send("/auth/password/reset", {"token":security_code.text.strip_edges(), "password":new_password.text}))
+    _button("НАЗАД", func(): _show_login())
+    _layout()
+
+func _show_verification() -> void:
+    mode = "verification"
+    _panel()
+    security_email = _field("Email аккаунта")
+    security_code = _field("Код подтверждения из письма")
+    _button("ОТПРАВИТЬ КОД", func(): _send("/auth/verify/request", {"email":security_email.text.strip_edges()}))
+    _button("ПОДТВЕРДИТЬ", func(): _send("/auth/verify/confirm", {"token":security_code.text.strip_edges()}))
+    _button("НАЗАД", func(): _show_login())
     _layout()
 
 func _show_settings() -> void:
@@ -150,6 +176,8 @@ func _show_settings() -> void:
         _show_settings()
     )
     _label("Горизонтальный экран · безопасные поля", 13)
+    if GameSession.is_authenticated():
+        _button("ВЫЙТИ СО ВСЕХ УСТРОЙСТВ", func(): _send("/auth/logout-all", {}))
     _button("НАЗАД", func(): _show_home())
     _layout()
 
@@ -165,6 +193,8 @@ func _send(route: String, payload: Dictionary) -> void:
     pending = route
     status_label.text = "Подключение к серверу..."
     var headers := PackedStringArray(["Content-Type: application/json"])
+    if GameSession.is_authenticated():
+        headers.append("Authorization: Bearer " + GameSession.access_token)
     var err := request.request(API + route, headers, HTTPClient.METHOD_POST, JSON.stringify(payload))
     if err != OK:
         busy = false
@@ -179,12 +209,19 @@ func _on_response(result: int, code: int, _headers: PackedStringArray, body: Pac
     if not data is Dictionary:
         status_label.text = "Некорректный ответ сервера"
         return
+    if code == 200 and pending == "/auth/logout-all":
+        GameSession.sign_out()
+        _show_home()
+        return
+    if code == 200 and pending.begins_with("/auth/") and not data.has("token"):
+        status_label.text = "Операция выполнена. Проверьте почту, если запрашивали код."
+        return
     if code == 200 and data.has("token"):
         token = str(data.token)
         GameSession.sign_in(token, str(data.get("username", "")))
         _enter_world()
     else:
-        var errors := {"invalid_username":"Проверьте имя игрока", "invalid_email":"Некорректная почта", "invalid_password":"Пароль должен содержать 4–128 символов", "account_exists":"Аккаунт уже существует", "invalid_credentials":"Неверный логин или пароль", "rate_limited":"Слишком много попыток, попробуйте позже"}
+        var errors := {"invalid_username":"Проверьте имя игрока", "invalid_email":"Некорректная почта", "invalid_password":"Пароль должен содержать 4–128 символов", "account_exists":"Аккаунт уже существует", "invalid_credentials":"Неверный логин или пароль", "rate_limited":"Слишком много попыток, попробуйте позже", "email_unavailable":"Почтовый сервис пока недоступен", "invalid_or_expired_token":"Неверный или просроченный код", "unauthorized":"Необходимо войти в аккаунт"}
         status_label.text = errors.get(str(data.get("error","")), "Сервер ответил: %d" % code)
 
 func _enter_world() -> void:

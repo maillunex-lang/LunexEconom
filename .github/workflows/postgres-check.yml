@@ -1,0 +1,56 @@
+name: PostgreSQL 16 checks
+on:
+  push:
+    branches: [chatgpt/accounts-infra]
+    paths:
+      - 'server/**'
+      - '.github/workflows/postgres-check.yml'
+  pull_request:
+    paths:
+      - 'server/**'
+      - '.github/workflows/postgres-check.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  postgres:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: lunex_ci
+          POSTGRES_PASSWORD: ci-only-not-production
+          POSTGRES_DB: lunex_ci
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U lunex_ci -d lunex_ci"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 15
+    env:
+      LUNEX_DB_ENGINE: postgres
+      LUNEX_PG_HOST: 127.0.0.1
+      LUNEX_PG_PORT: '5432'
+      LUNEX_PG_DB: lunex_ci
+      LUNEX_PG_USER: lunex_ci
+      LUNEX_PG_PASSWORD: ci-only-not-production
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install PostgreSQL driver
+        run: python -m pip install 'psycopg[binary]'
+      - name: Initialize isolated PostgreSQL schema
+        working-directory: server
+        run: python -c 'import postgres_db; postgres_db.init()'
+      - name: PostgreSQL integration tests
+        working-directory: server
+        run: python -m unittest test_postgres_integration test_postgres_world_ci -v
+      - name: Full server regression suite (SQLite fixtures remain isolated)
+        working-directory: server
+        env:
+          LUNEX_DB_ENGINE: sqlite
+        run: python -m unittest discover -p 'test_*.py' -v
