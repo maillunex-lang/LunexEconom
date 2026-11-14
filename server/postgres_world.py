@@ -6,11 +6,12 @@ import psycopg
 import postgres_db
 import roads as road_rules
 import economy
+import production
 import clock
 
 CHUNK = 12
 MAX_COORD = 10000
-KINDS = {"farm":(2,2),"mine":(2,3),"factory":(3,2)}
+KINDS = {"farm":(2,2),"mine":(2,3),"factory":(3,2),"warehouse":(3,3)}
 
 def build(owner,payload):
     kind=payload.get("kind")
@@ -42,11 +43,11 @@ def build(owner,payload):
         oid=uuid.uuid4().hex
         now=int(time.time())
         clk=clock.state(db,"%s",now)
-        economy.settle(db,"%s",owner,clk,now)
+        production.advance(db,"%s",clk,now)
         paid,cost,balance=economy.charge_build(db,"%s",owner,kind,len(new_roads),now)
         if not paid:return 402,{"error":"insufficient_funds","cost":cost,"balance":balance}
         db.execute("INSERT INTO buildings(id,owner,kind,x,y,created) VALUES(%s,%s,%s,%s,%s,%s)",(oid,owner,kind,x,y,now))
-        economy.register_building(db,"%s",owner,oid,kind,clk)
+        production.register_building(db,"%s",owner,oid,kind,clk)
         with db.cursor() as cursor:
             cursor.executemany("INSERT INTO cells(x,y,object_id) VALUES(%s,%s,%s)",[(xx,yy,oid) for xx,yy in footprint])
             if new_roads:
@@ -75,14 +76,16 @@ def clock_state():
 def market_state():
     with postgres_db.connect() as db:
         db.execute("SELECT pg_advisory_xact_lock(20261114)")
-        clk=clock.state(db,"%s",int(time.time()))
-        return 200,{"ok":True,"month_index":clk["month_index"],"products":economy.quote(db,"%s",clk)}
+        now=int(time.time())
+        clk=clock.state(db,"%s",now)
+        production.advance(db,"%s",clk,now)
+        return 200,{"ok":True,"month_index":clk["month_index"],"products":production.quote(db,"%s",clk)}
 
 def wallet(owner):
     with postgres_db.connect() as db:
         db.execute("SELECT pg_advisory_xact_lock(20261114)")
         now=int(time.time())
-        return 200,economy.wallet(db,"%s",owner,clock.state(db,"%s",now),now)
+        return 200,production.wallet(db,"%s",owner,clock.state(db,"%s",now),now)
 
 def events(after):
     if type(after) is not int or after<0:return 400,{"error":"invalid_cursor"}

@@ -44,7 +44,10 @@ class PricingMathTests(unittest.TestCase):
 
     def test_every_kind_has_a_market(self):
         for kind, spec in economy.PRODUCTION.items():
-            self.assertIn(spec["product"], economy.MARKET)
+            if spec["product"]:
+                self.assertIn(spec["product"], economy.MARKET)
+            for raw in spec.get("inputs", {}):
+                self.assertIn(raw, economy.MARKET)
 
 
 class MarketIntegrationTests(unittest.TestCase):

@@ -10,6 +10,7 @@ import uuid
 import auth
 import roads as road_rules
 import economy
+import production
 import clock
 if os.environ.get('LUNEX_DB_ENGINE') == 'postgres':
     import postgres_world
@@ -18,7 +19,7 @@ if os.environ.get('LUNEX_DB_ENGINE') == 'postgres':
 DB = os.environ.get("LUNEX_WORLD_DB", "/home/gamedev/projects/LunexEconom-server/world.sqlite3")
 CHUNK = 12
 MAX_COORD = 10000
-KINDS = {"farm":(2,2), "mine":(2,3), "factory":(3,2)}
+KINDS = {"farm":(2,2), "mine":(2,3), "factory":(3,2), "warehouse":(3,3)}
 LOCK = threading.RLock()
 
 def connect():
@@ -69,12 +70,12 @@ def build(owner, payload):
         object_id=uuid.uuid4().hex
         now=int(time.time())
         clk=clock.state(db,"?",now)
-        economy.settle(db,"?",owner,clk,now)
+        production.advance(db,"?",clk,now)
         paid,cost,balance=economy.charge_build(db,"?",owner,kind,len(new_roads),now)
         if not paid:
             return 402,{"error":"insufficient_funds","cost":cost,"balance":balance}
         db.execute("INSERT INTO buildings VALUES(?,?,?,?,?,?)",(object_id,owner,kind,x,y,now))
-        economy.register_building(db,"?",owner,object_id,kind,clk)
+        production.register_building(db,"?",owner,object_id,kind,clk)
         db.executemany("INSERT INTO cells VALUES(?,?,?)",[(xx,yy,object_id) for xx,yy in footprint])
         db.executemany("INSERT INTO roads VALUES(?,?,?,?)",[(rx,ry,owner,now) for rx,ry in new_roads])
         events=[]
@@ -107,7 +108,8 @@ def market_state():
         db.execute("BEGIN IMMEDIATE")
         now=int(time.time())
         clk=clock.state(db,"?",now)
-        result={"ok":True,"month_index":clk["month_index"],"products":economy.quote(db,"?",clk)}
+        production.advance(db,"?",clk,now)
+        result={"ok":True,"month_index":clk["month_index"],"products":production.quote(db,"?",clk)}
         db.commit()
     return 200,result
 
@@ -115,7 +117,7 @@ def wallet(owner):
     with LOCK, connect() as db:
         db.execute("BEGIN IMMEDIATE")
         now=int(time.time())
-        result=economy.wallet(db,"?",owner,clock.state(db,"?",now),now)
+        result=production.wallet(db,"?",owner,clock.state(db,"?",now),now)
         db.commit()
     return 200,result
 

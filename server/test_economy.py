@@ -33,7 +33,7 @@ class EconomyTests(unittest.TestCase):
     def test_terms(self):
         t = economy.terms()
         self.assertEqual(t["start_capital"], 1_000_000)
-        self.assertEqual(t["building_costs"], {"farm": 120_000, "mine": 300_000, "factory": 450_000})
+        self.assertEqual(t["building_costs"], {"farm": 120_000, "mine": 300_000, "factory": 450_000, "warehouse": 80_000})
         self.assertEqual(t["road_cell_cost"], 5_000)
 
     def test_wallet_starts_with_capital_once(self):

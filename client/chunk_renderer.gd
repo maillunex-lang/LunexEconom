@@ -64,6 +64,9 @@ func _draw_building(p: Vector2, kind: String) -> void:
         "factory":
             wall = Color("#668b9d")
             roof = Color("#9eb7c1")
+        "warehouse":
+            wall = Color("#8a7d5c")
+            roof = Color("#b5a47a")
     var base := PackedVector2Array([
         p + Vector2(-22, -5), p + Vector2(0, 6),
         p + Vector2(22, -5), p + Vector2(0, -16)
