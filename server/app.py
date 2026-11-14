@@ -7,6 +7,7 @@ import threading
 import uuid
 from urllib.parse import parse_qs
 import world_events
+import auth
 
 WORLD_ID = "bashkiria-main"
 MONTH_SECONDS = 86400
@@ -40,8 +41,15 @@ class Handler(BaseHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(payload)
 
+    def _bearer(self):
+        value = self.headers.get('Authorization', '')
+        return value[7:] if value.startswith('Bearer ') else ''
+
     def do_GET(self):
         url = urlsplit(self.path)
+        if url.path == '/auth/me':
+            status, data = auth.profile(self._bearer())
+            return self._send(status, data)
         try:
             query = parse_qs(url.query)
             if url.path == '/events':
@@ -54,7 +62,11 @@ class Handler(BaseHTTPRequestHandler):
         self._send(status, data)
 
     def do_POST(self):
-        if urlsplit(self.path).path != "/sessions":
+        route = urlsplit(self.path).path
+        if route == '/auth/logout':
+            status, data = auth.logout(self._bearer())
+            return self._send(status, data)
+        if route not in ('/sessions', '/auth/register', '/auth/login'):
             return self._send(404, {"error": "not_found"})
         try:
             length = int(self.headers.get("Content-Length", "0"))
@@ -63,7 +75,12 @@ class Handler(BaseHTTPRequestHandler):
             data = json.loads(self.rfile.read(length))
             if not isinstance(data, dict):
                 return self._send(400, {"error": "invalid_body"})
-            status, payload = join(data.get("nickname"))
+            if route == '/auth/register':
+                status, payload = auth.register(data, self.client_address[0])
+            elif route == '/auth/login':
+                status, payload = auth.login(data, self.client_address[0])
+            else:
+                status, payload = join(data.get("nickname"))
             return self._send(status, payload)
         except (ValueError, UnicodeError, json.JSONDecodeError):
             return self._send(400, {"error": "invalid_body"})
