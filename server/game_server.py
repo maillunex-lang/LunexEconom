@@ -46,6 +46,7 @@ def _prepare(db):
     db.execute("PRAGMA busy_timeout=10000")
     db.execute("PRAGMA foreign_keys=ON")
     db.execute("CREATE TABLE IF NOT EXISTS buildings(id TEXT PRIMARY KEY,owner TEXT NOT NULL,kind TEXT NOT NULL,x INTEGER NOT NULL,y INTEGER NOT NULL,created INTEGER NOT NULL)")
+    db.execute("CREATE TABLE IF NOT EXISTS building_specializations(object_id TEXT PRIMARY KEY REFERENCES buildings(id) ON DELETE CASCADE,specialization TEXT NOT NULL)")
     db.execute("CREATE TABLE IF NOT EXISTS cells(x INTEGER NOT NULL,y INTEGER NOT NULL,object_id TEXT NOT NULL REFERENCES buildings(id),PRIMARY KEY(x,y))")
     db.execute("CREATE TABLE IF NOT EXISTS chunks(cx INTEGER NOT NULL,cy INTEGER NOT NULL,version INTEGER NOT NULL,PRIMARY KEY(cx,cy))")
     db.execute("CREATE TABLE IF NOT EXISTS events(seq INTEGER PRIMARY KEY AUTOINCREMENT,cx INTEGER NOT NULL,cy INTEGER NOT NULL,version INTEGER NOT NULL,kind TEXT NOT NULL,payload TEXT NOT NULL)")
