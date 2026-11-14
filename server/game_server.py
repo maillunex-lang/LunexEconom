@@ -21,6 +21,7 @@ import stats
 import social
 import admin_api
 import citygen
+import construction_catalog
 if os.environ.get('LUNEX_DB_ENGINE') == 'postgres':
     import postgres_world
     import postgres_db
@@ -538,6 +539,7 @@ class Handler(BaseHTTPRequestHandler):
             if not owner:return self._send(401,{"error":"unauthorized"})
             return self._send(*contracts_state(owner))
         if url.path=="/city":return self._send(*city_state(self._identity()))
+        if url.path=="/construction/catalog":return self._send(200,construction_catalog.view())
         if url.path=="/health":return self._send(200,health_details())
         if url.path in ("/leaderboard", "/feed"):
             owner = self._identity()
