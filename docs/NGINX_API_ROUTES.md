@@ -6,6 +6,26 @@
 «События» писали «Ошибка сети», «Контракты» — «Не удалось открыть доску». Серверный код и тесты тут ни при чём: сервер эти адреса обслуживает.
 Автообновление (`ops/update_server.py`) меняет только Python-код и **не** трогает nginx — конфиг nginx правится вручную.
 
+## Статус: исправлено 14.11.2026
+Файл `/etc/nginx/sites-available/rikagro-game` (резервная копия `/home/gamedev/backups/nginx/rikagro-game.20261114T171519Z.bak`): девять отдельных `location = ...`
+и блокирующий `location ^~ /lunexeconom/api/ { return 404; }` заменены одним правилом:
+```nginx
+location ^~ /lunexeconom/api/ {
+    client_max_body_size 4k;
+    proxy_pass http://127.0.0.1:18767/;      # завершающий «/» обязателен: /lunexeconom/api/city -> /city
+    proxy_set_header Authorization $http_authorization;
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_connect_timeout 3s;
+    proxy_read_timeout 10s;
+    add_header Cache-Control "no-store" always;
+}
+```
+Проверено снаружи (из независимой сети): `health`, `world`, `market`, `city` — 200; `events`, `wallet`, `contracts`, `leaderboard`, `feed` и POST `sell`, `loan`, `city/taxes`,
+`contracts/offer` — 401 JSON. Новые endpoint-ы теперь проходят автоматически. Версия сервера в `/health` пока пустая (`commit: null`); развёрнутый SHA лежит в
+`/var/lib/lunexeconom-server-update/deployed-sha` на VPS. На VPS `lunexeconom-game` работает на `17394a4`.
+
+Исторический раздел ниже описывает исходную проблему.
+
 ## Что сделать на VPS (root)
 1. Найти текущую настройку и запомнить, как проксируется `events`/`chunk`:
    ```bash
