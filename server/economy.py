@@ -270,9 +270,15 @@ def ensure_wallet(db, ph, owner, now):
     return balance(db, ph, owner)
 
 
-def charge_build(db, ph, owner, kind, road_cells, now):
+def charge_build(db, ph, owner, kind, road_cells, now, size=None):
     """Charge for a building plus its access road. Returns (ok, cost, balance)."""
     cost = build_cost(kind, road_cells)
+    if size is not None:
+        import building_dimensions
+        building_dimensions.footprint(kind, size)
+        legacy_area = building_dimensions.LEGACY_FOOTPRINTS[kind][0] * building_dimensions.LEGACY_FOOTPRINTS[kind][1]
+        # Integer rounding, proportional to land occupied; no floating-point currency.
+        cost = (BUILD_COST[kind] * size * size + legacy_area - 1) // legacy_area + ROAD_CELL_COST * road_cells
     current = ensure_wallet(db, ph, owner, now)
     if current < cost:
         return False, cost, current
