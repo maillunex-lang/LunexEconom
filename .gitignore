@@ -1,0 +1,12 @@
+.godot/
+__pycache__/
+*.pyc
+.env
+.env.*
+!.env.example
+*.apk
+*.aab
+*.keystore
+*.jks
+build/
+dist/
