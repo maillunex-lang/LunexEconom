@@ -27,6 +27,14 @@
   function showMode() {
     const item = items.get(select.value);
     mode.value = item?.mode || "default";
+    const base = "/lunexeconom/assets/art-catalog/";
+    for (const [elementId, folder, sha] of [["art-default-preview", "defaults", item?.default_sha256], ["art-custom-preview", "custom", item?.custom_sha256]]) {
+      const img = $(elementId);
+      img.style.display = sha ? "block" : "none";
+      if (sha) img.src = base + folder + "/" + sha + ".png";
+      else img.removeAttribute("src");
+    }
+    $("art-catalog-source").textContent = item?.source || "Стандартный спрайт ещё не назначен";
     status.textContent = item?.custom_sha256
       ? "Своя версия: " + item.custom_sha256.slice(0, 16) + "…"
       : "Своя версия ещё не загружена";
