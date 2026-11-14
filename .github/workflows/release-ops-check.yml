@@ -1,0 +1,24 @@
+name: Release operations safety checks
+on:
+  push:
+    branches: [chatgpt/release-ops]
+    paths:
+      - 'ops/**'
+      - '.github/workflows/release-ops-check.yml'
+  pull_request:
+    paths:
+      - 'ops/**'
+      - '.github/workflows/release-ops-check.yml'
+permissions:
+  contents: read
+jobs:
+  ops-unit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run offline operations tests
+        run: |
+          python3 -m compileall -q ops
+          cd ops
+          python3 -m unittest -v test_deploy test_postgres_restore_drill test_api_load_test
