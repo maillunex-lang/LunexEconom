@@ -1,0 +1,114 @@
+name: Android signed release candidate (isolated branch)
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  signed-apk:
+    if: github.ref == 'refs/heads/chatgpt/accounts-infra'
+    runs-on: ubuntu-latest
+    timeout-minutes: 50
+    steps:
+      - uses: actions/checkout@v4
+      - name: Require release signing secrets
+        env:
+          STORE_B64: ${{ secrets.LUNEX_ANDROID_KEYSTORE_BASE64 }}
+          STORE_PASS: ${{ secrets.LUNEX_ANDROID_KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.LUNEX_ANDROID_KEY_ALIAS }}
+          KEY_PASS: ${{ secrets.LUNEX_ANDROID_KEY_PASSWORD }}
+        run: |
+          set -euo pipefail
+          for name in STORE_B64 STORE_PASS KEY_ALIAS KEY_PASS; do
+            if [ -z "${!name}" ]; then echo "::error::Missing Android signing secret: $name"; exit 1; fi
+          done
+      - uses: android-actions/setup-android@v3
+        with:
+          packages: 'platform-tools platforms;android-35 build-tools;35.0.0'
+      - name: Install Godot 4.7.2 and export templates
+        run: |
+          set -euo pipefail
+          mkdir -p "$HOME/.local/share/godot/export_templates/4.7.2.stable" "$RUNNER_TEMP/godot"
+          curl -fL --retry 3 --max-time 180 "https://github.com/godotengine/godot-builds/releases/download/4.7.2-stable/Godot_v4.7.2-stable_linux.x86_64.zip" -o "$RUNNER_TEMP/godot/godot.zip"
+          unzip -q "$RUNNER_TEMP/godot/godot.zip" -d "$RUNNER_TEMP/godot"
+          GODOT=$(find "$RUNNER_TEMP/godot" -maxdepth 2 -type f -name 'Godot_v4.7.2-stable_linux.x86_64' -print -quit)
+          test -n "$GODOT"
+          chmod +x "$GODOT"
+          echo "GODOT=$GODOT" >> "$GITHUB_ENV"
+          curl -fL --retry 3 --max-time 240 "https://github.com/godotengine/godot-builds/releases/download/4.7.2-stable/Godot_v4.7.2-stable_export_templates.tpz" -o "$RUNNER_TEMP/godot/templates.tpz"
+          unzip -q "$RUNNER_TEMP/godot/templates.tpz" -d "$RUNNER_TEMP/godot/templates"
+          cp -a "$RUNNER_TEMP/godot/templates/templates/." "$HOME/.local/share/godot/export_templates/4.7.2.stable/"
+      - name: Decode signing key and configure Godot
+        env:
+          STORE_B64: ${{ secrets.LUNEX_ANDROID_KEYSTORE_BASE64 }}
+          STORE_PASS: ${{ secrets.LUNEX_ANDROID_KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.LUNEX_ANDROID_KEY_ALIAS }}
+          KEY_PASS: ${{ secrets.LUNEX_ANDROID_KEY_PASSWORD }}
+        run: |
+          set -euo pipefail
+          umask 077
+          mkdir -p "$RUNNER_TEMP/android-signing"
+          printf '%s' "$STORE_B64" | base64 --decode > "$RUNNER_TEMP/android-signing/release.jks"
+          test -s "$RUNNER_TEMP/android-signing/release.jks"
+          echo "::add-mask::$STORE_PASS"
+          echo "::add-mask::$KEY_PASS"
+          echo "::add-mask::$KEY_ALIAS"
+          python3 - <<'PY'
+          from pathlib import Path
+          import os
+          p = Path("client/export_presets.cfg")
+          text = p.read_text()
+          required = 'package/unique_name="ru.lunex.bashkiriahoneyoil"'
+          assert required in text, "Unexpected package ID"
+          def esc(s):
+              return s.replace("\\", "\\\\").replace('"', '\\"').replace("\n", "")
+          values = {
+              "keystore/release": str(Path(os.environ["RUNNER_TEMP"]) / "android-signing/release.jks"),
+              "keystore/release_user": os.environ["KEY_ALIAS"],
+              "keystore/release_password": os.environ["STORE_PASS"],
+          }
+          # Godot Android export uses keystore/release_password as store password.
+          # Key password is supplied via GODOT_ANDROID_KEYSTORE_RELEASE_PASSWORD only
+          # if the chosen keystore uses the same password for key and store.
+          assert os.environ["STORE_PASS"] == os.environ["KEY_PASS"], "Godot export requires matching key/store passwords in this workflow"
+          for key, value in values.items():
+              import re
+              line = key + '="' + esc(value) + '"'
+              if re.search(r"^" + re.escape(key) + r"=", text, flags=re.M):
+                  text = re.sub(r"^" + re.escape(key) + r"=.*$", lambda _: line, text, flags=re.M)
+              else:
+                  text += "\n" + line + "\n"
+          p.write_text(text)
+          PY
+      - name: Export release APK
+        run: |
+          set -euo pipefail
+          mkdir -p build
+          "$GODOT" --headless --path client --editor --quit
+          "$GODOT" --headless --path client --export-release Android "$GITHUB_WORKSPACE/build/LunexEconom-release.apk"
+          test -s build/LunexEconom-release.apk
+      - name: Verify APK signing and identity
+        run: |
+          set -euo pipefail
+          APK=build/LunexEconom-release.apk
+          "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --verbose --print-certs "$APK" > build/signature-report.txt
+          "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging "$APK" > build/apk-badging.txt
+          grep -q "package: name='ru.lunex.bashkiriahoneyoil'" build/apk-badging.txt
+          grep -q 'arm64-v8a' build/apk-badging.txt
+          sha256sum "$APK" > build/SHA256SUMS
+      - uses: actions/upload-artifact@v4
+        with:
+          name: lunexeconom-signed-release-candidate
+          path: |
+            build/LunexEconom-release.apk
+            build/SHA256SUMS
+            build/apk-badging.txt
+          if-no-files-found: error
+          retention-days: 7
+      - name: Erase temporary signing material
+        if: always()
+        run: |
+          rm -f "$RUNNER_TEMP/android-signing/release.jks"
+          rm -f client/export_presets.cfg
