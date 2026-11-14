@@ -102,6 +102,37 @@ class AccountTests(unittest.TestCase):
         with self.auth._db() as db:
             self.assertEqual(db.execute("SELECT COUNT(*) FROM auth_tokens").fetchone()[0], 0)
 
+    def test_resend_https_api_uses_key_file(self):
+        import tempfile
+        from unittest.mock import patch, MagicMock
+        with tempfile.TemporaryDirectory() as directory:
+            secret = os.path.join(directory, "resend-key")
+            with open(secret, "w", encoding="utf-8") as handle:
+                handle.write("test-key")
+            settings = {
+                "LUNEX_EMAIL_PROVIDER": "resend",
+                "LUNEX_EMAIL_FROM": "LunexEconom <noreply@rikagro.ru>",
+                "LUNEX_RESEND_API_KEY_FILE": secret,
+            }
+            with patch.dict(os.environ, settings), patch.object(self.auth.urllib.request, "urlopen") as send:
+                response = MagicMock()
+                response.status = 200
+                send.return_value.__enter__.return_value = response
+                self.assertTrue(self.auth._send_account_email("test@example.test", "Verify", "Code"))
+                request = send.call_args.args[0]
+                self.assertEqual(request.full_url, "https://api.resend.com/emails")
+                self.assertEqual(request.get_header("Authorization"), "Bearer test-key")
+                self.assertEqual(self.auth.json.loads(request.data)["to"], ["test@example.test"])
+
+    def test_resend_missing_key_fails_closed(self):
+        from unittest.mock import patch
+        with patch.dict(os.environ, {
+            "LUNEX_EMAIL_PROVIDER": "resend",
+            "LUNEX_EMAIL_FROM": "noreply@rikagro.ru",
+            "LUNEX_RESEND_API_KEY_FILE": "/nonexistent/resend-key",
+        }):
+            self.assertFalse(self.auth._send_account_email("test@example.test", "Verify", "Code"))
+
     def test_mailru_tls465_uses_secret_file_and_authentication(self):
         import tempfile
         from unittest.mock import patch, MagicMock
