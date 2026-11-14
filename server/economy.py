@@ -16,6 +16,7 @@ TREASURY = "system:treasury"
 CONSTRUCTION = "system:construction"
 MARKET_ACCOUNT = "system:market"      # buys all production at the clearing price
 UPKEEP = "system:upkeep"      # sink for maintenance
+BANK = "system:bank"            # lends and collects interest; may be negative (it creates the loan money)
 RESIDENTS = "system:residents"  # receives wages (residents' spending is not modelled as a closed loop yet)
 MAX_SETTLE_MONTHS = 600   # months processed per call when catching up
 
@@ -62,6 +63,15 @@ LIQUIDATION_RATE = 0.4
 SELL_RATE = 0.5                # voluntary sale of a building: better than a forced liquidation, still a loss
 INVENTORY_LIQUIDATION_RATE = 0.5
 NPC_RECAPITAL_MONTHS = 6
+
+# ---- Bank: one revolving loan per company, secured by its buildings ----
+# Limit = LOAN_LTV of the construction cost of the company's buildings (capped by LOAN_MAX). Interest is charged every game
+# month after operating costs; interest that cannot be paid is added to the loan and counts as an unpaid month. A company in
+# default (unpaid costs or arrears) gets no new credit. In bankruptcy the bank is the last creditor and loses the rest.
+LOAN_INTEREST = 0.015
+LOAN_LTV = 0.5
+LOAN_MAX = 5_000_000
+LOAN_MIN = 10_000
 # A warehouse owner holds production back while last month's price was below reference * HOLD_BELOW
 # and releases everything (stock included) once the price recovers.
 HOLD_BELOW = 0.9
@@ -91,6 +101,7 @@ SCHEMA = (
     "CREATE TABLE IF NOT EXISTS company_reports(owner TEXT NOT NULL, month_index BIGINT NOT NULL, revenue BIGINT NOT NULL, input_cost BIGINT NOT NULL, upkeep BIGINT NOT NULL, profit BIGINT NOT NULL, buildings INTEGER NOT NULL, PRIMARY KEY(owner, month_index))",
     "CREATE TABLE IF NOT EXISTS population(month_index BIGINT PRIMARY KEY, population BIGINT NOT NULL, labor_force BIGINT NOT NULL, jobs BIGINT NOT NULL, wage BIGINT NOT NULL, staffing_permille INTEGER NOT NULL, demand_permille INTEGER NOT NULL, next_population BIGINT NOT NULL)",
     "CREATE TABLE IF NOT EXISTS company_status(owner TEXT PRIMARY KEY, missed INTEGER NOT NULL, wages_owed BIGINT NOT NULL, input_owed BIGINT NOT NULL, maint_owed BIGINT NOT NULL, bankruptcies INTEGER NOT NULL, last_bankruptcy_month BIGINT, written_off BIGINT NOT NULL)",
+    "CREATE TABLE IF NOT EXISTS loans(owner TEXT PRIMARY KEY, balance BIGINT NOT NULL, interest_paid BIGINT NOT NULL, taken_total BIGINT NOT NULL, repaid_total BIGINT NOT NULL)",
     "CREATE TABLE IF NOT EXISTS npc_state(owner TEXT PRIMARY KEY, acted_through BIGINT NOT NULL)",
     "CREATE TABLE IF NOT EXISTS company_state(owner TEXT PRIMARY KEY, settled_through BIGINT NOT NULL)",
     "CREATE TABLE IF NOT EXISTS monthly_reports(owner TEXT NOT NULL, month_index BIGINT NOT NULL, revenue BIGINT NOT NULL, upkeep BIGINT NOT NULL, profit BIGINT NOT NULL, buildings INTEGER NOT NULL, PRIMARY KEY(owner, month_index))",
@@ -110,7 +121,7 @@ def terms():
     return {"currency": CURRENCY, "start_capital": START_CAPITAL,
             "building_costs": dict(BUILD_COST), "road_cell_cost": ROAD_CELL_COST,
             "hold_below": HOLD_BELOW,
-            "insolvency": {"bankrupt_after_missed": BANKRUPT_AFTER_MISSED, "liquidation_rate": LIQUIDATION_RATE, "sell_rate": SELL_RATE, "distress_output": DISTRESS_OUTPUT},
+            "insolvency": {"bankrupt_after_missed": BANKRUPT_AFTER_MISSED, "loan": {"interest": LOAN_INTEREST, "ltv": LOAN_LTV, "max": LOAN_MAX, "min": LOAN_MIN}, "liquidation_rate": LIQUIDATION_RATE, "sell_rate": SELL_RATE, "distress_output": DISTRESS_OUTPUT},
             "labor": {"base_wage": BASE_WAGE, "participation": PARTICIPATION, "base_population": BASE_POPULATION},
             "production": {k: {"product_id": v["product"], "product": MARKET[v["product"]]["name"] if v["product"] else "",
                                "output": v["output"], "unit_price": MARKET[v["product"]]["reference_price"] if v["product"] else 0,

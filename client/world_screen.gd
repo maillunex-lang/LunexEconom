@@ -238,6 +238,11 @@ func _setup_ui_v1() -> void:
     section_body.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
     section_body.custom_minimum_size = Vector2(360, 105)
     section_content.add_child(section_body)
+    section_actions = HBoxContainer.new()
+    section_actions.add_child(_ui_button("Взять кредит", _take_loan, 200))
+    section_actions.add_child(_ui_button("Погасить кредит", _repay_loan, 200))
+    section_content.add_child(section_actions)
+    section_actions.hide()
     section_panel.hide()
     get_viewport().size_changed.connect(_layout_ui_v1)
     call_deferred("_layout_ui_v1")
@@ -323,6 +328,7 @@ func _open_section(section: String) -> void:
             section_body.text = "Маршруты поставок и транспортные задания находятся в разработке. Дорожная сеть доступна на карте."
         "Меню":
             section_body.text = "Башкирия: Мёд и Нефть\nВерсия интерфейса 1.0\nУправление: одним пальцем двигайте карту, двумя изменяйте масштаб."
+    section_actions.visible = section == "Экономика"
     _show_panel(section_panel)
     call_deferred("_layout_ui_v1")
 
@@ -503,6 +509,10 @@ var competitors: Array = []
 var wallet_holdings: Dictionary = {}
 var labor: Dictionary = {}
 var company: Dictionary = {}
+var loan: Dictionary = {}
+var loan_pending := false
+var section_actions: HBoxContainer
+const LOAN_STEP := 100000
 var seen_bankruptcy_month = null
 var seen_missed := 0
 const KIND_NAMES := {"farm": "Ферма", "mine": "Шахта", "factory": "Завод", "warehouse": "Склад"}
@@ -599,6 +609,9 @@ func _economy_text() -> String:
     var mine := _holdings_text(wallet_holdings)
     if mine != "": lines.append("Мои здания: " + mine)
     lines.append_array(_company_lines())
+    if not loan.is_empty() and (int(loan.get("balance", 0)) > 0 or int(loan.get("limit", 0)) > 0):
+        lines.append("Кредит: %s из лимита %s (под залог зданий), проценты %s/мес (%.1f%%)%s" % [_fmt_money(int(loan.get("balance", 0))), _fmt_money(int(loan.get("limit", 0))), _fmt_money(int(loan.get("monthly_interest", 0))),
+            float(loan.get("interest_rate", 0.015)) * 100.0, " — выдача закрыта: есть долги" if bool(loan.get("in_default", false)) else ""])
     var market := _market_lines()
     if not market.is_empty():
         lines.append("")
@@ -697,6 +710,7 @@ func _refresh_wallet() -> void:
         wallet_inventory = data.get("inventory", {})
         wallet_holdings = data.get("holdings", {})
         if data.get("labor", null) is Dictionary: labor = data["labor"]
+        if data.get("loan", null) is Dictionary: loan = data["loan"]
         if data.get("company", null) is Dictionary:
             company = data["company"]
             _announce_company_status()
@@ -767,4 +781,35 @@ func _sell_selected() -> void:
         else:
             var errors := {"not_owner": "Это здание не ваше", "not_found": "Здание уже продано", "unauthorized": "Сессия завершена, войдите снова"}
             info.text = str(errors.get(str(data.get("error", "")), "Не удалось продать (HTTP %d)" % code))
+    )
+
+func _take_loan() -> void:
+    var available := int(loan.get("available", 0))
+    var amount := mini(LOAN_STEP, available)
+    if amount < int(loan.get("min", 10000)):
+        info.text = "Кредит недоступен: нет свободного лимита (нужен залог — постройте здания)" if not bool(loan.get("in_default", false)) else "Кредит недоступен: сначала погасите долги"
+        return
+    _loan_request("take", amount)
+
+func _repay_loan() -> void:
+    var debt := int(loan.get("balance", 0))
+    if debt <= 0:
+        info.text = "Кредита нет"
+        return
+    _loan_request("repay", mini(LOAN_STEP, debt))
+
+func _loan_request(action: String, amount: int) -> void:
+    if loan_pending: return
+    loan_pending = true
+    _api_post("loan", {"action": action, "amount": amount, "request_id": _new_build_request_id()}, func(code: int, data: Dictionary) -> void:
+        loan_pending = false
+        if code == 200 or code == 201:
+            if data.get("loan", null) is Dictionary: loan = data["loan"]
+            if data.has("balance"): _set_balance(int(data["balance"]))
+            info.text = ("Получен кредит %s" if action == "take" else "Погашено %s") % _fmt_money(amount)
+            if section_panel.visible and section_title.text == "Экономика": section_body.text = _economy_text()
+        else:
+            var errors := {"limit_exceeded": "Превышен кредитный лимит", "in_default": "Есть долги: кредит не выдаётся", "insufficient_funds": "Недостаточно денег для погашения",
+                "no_loan": "Кредита нет", "invalid_amount": "Недопустимая сумма", "unauthorized": "Сессия завершена, войдите снова"}
+            info.text = str(errors.get(str(data.get("error", "")), "Операция не выполнена (HTTP %d)" % code))
     )

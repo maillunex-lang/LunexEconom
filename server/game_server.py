@@ -122,6 +122,22 @@ def sell(owner,payload):
         db.commit()
         return status,result
 
+def loan(owner,payload):
+    request_id=payload.get("request_id")
+    try:uuid.UUID(request_id)
+    except (ValueError,TypeError,AttributeError):return 400,{"error":"invalid_request_id"}
+    with LOCK, connect() as db:
+        db.execute("BEGIN IMMEDIATE")
+        prev=db.execute("SELECT response FROM commands WHERE owner=? AND request_id=?",(owner,request_id)).fetchone()
+        if prev:return 200,json.loads(prev[0])
+        now=int(time.time())
+        production.advance(db,"?",clock.state(db,"?",now),now)
+        status,result=production.loan_command(db,"?",owner,payload,now)
+        if status==201:
+            db.execute("INSERT INTO commands VALUES(?,?,?)",(owner,request_id,json.dumps(result)))
+        db.commit()
+        return status,result
+
 def market_state():
     with LOCK, connect() as db:
         db.execute("BEGIN IMMEDIATE")
@@ -170,7 +186,7 @@ def chunk(cx,cy):
     items+=[{"x":x,"y":y,"kind":"road_changed","object_id":"","owner":owner} for x,y,owner in rds]
     return 200,{"cx":cx,"cy":cy,"version":row[0] if row else 0,"cells":items}
 
-ECONOMY_POST={"/sell":"sell"}
+ECONOMY_POST={"/sell":"sell","/loan":"loan"}
 
 class Handler(BaseHTTPRequestHandler):
     def _send(self,status,data):
@@ -258,6 +274,7 @@ if os.environ.get("LUNEX_DB_ENGINE") == "postgres":
     clock_state = postgres_world.clock_state
     market_state = postgres_world.market_state
     sell = postgres_world.sell
+    loan = postgres_world.loan
     NPC_CONNECT,NPC_PH = postgres_db.connect,"%s"
 
 if __name__=="__main__":

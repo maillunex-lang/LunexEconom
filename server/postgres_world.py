@@ -90,6 +90,21 @@ def sell(owner,payload):
             db.execute("INSERT INTO commands(owner,request_id,response) VALUES(%s,%s,%s)",(owner,request_id,json.dumps(result)))
         return status,result
 
+def loan(owner,payload):
+    request_id=payload.get("request_id")
+    try:uuid.UUID(request_id)
+    except (ValueError,TypeError,AttributeError):return 400,{"error":"invalid_request_id"}
+    with postgres_db.connect() as db:
+        db.execute("SELECT pg_advisory_xact_lock(20261114)")
+        prev=db.execute("SELECT response FROM commands WHERE owner=%s AND request_id=%s",(owner,request_id)).fetchone()
+        if prev:return 200,json.loads(prev[0])
+        now=int(time.time())
+        production.advance(db,"%s",clock.state(db,"%s",now),now)
+        status,result=production.loan_command(db,"%s",owner,payload,now)
+        if status==201:
+            db.execute("INSERT INTO commands(owner,request_id,response) VALUES(%s,%s,%s)",(owner,request_id,json.dumps(result)))
+        return status,result
+
 def market_state():
     with postgres_db.connect() as db:
         db.execute("SELECT pg_advisory_xact_lock(20261114)")

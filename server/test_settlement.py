@@ -56,7 +56,7 @@ class SettlementTests(unittest.TestCase):
         self.assertEqual(w["balance"], res["balance"] + 12_000)   # 100*200 - 8000
         self.assertEqual(len(w["reports"]), 1)
         self.assertEqual(w["reports"][0]["profit"], 12_000)
-        self.assertEqual(w["forecast"], {"revenue": 20_000, "input_cost": 0, "upkeep": 8_000, "wages": 6_000, "profit": 12_000, "buildings": 1})
+        self.assertEqual(w["forecast"], {"revenue": 20_000, "input_cost": 0, "upkeep": 8_000, "wages": 6_000, "interest": 0, "profit": 12_000, "buildings": 1})
 
     def test_settlement_is_idempotent(self):
         _, res = self.build()
