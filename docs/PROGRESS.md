@@ -76,3 +76,11 @@
 - Собран Android debug APK versionCode 10, versionName `0.2.7.1-build-touch-fix`, подпись v2/v3 verified, SHA256 `aa6ff4ad3f8c86657e10155dc66db77e5f0ed4c6756ddef8b2006ff1f7d4b294`.
 - APK опубликован https://rikagro.ru/lunexeconom/versions/Bashkiria-Honey-Oil-0.2.7.1-build-touch-fix.apk, HTTPS 200. Обновлены manifest, release.json и builds.json; резервные копии: `/var/www/rikagro-game/lunexeconom/backups/pre-0.2.7.1-20261114`.
 - **Android QA ещё не выполнен для новой версии.** Это локальный строительный прототип без серверного сохранения. Ветка `main` не менялась.
+
+## 14.11.2026: 0.2.7.2 Construction Input Fix
+- Пользователь подтвердил, что в 0.2.7.1 зелёная подсветка сохранялась и кнопка «Построить» не действовала.
+- Новый тест `tests/world_027_gui_click.gd` воспроизвёл дефект: реальные mouse press/release в viewport не активировали даже кнопку выбора фермы (`world.build_type` оставался пустым), хотя вызов `world.place_building()` напрямую работал. Таким образом прежние unit/integration tests были недостаточны.
+- Добавлена независимая от GUI focus маршрутизация событий касания/мыши на кнопки панели через `world_screen.gd::_input` и hit-test прямоугольников. Для кнопок панели `mouse_filter=IGNORE` во избежание двойной активации. `world.gd` продолжает игнорировать касания UI, не изменяя выбранную клетку.
+- Проверки Godot 4.7.2: `WORLD_TEST_PASS`, `WORLD_027_TEST_PASS`, `WORLD_027_INTEGRATION_PASS`, `WORLD_027_TOUCH_FIX_PASS`, `WORLD_027_GUI_CLICK_PASS`, `WORLD_027_TOUCH_E2E_PASS`. Последние два проверяют последовательности нажатий, создание и `cell_kind == 6` для фермы, шахты и завода. Это имитация ввода в Godot, **не физический Android-тест**.
+- Android APK `0.2.7.2-construction-input` versionCode 11 собран и подписан; SHA256 `914a324e10f03730bd75beb00856537f90aa4db32cffc06c491b4293b7c4b513`. HTTPS 200: https://rikagro.ru/lunexeconom/versions/Bashkiria-Honey-Oil-0.2.7.2-construction-input.apk .
+- Обновлены `updates/manifest.json`, `builds.json`, `release.json` и актуальная APK; резервные копии `/var/www/rikagro-game/lunexeconom/backups/pre-0.2.7.2-20261114`. `main` не менялась; серверная экономика/сохранение отсутствуют.
