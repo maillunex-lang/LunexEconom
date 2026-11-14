@@ -11,9 +11,12 @@ class AccountTests(unittest.TestCase):
         self.env.start()
         import auth
         self.auth = auth
+        self.previous_db_path = auth.DB_PATH
+        auth.DB_PATH = os.path.join(self.temp.name, "auth.sqlite3")
         self.auth._attempts.clear()
 
     def tearDown(self):
+        self.auth.DB_PATH = self.previous_db_path
         self.env.stop()
         self.temp.cleanup()
 
