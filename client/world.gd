@@ -56,10 +56,10 @@ func _draw() -> void:
     var b := cell_at(camera.position + half + Vector2(200, 200))
     var c := cell_at(camera.position + Vector2(-half.x, half.y) + Vector2(-200, 200))
     var d := cell_at(camera.position + Vector2(half.x, -half.y) + Vector2(200, -200))
-    var min_x: int = clampi(mini(a.x, b.x, c.x, d.x) - 2, 0, WORLD - 1)
-    var max_x: int = clampi(maxi(a.x, b.x, c.x, d.x) + 2, 0, WORLD - 1)
-    var min_y: int = clampi(mini(a.y, b.y, c.y, d.y) - 2, 0, WORLD - 1)
-    var max_y: int = clampi(maxi(a.y, b.y, c.y, d.y) + 2, 0, WORLD - 1)
+    var min_x: int = clampi(mini(mini(a.x, b.x), mini(c.x, d.x)) - 2, 0, WORLD - 1)
+    var max_x: int = clampi(maxi(maxi(a.x, b.x), maxi(c.x, d.x)) + 2, 0, WORLD - 1)
+    var min_y: int = clampi(mini(mini(a.y, b.y), mini(c.y, d.y)) - 2, 0, WORLD - 1)
+    var max_y: int = clampi(maxi(maxi(a.y, b.y), maxi(c.y, d.y)) + 2, 0, WORLD - 1)
     # Iterate visible chunk ranges, draw only visible cells.
     for cx in range(min_x / CHUNK, max_x / CHUNK + 1):
         for cy in range(min_y / CHUNK, max_y / CHUNK + 1):
