@@ -13,6 +13,8 @@ identical for everybody. Products are cleared in dependency order (raw materials
 
 Shared by SQLite and PostgreSQL; all functions run inside the caller's transaction (`ph` = SQL placeholder).
 """
+import json
+
 import economy
 
 
@@ -58,6 +60,71 @@ def _save_inventory(db, ph, owner, stock):
     for product, qty in sorted(stock.items()):
         db.execute(_q("INSERT INTO inventory(owner,product,qty) VALUES(%s,%s,%s) ON CONFLICT(owner,product) DO UPDATE SET qty=excluded.qty", ph),
                    (owner, product, qty))
+
+
+CHUNK = 12
+_STATUS_COLS = "missed,wages_owed,input_owed,maint_owed,bankruptcies,last_bankruptcy_month,written_off"
+
+
+def _status(db, ph, owner):
+    row = db.execute(_q("SELECT " + _STATUS_COLS + " FROM company_status WHERE owner=%s", ph), (owner,)).fetchone()
+    keys = _STATUS_COLS.split(",")
+    return dict(zip(keys, row)) if row else {"missed": 0, "wages_owed": 0, "input_owed": 0, "maint_owed": 0, "bankruptcies": 0,
+                                             "last_bankruptcy_month": None, "written_off": 0}
+
+
+def _save_status(db, ph, owner, st):
+    db.execute(_q("INSERT INTO company_status(owner," + _STATUS_COLS + ") VALUES(%s,%s,%s,%s,%s,%s,%s,%s) ON CONFLICT(owner) DO UPDATE SET "
+                  "missed=excluded.missed,wages_owed=excluded.wages_owed,input_owed=excluded.input_owed,maint_owed=excluded.maint_owed,"
+                  "bankruptcies=excluded.bankruptcies,last_bankruptcy_month=excluded.last_bankruptcy_month,written_off=excluded.written_off", ph),
+               (owner, st["missed"], st["wages_owed"], st["input_owed"], st["maint_owed"], st["bankruptcies"], st["last_bankruptcy_month"], st["written_off"]))
+
+
+def _remove_building(db, ph, object_id, owner):
+    """Take a building off the map and tell clients (one `building_removed` event per affected chunk)."""
+    cells = [(int(x), int(y)) for x, y in db.execute(_q("SELECT x,y FROM cells WHERE object_id=%s", ph), (object_id,)).fetchall()]
+    db.execute(_q("DELETE FROM cells WHERE object_id=%s", ph), (object_id,))
+    db.execute(_q("DELETE FROM buildings WHERE id=%s", ph), (object_id,))
+    db.execute(_q("DELETE FROM building_ops WHERE object_id=%s", ph), (object_id,))
+    grouped = {}
+    for x, y in cells:
+        grouped.setdefault((x // CHUNK, y // CHUNK), []).append([x, y])
+    for (cx, cy), coords in sorted(grouped.items()):
+        db.execute(_q("INSERT INTO chunks(cx,cy,version) VALUES(%s,%s,1) ON CONFLICT(cx,cy) DO UPDATE SET version=chunks.version+1", ph), (cx, cy))
+        version = db.execute(_q("SELECT version FROM chunks WHERE cx=%s AND cy=%s", ph), (cx, cy)).fetchone()[0]
+        db.execute(_q("INSERT INTO events(cx,cy,version,kind,payload) VALUES(%s,%s,%s,%s,%s)", ph),
+                   (cx, cy, version, "building_removed", json.dumps({"object_id": object_id, "owner": owner, "cells": coords})))
+
+
+def liquidate(db, ph, owner, month, now):
+    """Bankruptcy: remove all buildings, sell assets, pay creditors, write off the rest of the debt."""
+    st = _status(db, ph, owner)
+    account = economy.player_account(owner)
+    proceeds = 0
+    for object_id, kind in db.execute(_q("SELECT id,kind FROM buildings WHERE owner=%s", ph), (owner,)).fetchall():
+        proceeds += int(economy.BUILD_COST.get(kind, 0) * economy.LIQUIDATION_RATE)
+        _remove_building(db, ph, object_id, owner)
+    db.execute(_q("DELETE FROM building_ops WHERE owner=%s", ph), (owner,))
+    stock_value = 0
+    for product, qty in db.execute(_q("SELECT product,qty FROM inventory WHERE owner=%s", ph), (owner,)).fetchall():
+        row = db.execute(_q("SELECT price FROM market_prices WHERE product=%s ORDER BY month_index DESC LIMIT 1", ph), (product,)).fetchone()
+        stock_value += int(qty * (row[0] if row else economy.MARKET.get(product, {}).get("reference_price", 0)) * economy.INVENTORY_LIQUIDATION_RATE)
+    db.execute(_q("DELETE FROM inventory WHERE owner=%s", ph), (owner,))
+    if proceeds:
+        economy.post(db, ph, "liquidation", "Банкротство: продажа зданий", [(economy.CONSTRUCTION, -proceeds), (account, proceeds)], now)
+    if stock_value:
+        economy.post(db, ph, "liquidation", "Банкротство: продажа запасов", [(economy.MARKET_ACCOUNT, -stock_value), (account, stock_value)], now)
+    cash = economy.balance(db, ph, owner) or 0
+    pay_w = min(st["wages_owed"], cash)
+    pay_i = min(st["input_owed"], cash - pay_w)
+    pay_m = min(st["maint_owed"], cash - pay_w - pay_i)
+    paid = pay_w + pay_i + pay_m
+    if paid:
+        economy.post(db, ph, "liquidation", "Банкротство: расчёт с кредиторами", [(account, -paid), (economy.RESIDENTS, pay_w), (economy.MARKET_ACCOUNT, pay_i), (economy.UPKEEP, pay_m)], now)
+    owed = st["wages_owed"] + st["input_owed"] + st["maint_owed"]
+    st.update(missed=0, wages_owed=0, input_owed=0, maint_owed=0, bankruptcies=st["bankruptcies"] + 1,
+              last_bankruptcy_month=month, written_off=st["written_off"] + (owed - paid))
+    _save_status(db, ph, owner, st)
 
 
 def labor_market(population, total_jobs):
@@ -110,6 +177,7 @@ def step_month(db, ph, month, now):
             companies[owner]["stock"][product] = int(qty)
     for owner, c in companies.items():
         c["cash"] = economy.balance(db, ph, owner) or 0
+        c["distress"] = _status(db, ph, owner)["missed"] >= 1      # unpaid last month: workers walk away
 
     population = _population_at(db, ph, month)
     total_jobs = sum(c["jobs"] for c in companies.values())
@@ -133,7 +201,7 @@ def step_month(db, ph, month, now):
                 if spec["product"] != product:
                     continue
                 out = spec["output"] * factor // 1000
-                out = int(out * staffing * (_input_fraction(c) if spec.get("inputs") else 1.0))
+                out = int(out * staffing * (_input_fraction(c) if spec.get("inputs") else 1.0) * (economy.DISTRESS_OUTPUT if c["distress"] else 1.0))
                 produced += out
             stock = c["stock"].get(product, 0)
             need = c["needs"].get(product, 0)
@@ -171,20 +239,44 @@ def step_month(db, ph, month, now):
         db.execute(_q("INSERT INTO market_prices(product,month_index,price,supply,demand) VALUES(%s,%s,%s,%s,%s) ON CONFLICT(product,month_index) DO NOTHING", ph),
                    (product, month, price, supply, demand))
 
+    bankrupt = []
     for owner, c in sorted(companies.items()):
+        st = _status(db, ph, owner)
         wages = int(c["jobs"] * staffing * lab["wage"])
-        available = (economy.balance(db, ph, owner) or 0) + c["revenue"]
-        paid_input = min(c["input_cost"], max(available, 0))
-        paid_wages = min(wages, max(available - paid_input, 0))
-        paid_maint = min(c["maint"], max(available - paid_input - paid_wages, 0))   # no debt: unpaid costs are forgiven (bankruptcy rules later)
+        cash = (economy.balance(db, ph, owner) or 0) + c["revenue"]
+        paid_input = min(c["input_cost"], max(cash, 0))
+        cash -= paid_input
+        paid_wages = min(wages, max(cash, 0))
+        cash -= paid_wages
+        paid_maint = min(c["maint"], max(cash, 0))
+        cash -= paid_maint
+        unpaid = {"input": c["input_cost"] - paid_input, "wages": wages - paid_wages, "maint": c["maint"] - paid_maint}
+        # leftover cash services old arrears: wages first, then raw materials, then maintenance
+        arr_w = min(st["wages_owed"], max(cash, 0))
+        cash -= arr_w
+        arr_i = min(st["input_owed"], max(cash, 0))
+        cash -= arr_i
+        arr_m = min(st["maint_owed"], max(cash, 0))
+        cash -= arr_m
+        st["wages_owed"] += unpaid["wages"] - arr_w
+        st["input_owed"] += unpaid["input"] - arr_i
+        st["maint_owed"] += unpaid["maint"] - arr_m
+        st["missed"] = st["missed"] + 1 if sum(unpaid.values()) > 0 else 0
+        out_input, out_wages, out_maint = paid_input + arr_i, paid_wages + arr_w, paid_maint + arr_m
         profit = c["revenue"] - paid_input - paid_wages - paid_maint
-        if c["revenue"] or paid_input or paid_wages or paid_maint:
-            economy.post(db, ph, "monthly", "Итоги месяца: доход %d, сырьё %d, зарплаты %d, обслуживание %d" % (c["revenue"], paid_input, paid_wages, paid_maint),
-                         [(economy.player_account(owner), profit), (economy.MARKET_ACCOUNT, -c["revenue"] + paid_input),
-                          (economy.RESIDENTS, paid_wages), (economy.UPKEEP, paid_maint)], now)
+        if c["revenue"] or out_input or out_wages or out_maint:
+            economy.post(db, ph, "monthly", "Итоги месяца: доход %d, сырьё %d, зарплаты %d, обслуживание %d%s" % (
+                             c["revenue"], out_input, out_wages, out_maint, (", долг %d" % (st["wages_owed"] + st["input_owed"] + st["maint_owed"])) if st["missed"] or st["wages_owed"] + st["input_owed"] + st["maint_owed"] else ""),
+                         [(economy.player_account(owner), c["revenue"] - out_input - out_wages - out_maint),
+                          (economy.MARKET_ACCOUNT, -c["revenue"] + out_input), (economy.RESIDENTS, out_wages), (economy.UPKEEP, out_maint)], now)
         db.execute(_q("INSERT INTO company_reports(owner,month_index,revenue,input_cost,upkeep,profit,buildings) VALUES(%s,%s,%s,%s,%s,%s,%s) ON CONFLICT(owner,month_index) DO NOTHING", ph),
                    (owner, month, c["revenue"], paid_input, paid_wages + paid_maint, profit, len(c["buildings"])))
+        _save_status(db, ph, owner, st)
         _save_inventory(db, ph, owner, c["stock"])
+        if st["missed"] >= economy.BANKRUPT_AFTER_MISSED:
+            bankrupt.append(owner)
+    for owner in bankrupt:
+        liquidate(db, ph, owner, month, now)
     db.execute(_q("INSERT INTO population(month_index,population,labor_force,jobs,wage,staffing_permille,demand_permille,next_population) VALUES(%s,%s,%s,%s,%s,%s,%s,%s) ON CONFLICT(month_index) DO NOTHING", ph),
                (month, lab["population"], lab["labor_force"], lab["jobs"], lab["wage"], int(staffing * 1000), int(lab["scale"] * 1000),
                 next_population(population, total_jobs, lab["labor_force"])))
@@ -285,6 +377,13 @@ def reports(db, ph, owner, limit=6):
     return [{"month_index": m, "revenue": r, "input_cost": i, "upkeep": u, "profit": p, "buildings": b} for m, r, i, u, p, b in rows]
 
 
+def company_view(db, ph, owner):
+    st = _status(db, ph, owner)
+    return {"missed": st["missed"], "arrears": st["wages_owed"] + st["input_owed"] + st["maint_owed"], "wages_owed": st["wages_owed"],
+            "input_owed": st["input_owed"], "maint_owed": st["maint_owed"], "bankruptcies": st["bankruptcies"],
+            "last_bankruptcy_month": st["last_bankruptcy_month"], "written_off": st["written_off"], "bankrupt_after": economy.BANKRUPT_AFTER_MISSED}
+
+
 def holdings(db, ph, owner):
     """Number of buildings per kind."""
     out = {}
@@ -310,4 +409,4 @@ def wallet(db, ph, owner, clk, now):
     labor = labor_view(db, ph, clk)
     return {"ok": True, "balance": bal, "currency": economy.CURRENCY, "transactions": economy.history(db, ph, owner),
             "forecast": forecast(db, ph, owner, quotes, labor), "labor": labor, "reports": reports(db, ph, owner), "month_index": clk["month_index"],
-            "market": quotes, "inventory": inventory_view(db, ph, owner), "holdings": holdings(db, ph, owner)}
+            "market": quotes, "inventory": inventory_view(db, ph, owner), "holdings": holdings(db, ph, owner), "company": company_view(db, ph, owner)}

@@ -117,13 +117,27 @@ def act(persona, month, wallet_fn, market_fn, build_fn):
     return kind if _place(owner, month, kind, total, build_fn) else None
 
 
+def recapitalize(connect, ph, owner, now):
+    """A new investor puts fresh capital into a bankrupt NPC."""
+    with connect() as db:
+        economy.post(db, ph, "recapital", "Новый инвестор", [(economy.player_account(owner), economy.START_CAPITAL), (economy.TREASURY, -economy.START_CAPITAL)], now)
+
+
+def needs_investor(wallet, month):
+    """True for a bankrupt NPC without buildings that has waited long enough."""
+    last = wallet.get("company", {}).get("last_bankruptcy_month")
+    return (last is not None and not wallet.get("holdings") and wallet["balance"] < economy.START_CAPITAL // 2
+            and month - last >= economy.NPC_RECAPITAL_MONTHS)
+
+
 def tick(connect, ph, clock_fn, market_fn, wallet_fn, build_fn):
     """Let every NPC act for the months that have completed since it last acted. Cheap when nothing is pending."""
     if not _LOCK.acquire(blocking=False):
         return 0
     built = 0
     try:
-        month = clock_fn()["month_index"]
+        clk = clock_fn()
+        month = clk["month_index"]
         with connect() as db:
             known = dict(db.execute("SELECT owner,acted_through FROM npc_state").fetchall())
             for index, persona in enumerate(PERSONAS):
@@ -136,6 +150,8 @@ def tick(connect, ph, clock_fn, market_fn, wallet_fn, build_fn):
             pending = month - 1 - acted
             if pending <= 0:
                 continue
+            if needs_investor(wallet_fn(persona["owner"]), month):
+                recapitalize(connect, ph, persona["owner"], clk["server_time"])
             for k in range(min(pending, MAX_CATCH_UP)):
                 if act(persona, acted + 1 + k, wallet_fn, market_fn, build_fn):
                     built += 1

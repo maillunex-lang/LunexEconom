@@ -53,6 +53,7 @@ CREATE TABLE IF NOT EXISTS world_state (id INTEGER PRIMARY KEY, processed_throug
 CREATE TABLE IF NOT EXISTS inventory (owner TEXT NOT NULL, product TEXT NOT NULL, qty BIGINT NOT NULL, PRIMARY KEY(owner, product));
 CREATE TABLE IF NOT EXISTS company_reports (owner TEXT NOT NULL, month_index BIGINT NOT NULL, revenue BIGINT NOT NULL, input_cost BIGINT NOT NULL, upkeep BIGINT NOT NULL, profit BIGINT NOT NULL, buildings INTEGER NOT NULL, PRIMARY KEY(owner, month_index));
 CREATE TABLE IF NOT EXISTS population (month_index BIGINT PRIMARY KEY, population BIGINT NOT NULL, labor_force BIGINT NOT NULL, jobs BIGINT NOT NULL, wage BIGINT NOT NULL, staffing_permille INTEGER NOT NULL, demand_permille INTEGER NOT NULL, next_population BIGINT NOT NULL);
+CREATE TABLE IF NOT EXISTS company_status (owner TEXT PRIMARY KEY, missed INTEGER NOT NULL, wages_owed BIGINT NOT NULL, input_owed BIGINT NOT NULL, maint_owed BIGINT NOT NULL, bankruptcies INTEGER NOT NULL, last_bankruptcy_month BIGINT, written_off BIGINT NOT NULL);
 CREATE TABLE IF NOT EXISTS npc_state (owner TEXT PRIMARY KEY, acted_through BIGINT NOT NULL);
 CREATE TABLE IF NOT EXISTS company_state (owner TEXT PRIMARY KEY, settled_through BIGINT NOT NULL);
 CREATE TABLE IF NOT EXISTS monthly_reports (owner TEXT NOT NULL, month_index BIGINT NOT NULL, revenue BIGINT NOT NULL, upkeep BIGINT NOT NULL, profit BIGINT NOT NULL, buildings INTEGER NOT NULL, PRIMARY KEY(owner, month_index));

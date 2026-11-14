@@ -50,6 +50,17 @@ INCOME_CAP = 1.5
 NATURAL_GROWTH = 0.003
 MIGRATION_IN = 0.03
 MIGRATION_OUT = 0.005
+
+# ---- Insolvency ----
+# Costs a company cannot pay become arrears (wages, raw materials, maintenance; repaid in that order from later cash).
+# An unpaid month cuts output to DISTRESS_OUTPUT (workers walk away). After BANKRUPT_AFTER_MISSED unpaid months in a row
+# the company is liquidated: buildings leave the map, buildings/stock are sold for a share of their value, creditors
+# are paid from the proceeds and the rest of the debt is written off. NPC owners get a new investor later.
+BANKRUPT_AFTER_MISSED = 3
+DISTRESS_OUTPUT = 0.5
+LIQUIDATION_RATE = 0.4
+INVENTORY_LIQUIDATION_RATE = 0.5
+NPC_RECAPITAL_MONTHS = 6
 # A warehouse owner holds production back while last month's price was below reference * HOLD_BELOW
 # and releases everything (stock included) once the price recovers.
 HOLD_BELOW = 0.9
@@ -78,6 +89,7 @@ SCHEMA = (
     "CREATE TABLE IF NOT EXISTS inventory(owner TEXT NOT NULL, product TEXT NOT NULL, qty BIGINT NOT NULL, PRIMARY KEY(owner, product))",
     "CREATE TABLE IF NOT EXISTS company_reports(owner TEXT NOT NULL, month_index BIGINT NOT NULL, revenue BIGINT NOT NULL, input_cost BIGINT NOT NULL, upkeep BIGINT NOT NULL, profit BIGINT NOT NULL, buildings INTEGER NOT NULL, PRIMARY KEY(owner, month_index))",
     "CREATE TABLE IF NOT EXISTS population(month_index BIGINT PRIMARY KEY, population BIGINT NOT NULL, labor_force BIGINT NOT NULL, jobs BIGINT NOT NULL, wage BIGINT NOT NULL, staffing_permille INTEGER NOT NULL, demand_permille INTEGER NOT NULL, next_population BIGINT NOT NULL)",
+    "CREATE TABLE IF NOT EXISTS company_status(owner TEXT PRIMARY KEY, missed INTEGER NOT NULL, wages_owed BIGINT NOT NULL, input_owed BIGINT NOT NULL, maint_owed BIGINT NOT NULL, bankruptcies INTEGER NOT NULL, last_bankruptcy_month BIGINT, written_off BIGINT NOT NULL)",
     "CREATE TABLE IF NOT EXISTS npc_state(owner TEXT PRIMARY KEY, acted_through BIGINT NOT NULL)",
     "CREATE TABLE IF NOT EXISTS company_state(owner TEXT PRIMARY KEY, settled_through BIGINT NOT NULL)",
     "CREATE TABLE IF NOT EXISTS monthly_reports(owner TEXT NOT NULL, month_index BIGINT NOT NULL, revenue BIGINT NOT NULL, upkeep BIGINT NOT NULL, profit BIGINT NOT NULL, buildings INTEGER NOT NULL, PRIMARY KEY(owner, month_index))",
@@ -97,6 +109,7 @@ def terms():
     return {"currency": CURRENCY, "start_capital": START_CAPITAL,
             "building_costs": dict(BUILD_COST), "road_cell_cost": ROAD_CELL_COST,
             "hold_below": HOLD_BELOW,
+            "insolvency": {"bankrupt_after_missed": BANKRUPT_AFTER_MISSED, "liquidation_rate": LIQUIDATION_RATE, "distress_output": DISTRESS_OUTPUT},
             "labor": {"base_wage": BASE_WAGE, "participation": PARTICIPATION, "base_population": BASE_POPULATION},
             "production": {k: {"product_id": v["product"], "product": MARKET[v["product"]]["name"] if v["product"] else "",
                                "output": v["output"], "unit_price": MARKET[v["product"]]["reference_price"] if v["product"] else 0,

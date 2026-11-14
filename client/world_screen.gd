@@ -489,6 +489,9 @@ var market_quotes: Dictionary = {}
 var competitors: Array = []
 var wallet_holdings: Dictionary = {}
 var labor: Dictionary = {}
+var company: Dictionary = {}
+var seen_bankruptcy_month = null
+var seen_missed := 0
 const KIND_NAMES := {"farm": "Ферма", "mine": "Шахта", "factory": "Завод", "warehouse": "Склад"}
 var production := {"farm": {"product_id": "honey", "output": 100, "unit_price": 200, "upkeep": 2000, "jobs": 4}, "mine": {"product_id": "oil", "output": 40, "unit_price": 1500, "upkeep": 15000, "jobs": 10}, "factory": {"product_id": "goods", "output": 60, "unit_price": 2000, "upkeep": 26000, "jobs": 20, "inputs": {"oil": 10, "honey": 20}}, "warehouse": {"product_id": "", "output": 0, "unit_price": 0, "upkeep": 2000, "jobs": 2, "capacity": 400}}
 
@@ -582,6 +585,7 @@ func _economy_text() -> String:
             " (нехватка рабочих)" if float(labor.get("staffing", 1.0)) < 1.0 else (" (безработица %d%%)" % int(float(labor.get("unemployment", 0.0)) * 100.0) if float(labor.get("unemployment", 0.0)) > 0.05 else "")])
     var mine := _holdings_text(wallet_holdings)
     if mine != "": lines.append("Мои здания: " + mine)
+    lines.append_array(_company_lines())
     var market := _market_lines()
     if not market.is_empty():
         lines.append("")
@@ -595,6 +599,30 @@ func _economy_text() -> String:
                 var held := _holdings_text(c.get("holdings", {}))
                 lines.append("%s — %d зд.%s" % [str(c.get("name", "")), int(c.get("buildings", 0)), (" (" + held + ")") if held != "" else ""])
     return "\n".join(lines)
+
+func _company_lines() -> PackedStringArray:
+    var lines: PackedStringArray = []
+    if company.is_empty(): return lines
+    var arrears := int(company.get("arrears", 0))
+    if arrears > 0:
+        lines.append("Долги: %s (зарплаты %s, сырьё %s, обслуживание %s)" % [_fmt_money(arrears), _fmt_money(int(company.get("wages_owed", 0))), _fmt_money(int(company.get("input_owed", 0))), _fmt_money(int(company.get("maint_owed", 0)))])
+    var missed := int(company.get("missed", 0))
+    if missed > 0:
+        lines.append("ВНИМАНИЕ: расходы не оплачены %d мес. подряд из %d, выпуск снижен, затем банкротство!" % [missed, int(company.get("bankrupt_after", 3))])
+    var bankruptcies := int(company.get("bankruptcies", 0))
+    if bankruptcies > 0 and company.get("last_bankruptcy_month", null) != null:
+        lines.append("Банкротств: %d (последнее: %s)" % [bankruptcies, _month_label(int(company["last_bankruptcy_month"]))])
+    return lines
+
+func _announce_company_status() -> void:
+    var last = company.get("last_bankruptcy_month", null)
+    var missed := int(company.get("missed", 0))
+    if last != null and seen_bankruptcy_month != null and int(last) != int(seen_bankruptcy_month):
+        info.text = "Компания обанкротилась: здания проданы за 40% стоимости, долги погашены, остаток списан"
+    elif missed > seen_missed:
+        info.text = "Расходы не оплачены (%d из %d мес.): пополните счёт, иначе банкротство" % [missed, int(company.get("bankrupt_after", 3))]
+    seen_bankruptcy_month = last if last != null else -1
+    seen_missed = missed
 
 func _holdings_text(h) -> String:
     if not h is Dictionary or h.is_empty(): return ""
@@ -655,6 +683,9 @@ func _refresh_wallet() -> void:
         wallet_inventory = data.get("inventory", {})
         wallet_holdings = data.get("holdings", {})
         if data.get("labor", null) is Dictionary: labor = data["labor"]
+        if data.get("company", null) is Dictionary:
+            company = data["company"]
+            _announce_company_status()
         if data.get("market", null) is Dictionary: market_quotes = data["market"]
         if section_panel != null and section_panel.visible and section_title.text == "Экономика":
             section_body.text = _economy_text()
