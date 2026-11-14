@@ -25,7 +25,7 @@ if os.environ.get('LUNEX_DB_ENGINE') == 'postgres':
 DB = os.environ.get("LUNEX_WORLD_DB", "/home/gamedev/projects/LunexEconom-server/world.sqlite3")
 CHUNK = 12
 MAX_COORD = 10000
-KINDS = {"farm":(2,2), "mine":(2,3), "factory":(3,2), "warehouse":(3,3), "school":(3,2), "hospital":(3,3), "park":(2,2)}
+KINDS = {"farm":(2,2), "mine":(2,3), "factory":(3,2), "warehouse":(3,3), "shop":(2,2), "school":(3,2), "hospital":(3,3), "park":(2,2)}
 LOCK = threading.RLock()
 
 def connect():
@@ -212,7 +212,10 @@ def market_state():
         now=int(time.time())
         clk=clock.state(db,"?",now)
         production.advance(db,"?",clk,now)
-        result={"ok":True,"month_index":clk["month_index"],"products":production.quote(db,"?",clk),"labor":production.labor_view(db,"?",clk),"taxes":taxes.view(db,"?"),"competitors":production.competitors(db,"?")}
+        quotes=production.quote(db,"?",clk)
+        labor=production.labor_view(db,"?",clk)
+        import retail
+        result={"ok":True,"month_index":clk["month_index"],"products":quotes,"labor":labor,"taxes":taxes.view(db,"?"),"competitors":production.competitors(db,"?"),"retail":retail.snapshot(db,"?",clk,quotes,labor.get("scale",1))}
         db.commit()
     return 200,result
 

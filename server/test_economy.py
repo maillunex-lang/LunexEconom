@@ -34,6 +34,7 @@ class EconomyTests(unittest.TestCase):
         t = economy.terms()
         self.assertEqual(t["start_capital"], 1_000_000)
         self.assertEqual(t["building_costs"], {"farm": 120_000, "mine": 300_000, "factory": 450_000, "warehouse": 80_000,
+                                                  "shop": 160_000,
                                                   "school": 400_000, "hospital": 800_000, "park": 150_000})
         self.assertEqual(t["road_cell_cost"], 5_000)
 

@@ -283,10 +283,10 @@ class PostgresEconomyTests(unittest.TestCase):
 
     def test_loans_interest_and_default(self):
         self.build("alice", "factory")
-        self.assertEqual(postgres_world.loan("alice", {"action": "take", "amount": 100_000, "request_id": rid()})[0], 201)
+        self.assertEqual(postgres_world.loan("alice", {"action": "take", "amount": 50_000, "request_id": rid()})[0], 201)
         self.assertEqual(postgres_world.loan("alice", {"action": "take", "amount": 900_000, "request_id": rid()})[1]["error"], "limit_exceeded")
         w = self.month("alice", 2)
-        self.assertEqual(w["loan"]["balance"], 100_000)
+        self.assertEqual(w["loan"]["balance"], 50_000)
         self.assertGreater(self.sql("SELECT interest_paid FROM loans WHERE owner='alice'")[0][0], 0)
         self.set_cash("alice", 0)
         w = self.month("alice", 1)
@@ -364,6 +364,49 @@ class PostgresEconomyTests(unittest.TestCase):
                         (economy_mod.player_account("bob"),))[0][0]
         self.assertEqual(int(paid), -4000)
         self.assertEqual(self.sql("SELECT status FROM trade_contracts")[0][0], "completed")
+        self.assert_ledger()
+
+    def test_owner_spend_returns_profit_to_the_market(self):
+        self.build("alice", "farm")
+        self.month("alice")
+        row = self.sql("SELECT amount FROM eco_owner_spend WHERE owner='alice'")
+        self.assertTrue(row and row[0][0] > 0)
+        market = self.sql("SELECT COALESCE(SUM(e.amount),0) FROM ledger_entries e JOIN ledger_tx t ON t.id=e.tx_id "
+                          "WHERE t.kind='owner_spend' AND e.account=%s", (economy.MARKET_ACCOUNT,))[0][0]
+        self.assertEqual(market, row[0][0])
+        again = self.wallet("alice")
+        self.assertEqual(self.sql("SELECT COUNT(*) FROM eco_owner_spend")[0][0], 1)
+        self.assertGreater(again["forecast"]["owner_spend"], 0)
+        self.assertEqual(again["reports"][0]["owner_spent"], row[0][0])
+        self.assert_ledger()
+
+    def test_shop_earns_retail_margin_and_goods_vat(self):
+        self.build("alice", "farm")
+        self.build("bob", "shop")
+        self.month("bob")
+        revenue = self.sql("SELECT revenue FROM company_reports WHERE owner='bob'")[0][0]
+        vat = self.sql("SELECT vat FROM company_taxes WHERE owner='bob'")[0][0]
+        self.assertGreater(revenue, 0)
+        self.assertEqual(vat, int(round(revenue * economy.VAT_RATES["goods"])))
+        view = self.wallet("alice")["retail"]
+        self.assertEqual(view["shops"], 1)
+        self.assertGreater(view["floor"], 0)
+        self.assert_ledger()
+
+    def test_newcomer_loan_limit_is_below_the_mature_limit(self):
+        self.build("alice", "factory")
+        fresh = self.wallet("alice")["loan"]
+        self.assertEqual(fresh["limit"], int(450_000 * economy.LOAN_NEW_LTV))
+        self.assertIn("Новичок", fresh["limit_reason"])
+        self.assertEqual(postgres_world.loan("alice", {"action": "take", "amount": fresh["limit"] + 10_000, "request_id": rid()})[1]["error"], "limit_exceeded")
+        with postgres_db.connect() as db:
+            db.execute("UPDATE building_ops SET start_month=start_month-%s WHERE owner='alice'", (economy.LOAN_RAMP_MONTHS + 2,))
+            db.execute("INSERT INTO company_reports(owner,month_index,revenue,input_cost,upkeep,profit,buildings) "
+                       "VALUES('alice',-1,%s,0,0,0,1) ON CONFLICT(owner,month_index) DO UPDATE SET revenue=EXCLUDED.revenue",
+                       (economy.LOAN_REVENUE_PROOF,))
+        grown = self.wallet("alice")["loan"]
+        self.assertEqual(grown["limit"], int(450_000 * economy.LOAN_LTV))
+        self.assertIn("Полный лимит", grown["limit_reason"])
         self.assert_ledger()
 
 

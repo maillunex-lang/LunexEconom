@@ -11,6 +11,7 @@ import uuid
 CURRENCY = "RUB"
 START_CAPITAL = 1_000_000
 BUILD_COST = {"farm": 120_000, "mine": 300_000, "factory": 450_000, "warehouse": 80_000,
+              "shop": 160_000,
               "school": 400_000, "hospital": 800_000, "park": 150_000}   # social buildings are paid from the city budget
 ROAD_CELL_COST = 5_000
 TREASURY = "system:treasury"
@@ -30,6 +31,8 @@ PRODUCTION = {
     "mine":      {"product": "oil",   "output": 40,  "jobs": 10, "upkeep": 15_000},
     "factory":   {"product": "goods", "output": 60,  "jobs": 20, "upkeep": 26_000, "inputs": {"oil": 10, "honey": 20}},
     "warehouse": {"product": None,    "output": 0,   "jobs": 2,  "upkeep": 2_000,  "capacity": 400},
+    # A shop does not produce. It sells consumer goods (MARKET consumer=True) to residents. `floor` is units per month.
+    "shop":      {"product": None,    "output": 0,   "jobs": 5,  "upkeep": 3_000,  "floor": 100, "role": "retail"},
     # Social buildings belong to the city (built by the mayor from the budget); `serves` = residents covered per building.
     "school":    {"product": None,    "output": 0,   "jobs": 6,  "upkeep": 3_000,  "serves": 120},
     "hospital":  {"product": None,    "output": 0,   "jobs": 8,  "upkeep": 5_000,  "serves": 200},
@@ -118,6 +121,13 @@ LOAN_INTEREST = 0.015
 LOAN_LTV = 0.5
 LOAN_MAX = 5_000_000
 LOAN_MIN = 10_000
+# A new company borrows only LOAN_NEW_LTV of its buildings. The rest of the way to LOAN_LTV opens with age
+# (LOAN_RAMP_MONTHS of operation) and with confirmed revenue (average of the last LOAN_REVENUE_MONTHS at least
+# LOAN_REVENUE_PROOF). Both are required: time alone or one lucky month alone does not unlock the full limit.
+LOAN_NEW_LTV = 0.12
+LOAN_RAMP_MONTHS = 12
+LOAN_REVENUE_MONTHS = 3
+LOAN_REVENUE_PROOF = 20_000
 # A warehouse owner holds production back while the recent average price is below reference * HOLD_BELOW. The held share grows
 # with the depth of the fall (the full output is held only at HOLD_BELOW * (1 - HOLD_DEPTH)) and the stock is released gradually
 # (RELEASE_SHARE of it per month, all of it at once while the price is above the reference). Fractions instead of an all-or-nothing
@@ -128,17 +138,29 @@ HOLD_SMOOTH_MONTHS = 3
 RELEASE_SHARE = 0.34
 # Residents spend the wages they earned on consumer goods: money flows system:residents -> system:market (closed money circle).
 RESIDENT_SPEND_TO_MARKET = True
+# Owners spend a share of positive after-tax operating profit on their own life. The money returns to system:market,
+# so producer profit is not paid out of thin air. Cash above OWNER_SPEND_RESERVE_MONTHS of wages, maintenance and
+# raw materials is what may be spent; the city budget does not consume. Share 0.90 and a 3-month reserve: a farm
+# that is actually earning stays in the black (about 10% of after-tax profit plus the reserve), while the stock of
+# unspent owner profit stops compounding. See docs/OWNER_SPENDING.md.
+OWNER_SPEND_ENABLED = True
+OWNER_SPEND_SHARE = 0.90
+OWNER_SPEND_RESERVE_MONTHS = 3
+# Retail: a shop sells consumer goods to residents at a markup. With no shops the wage loop is unchanged.
+# See docs/RETAIL.md.
+RETAIL_ENABLED = True
+RETAIL_MARKUP = 0.30
 # Market: one world-wide market per product (regions/cities come later).
 #   price = reference_price * (demand / supply) ** (1 / elasticity), clamped to [MIN_PRICE_K, MAX_PRICE_K] x reference.
 #   demand = base_demand * season[calendar month] * demand scale (population and income, see above)
 # base_demand = 2 buildings' output: the world absorbs two buildings of a kind at the reference price;
 # a lone first building enjoys a premium, a crowded market pushes prices (and profit) down.
 MARKET = {
-    "honey": {"name": "Мёд",    "reference_price": 200,  "base_demand": 200, "elasticity": 1.5,
+    "honey": {"name": "Мёд",    "reference_price": 200,  "base_demand": 200, "elasticity": 1.5, "consumer": True,
               "season": [1.15, 1.10, 1.00, 0.95, 0.90, 0.90, 0.90, 0.95, 1.00, 1.05, 1.10, 1.15]},
-    "oil":   {"name": "Нефть",  "reference_price": 1500, "base_demand": 80,  "elasticity": 1.5,
+    "oil":   {"name": "Нефть",  "reference_price": 1500, "base_demand": 80,  "elasticity": 1.5, "consumer": False,
               "season": [1.15, 1.10, 1.05, 0.95, 0.90, 0.85, 0.85, 0.90, 0.95, 1.05, 1.10, 1.15]},
-    "goods": {"name": "Товары", "reference_price": 2000, "base_demand": 120, "elasticity": 1.5,
+    "goods": {"name": "Товары", "reference_price": 2000, "base_demand": 120, "elasticity": 1.5, "consumer": True,
               "season": [0.95, 0.90, 0.95, 1.00, 1.00, 1.00, 1.00, 1.05, 1.05, 1.05, 1.10, 1.25]},
 }
 MIN_PRICE_K = 0.25
@@ -184,6 +206,7 @@ SCHEMA = (
     "CREATE TABLE IF NOT EXISTS trade_contracts(id TEXT PRIMARY KEY, offer_id TEXT NOT NULL, supplier TEXT NOT NULL, buyer TEXT NOT NULL, product TEXT NOT NULL, qty BIGINT NOT NULL, price BIGINT NOT NULL, penalty BIGINT NOT NULL, start_month BIGINT NOT NULL, end_month BIGINT NOT NULL, status TEXT NOT NULL, closed_reason TEXT NOT NULL DEFAULT '', created BIGINT NOT NULL)",
     "CREATE TABLE IF NOT EXISTS trade_deliveries(contract_id TEXT NOT NULL, month_index BIGINT NOT NULL, delivered BIGINT NOT NULL, shortfall BIGINT NOT NULL, paid BIGINT NOT NULL, penalty_paid BIGINT NOT NULL, PRIMARY KEY(contract_id, month_index))",
     "CREATE TABLE IF NOT EXISTS trade_debts(debtor TEXT NOT NULL, creditor TEXT NOT NULL, amount BIGINT NOT NULL, PRIMARY KEY(debtor, creditor))",
+    "CREATE TABLE IF NOT EXISTS eco_owner_spend(owner TEXT NOT NULL, month_index BIGINT NOT NULL, amount BIGINT NOT NULL, PRIMARY KEY(owner, month_index))",
 )
 
 
@@ -206,11 +229,13 @@ def terms():
                      "mayor_salary": MAYOR_SALARY, "election_period": ELECTION_PERIOD, "election_fee": ELECTION_FEE,
                      "bonus_share": MAYOR_BONUS_SHARE, "term_bonus": [[t, b] for t, b in TERM_BONUS], "max_terms": MAX_CONSECUTIVE_TERMS,
                      "dismiss_below": DISMISS_BELOW, "dismiss_after": DISMISS_AFTER, "productivity": SOCIAL_PRODUCTIVITY},
-            "insolvency": {"bankrupt_after_missed": BANKRUPT_AFTER_MISSED, "loan": {"interest": LOAN_INTEREST, "ltv": LOAN_LTV, "max": LOAN_MAX, "min": LOAN_MIN}, "liquidation_rate": LIQUIDATION_RATE, "sell_rate": SELL_RATE, "distress_output": DISTRESS_OUTPUT},
+            "insolvency": {"bankrupt_after_missed": BANKRUPT_AFTER_MISSED, "loan": {"interest": LOAN_INTEREST, "ltv": LOAN_LTV, "new_ltv": LOAN_NEW_LTV, "ramp_months": LOAN_RAMP_MONTHS, "revenue_proof": LOAN_REVENUE_PROOF, "max": LOAN_MAX, "min": LOAN_MIN}, "liquidation_rate": LIQUIDATION_RATE, "sell_rate": SELL_RATE, "distress_output": DISTRESS_OUTPUT},
             "labor": {"base_wage": BASE_WAGE, "participation": PARTICIPATION, "base_population": BASE_POPULATION},
             "production": {k: {"product_id": v["product"], "product": MARKET[v["product"]]["name"] if v["product"] else "",
                                "output": v["output"], "unit_price": MARKET[v["product"]]["reference_price"] if v["product"] else 0,
-                               "upkeep": v["upkeep"], "jobs": v["jobs"], "inputs": dict(v.get("inputs", {})), "capacity": v.get("capacity", 0)}
+                               "upkeep": v["upkeep"], "jobs": v["jobs"], "inputs": dict(v.get("inputs", {})), "capacity": v.get("capacity", 0),
+                               "floor": v.get("floor", 0), "role": v.get("role", ""),
+                               "retail_hint": 18_000 if v.get("role") == "retail" else 0}
                            for k, v in PRODUCTION.items()}}
 
 

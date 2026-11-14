@@ -267,6 +267,7 @@ def step_month(db, ph, month, now):
     import contracts as trade_contracts
     contract_deliveries = []
     consumer_spend = 0           # value of what residents bought this month (consumer demand x fill x price)
+    consumer_units = 0           # units of consumer goods behind that value (shops serve these)
     for product in product_order():
         ref = economy.MARKET[product]["reference_price"]
         previous = _price_row(db, ph, product, month - 1)
@@ -320,6 +321,8 @@ def step_month(db, ph, month, now):
         prices[product] = price
         fill = 1.0 if demand <= 0 else min(1.0, supply / demand)
         consumer_spend += int((demand - demand_ext) * fill * price)
+        if economy.MARKET[product].get("consumer"):
+            consumer_units += int((demand - demand_ext) * fill)
         for owner, c in companies.items():
             c["revenue"] += offers[owner] * price
             c["rev_by"][product] = c["rev_by"].get(product, 0) + offers[owner] * price
@@ -331,6 +334,9 @@ def step_month(db, ph, month, now):
                 c["in_by"][product] = c["in_by"].get(product, 0) + bought * price
         db.execute(_q("INSERT INTO market_prices(product,month_index,price,supply,demand) VALUES(%s,%s,%s,%s,%s) ON CONFLICT(product,month_index) DO NOTHING", ph),
                    (product, month, price, supply, demand))
+
+    import retail
+    retail.apply(companies, consumer_spend, consumer_units, staffing)
 
     loans = {o: int(b) for o, b in db.execute("SELECT owner,balance FROM loans WHERE balance>0").fetchall()}
     rates = taxes.rates(db, ph)
@@ -381,6 +387,9 @@ def step_month(db, ph, month, now):
         st["input_owed"] += unpaid["input"] - arr_i
         st["maint_owed"] += unpaid["maint"] - arr_m
         st["missed"] = st["missed"] + 1 if sum(unpaid.values()) > 0 and not is_city else 0
+        c["after_tax"] = c["revenue"] - c["input_cost"] - wages - c["maint"] - interest_due - profit_tax - property_tax
+        c["unpaid_sum"] = sum(unpaid.values())
+        c["reserve"] = (c["maint"] + wages + c["input_cost"]) * economy.OWNER_SPEND_RESERVE_MONTHS
         out_input, out_wages, out_maint, out_tax = paid_input + arr_i, paid_wages + arr_w, paid_maint + arr_m, paid_tax + arr_t
         profit = c["revenue"] - c["input_cost"] - paid_wages - paid_maint
         if revenue_g or out_input or out_wages or out_maint or paid_interest or out_tax:
@@ -412,6 +421,8 @@ def step_month(db, ph, month, now):
         bank.paid_interest(db, ph, owner, paid)
         bank.capitalize(db, ph, owner, due - paid)
     trade_contracts.settle(db, ph, month, contract_deliveries, now, bankrupt)
+    import owner_spend
+    owner_spend.settle(db, ph, month, companies, bankrupt, now)
     if economy.RESIDENT_SPEND_TO_MARKET and consumer_spend > 0:
         row = db.execute(_q("SELECT balance FROM wallets WHERE account=%s", ph), (economy.RESIDENTS,)).fetchone()
         spend = min(consumer_spend, max(0, int(row[0]) if row else 0))
@@ -476,7 +487,7 @@ def labor_view(db, ph, clk):
     lab = _current_labor(db, ph, clk["month_index"], _ops(db, ph))
     return {"population": lab["population"], "labor_force": lab["labor_force"], "jobs": lab["jobs"], "employed": lab["employed"],
             "wage": lab["wage"], "base_wage": economy.BASE_WAGE, "staffing": round(lab["staffing"], 3), "unemployment": round(lab["unemployment"], 3),
-            "quality": round(lab["quality"], 3)}
+            "quality": round(lab["quality"], 3), "scale": round(lab["scale"], 3)}
 
 
 def quote(db, ph, clk):
@@ -522,7 +533,9 @@ def forecast(db, ph, owner, quotes, labor):
     profit_tax = taxes.profit_tax_due(profit, rates["profit"]) if owner != economy.CITY else 0
     property_tax = taxes.property_tax_due(kinds, rates["property"]) if owner != economy.CITY else 0
     return {"revenue": revenue, "input_cost": inputs, "upkeep": maint + wages, "wages": wages, "interest": interest,
-            "profit": profit, "profit_tax": profit_tax, "property_tax": property_tax, "profit_after_tax": profit - profit_tax - property_tax, "buildings": count}
+            "profit": profit, "profit_tax": profit_tax, "property_tax": property_tax, "profit_after_tax": profit - profit_tax - property_tax,
+            "owner_spend": int(max(0, profit - profit_tax - property_tax) * economy.OWNER_SPEND_SHARE) if economy.OWNER_SPEND_ENABLED and owner != economy.CITY else 0,
+            "owner_spend_share": economy.OWNER_SPEND_SHARE, "buildings": count}
 
 
 def inventory_view(db, ph, owner):
@@ -537,7 +550,10 @@ def reports(db, ph, owner, limit=6):
     rows = db.execute(_q("SELECT month_index,revenue,input_cost,upkeep,profit,buildings FROM company_reports WHERE owner=%s ORDER BY month_index DESC LIMIT %s", ph),
                       (owner, limit)).fetchall()
     paid = taxes.last_taxes(db, ph, owner, limit)
-    return [{"month_index": m, "revenue": r, "input_cost": i, "upkeep": u, "profit": p, "buildings": b, "tax": paid.get(int(m), {}).get("paid", 0)} for m, r, i, u, p, b in rows]
+    import owner_spend
+    spent = owner_spend.last_for(db, ph, owner, limit)
+    return [{"month_index": m, "revenue": r, "input_cost": i, "upkeep": u, "profit": p, "buildings": b,
+             "tax": paid.get(int(m), {}).get("paid", 0), "owner_spent": spent.get(int(m), 0)} for m, r, i, u, p, b in rows]
 
 
 def company_view(db, ph, owner):
@@ -615,6 +631,9 @@ def wallet(db, ph, owner, clk, now):
     bal = economy.ensure_wallet(db, ph, owner, now)
     quotes = quote(db, ph, clk)
     labor = labor_view(db, ph, clk)
+    import retail
     return {"ok": True, "balance": bal, "currency": economy.CURRENCY, "transactions": economy.history(db, ph, owner),
             "forecast": forecast(db, ph, owner, quotes, labor), "labor": labor, "reports": reports(db, ph, owner), "month_index": clk["month_index"],
-            "market": quotes, "inventory": inventory_view(db, ph, owner), "holdings": holdings(db, ph, owner), "company": company_view(db, ph, owner), "loan": loan_view(db, ph, owner), "taxes": taxes.view(db, ph)}
+            "market": quotes, "inventory": inventory_view(db, ph, owner), "holdings": holdings(db, ph, owner), "company": company_view(db, ph, owner),
+            "loan": loan_view(db, ph, owner), "taxes": taxes.view(db, ph),
+            "retail": retail.snapshot(db, ph, clk, quotes, labor.get("scale", 1.0))}

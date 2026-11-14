@@ -68,8 +68,16 @@ def choose_kind(persona, wallet, quotes, wage=economy.BASE_WAGE, tax_rates=None)
     if total >= MAX_BUILDINGS:
         return None
     producers = sum(n for k, n in holdings.items() if economy.PRODUCTION.get(k, {}).get("product"))
+    retail = quotes.get("_retail") or {}
+    options = sorted(persona["focus"].items())
+    if int(retail.get("unmet_units", 0)) > 0 and "shop" not in persona["focus"]:
+        options.append(("shop", persona["focus"].get("shop", 1.0)))
     best = None
-    for kind, weight in sorted(persona["focus"].items()):
+    seen = set()
+    for kind, weight in options:
+        if kind in seen or kind not in economy.PRODUCTION:
+            continue
+        seen.add(kind)
         cost = economy.BUILD_COST[kind] + economy.ROAD_CELL_COST * ROAD_ESTIMATE_CELLS
         if wallet["balance"] - cost < RESERVE:
             continue
@@ -78,6 +86,11 @@ def choose_kind(persona, wallet, quotes, wage=economy.BASE_WAGE, tax_rates=None)
             if producers < 2 or holdings.get("warehouse", 0) >= (producers + 2) // 3:
                 continue
             score = weight * 0.05            # only when nothing clearly profitable is available
+        elif spec.get("role") == "retail":
+            profit = _shop_profit(spec, retail, wage, (tax_rates or {}).get("profit", 0.0), (tax_rates or {}).get("property", 0.0), economy.BUILD_COST[kind])
+            if profit is None or profit <= 0 or cost / profit > MAX_PAYBACK_MONTHS:
+                continue
+            score = weight / (cost / profit)
         else:
             profit = _profit(spec, quotes, wage, (tax_rates or {}).get("profit", 0.0), (tax_rates or {}).get("property", 0.0), economy.BUILD_COST[kind])
             if profit is None or profit <= 0 or cost / profit > MAX_PAYBACK_MONTHS:
@@ -86,6 +99,18 @@ def choose_kind(persona, wallet, quotes, wage=economy.BASE_WAGE, tax_rates=None)
         if best is None or score > best[0]:
             best = (score, kind)
     return best[1] if best else None
+
+
+def _shop_profit(spec, retail, wage, profit_tax, property_tax, cost):
+    """Expected margin of one shop that covers part of the unmet consumer demand, or None."""
+    unmet = int(retail.get("unmet_units", 0))
+    price = int(retail.get("unit_price") or 0)
+    if unmet <= 0 or price <= 0:
+        return None
+    units = min(int(spec.get("floor", 0)), unmet)
+    margin = int(units * price * economy.RETAIL_MARKUP / (1.0 + economy.RETAIL_MARKUP))
+    profit = margin - (spec["upkeep"] + spec["jobs"] * wage)
+    return profit - max(profit, 0) * profit_tax - cost * property_tax / 12
 
 
 def _place(owner, month, kind, total, build_fn):
@@ -111,7 +136,10 @@ def act(persona, month, wallet_fn, market_fn, build_fn):
     wallet = wallet_fn(owner)
     market = market_fn()
     t = market.get("taxes", {})
-    kind = choose_kind(persona, wallet, market["products"], market.get("labor", {}).get("wage", economy.BASE_WAGE),
+    products = dict(market.get("products") or {})
+    if market.get("retail"):
+        products["_retail"] = market["retail"]
+    kind = choose_kind(persona, wallet, products, market.get("labor", {}).get("wage", economy.BASE_WAGE),
                        {"profit": t.get("profit_tax", 0.0), "property": t.get("property_tax", 0.0)})
     if kind is None:
         return None
