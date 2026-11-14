@@ -94,6 +94,11 @@ jobs:
         run: |
           set -euo pipefail
           test -s dist/Bashkiria-Honey-Oil-debug.apk
+          latest_sha=$(gh api "repos/$GITHUB_REPOSITORY/commits/main" --jq .sha)
+          if [ "$latest_sha" != "$GITHUB_SHA" ]; then
+            echo "Skipping outdated APK: $GITHUB_SHA is not current main ($latest_sha)"
+            exit 0
+          fi
           (cd dist && sed 's#build/##g' SHA256SUMS | sha256sum -c -)
           if ! gh release view android-test-latest --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
             gh release create android-test-latest --repo "$GITHUB_REPOSITORY" --prerelease --title "Android: latest test APK (not device-tested)" --notes "Automatic debug APK for manual Android installation. Not a production release."
