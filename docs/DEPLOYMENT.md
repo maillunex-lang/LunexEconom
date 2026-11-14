@@ -28,3 +28,21 @@
 ## Откат
 Остановить таймер: `systemctl disable --now lunexeconom-deploy.timer`.
 Восстановить файлы сайта из заранее сделанного архива и перезапустить таймер после устранения причины. Другие службы не затрагиваются.
+
+## Обновление APK через manifest.json (раунд 2)
+
+- Публикация `android-release.yml` принимает только артефакт `lunexeconom-signed-release-candidate`, проверяет SHA-256 из отчёта испытаний и подпись APK; выпускает APK и `build_info.json` в GitHub Release.
+- `ops/deploy.py` читает метаданные версии из `build_info.json` в GitHub Release, проверяет скачанный APK, кладёт его в `/var/www/rikagro-game/lunexeconom/versions/` и атомарно обновляет `updates/manifest.json` (schema 1, version_code, version_name, url, sha256, size). Debug-APK в манифест не попадает. Откат version_code и замена файла при прежнем коде запрещены.
+- Если релиз/метаданные недоступны или проверка не прошла, прежний манифест сохраняется. Внимание: до проверки реального подписанного релиза публикацию нельзя считать испытанной.
+
+### Ручная переустановка deploy.py на VPS (только после отдельного разрешения владельца)
+
+**В этой ветке на VPS ничего не устанавливается.** После успешного CI и слияния, когда владелец разрешит обновление, администратор выполняет вручную:
+
+1. Сверяет `main` с проверенным SHA, сохраняет резервную копию `/opt/lunexeconom-deploy/deploy.py` и текущего `updates/manifest.json` (если существует).
+2. Копирует **именно проверенный** `ops/deploy.py` из репозитория в `/opt/lunexeconom-deploy/deploy.py` через временный файл с атомарной заменой; не изменяет systemd unit/timer, nginx или сервер игры.
+3. Выполняет `python3 -m py_compile /opt/lunexeconom-deploy/deploy.py`, затем разово запускает `systemctl start lunexeconom-deploy.service` в согласованное время.
+4. Проверяет `journalctl -u lunexeconom-deploy.service -n 50 --no-pager`, `https://rikagro.ru/lunexeconom/updates/manifest.json` и совпадение SHA-256 опубликованного APK. Если подписанного релиза ещё нет, старый манифест должен сохраниться.
+5. При ошибке возвращает резервную копию скрипта и манифеста; перезапуск игрового сервера не требуется.
+
+**Важно:** обновление кода в GitHub само по себе не переустанавливает локальную копию `/opt/lunexeconom-deploy/deploy.py`.

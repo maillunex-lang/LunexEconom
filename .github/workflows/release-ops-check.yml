@@ -1,0 +1,59 @@
+name: Release operations safety checks
+on:
+  workflow_dispatch:
+  push:
+    branches: [main, chatgpt/release-ops]
+    paths:
+      - 'ops/**'
+      - 'server/game_server.py'
+      - 'server/test_health_ops.py'
+      - '.github/workflows/release-ops-check.yml'
+  pull_request:
+    paths:
+      - 'ops/**'
+      - '.github/workflows/release-ops-check.yml'
+permissions:
+  contents: read
+jobs:
+  ops-unit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: lunex_test
+          POSTGRES_PASSWORD: ci-only-temporary
+          POSTGRES_DB: lunex_restore_admin
+        ports:
+          - 15551:5432
+        options: >-
+          --health-cmd "pg_isready -U lunex_test -d lunex_restore_admin"
+          --health-interval 5s --health-timeout 3s --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run offline operations tests
+        run: |
+          python3 -m compileall -q ops
+          cd ops
+          python3 -m unittest -v test_deploy test_postgres_restore_drill test_api_load_test
+      - name: Test additive health response
+        run: |
+          python3 -m pip install -q psycopg[binary]
+          cd server
+          python3 -m unittest -v test_health_ops
+      - name: Real PostgreSQL backup restore on disposable CI database
+        env:
+          PGPASSWORD: ci-only-temporary
+        run: |
+          set -euo pipefail
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq postgresql-client
+          export PGHOST=127.0.0.1 PGPORT=15551 PGUSER=lunex_test
+          psql -d lunex_restore_admin -v ON_ERROR_STOP=1 -c 'CREATE TABLE restore_probe (id integer primary key, payload text not null)'
+          psql -d lunex_restore_admin -v ON_ERROR_STOP=1 -c "INSERT INTO restore_probe VALUES (7, 'backup-restored')"
+          pg_dump -Fc -d lunex_restore_admin -f /tmp/lunex-restore-ci.dump
+          createdb lunex_restore_test_ci
+          python3 ops/postgres_restore_drill.py --backup /tmp/lunex-restore-ci.dump --admin-dsn postgresql://lunex_test:ci-only-temporary@127.0.0.1:15551/lunex_restore_admin --target lunex_restore_test_ci
+          test "$(psql -d lunex_restore_test_ci -Atc 'SELECT payload FROM restore_probe WHERE id=7')" = 'backup-restored'
+          dropdb lunex_restore_test_ci

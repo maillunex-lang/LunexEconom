@@ -252,6 +252,25 @@ def chunk(cx,cy):
     items+=[{"x":x,"y":y,"kind":"road_changed","object_id":"","owner":owner} for x,y,owner in rds]
     return 200,{"cx":cx,"cy":cy,"version":row[0] if row else 0,"cells":items}
 
+def health_details():
+    """Additive diagnostics. Preserve legacy /health keys and status code."""
+    details = {"ok": True, "service": "lunexeconom-game", "version": "0.2.0"}
+    commit = os.environ.get("LUNEX_COMMIT_SHA", "").strip()
+    details["commit"] = commit if len(commit) == 40 and all(c in "0123456789abcdef" for c in commit.lower()) else None
+    engine = os.environ.get("LUNEX_DB_ENGINE", "sqlite")
+    try:
+        if engine == "postgres":
+            with postgres_db.connect() as db:
+                db.execute("SELECT 1").fetchone()
+        else:
+            with sqlite_util.open_db(DB) as db:
+                db.execute("SELECT 1").fetchone()
+        details["database"] = {"engine": engine, "status": "ok"}
+    except Exception:
+        # No connection strings, filesystem paths or credentials in health responses.
+        details["database"] = {"engine": engine, "status": "unavailable"}
+    return details
+
 ECONOMY_POST={"/sell":"sell","/loan":"loan","/city/taxes":"city_taxes","/city/build":"city_build","/city/candidacy":"city_candidacy","/city/vote":"city_vote"}
 
 class Handler(BaseHTTPRequestHandler):
@@ -291,7 +310,7 @@ class Handler(BaseHTTPRequestHandler):
         url=urlsplit(self.path)
         if url.path in ("/market","/wallet","/world","/city"):npc_tick()
         if url.path=="/city":return self._send(*city_state(self._identity()))
-        if url.path=="/health":return self._send(200,{"ok":True,"service":"lunexeconom-game","version":"0.2.0"})
+        if url.path=="/health":return self._send(200,health_details())
         if url.path=="/world":
             now_clock=clock_state()
             return self._send(200,{"world_id":"bashkiria-main","month_seconds":now_clock["month_seconds"],"building_types":KINDS,"economy":economy.terms(),"clock":now_clock})
