@@ -264,5 +264,59 @@ class AnnouncementAndAuditTests(AdminBase):
         self.assertEqual(data["audit"], [])
 
 
+class CityGenerationAdminTests(AdminBase):
+    def houses(self):
+        with game_server.connect() as db:
+            return db.execute("SELECT COUNT(*) FROM buildings WHERE kind='house'").fetchone()[0]
+
+    def test_status_lists_all_twenty_cities(self):
+        status, data = self.call("GET", "/admin/cities")
+        self.assertEqual(status, 200)
+        self.assertEqual(len(data["cities"]), 20)
+        self.assertTrue(all(c["houses"] == 0 and not c["seeded"] for c in data["cities"]))
+
+    def test_seeding_is_a_dry_run_unless_explicitly_applied(self):
+        status, data = self.call("POST", "/admin/cities/seed", {"city_id": "ufa"})
+        self.assertEqual((status, data["dry_run"]), (200, True))
+        self.assertEqual(data["cities"][0]["placed"], 25)
+        self.assertEqual(self.houses(), 0)                                  # a plan only: nothing written
+        status, data = self.call("POST", "/admin/cities/seed", {"city_id": "ufa", "dry_run": False})
+        self.assertEqual((status, data["dry_run"]), (200, False))
+        self.assertEqual(self.houses(), 25)
+        _, again = self.call("POST", "/admin/cities/seed", {"city_id": "ufa", "dry_run": False})
+        self.assertEqual(again["cities"][0]["placed"], 0)                    # idempotent
+        self.assertEqual(self.houses(), 25)
+
+    def test_all_cities_and_validation(self):
+        self.assertEqual(self.call("POST", "/admin/cities/seed", {"city_id": "atlantis", "dry_run": False})[0], 400)
+        self.assertEqual(self.call("POST", "/admin/cities/seed", {"dry_run": False})[0], 400)
+        status, data = self.call("POST", "/admin/cities/seed", {"city_id": "all", "dry_run": False})
+        self.assertEqual(status, 200)
+        self.assertEqual(self.houses(), sum(c["placed"] for c in data["cities"]))
+        _, listing = self.call("GET", "/admin/cities")
+        self.assertTrue(all(c["seeded"] for c in listing["cities"]))
+
+    def test_generation_is_audited_and_does_not_touch_money(self):
+        before = self.snapshot()
+        self.call("POST", "/admin/cities/seed", {"city_id": "ufa", "dry_run": False}, headers={"X-Admin-Actor": "ops1"})
+        after = self.snapshot()
+        self.assertEqual(before["wallets"], after["wallets"])
+        self.assertEqual(before["ledger_tx"], after["ledger_tx"])
+        self.assertEqual(before["building_ops"], after["building_ops"])
+        _, audit = self.call("GET", "/admin/audit")
+        self.assertIn(("cities_seed", "ops1"), [(a["action"], a["actor"]) for a in audit["audit"]])
+
+    def test_overview_separates_town_houses_from_company_buildings(self):
+        self.call("POST", "/admin/cities/seed", {"city_id": "ufa", "dry_run": False})
+        _, data = self.call("GET", "/admin/overview")
+        self.assertEqual(data["world"]["town_houses"], 25)
+        self.assertEqual(data["world"]["buildings"], 0)
+
+    def test_the_route_needs_the_admin_token(self):
+        self.assertEqual(self.call("POST", "/admin/cities/seed", {"city_id": "ufa", "dry_run": False}, token="x" * 40)[0], 401)
+        self.assertEqual(self.call("POST", "/admin/cities/seed", {"city_id": "ufa", "dry_run": False}, headers={"X-Real-IP": "203.0.113.1"})[0], 404)
+        self.assertEqual(self.houses(), 0)
+
+
 if __name__ == "__main__":
     unittest.main()

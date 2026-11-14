@@ -436,9 +436,12 @@ def step_month(db, ph, month, now):
     health = 0.0 if _arrears(_status(db, ph, economy.CITY)) > 0 else (1.0 if services <= 0 else min(1.0, city_cash / (2.0 * services)))
     city.update_rating(db, ph, month, quality, lab["unemployment"], health, now)
     city.tally_if_due(db, ph, month, lab["population"], lab["unemployment"], quality, now)
+    next_pop = next_population(population, total_jobs, lab["labor_force"], quality)
     db.execute(_q("INSERT INTO population(month_index,population,labor_force,jobs,wage,staffing_permille,demand_permille,next_population) VALUES(%s,%s,%s,%s,%s,%s,%s,%s) ON CONFLICT(month_index) DO NOTHING", ph),
-               (month, lab["population"], lab["labor_force"], lab["jobs"], lab["wage"], int(staffing * 1000), int(lab["scale"] * 1000),
-                next_population(population, total_jobs, lab["labor_force"], quality)))
+               (month, lab["population"], lab["labor_force"], lab["jobs"], lab["wage"], int(staffing * 1000), int(lab["scale"] * 1000), next_pop))
+    # Once the game city has been generated (docs/CITYGEN.md) its houses follow the population; a no-op before that.
+    import citygen
+    citygen.grow(db, ph, next_pop, now)
 
 
 def _input_fraction(c):

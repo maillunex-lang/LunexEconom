@@ -62,7 +62,7 @@ func _draw() -> void:
                         elif visual == "square":
                             draw_rect(Rect2(p + Vector2(-12,-5), Vector2(24, 11)), Color("#d0c39e"))
                         elif visual == "house":
-                            draw_colored_polygon(PackedVector2Array([p+Vector2(-12,-4),p+Vector2(0,-13),p+Vector2(12,-4),p+Vector2(0,3)]), Color("#b9ab8c"))
+                            pass        # real, server-generated houses replace the flat background houses (docs/CITYGEN.md)
                         elif visual == "industrial":
                             draw_rect(Rect2(p + Vector2(-12, -14), Vector2(22, 13)), Color("#89979c"))
                         if visual != "":
@@ -114,7 +114,28 @@ func _owner_color(owner: String) -> Color:
         value = (value ^ int(byte)) * 16777619 & 0x7fffffff
     return Color.from_hsv(float(value % 360) / 360.0, 0.58, 0.91)
 
+## A small isometric cottage of the generated city. Four of them (one per cell of the 2x2 lot) make a terrace; no owner badge: it is the town's.
+func _draw_house(p: Vector2) -> void:
+    var v: int = posmod(int(round(p.x)) * 31 + int(round(p.y)) * 17, 4)
+    var walls := [Color("#e8dcc0"), Color("#d9cdb0"), Color("#cfd8d4"), Color("#e2cdbd")]
+    var roofs := [Color("#b5533f"), Color("#7e6a55"), Color("#4f6f63"), Color("#9b4a3a")]
+    var wall: Color = walls[v]
+    var roof: Color = roofs[v]
+    var a := Vector2(-11, 0)
+    var b := Vector2(0, 5.5)
+    var c := Vector2(11, 0)
+    var rise := Vector2(0, -8)
+    draw_colored_polygon(PackedVector2Array([p + a, p + b, p + b + rise, p + a + rise]), wall.darkened(0.16))
+    draw_colored_polygon(PackedVector2Array([p + b, p + c, p + c + rise, p + b + rise]), wall)
+    draw_colored_polygon(PackedVector2Array([p + a + rise, p + b + rise, p + c + rise, p + Vector2(0, -15)]), roof)
+    draw_colored_polygon(PackedVector2Array([p + a + rise, p + Vector2(0, -15), p + c + rise]), roof.lightened(0.12))
+    draw_rect(Rect2(p + Vector2(3, -6), Vector2(3, 5)), Color("#5b4636"))
+    draw_rect(Rect2(p + Vector2(-7, -6), Vector2(3, 3)), Color("#a8c5d6"))
+
 func _draw_building(p: Vector2, kind: String, owner: String = "") -> void:
+    if kind == "house":
+        _draw_house(p)
+        return
     if world != null and world.patch_visuals != null:
         var tex: Texture2D = world.patch_visuals.texture_for(kind)
         if tex != null:

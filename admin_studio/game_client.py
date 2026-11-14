@@ -7,8 +7,8 @@ import urllib.request
 
 MAX_RESPONSE = 1024 * 1024
 TIMEOUT = 8
-GET_PATHS = ("/admin/overview", "/admin/players", "/admin/player", "/admin/reports", "/admin/audit")
-POST_PATHS = ("/admin/ban", "/admin/unban", "/admin/report/resolve", "/admin/announce")
+GET_PATHS = ("/admin/overview", "/admin/players", "/admin/player", "/admin/reports", "/admin/audit", "/admin/cities")
+POST_PATHS = ("/admin/ban", "/admin/unban", "/admin/report/resolve", "/admin/announce", "/admin/cities/seed")
 
 
 class GameAdminError(Exception):

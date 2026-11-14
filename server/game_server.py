@@ -20,6 +20,7 @@ import contracts
 import stats
 import social
 import admin_api
+import citygen
 if os.environ.get('LUNEX_DB_ENGINE') == 'postgres':
     import postgres_world
     import postgres_db
@@ -52,6 +53,7 @@ def _prepare(db):
     for statement in economy.SCHEMA + clock.SCHEMA + social.SCHEMA:
         db.execute(statement)
     admin_api.ensure(db, "?")
+    citygen.ensure(db, "?")
     db.commit()
 
 

@@ -84,8 +84,35 @@
     d.audit.forEach(a => list.append(node("article", when(a.at) + " · " + a.actor + " · " + a.action + " · " + a.target + " · " + a.detail + " · " + a.ip)));
   }
 
+  async function loadCities() {
+    const d = await api("/api/game/cities");
+    const list = $g("citylist"); list.replaceChildren();
+    d.cities.forEach(c => {
+      const row = node("article");
+      row.append(node("strong", c.name), node("span", " · домов " + c.houses + " из " + c.target + " · мест по плану " + c.plan_size + (c.seeded ? " · сгенерирован" : " · не генерировался")));
+      const go = node("button", "Сгенерировать"); go.type = "button";
+      go.onclick = () => seedOne(c.city_id, c.name);
+      row.append(go); list.append(row);
+    });
+  }
+
+  async function seedCities(which, label, dry) {
+    try {
+      const real = dry === false;
+      if (real && !window.confirm("Создать дома в «" + label + "»? Это изменит игровой мир (деньги и экономика не затрагиваются).")) return;
+      const r = await api("/api/game/cities/seed", { method: "POST", body: JSON.stringify({ city_id: which, dry_run: !real }) });
+      const placed = r.cities.reduce((a, c) => a + c.placed, 0);
+      say("citiesmessage", (real ? "Создано домов: " : "План (ничего не записано): будет создано домов: ") + placed + " в городах: " + r.cities.filter(c => c.placed > 0).length);
+      if (real) { await loadCities(); await loadOverview(); await loadAudit(); }
+    } catch (e) { say("citiesmessage", "Ошибка: " + reason(e), true); }
+  }
+  $g("citiesplan").onclick = () => seedCities("all", "все города", true);
+  $g("citiesseed").onclick = () => seedCities("all", "все города", false);
+  // single-city buttons always apply for real (after confirmation); the plan button above never writes
+  async function seedOne(id, name) { await seedCities(id, name, false); }
+
   async function refreshGame() {
-    try { await Promise.all([loadOverview(), loadPlayers(), loadReports(), loadAudit()]); say("gamemessage", "Обновлено " + new Date().toLocaleTimeString("ru-RU")); }
+    try { await Promise.all([loadOverview(), loadPlayers(), loadReports(), loadAudit(), loadCities()]); say("gamemessage", "Обновлено " + new Date().toLocaleTimeString("ru-RU")); }
     catch (e) { say("gamemessage", "Игровой сервер: " + reason(e), true); }
   }
 

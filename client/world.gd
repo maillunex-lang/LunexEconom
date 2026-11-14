@@ -8,6 +8,8 @@ const PLANNER_SCRIPT = preload("res://construction_planner.gd")
 var planner = PLANNER_SCRIPT.new()
 const PATCH_VISUALS_SCRIPT = preload("res://patch_visuals.gd")
 var patch_visuals: Node
+## Every building kind a server snapshot or event may carry ("house" = a city-generated dwelling, never player-built).
+const BUILDING_KINDS := ["farm", "mine", "factory", "warehouse", "shop", "school", "hospital", "park", "house"]
 
 var build_type := ""
 var building_records: Dictionary = {}
@@ -69,7 +71,7 @@ func cell_kind(x: int, y: int) -> int:
     if server_cells.has(coord):
         var kind := str(server_cells[coord].get("kind", ""))
         if kind == "road_changed": return 3
-        if kind == "building_created" or kind in ["farm", "mine", "factory", "warehouse", "shop", "school", "hospital", "park"]: return 6
+        if kind == "building_created" or kind in BUILDING_KINDS: return 6
         if kind == "building_removed": return 0
     # Integer-only hash: independent of call order and frame rate.
     var h := (x * 73856093) ^ (y * 19349663) ^ SEED
@@ -85,7 +87,7 @@ func cell_kind(x: int, y: int) -> int:
     return n % 3
 
 func _is_building_event(kind: String) -> bool:
-    return kind == "building_created" or kind in ["farm", "mine", "factory", "warehouse", "shop", "school", "hospital", "park"]
+    return kind == "building_created" or kind in BUILDING_KINDS
 
 func _set_server_road(coord: Vector2i, present: bool) -> void:
     if present: roads.segments[coord] = true
@@ -97,7 +99,7 @@ func _set_server_road(coord: Vector2i, present: bool) -> void:
 func apply_server_event(event: Dictionary) -> void:
     var kind := str(event.get("kind", ""))
     if not (_is_building_event(kind) or kind in ["building_removed", "road_changed"]): return
-    var building_kind := str(event.get("building_kind", kind if kind in ["farm", "mine", "factory", "warehouse", "shop", "school", "hospital", "park"] else ""))
+    var building_kind := str(event.get("building_kind", kind if kind in BUILDING_KINDS else ""))
     for cell in event.get("cells", []):
         if not cell is Array or cell.size() != 2: continue
         var coord := Vector2i(int(cell[0]), int(cell[1]))
@@ -120,7 +122,7 @@ func apply_chunk_snapshot(coord: Vector2i, cells: Array) -> void:
         if kind == "road_changed":
             roads.segments[c] = true
         else:
-            var bk := str(cell.get("building_kind", kind if kind in ["farm", "mine", "factory", "warehouse", "shop", "school", "hospital", "park"] else ""))
+            var bk := str(cell.get("building_kind", kind if kind in BUILDING_KINDS else ""))
             server_cells[c] = {"kind":"building_created","building_kind":bk,"object_id":cell.get("object_id", ""),"owner":str(cell.get("owner", ""))}
     # Roads on the chunk border change the shape of roads in neighbouring chunks.
     for dx in range(-1, 2):

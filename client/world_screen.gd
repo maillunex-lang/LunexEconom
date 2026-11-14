@@ -881,7 +881,7 @@ var city_mode := false
 const LOAN_STEP := 100000
 var seen_bankruptcy_month = null
 var seen_missed := 0
-const KIND_NAMES := {"farm": "Ферма", "mine": "Шахта", "factory": "Завод", "warehouse": "Склад", "shop": "Магазин", "school": "Школа", "hospital": "Больница", "park": "Парк"}
+const KIND_NAMES := {"house": "Жилой дом", "farm": "Ферма", "mine": "Шахта", "factory": "Завод", "warehouse": "Склад", "shop": "Магазин", "school": "Школа", "hospital": "Больница", "park": "Парк"}
 var production := {"farm": {"product_id": "honey", "output": 100, "unit_price": 200, "upkeep": 2000, "jobs": 4}, "mine": {"product_id": "oil", "output": 40, "unit_price": 1500, "upkeep": 15000, "jobs": 10}, "factory": {"product_id": "goods", "output": 60, "unit_price": 2000, "upkeep": 26000, "jobs": 20, "inputs": {"oil": 10, "honey": 20}}, "warehouse": {"product_id": "", "output": 0, "unit_price": 0, "upkeep": 2000, "jobs": 2, "capacity": 400}, "shop": {"product_id": "", "output": 0, "unit_price": 0, "upkeep": 3000, "jobs": 5, "retail_hint": 18000}}
 var retail_view: Dictionary = {}
 
@@ -1167,6 +1167,13 @@ func _owner_name(owner: String) -> String:
     for c in competitors:
         if c is Dictionary and str(c.get("owner", "")) == owner: return str(c.get("name", owner))
     if owner == "city": return "Город"
+    if owner.begins_with("town:"):                              # generated houses: "Город Уфа"
+        var town_id := owner.trim_prefix("town:")
+        if regional_map_panel != null and regional_map_panel.loaded:
+            for city_ref in regional_map_panel.cities:
+                if city_ref is Dictionary and str(city_ref.get("id", "")) == town_id:
+                    return "город " + str(city_ref.get("name", town_id))
+        return "город"
     for c in _election().get("candidates", []):
         if c is Dictionary and str(c.get("owner", "")) == owner: return str(c.get("name", owner))
     return owner.trim_prefix("npc:") if owner.begins_with("npc:") else owner

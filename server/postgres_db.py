@@ -115,4 +115,6 @@ def init():
         social.ensure(db, "%s")
         import admin_api
         admin_api.ensure(db, "%s", postgres=True)
+        import citygen
+        citygen.ensure(db, "%s")
         db.commit()

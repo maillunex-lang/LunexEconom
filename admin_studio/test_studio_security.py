@@ -261,6 +261,14 @@ class GameRelayTests(Base):
         self.assertEqual(self.call("POST", "/api/game/wipe-everything", {})[0], 404)
         self.assertEqual(len(Fake.seen), before)                         # nothing reached the game server
 
+    def test_city_generation_routes_are_relayed(self):
+        self.start(None, GameClient(self.upstream, GAME_TOKEN))
+        self.assertEqual(self.call("GET", "/api/game/cities")[0], 200)
+        self.assertEqual(Fake.seen[-1][1], "/admin/cities")
+        self.assertEqual(self.call("POST", "/api/game/cities/seed", {"city_id": "ufa", "dry_run": True})[0], 200)
+        self.assertEqual((Fake.seen[-1][1], Fake.seen[-1][3]["city_id"]), ("/admin/cities/seed", "ufa"))
+        self.assertEqual(self.call("GET", "/api/game/cities/seed")[0], 404)         # not a readable route
+
     def test_not_configured_and_unreachable_upstream(self):
         self.start(None, GameClient(self.upstream, ""))
         self.assertEqual(self.call("GET", "/api/game/overview")[0], 503)

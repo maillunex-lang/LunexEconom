@@ -90,7 +90,8 @@ def token_ok(authorization, now):
 
 # ---------- helpers ----------
 def _scalar(db, sql, params=()):
-    row = db.execute(sql, params).fetchone()
+    # No parameters -> no placeholder processing: a literal % (LIKE 'town:%') must reach psycopg untouched.
+    row = (db.execute(sql, params) if params else db.execute(sql)).fetchone()
     return 0 if row is None or row[0] is None else row[0]
 
 
@@ -129,7 +130,8 @@ def overview(db, ph, now, extra):
         "ok": True, "now": now, "month_index": month, "month_seconds": month_seconds,
         "accounts": extra,
         "world": {
-            "buildings": int(_scalar(db, "SELECT COUNT(*) FROM buildings")),
+            "buildings": int(_scalar(db, "SELECT COUNT(*) FROM buildings WHERE owner NOT LIKE 'town:%'")),
+            "town_houses": int(_scalar(db, "SELECT COUNT(*) FROM buildings WHERE owner LIKE 'town:%'")),
             "companies": int(_scalar(db, "SELECT COUNT(DISTINCT owner) FROM building_ops")),
             "roads": int(_scalar(db, "SELECT COUNT(*) FROM roads")),
         },
@@ -239,6 +241,21 @@ def set_announcement(db, ph, payload, actor, ip, now):
     return 200, {"ok": True, "text": text}
 
 
+def seed_cities(db, ph, payload, actor, ip, now):
+    """Initial city generation (docs/CITYGEN.md). `city_id`: an id or "all"; `dry_run` defaults to TRUE so a plan is always seen first."""
+    import citygen
+    import geo
+    which = payload.get("city_id")
+    known = {c["id"] for c in geo.cities()}
+    if which != "all" and which not in known:
+        return 400, {"error": "unknown_city"}
+    dry = payload.get("dry_run", True) is not False
+    result = citygen.seed(db, ph, "all" if which == "all" else [which], now, dry_run=dry)
+    if not dry:
+        audit(db, ph, actor, "cities_seed", str(which), "houses placed: %d" % sum(r["placed"] for r in result), ip, now)
+    return 200, {"ok": True, "dry_run": dry, "cities": result}
+
+
 # ---------- dispatch ----------
 def handle(db, ph, method, path, args, payload, ctx, now, auth):
     """One administrative request. `auth` is the accounts module (users, bans). Returns (status, result)."""
@@ -263,6 +280,9 @@ def handle(db, ph, method, path, args, payload, ctx, now, auth):
             return reports(db, ph, "all" if args.get("status") == "all" else "open")
         if path == "/admin/audit":
             return audit_view(db, ph)
+        if path == "/admin/cities":
+            import citygen
+            return 200, {"ok": True, "cities": citygen.status(db, ph)}
         return 404, {"error": "not_found"}
     if path == "/admin/ban":
         status, result = auth.ban_user(payload.get("username"), payload.get("reason"), payload.get("days"), actor)
@@ -278,4 +298,6 @@ def handle(db, ph, method, path, args, payload, ctx, now, auth):
         return resolve_report(db, ph, payload, actor, ip, now)
     if path == "/admin/announce":
         return set_announcement(db, ph, payload, actor, ip, now)
+    if path == "/admin/cities/seed":
+        return seed_cities(db, ph, payload, actor, ip, now)
     return 404, {"error": "not_found"}
