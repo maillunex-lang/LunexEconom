@@ -1,7 +1,7 @@
 extends Control
 @onready var world = $World
 @onready var hud: MarginContainer = $HUD
-@onready var info: Label = $UIOverlay/HUD/Top/Info
+@onready var info: Label = $HUD/Top/Info
 func _ready() -> void:
     var overlay := CanvasLayer.new()
     overlay.name = "UIOverlay"
