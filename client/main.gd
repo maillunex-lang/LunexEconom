@@ -133,7 +133,7 @@ func _show_register() -> void:
     _panel()
     username = _field("Имя игрока (3–24 символа)")
     email = _field("Электронная почта")
-    password = _field("Пароль (минимум 10 символов)", true)
+    password = _field("Пароль (минимум 4 символа)", true)
     _button("ЗАРЕГИСТРИРОВАТЬСЯ", func(): _submit_register())
     _button("НАЗАД", func(): _show_home())
     _layout()
