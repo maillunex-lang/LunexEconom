@@ -94,6 +94,9 @@ func _on_update_state(message: String, can_install: bool) -> void:
     $HUD/Top/Update.text = "Установить" if can_install else "Обновить"
     $HUD/Top/Update.tooltip_text = message
     $HUD/Top/UpdateStatus.text = message
+var section_panel: PanelContainer
+var section_title: Label
+var section_body: Label
 var catalog_panel: PanelContainer
 var placement_panel: PanelContainer
 var details_panel: PanelContainer
@@ -144,10 +147,10 @@ func _setup_build_toolbar() -> void:
     build_toolbar.offset_top = -94
     build_toolbar.offset_bottom = -20
     build_toolbar.add_child(_ui_button("Строить", _open_catalog))
-    build_toolbar.add_child(_ui_button("Дороги", func(): info.text = "Выберите участок для дороги"))
-    build_toolbar.add_child(_ui_button("Экономика", func(): info.text = "Экономика: в разработке"))
-    build_toolbar.add_child(_ui_button("Логистика", func(): info.text = "Логистика: в разработке"))
-    build_toolbar.add_child(_ui_button("Меню", func(): info.text = "Меню: в разработке"))
+    build_toolbar.add_child(_ui_button("Дороги", func(): _open_section("Дороги")))
+    build_toolbar.add_child(_ui_button("Экономика", func(): _open_section("Экономика")))
+    build_toolbar.add_child(_ui_button("Логистика", func(): _open_section("Логистика")))
+    build_toolbar.add_child(_ui_button("Меню", func(): _open_section("Меню")))
     for child in build_toolbar.get_children():
         child.size_flags_horizontal = Control.SIZE_EXPAND_FILL
     build_toolbar.add_theme_constant_override("separation", 6)
@@ -192,6 +195,25 @@ func _setup_ui_v1() -> void:
     details_content.add_child(title)
     details_content.add_child(_ui_button("Закрыть", func(): details_panel.hide()))
     details_panel.hide()
+    section_panel = PanelContainer.new()
+    section_panel.name = "SectionPanel"
+    section_panel.add_theme_stylebox_override("panel", _style())
+    add_child(section_panel)
+    var section_content := VBoxContainer.new()
+    section_panel.add_child(section_content)
+    var header := HBoxContainer.new()
+    section_content.add_child(header)
+    section_title = Label.new()
+    section_title.add_theme_font_size_override("font_size", 23)
+    section_title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+    header.add_child(section_title)
+    header.add_child(_ui_button("Закрыть ×", func(): section_panel.hide(), 120))
+    section_body = Label.new()
+    section_body.add_theme_font_size_override("font_size", 18)
+    section_body.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+    section_body.custom_minimum_size = Vector2(360, 105)
+    section_content.add_child(section_body)
+    section_panel.hide()
     get_viewport().size_changed.connect(_layout_ui_v1)
     call_deferred("_layout_ui_v1")
 
@@ -206,10 +228,16 @@ func _layout_ui_v1(override_size: Vector2 = Vector2.ZERO) -> void:
     var safe := DisplayServer.get_display_safe_area()
     if OS.has_feature("mobile") and screen.y > 0 and safe.size.y > 0:
         bottom_safe = maxf(20.0, (screen.y - safe.end.y) * size.y / screen.y + 12.0)
-    var nav_top := size.y - bottom_safe - 68.0
+    build_toolbar.set_anchors_preset(Control.PRESET_TOP_LEFT)
+    build_toolbar.position = Vector2(maxf(18, (size.x - minf(size.x - 36, 830)) * 0.5), size.y - bottom_safe - 70)
+    build_toolbar.size = Vector2(minf(size.x - 36, 830), 62)
+    var nav_top := build_toolbar.position.y
     catalog_panel.position = Vector2((size.x - catalog_panel.size.x) * 0.5, maxf(65, nav_top - catalog_panel.size.y - 12))
     placement_panel.position = Vector2((size.x - placement_panel.size.x) * 0.5, maxf(65, nav_top - placement_panel.size.y - 12))
     details_panel.position = Vector2(size.x - details_panel.size.x - 22, maxf(85, (size.y - details_panel.size.y) * 0.5))
+    if section_panel != null:
+        section_panel.size.x = minf(500, usable_width)
+        section_panel.position = Vector2((size.x - section_panel.size.x) * 0.5, maxf(65, nav_top - section_panel.size.y - 12))
 
 func _setup_top_hud() -> void:
     var top: HBoxContainer = $HUD/Top
@@ -234,11 +262,30 @@ func _show_panel(panel: Control) -> void:
     var tween := create_tween()
     tween.tween_property(panel, "modulate:a", 1.0, 0.2).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
 
+func _open_section(section: String) -> void:
+    world.cancel_build()
+    catalog_panel.hide()
+    placement_panel.hide()
+    details_panel.hide()
+    section_title.text = section
+    match section:
+        "Дороги":
+            section_body.text = "Выберите клетку на карте и нажмите «Проложить дорогу». Подключение проверяется по дорожной сети."
+        "Экономика":
+            section_body.text = "Экономика предприятия пока не подключена. Баланс и производственные показатели появятся после реализации серверной экономики."
+        "Логистика":
+            section_body.text = "Маршруты поставок и транспортные задания находятся в разработке. Дорожная сеть доступна на карте."
+        "Меню":
+            section_body.text = "Башкирия: Мёд и Нефть\nВерсия интерфейса 1.0\nУправление: одним пальцем двигайте карту, двумя изменяйте масштаб."
+    _show_panel(section_panel)
+    call_deferred("_layout_ui_v1")
+
 func _open_catalog() -> void:
     world.cancel_build()
     _show_panel(catalog_panel)
     placement_panel.hide()
     details_panel.hide()
+    section_panel.hide()
     call_deferred("_layout_ui_v1")
 
 func _choose_ui_build(kind: String) -> void:
@@ -283,7 +330,7 @@ func _place_building() -> void:
 
 func is_world_ui_point(point: Vector2) -> bool:
     if $HUD/Top.get_global_rect().has_point(point): return true
-    for panel in [build_toolbar, catalog_panel, placement_panel, details_panel]:
+    for panel in [build_toolbar, catalog_panel, placement_panel, details_panel, section_panel]:
         if panel != null and panel.visible and panel.get_global_rect().has_point(point):
             return true
     return false
@@ -293,7 +340,7 @@ func is_world_ui_point(point: Vector2) -> bool:
 var ui_touch_buttons: Dictionary = {}
 var ui_mouse_button: Button = null
 func _hit_ui_button(point: Vector2) -> Button:
-    for panel in [catalog_panel, placement_panel, details_panel, build_toolbar]:
+    for panel in [catalog_panel, placement_panel, details_panel, section_panel, build_toolbar]:
         if panel == null or not panel.visible or not panel.get_global_rect().has_point(point):
             continue
         var stack: Array[Node] = [panel]
