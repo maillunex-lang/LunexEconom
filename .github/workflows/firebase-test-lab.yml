@@ -1,0 +1,14 @@
+name: Firebase Test Lab (disabled until explicit cost approval)
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  firebase-test-lab:
+    # Intentionally disabled. A future explicit user approval and billing review
+    # are required before enabling this job.
+    if: ${{ false }}
+    runs-on: ubuntu-latest
+    environment: firebase-test-lab
+    steps:
+      - run: echo "Firebase cloud tests require explicit billing approval and credentials."
