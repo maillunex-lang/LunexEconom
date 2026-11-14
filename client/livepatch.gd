@@ -10,6 +10,48 @@ const MAX_IMAGE := 8 * 1024 * 1024
 const MAX_ASSETS := 300
 var busy := false
 
+func current_revision() -> int:
+    var path := "user://livepatch/manifest.json"
+    if not FileAccess.file_exists(path):
+        return 0
+    var file := FileAccess.open(path, FileAccess.READ)
+    if file == null:
+        return 0
+    var data = JSON.parse_string(file.get_as_text())
+    if not _valid_manifest(data):
+        return 0
+    return int(data["revision"])
+
+func restore_previous() -> bool:
+    if busy:
+        return false
+    var directory := "user://livepatch/"
+    var previous := directory + "manifest.previous.json"
+    if not FileAccess.file_exists(previous):
+        return false
+    var file := FileAccess.open(previous, FileAccess.READ)
+    if file == null:
+        return false
+    var data = JSON.parse_string(file.get_as_text())
+    if not _valid_manifest(data):
+        return false
+    for asset in data["assets"]:
+        var path := directory + str(asset["sha256"]) + "." + str(asset["extension"])
+        if not FileAccess.file_exists(path) or FileAccess.get_sha256(path) != str(asset["sha256"]):
+            return false
+    var current := directory + "manifest.json"
+    var temporary := directory + "manifest.restore.tmp"
+    var output := FileAccess.open(temporary, FileAccess.WRITE)
+    if output == null:
+        return false
+    output.store_string(JSON.stringify(data))
+    output.close()
+    if DirAccess.rename_absolute(ProjectSettings.globalize_path(temporary), ProjectSettings.globalize_path(current)) != OK:
+        return false
+    patch_ready.emit(int(data["revision"]))
+    return true
+
+
 func _valid_asset(item: Variant) -> bool:
     if not item is Dictionary:
         return false
@@ -72,6 +114,9 @@ func check_and_download() -> void:
         patch_failed.emit("Некорректный манифест")
         return
     var revision := int(data["revision"])
+    if revision <= current_revision():
+        busy = false
+        return
     var directory := "user://livepatch/"
     DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path(directory))
     var all_ok := true
@@ -105,6 +150,24 @@ func check_and_download() -> void:
         if DirAccess.rename_absolute(ProjectSettings.globalize_path(temp), ProjectSettings.globalize_path(path)) != OK:
             all_ok = false
             break
+    if all_ok:
+        var current := directory + "manifest.json"
+        if FileAccess.file_exists(current):
+            var old := FileAccess.open(current, FileAccess.READ)
+            if old == null:
+                all_ok = false
+            else:
+                var old_data = JSON.parse_string(old.get_as_text())
+                if not _valid_manifest(old_data):
+                    all_ok = false
+                else:
+                    var previous := FileAccess.open(directory + "manifest.previous.json.tmp", FileAccess.WRITE)
+                    if previous == null:
+                        all_ok = false
+                    else:
+                        previous.store_string(JSON.stringify(old_data))
+                        previous.close()
+                        all_ok = DirAccess.rename_absolute(ProjectSettings.globalize_path(directory + "manifest.previous.json.tmp"), ProjectSettings.globalize_path(directory + "manifest.previous.json")) == OK
     if all_ok:
         var output := FileAccess.open(directory + "manifest.json.tmp", FileAccess.WRITE)
         if output != null:

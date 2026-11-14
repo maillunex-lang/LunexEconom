@@ -24,3 +24,8 @@ Admin endpoints: GET/POST /api/cities, GET /api/cities/{id}, POST /api/buildings
 
 ### Read-only upstream preview (iteration 3)
 Set LUNEX_WORLD_PREVIEW_UPSTREAM to the trusted, operator-controlled game server origin (default http://127.0.0.1:18767). Authenticated GET /api/preview/chunk?cx=0&cy=0 and POST /api/preview/check with city_id,cx,cy fetch a live /chunk snapshot and flag draft conflicts. This is a best-effort preview, not a placement authorization. Never allow user-defined upstream URLs. In production, use an internal network with explicit network ACLs and no exposure of private game APIs.
+
+### Release history and rollback (iteration 5)
+Admin GET /api/releases lists the 100 latest immutable releases. POST /api/rollback-release with JSON {"revision":1} republishes that historical snapshot as a new revision, after checking that the referenced blobs still exist. No assets or historical records are deleted. Clients never downgrade automatically. Client `restore_previous()` is a manual emergency rollback of the cached manifest after verifying its referenced blobs.
+
+**Do not enable production auto-updates yet:** the transport is HTTPS but the manifest lacks an application-level Ed25519 signature verified against a pinned public key in the APK. A maliciously altered manifest could otherwise direct content replacement. Require signing, trusted-key distribution, staged channels and on-device tests before activation.

@@ -79,6 +79,22 @@ class PatchTests(unittest.TestCase):
         self.assertEqual(json.loads(exported)["mode"], "review_only")
         self.assertEqual(self.request("/api/buildings/remove", "POST", {"city_id":"ufa", "building_id":json.loads(data)["id"]}, True)[0], 200)
 
+    def test_rollback_creates_new_revision(self):
+        self.store.add_asset("farm_1", "agriculture", "Старая", "", "png", PNG)
+        old = self.store.publish()
+        self.store.add_asset("farm_1", "agriculture", "Новая", "", "png", PNG)
+        self.store.publish()
+        restored = self.store.rollback(1)
+        self.assertEqual(restored["revision"], 3)
+        self.assertEqual(restored["assets"][0]["title"], "Старая")
+        self.assertEqual(self.store.manifest(2)["assets"][0]["title"], "Новая")
+        self.assertEqual(len(self.store.releases()), 3)
+        self.assertEqual(self.request("/api/releases", auth=True)[0], 200)
+        code, response = self.request("/api/rollback-release", "POST", {"revision":2}, True)
+        self.assertEqual(code, 200)
+        self.assertEqual(json.loads(response)["revision"], 4)
+        self.assertEqual(self.request("/api/rollback-release", "POST", {"revision":999}, True)[0], 400)
+
     def test_revision_snapshot(self):
         self.store.add_asset("farm_1", "agriculture", "A", "", "png", PNG)
         one = self.store.publish()

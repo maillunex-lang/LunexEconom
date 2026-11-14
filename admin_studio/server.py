@@ -87,6 +87,8 @@ def handler_factory(store, token):
                     return self.send(200, drafts.city(city_id))
                 except ValueError:
                     return self.send(404, {"error": "city_not_found"})
+            if path == "/api/releases":
+                return self.send(200, {"releases": store.releases()})
             if path == "/api/assets":
                 return self.send(200, {"assets": store.list_assets()})
             if path == "/api/audit":
@@ -116,6 +118,8 @@ def handler_factory(store, token):
                     return self.send(200, drafts.forecast(body["city_id"], body["months"]))
                 if path == "/api/export-city":
                     return self.send(200, drafts.export(body["city_id"]))
+                if path == "/api/rollback-release":
+                    return self.send(200, store.rollback(body["revision"]))
                 if path == "/api/publish":
                     return self.send(200, store.publish())
                 if path == "/api/assets":

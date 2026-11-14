@@ -79,8 +79,10 @@ class Store:
 
     def publish(self):
         with LOCK, self.connect() as db:
-            assets = [dict(row) for row in db.execute("SELECT * FROM assets ORDER BY id")]
             db.execute("BEGIN IMMEDIATE")
+            assets = [dict(row) for row in db.execute("SELECT * FROM assets ORDER BY id")]
+            if len(assets) > 300:
+                raise ValueError("asset_limit_exceeded")
             revision = int(db.execute("SELECT COALESCE(MAX(revision),0)+1 FROM releases").fetchone()[0])
             manifest = {"schema": 1, "revision": revision, "assets": [
                 {"id": a["id"], "category": a["category"], "title": a["title"],
@@ -92,6 +94,34 @@ class Store:
             db.execute("INSERT INTO audit(at,action,subject,details) VALUES(?,?,?,?)",
                        (int(time.time()), "publish", str(revision), str(len(assets))))
             return manifest
+
+    def rollback(self, target_revision):
+        """Reissue a historical snapshot as a NEW monotonic revision; never mutate history."""
+        if type(target_revision) is not int or target_revision < 1:
+            raise ValueError("invalid_revision")
+        with LOCK, self.connect() as db:
+            db.execute("BEGIN IMMEDIATE")
+            row = db.execute("SELECT manifest FROM releases WHERE revision=?", (target_revision,)).fetchone()
+            if row is None:
+                raise ValueError("revision_not_found")
+            snapshot = json.loads(row[0])
+            for asset in snapshot["assets"]:
+                name = asset["sha256"] + "." + asset["extension"]
+                if not (self.root / "blobs" / name).is_file():
+                    raise ValueError("missing_release_blob")
+            revision = db.execute("SELECT COALESCE(MAX(revision),0)+1 FROM releases").fetchone()[0]
+            snapshot["revision"] = revision
+            db.execute("INSERT INTO releases(revision,created,manifest) VALUES(?,?,?)",
+                       (revision, int(time.time()), json.dumps(snapshot, ensure_ascii=False)))
+            db.execute("INSERT INTO audit(at,action,subject,details) VALUES(?,?,?,?)",
+                       (int(time.time()), "rollback_release", str(revision), str(target_revision)))
+            return snapshot
+
+    def releases(self):
+        with self.connect() as db:
+            return [{"revision": row["revision"], "created": row["created"],
+                     "assets": len(json.loads(row["manifest"])["assets"])}
+                    for row in db.execute("SELECT revision,created,manifest FROM releases ORDER BY revision DESC LIMIT 100")]
 
     def manifest(self, revision=None):
         with self.connect() as db:
