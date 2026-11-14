@@ -17,7 +17,9 @@ class PostgresAdminTests(unittest.TestCase):
     def setUp(self):
         postgres_db.init()
         with postgres_db.connect() as db:
-            db.execute("TRUNCATE TABLE adm_audit,adm_announcement,adm_report_state,adm_bans,soc_reports,sessions,users,auth_attempts RESTART IDENTITY CASCADE")
+            # Other PostgreSQL test modules leave rows behind (the CI runs them in one database, in a fixed order): start from nothing.
+            names = [r[0] for r in db.execute("SELECT tablename FROM pg_tables WHERE schemaname='public'").fetchall()]
+            db.execute("TRUNCATE TABLE " + ",".join(sorted(n for n in names if n != "schema_migrations")) + " RESTART IDENTITY CASCADE")
         self.name = "adm" + uuid.uuid4().hex[:8]
         code, data = auth.register({"username": self.name, "email": self.name + "@example.test", "password": "safe-password-1"}, "pg-" + self.name)
         self.assertIn(code, (200, 201), data)
