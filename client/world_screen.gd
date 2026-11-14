@@ -726,7 +726,7 @@ func show_build_preview(result: Dictionary) -> void:
                 "mine", "factory": legacy_area = 6
                 "warehouse": legacy_area = 9
             var new_area := world.build_square_size * world.build_square_size
-            base_cost = (base_cost * new_area + legacy_area - 1) / legacy_area
+            base_cost = int((base_cost * new_area + legacy_area - 1) / legacy_area)
         var total := base_cost + road_len * road_cell_cost
         if city_mode:
             info.text = "Из бюджета: %s (в казне %s)" % [_fmt_money(total), _fmt_money(int(city.get("budget", 0)))]
