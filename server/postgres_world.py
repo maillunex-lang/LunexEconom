@@ -234,3 +234,37 @@ def stats_feed(owner, after=0):
     with postgres_db.connect() as db:
         db.execute("SET TRANSACTION READ ONLY")
         return stats.feed(db, "%s", owner, after)
+
+
+def soc_post(owner, path, payload, client):
+    import social
+    with postgres_db.connect() as db:
+        db.execute("SELECT pg_advisory_xact_lock(20261114)")
+        now = int(time.time())
+        clk = clock.state(db, "%s", now)
+        production.advance(db, "%s", clk, now)
+        social.distribute_pending(db, "%s", clk, now)
+        return social.perform_post(db, "%s", owner, path, payload, client, now, clk)
+
+
+def soc_get(owner, path, query):
+    import clock as game_clock
+    import social
+    args = {}
+    for key, values in query.items():
+        if len(values) != 1:
+            return 400, {"error": "invalid_query"}
+        args[key] = values[0]
+    with postgres_db.connect() as db:
+        if path in social.READ_ONLY:
+            db.execute("SET TRANSACTION READ ONLY")
+            row = db.execute("SELECT epoch,month_seconds,base_index FROM world_clock WHERE id=1").fetchone()
+            if row is not None:
+                args["month"] = str(game_clock.month_index((int(row[0]), int(row[1]), int(row[2])), int(time.time())))
+            return social.perform_get(db, "%s", owner, path, args, None)
+        db.execute("SELECT pg_advisory_xact_lock(20261114)")
+        now = int(time.time())
+        clk = clock.state(db, "%s", now)
+        production.advance(db, "%s", clk, now)
+        social.distribute_pending(db, "%s", clk, now)
+        return social.perform_get(db, "%s", owner, path, args, clk)

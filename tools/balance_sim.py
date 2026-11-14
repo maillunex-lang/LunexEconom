@@ -31,8 +31,8 @@ import roads  # noqa: E402
 
 T0 = 1_800_000_000
 CYCLE = ("farm", "mine", "factory", "warehouse")
-STRATEGIES = ("rotate", "hoard", "loan", "idle")
-_PREFIX = {"rotate": "rot", "hoard": "hor", "loan": "lon", "idle": "idl"}
+STRATEGIES = ("rotate", "hoard", "loan", "idle", "contract")
+_PREFIX = {"rotate": "rot", "hoard": "hor", "loan": "lon", "idle": "idl", "contract": "con"}
 
 # Целые метрики месяца. Время шага сюда не входит: оно не детерминировано.
 METRIC_FIELDS = (
@@ -145,7 +145,30 @@ class Bot:
             if world.try_build(self.name, kind, month):
                 self.built += 1
             return
+        if self.strategy == "contract":
+            self._contract(world, month)
+            return
         raise ValueError("неизвестная стратегия: %s" % self.strategy)
+
+    def _contract(self, world, month):
+        """Чётный бот выставляет мёд, нечётный принимает первое чужое предложение. Деньги и товар идут обычным месячным шагом."""
+        if self.index % 2 == 0:
+            if month % 6 != 0:
+                return
+            game_server.contracts_offer(self.name, {
+                "product": "honey", "qty": 5, "price": 200, "term_months": 2, "penalty": 10,
+                "request_id": world.request_id(self.name, month, "offer"),
+            })
+            return
+        state = game_server.contracts_state(self.name)[1]
+        for offer in state.get("offers") or []:
+            if offer.get("supplier") == self.name:
+                continue
+            game_server.contracts_accept(self.name, {
+                "offer_id": offer["id"],
+                "request_id": world.request_id(self.name, month, "accept"),
+            })
+            return
 
 
 class World:
@@ -914,6 +937,7 @@ def _suite(args):
         ("bots_72", dict(months=72, seed=20261114, strategies=("rotate", "hoard", "loan", "idle"), npc_on=True)),
         ("expand_48", dict(months=48, seed=7, strategies=("rotate",) * 6, npc_on=True, build_cap=10)),
         ("credit_60", dict(months=60, seed=3, strategies=("loan",) * 3, npc_on=True, build_cap=6)),
+        ("contracts_24", dict(months=24, seed=11, strategies=("contract", "contract"), npc_on=True, build_cap=4)),
     ]
     runs = []
     for name, spec in specs:

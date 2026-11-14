@@ -107,4 +107,6 @@ def init():
         for statement in SCHEMA.split(";"):
             if statement.strip():
                 db.execute(statement)
+        import social
+        social.ensure(db, "%s")
         db.commit()
