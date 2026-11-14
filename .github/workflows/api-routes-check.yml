@@ -1,0 +1,16 @@
+name: Public API routes check
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  check-public-routes:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Probe GET and safe empty-body POST routes
+        run: python3 ops/check_api_routes.py --base-url https://rikagro.ru/lunexeconom/api

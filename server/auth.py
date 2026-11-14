@@ -8,6 +8,7 @@ import sqlite3
 import psycopg
 import postgres_db
 import sqlite_util
+import ops_email
 import threading
 import time
 import smtplib
@@ -176,6 +177,12 @@ def _send_account_email(address, subject, message):
     """
     if os.environ.get("LUNEX_EMAIL_PROVIDER") == "resend":
         return _send_resend_email(address, subject, message)
+    # New environment-only SMTP configuration takes precedence.
+    if os.environ.get("LUNEX_SMTP_PASSWORD") or (
+        os.environ.get("LUNEX_SMTP_HOST") in ("localhost", "127.0.0.1", "::1")
+        and os.environ.get("LUNEX_SMTP_TLS") == "off"
+    ):
+        return ops_email.send_smtp(address, subject, message)
     host = os.environ.get("LUNEX_SMTP_HOST")
     sender = os.environ.get("LUNEX_SMTP_FROM")
     user = os.environ.get("LUNEX_SMTP_USER")
@@ -218,6 +225,11 @@ def _issue_email_token(identifier, purpose, client):
         return generic
     with _lock, _db() as db:
         ph = "%s" if USE_POSTGRES else "?"
+        # Reserve against both address and origin before looking up the account.
+        # All outcomes intentionally use the same public response.
+        if not ops_email.reserve(db, ph, identifier.strip().lower(), client,
+                                 int(time.time()), USE_POSTGRES):
+            return generic
         row = db.execute("SELECT id,email FROM users WHERE lower(email)=" + ph, (identifier.strip().lower(),)).fetchone()
         if not row:
             return generic
@@ -227,8 +239,12 @@ def _issue_email_token(identifier, purpose, client):
         expires = int(time.time()) + 1800
         # Mail first, then persist. A failed SMTP send never exposes a usable token.
         message = "Your LunexEconom " + purpose + " code (valid 30 minutes): " + token
-        if not _send_account_email(row[1], "LunexEconom account " + purpose, message):
-            return 503, {"error": "email_unavailable"}
+        try:
+            delivered = _send_account_email(row[1], "LunexEconom account " + purpose, message)
+        except Exception:
+            delivered = False
+        if not delivered:
+            return generic
         db.execute("DELETE FROM auth_tokens WHERE user_id=" + ph + " AND purpose=" + ph, (row[0], purpose))
         db.execute("INSERT INTO auth_tokens(token_hash,user_id,purpose,expires_at) VALUES(" +
                    ("%s,%s,%s,%s" if USE_POSTGRES else "?,?,?,?") + ")",

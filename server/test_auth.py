@@ -81,7 +81,7 @@ class AccountTests(unittest.TestCase):
         def fake_email(_address, _subject, message):
             delivered.append(message.split(": ")[-1])
             return True
-        with patch.object(self.auth, "_send_account_email", side_effect=fake_email):
+        with patch.object(self.auth, "_send_account_email", side_effect=fake_email), patch.object(self.auth.ops_email, "reserve", return_value=True):
             self.assertEqual(self.auth.request_verification({"email":"email@example.test"},"verify-client")[0], 200)
             verify_token = delivered.pop()
             self.assertEqual(self.auth.confirm_email({"token":verify_token},"confirm-client")[0], 200)
@@ -98,7 +98,7 @@ class AccountTests(unittest.TestCase):
         from unittest.mock import patch
         self.auth.register({"username":"NoMail","email":"nomail@example.test","password":"abcd"},"create")
         with patch.object(self.auth, "_send_account_email", return_value=False):
-            self.assertEqual(self.auth.request_password_reset({"email":"nomail@example.test"},"mail-fail")[0], 503)
+            self.assertEqual(self.auth.request_password_reset({"email":"nomail@example.test"},"mail-fail")[0], 200)
         with self.auth._db() as db:
             self.assertEqual(db.execute("SELECT COUNT(*) FROM auth_tokens").fetchone()[0], 0)
 

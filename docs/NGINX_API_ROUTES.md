@@ -59,3 +59,20 @@ location ^~ /lunexeconom/api/ {
 
 ## Правило на будущее
 Добавляя endpoint в `server/game_server.py`, проверять его снаружи командой из п. 4 и дописывать адрес сюда.
+
+
+## Automated public route verification (ChatGPTTwo)
+
+Run from the repository root: `python3 ops/check_api_routes.py --base-url https://rikagro.ru/lunexeconom/api`.
+The script discovers GET, POST and economy endpoints directly from
+`server/game_server.py`, probes the public HTTPS prefix and fails if a
+route produces an HTML 404 from nginx or a non-JSON/unexpected status.
+POST requests deliberately use an empty body so the server returns its
+validation error without creating accounts, buildings or offers.
+A JSON 404 means the request reached the application, and is accepted.
+
+The workflow `.github/workflows/api-routes-check.yml` offers manual
+`workflow_dispatch`. Once that workflow file exists on the default branch,
+open GitHub Actions → Public API routes check → Run workflow.
+This workflow does not deploy or alter nginx and is never scheduled.
+Run again after any nginx or API routing change.

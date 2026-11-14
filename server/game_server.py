@@ -332,6 +332,16 @@ def stats_feed(owner, after=0):
 ECONOMY_POST={"/sell":"sell","/loan":"loan","/city/taxes":"city_taxes","/city/build":"city_build","/city/candidacy":"city_candidacy","/city/vote":"city_vote","/contracts/offer":"contracts_offer","/contracts/accept":"contracts_accept","/contracts/cancel":"contracts_cancel"}
 
 class Handler(BaseHTTPRequestHandler):
+    def _send_geo(self, data):
+        # Public immutable reference metadata, safe for clients and CDNs.
+        raw = json.dumps(data, ensure_ascii=False).encode("utf-8")
+        self.send_response(200)
+        self.send_header("Content-Type", "application/json; charset=utf-8")
+        self.send_header("Cache-Control", "public, max-age=3600")
+        self.send_header("Content-Length", str(len(raw)))
+        self.end_headers()
+        self.wfile.write(raw)
+
     def _send(self,status,data):
         raw=json.dumps(data,ensure_ascii=False).encode()
         self.send_response(status)
@@ -366,6 +376,13 @@ class Handler(BaseHTTPRequestHandler):
         return True
     def do_GET(self):
         url=urlsplit(self.path)
+        if url.path in ("/geo/regions", "/geo/cities", "/geo/routes"):
+            import geo
+            if url.path == "/geo/regions":
+                return self._send_geo({"regions": geo.regions()})
+            if url.path == "/geo/cities":
+                return self._send_geo({"cities": geo.cities()})
+            return self._send_geo({"routes": geo.routes()})
         if url.path in ("/market","/wallet","/world","/city","/contracts"):npc_tick()
         if url.path=="/contracts":
             owner=self._identity()
@@ -457,6 +474,9 @@ if os.environ.get("LUNEX_DB_ENGINE") == "postgres":
 
 if __name__=="__main__":
     if os.environ.get("LUNEX_DB_ENGINE") == "postgres":
+        if os.environ.get("LUNEX_AUTO_MIGRATE") == "1":
+            import migrate
+            migrate.up()
         postgres_db.init()
     else:
         connect().close()

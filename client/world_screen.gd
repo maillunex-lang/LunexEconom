@@ -19,6 +19,8 @@ func _ready() -> void:
     $UIOverlay/HUD/Top/Connect.pressed.connect(_connect)
     _setup_build_toolbar()
     _setup_ui_v1()
+    _setup_tutorial()
+    _setup_geo_features()
     _setup_top_hud()
     _refresh_terms()
     _refresh_wallet()
@@ -41,6 +43,19 @@ func _ready() -> void:
     updater.check()
 func set_selection(cell: Vector2i) -> void:
     info.text = "Регион 01 · Участок %d:%d" % [cell.x, cell.y]
+    if regional_map_panel != null and regional_map_panel.loaded:
+        for city_ref in regional_map_panel.cities:
+            if not city_ref is Dictionary:
+                continue
+            var dx: int = cell.x - int(city_ref.get("x", 0))
+            var dy: int = cell.y - int(city_ref.get("y", 0))
+            var radius: int = int(city_ref.get("radius", 0))
+            if dx * dx + dy * dy <= radius * radius:
+                var street_names: Array = city_ref.get("streets", [])
+                if not street_names.is_empty():
+                    var index := posmod(dx * 13 + dy * 17, street_names.size())
+                    info.text = "Участок: %s, %s, %d:%d" % [str(city_ref.get("name", "Город")), str(street_names[index]), cell.x, cell.y]
+                break
     if world.build_type.is_empty() and details_panel != null:
         var b: Dictionary = world.building_info(cell)
         if b.is_empty():
@@ -131,6 +146,12 @@ var build_toolbar: HBoxContainer
 var build_hint: Label
 var contracts_panel: Control
 var contract_shortcut: Control
+var tutorial_panel: Control
+var regional_map_panel: Control
+var perf_overlay: Control
+var geo_actions: HBoxContainer
+var seasons_enabled := true
+var rendered_season := -1
 var toolbar_touches: Dictionary = {}
 var toolbar_mouse_button: Button = null
 
@@ -292,6 +313,13 @@ func _setup_ui_v1() -> void:
     stats_actions.add_child(_ui_button("📜 События", func(): _open_stats_panel("feed"), 160))
     body_box.add_child(stats_actions)
     stats_actions.hide()
+    geo_actions = HBoxContainer.new()
+    geo_actions.add_theme_constant_override("separation", 8)
+    geo_actions.add_child(_ui_button("Карта", _open_region_map, 140))
+    geo_actions.add_child(_ui_button("Сезоны: вкл", _toggle_seasons, 160))
+    geo_actions.add_child(_ui_button("FPS", _toggle_fps, 115))
+    body_box.add_child(geo_actions)
+    geo_actions.hide()
     section_panel.hide()
     _setup_stats_panels()
     get_viewport().size_changed.connect(_layout_ui_v1)
@@ -340,6 +368,7 @@ func _open_stats_panel(which: String) -> void:
     details_panel.hide()
     leaderboard_panel.hide()
     feed_panel.hide()
+    if regional_map_panel != null: regional_map_panel.hide()
     if which == "leaderboard":
         _show_panel(leaderboard_panel)
         _refresh_leaderboard("networth")
@@ -418,6 +447,7 @@ func _layout_ui_v1(override_size: Vector2 = Vector2.ZERO) -> void:
         _layout_stats_panel(leaderboard_panel, size, nav_top)
     if feed_panel != null:
         _layout_stats_panel(feed_panel, size, nav_top)
+    if regional_map_panel != null: regional_map_panel._place()
 
 func _setup_top_hud() -> void:
     var top: HBoxContainer = $UIOverlay/HUD/Top
@@ -471,6 +501,7 @@ func _open_section(section: String) -> void:
         contracts_panel.hide()
     if leaderboard_panel != null: leaderboard_panel.hide()
     if feed_panel != null: feed_panel.hide()
+    if regional_map_panel != null: regional_map_panel.hide()
     section_title.text = section
     match section:
         "Город":
@@ -483,6 +514,10 @@ func _open_section(section: String) -> void:
             section_body.text = "Маршруты поставок и транспортные задания находятся в разработке. Дорожная сеть доступна на карте."
         "Меню":
             section_body.text = "Башкирия: Мёд и Нефть\nВерсия интерфейса 1.0\nУправление: одним пальцем двигайте карту, двумя изменяйте масштаб. Дороги к зданиям прокладываются автоматически."
+    if tutorial_panel != null:
+        if section == "Город": tutorial_panel.notify("city_opened")
+        elif section == "Экономика": tutorial_panel.notify("economy_opened")
+    if geo_actions != null: geo_actions.visible = section == "Меню"
     stats_actions.visible = section == "Меню"
     section_actions.visible = section == "Экономика"
     if contract_shortcut != null:
@@ -493,6 +528,7 @@ func _open_section(section: String) -> void:
 
 func _open_catalog() -> void:
     world.cancel_build()
+    if regional_map_panel != null: regional_map_panel.hide()
     if contracts_panel != null:
         contracts_panel.hide()
     _show_panel(catalog_panel)
@@ -589,6 +625,8 @@ func _place_building() -> void:
             var from_budget := city_mode
             city_mode = false
             if from_budget: _refresh_city()
+            elif tutorial_panel != null and str(payload.get("kind", "")) == "farm":
+                tutorial_panel.notify("farm_built")
             var road_cells := int(data.get("road_cells", 0))
             if data.has("balance") and not from_budget: _set_balance(int(data["balance"]))
             info.text = ("Построено за счёт бюджета: %s" if from_budget else "Построено за %s") % _fmt_money(int(data.get("cost", 0))) + ((" · дорога +%d кл." % road_cells) if road_cells > 0 else "")
@@ -618,7 +656,7 @@ func _new_build_request_id() -> String:
 
 func is_world_ui_point(point: Vector2) -> bool:
     if $UIOverlay/HUD/Top.get_global_rect().has_point(point): return true
-    for panel in [build_toolbar, catalog_panel, placement_panel, details_panel, section_panel, contracts_panel, leaderboard_panel, feed_panel]:
+    for panel in [build_toolbar, catalog_panel, placement_panel, details_panel, section_panel, contracts_panel, leaderboard_panel, feed_panel, tutorial_panel, regional_map_panel, perf_overlay]:
         if panel != null and panel.visible and panel.get_global_rect().has_point(point):
             return true
     return false
@@ -628,7 +666,7 @@ func is_world_ui_point(point: Vector2) -> bool:
 var ui_touch_buttons: Dictionary = {}
 var ui_mouse_button: Button = null
 func _ui_panels() -> Array:
-    return [catalog_panel, placement_panel, details_panel, section_panel, build_toolbar, contracts_panel, leaderboard_panel, feed_panel]
+    return [catalog_panel, placement_panel, details_panel, section_panel, build_toolbar, contracts_panel, leaderboard_panel, feed_panel, tutorial_panel, regional_map_panel]
 
 func _hit_ui_button(point: Vector2) -> Button:
     for panel in _ui_panels():
@@ -672,6 +710,14 @@ var ui_touch_start := {}       # touch index -> start position
 var ui_touch_moved := {}       # touch index -> true once the finger moved more than TAP_SLOP
 
 func _input(event: InputEvent) -> void:
+    # Android canvas-stretched GUI can miss gestures; route map touches explicitly.
+    if regional_map_panel != null and regional_map_panel.visible and regional_map_panel.map_canvas != null:
+        if event is InputEventScreenTouch or event is InputEventScreenDrag:
+            var surface: Control = regional_map_panel.map_canvas
+            if surface.get_global_rect().has_point(event.position) or regional_map_panel.fingers.has(event.index):
+                regional_map_panel.map_input(event)
+                get_viewport().set_input_as_handled()
+                return
     if event is InputEventScreenTouch:
         if event.pressed:
             var target := _hit_ui_button(event.position)
@@ -984,6 +1030,14 @@ func _tick_game_date() -> void:
     var label := get_node_or_null("UIOverlay/HUD/Top/GameDate") as Label
     if label != null:
         label.text = _game_date_text(game_clock, Time.get_unix_time_from_system() + clock_offset)
+    var seconds_per_month := maxi(int(game_clock.get("month_seconds", 86400)), 1)
+    var elapsed := maxf(Time.get_unix_time_from_system() + clock_offset - float(game_clock.get("epoch", 0)), 0.0)
+    var current_month := int(game_clock.get("base_index", 0)) + int(elapsed / seconds_per_month)
+    var season := int(load("res://season_visual.gd").season_for_month(current_month))
+    if rendered_season != season:
+        rendered_season = season
+        for chunk in world.active_chunks.values():
+            chunk.queue_redraw()
 
 func _owner_name(owner: String) -> String:
     for c in competitors:
@@ -1208,3 +1262,58 @@ func _start_city_build(kind: String) -> void:
     _show_panel(placement_panel)
     build_hint.text = "Выберите участок для: %s (оплата из бюджета)" % KIND_NAMES[kind]
     call_deferred("_layout_ui_v1")
+
+# Additive onboarding hook. Steps advance only on real UI/server events.
+func _setup_tutorial() -> void:
+    tutorial_panel = load("res://tutorial.gd").new()
+    tutorial_panel.setup(self, GameSession.username if GameSession.is_authenticated() else "")
+
+
+# Additive regional map, optional seasonal colors and FPS diagnostics.
+func _setup_geo_features() -> void:
+    var file := FileAccess.open("user://season_effects.txt", FileAccess.READ)
+    if file != null:
+        seasons_enabled = file.get_as_text().strip_edges() != "off"
+        file.close()
+    regional_map_panel = load("res://regional_map_panel.gd").new()
+    regional_map_panel.setup(self)
+    perf_overlay = load("res://perf_overlay.gd").new()
+    perf_overlay.setup(self)
+    if geo_actions != null:
+        (geo_actions.get_child(1) as Button).text = "Сезоны: вкл" if seasons_enabled else "Сезоны: выкл"
+
+func _open_region_map() -> void:
+    if regional_map_panel != null:
+        regional_map_panel.open_panel()
+
+func goto_geo_city(city: Dictionary) -> void:
+    var x: int = int(city.get("x", 0))
+    var y: int = int(city.get("y", 0))
+    # The geography overlay never changes build permissions or terrain.
+    world.expansion_radius = maxi(world.expansion_radius, maxi(absi(x), absi(y)) + 48)
+    world.target_position = world.iso(float(x), float(y))
+    world.camera.position = world.target_position
+    world._update_visible_chunks()
+    info.text = "Переход: " + str(city.get("name", "Город"))
+
+func _toggle_seasons() -> void:
+    seasons_enabled = not seasons_enabled
+    var file := FileAccess.open("user://season_effects.txt", FileAccess.WRITE)
+    if file != null:
+        file.store_string("on" if seasons_enabled else "off")
+        file.close()
+    (geo_actions.get_child(1) as Button).text = "Сезоны: вкл" if seasons_enabled else "Сезоны: выкл"
+    for chunk in world.active_chunks.values():
+        chunk.queue_redraw()
+
+func _toggle_fps() -> void:
+    if perf_overlay != null:
+        perf_overlay.toggle()
+
+
+func geo_month_index() -> int:
+    if game_clock.is_empty():
+        return 0
+    var span := maxi(int(game_clock.get("month_seconds", 86400)), 1)
+    var elapsed := maxf(Time.get_unix_time_from_system() + clock_offset - float(game_clock.get("epoch", 0)), 0.0)
+    return int(game_clock.get("base_index", 0)) + int(elapsed / span)
