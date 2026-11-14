@@ -6,6 +6,7 @@ import psycopg
 import postgres_db
 import roads as road_rules
 import economy
+import building_dimensions
 import production
 import taxes
 import city
@@ -27,7 +28,10 @@ def build(owner,payload):
         return 403,{"error":"social_only_for_city" if kind in economy.SOCIAL_KINDS else "city_builds_social_only"}
     try:uuid.UUID(request_id)
     except (ValueError,TypeError,AttributeError):return 400,{"error":"invalid_request_id"}
-    w,h=KINDS[kind]
+    try:
+        w,h=building_dimensions.footprint(kind,payload.get("size"))
+    except ValueError:
+        return 400,{"error":"invalid_building_size"}
     footprint=[(xx,yy) for xx in range(x,x+w) for yy in range(y,y+h)]
     if any(abs(xx)>MAX_COORD or abs(yy)>MAX_COORD for xx,yy in footprint):
         return 400,{"error":"outside_world"}
@@ -53,6 +57,8 @@ def build(owner,payload):
         if not paid:return 402,{"error":"insufficient_funds","cost":cost,"balance":balance}
         db.execute("INSERT INTO buildings(id,owner,kind,x,y,created) VALUES(%s,%s,%s,%s,%s,%s)",(oid,owner,kind,x,y,now))
         production.register_building(db,"%s",owner,oid,kind,clk)
+        if payload.get("size") is not None:
+            db.execute("INSERT INTO building_dimensions(object_id,width,height) VALUES(%s,%s,%s)",(oid,w,h))
         with db.cursor() as cursor:
             cursor.executemany("INSERT INTO cells(x,y,object_id) VALUES(%s,%s,%s)",[(xx,yy,oid) for xx,yy in footprint])
             if new_roads:
