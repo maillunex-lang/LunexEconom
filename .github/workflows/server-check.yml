@@ -21,5 +21,6 @@ jobs:
         run: |
           python -m py_compile *.py
           python -m unittest test_roads test_economy test_clock test_settlement test_market test_production test_npc test_labor test_bankruptcy test_sell test_bank test_tax test_city test_election test_rating test_sqlite_util test_health_ops test_app test_auth -v
+          python -m unittest discover -s ../tools -p 'test_*.py' -v
       - name: Test deployment scripts
         run: python -m unittest discover -s ops -p 'test_*.py' -v
