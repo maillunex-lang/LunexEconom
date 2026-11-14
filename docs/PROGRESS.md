@@ -68,3 +68,11 @@
 - Debug APK версии `0.2.7-building-sandbox`, versionCode 9, Android arm64-v8a/x86_64 собран через Godot 4.7.2. `apksigner verify`: v2/v3 valid. SHA256: `e757414bc14fd4477d35a1724e81bbcb66167977032aa669a65ef67bbecb598d`, размер 56 998 494 байта.
 - Опубликован тестовый APK: https://rikagro.ru/lunexeconom/versions/Bashkiria-Honey-Oil-0.2.7-building-sandbox.apk ; HTTPS 200, `release.json` и `updates/manifest.json` проверены. Резервная копия файлов публикации сохранена в `/var/www/rikagro-game/lunexeconom/backups/pre-0.2.7-20261114`.
 - **Статус: прототип, Android-проверка на реальном устройстве ожидается.** Не подтверждены FPS, safe-area на разных экранах, интерактивность кнопок на телефоне, корректность визуальных перекрёстков и серверная синхронизация. `main` не меняли.
+
+## 14.11.2026: 0.2.7.1 Touch Construction Fix
+- По записи с Android обнаружена проблема: панель строительства оказалась посередине экрана, а события касания кнопок одновременно проходили в выбор клетки мира.
+- Исправлены `client/world.gd` (фильтрация GUI touch press/release и mouse events) и `client/world_screen.gd` (нижняя привязка панели, safe-area).
+- Добавлен `client/tests/world_027_touch_fix.gd`: `WORLD_027_TOUCH_FIX_PASS toolbar_bottom/ui_touch/selection/build` (Godot 4.7.2 headless exit 0). Ранее выполненные проверки 0.2.7 также проходили.
+- Собран Android debug APK versionCode 10, versionName `0.2.7.1-build-touch-fix`, подпись v2/v3 verified, SHA256 `aa6ff4ad3f8c86657e10155dc66db77e5f0ed4c6756ddef8b2006ff1f7d4b294`.
+- APK опубликован https://rikagro.ru/lunexeconom/versions/Bashkiria-Honey-Oil-0.2.7.1-build-touch-fix.apk, HTTPS 200. Обновлены manifest, release.json и builds.json; резервные копии: `/var/www/rikagro-game/lunexeconom/backups/pre-0.2.7.1-20261114`.
+- **Android QA ещё не выполнен для новой версии.** Это локальный строительный прототип без серверного сохранения. Ветка `main` не менялась.
