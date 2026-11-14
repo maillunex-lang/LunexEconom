@@ -42,7 +42,7 @@ func _run() -> void:
 	close_btn.pressed.emit()
 	await process_frame
 	assert(not panel.visible and not panel.is_visible_in_tree())
-	assert(root._hit_ui_button(close_btn.get_global_rect().get_center()) == null, "closed board must ignore touches")
+	assert(root._hit_ui_button(close_btn.get_global_rect().get_center()) != close_btn, "closed board must ignore touches (the Economy window now sits under the same spot)")
 	assert(shortcut.visible)
 	for child in root.get_node("UIOverlay/BottomNavigation").get_children():
 		if child is Button and child.text == "Город":

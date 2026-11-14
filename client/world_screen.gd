@@ -116,6 +116,7 @@ var feed_panel
 var stats_actions: HBoxContainer
 var section_panel: PanelContainer
 var section_title: Label
+var section_scroll: ScrollContainer
 var section_body: Label
 var catalog_panel: PanelContainer
 var placement_panel: PanelContainer
@@ -238,15 +239,25 @@ func _setup_ui_v1() -> void:
     section_title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
     header.add_child(section_title)
     header.add_child(_ui_button("Закрыть ×", func(): section_panel.hide(), 120))
+    section_scroll = ScrollContainer.new()
+    section_scroll.name = "SectionScroll"
+    section_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+    section_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+    section_content.add_child(section_scroll)
+    var body_box := VBoxContainer.new()
+    body_box.name = "SectionBody"
+    body_box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+    section_scroll.add_child(body_box)
     section_body = Label.new()
     section_body.add_theme_font_size_override("font_size", 18)
     section_body.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-    section_body.custom_minimum_size = Vector2(360, 105)
-    section_content.add_child(section_body)
+    section_body.custom_minimum_size = Vector2(0, 105)
+    section_body.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+    body_box.add_child(section_body)
     section_actions = HBoxContainer.new()
     section_actions.add_child(_ui_button("Взять кредит", _take_loan, 200))
     section_actions.add_child(_ui_button("Погасить кредит", _repay_loan, 200))
-    section_content.add_child(section_actions)
+    body_box.add_child(section_actions)
     section_actions.hide()
     city_actions = VBoxContainer.new()
     var tax_row := HBoxContainer.new()
@@ -260,16 +271,16 @@ func _setup_ui_v1() -> void:
     build_row.add_child(_ui_button("Больница", func(): _start_city_build("hospital"), 150))
     build_row.add_child(_ui_button("Парк", func(): _start_city_build("park"), 150))
     city_actions.add_child(build_row)
-    section_content.add_child(city_actions)
+    body_box.add_child(city_actions)
     city_actions.hide()
     reg_actions = HBoxContainer.new()
     reg_actions.add_child(_ui_button("Кандидат: 8% / 1%", func(): _city_register(0.08, 0.010), 170))
     reg_actions.add_child(_ui_button("Кандидат: 13% / 2.2%", func(): _city_register(0.13, 0.022), 190))
     reg_actions.add_child(_ui_button("Кандидат: 18% / 2.2%", func(): _city_register(0.18, 0.022), 190))
-    section_content.add_child(reg_actions)
+    body_box.add_child(reg_actions)
     reg_actions.hide()
     vote_actions = HBoxContainer.new()
-    section_content.add_child(vote_actions)
+    body_box.add_child(vote_actions)
     vote_actions.hide()
     var contracts_ui = load("res://contracts_panel.gd").new()
     contracts_ui.name = "ContractsUI"
@@ -279,7 +290,7 @@ func _setup_ui_v1() -> void:
     stats_actions.add_theme_constant_override("separation", 8)
     stats_actions.add_child(_ui_button("🏆 Рейтинг", func(): _open_stats_panel("leaderboard"), 160))
     stats_actions.add_child(_ui_button("📜 События", func(): _open_stats_panel("feed"), 160))
-    section_content.add_child(stats_actions)
+    body_box.add_child(stats_actions)
     stats_actions.hide()
     section_panel.hide()
     _setup_stats_panels()
@@ -298,8 +309,9 @@ func _setup_stats_panels() -> void:
     feed_panel.refresh_requested.connect(_refresh_feed)
 
 
-func _layout_stats_panel(panel: Control, viewport_size: Vector2, nav_top: float) -> void:
-    # Keep the panel above bottom navigation and inside the landscape safe area.
+func panel_rect(nav_top: float) -> Rect2:
+    """Large window between the top HUD and the bottom navigation, inside the safe area (used by all section windows)."""
+    var viewport_size := size
     var screen := DisplayServer.screen_get_size()
     var safe := DisplayServer.get_display_safe_area()
     var left_safe := 20.0
@@ -307,10 +319,17 @@ func _layout_stats_panel(panel: Control, viewport_size: Vector2, nav_top: float)
     if OS.has_feature("mobile") and screen.x > 0 and safe.size.x > 0:
         left_safe = maxf(left_safe, safe.position.x * viewport_size.x / screen.x + 12.0)
         right_safe = maxf(right_safe, (screen.x - safe.end.x) * viewport_size.x / screen.x + 12.0)
-    panel.size = Vector2(minf(600.0, viewport_size.x - left_safe - right_safe),
-        minf(270.0, maxf(165.0, nav_top - 70.0)))
-    panel.position = Vector2(maxf(left_safe, (viewport_size.x - panel.size.x) * 0.5),
-        maxf(64.0, nav_top - panel.size.y - 10.0))
+    var width := minf(760.0, viewport_size.x - left_safe - right_safe)
+    var top := 66.0
+    var height := maxf(180.0, nav_top - 10.0 - top)
+    return Rect2(Vector2(maxf(left_safe, (viewport_size.x - width) * 0.5), top), Vector2(width, height))
+
+
+func _layout_stats_panel(panel: Control, viewport_size: Vector2, nav_top: float) -> void:
+    var area := panel_rect(nav_top)
+    panel.custom_minimum_size = area.size
+    panel.size = area.size
+    panel.position = area.position
 
 
 func _open_stats_panel(which: String) -> void:
@@ -391,8 +410,10 @@ func _layout_ui_v1(override_size: Vector2 = Vector2.ZERO) -> void:
     placement_panel.position = Vector2((size.x - placement_panel.size.x) * 0.5, maxf(65, nav_top - placement_panel.size.y - 12))
     details_panel.position = Vector2(size.x - details_panel.size.x - 22, maxf(85, (size.y - details_panel.size.y) * 0.5))
     if section_panel != null:
-        section_panel.size.x = minf(500, usable_width)
-        section_panel.position = Vector2((size.x - section_panel.size.x) * 0.5, maxf(65, nav_top - section_panel.size.y - 12))
+        var area := panel_rect(nav_top)
+        section_panel.custom_minimum_size = area.size
+        section_panel.size = area.size
+        section_panel.position = area.position
     if leaderboard_panel != null:
         _layout_stats_panel(leaderboard_panel, size, nav_top)
     if feed_panel != null:
@@ -606,8 +627,11 @@ func is_world_ui_point(point: Vector2) -> bool:
 # canvas-stretched viewports. Only route releases inside the same button.
 var ui_touch_buttons: Dictionary = {}
 var ui_mouse_button: Button = null
+func _ui_panels() -> Array:
+    return [catalog_panel, placement_panel, details_panel, section_panel, build_toolbar, contracts_panel, leaderboard_panel, feed_panel]
+
 func _hit_ui_button(point: Vector2) -> Button:
-    for panel in [catalog_panel, placement_panel, details_panel, section_panel, build_toolbar, contracts_panel, leaderboard_panel, feed_panel]:
+    for panel in _ui_panels():
         if panel == null or not panel.visible or not panel.get_global_rect().has_point(point):
             continue
         var stack: Array[Node] = [panel]
@@ -617,26 +641,64 @@ func _hit_ui_button(point: Vector2) -> Button:
             # (a button's own `visible` flag stays true when only the parent is hidden).
             if node is CanvasItem and not (node as CanvasItem).visible:
                 continue
+            # Content scrolled out of a ScrollContainer is clipped: only the visible part may take touches.
+            if node is ScrollContainer and not (node as Control).get_global_rect().has_point(point):
+                continue
             if node is Button and node.is_visible_in_tree() and node.get_global_rect().has_point(point):
                 return node
             for child in node.get_children():
                 stack.append(child)
     return null
 
+func _scroll_at(point: Vector2) -> ScrollContainer:
+    """The visible ScrollContainer under the point, if any (its content is scrolled by our own touch handling)."""
+    for panel in _ui_panels():
+        if panel == null or not panel.visible or not panel.get_global_rect().has_point(point):
+            continue
+        var stack: Array[Node] = [panel]
+        while not stack.is_empty():
+            var node: Node = stack.pop_back()
+            if node is CanvasItem and not (node as CanvasItem).visible:
+                continue
+            if node is ScrollContainer and (node as Control).get_global_rect().has_point(point):
+                return node
+            for child in node.get_children():
+                stack.append(child)
+    return null
+
+const TAP_SLOP := 14.0
+var ui_touch_scroll := {}      # touch index -> ScrollContainer or null
+var ui_touch_start := {}       # touch index -> start position
+var ui_touch_moved := {}       # touch index -> true once the finger moved more than TAP_SLOP
+
 func _input(event: InputEvent) -> void:
     if event is InputEventScreenTouch:
         if event.pressed:
             var target := _hit_ui_button(event.position)
-            if target != null:
+            var scroll := _scroll_at(event.position)
+            if target != null or scroll != null:
                 ui_touch_buttons[event.index] = target
+                ui_touch_scroll[event.index] = scroll
+                ui_touch_start[event.index] = event.position
+                ui_touch_moved[event.index] = false
                 get_viewport().set_input_as_handled()
-        elif ui_touch_buttons.has(event.index):
-            var target: Button = ui_touch_buttons[event.index]
+        elif ui_touch_start.has(event.index):
+            var target: Button = ui_touch_buttons.get(event.index)
+            var moved: bool = ui_touch_moved.get(event.index, false)
             ui_touch_buttons.erase(event.index)
-            if target == _hit_ui_button(event.position):
+            ui_touch_scroll.erase(event.index)
+            ui_touch_start.erase(event.index)
+            ui_touch_moved.erase(event.index)
+            if not moved and target != null and target == _hit_ui_button(event.position):
                 target.pressed.emit()
             get_viewport().set_input_as_handled()
-    elif event is InputEventScreenDrag and ui_touch_buttons.has(event.index):
+    elif event is InputEventScreenDrag and ui_touch_start.has(event.index):
+        if not ui_touch_moved[event.index] and (event.position - ui_touch_start[event.index]).length() > TAP_SLOP:
+            ui_touch_moved[event.index] = true         # a drag is never a tap
+        if ui_touch_moved[event.index]:
+            var scroll: ScrollContainer = ui_touch_scroll.get(event.index)
+            if scroll != null:
+                scroll.scroll_vertical = maxi(0, scroll.scroll_vertical - int(event.relative.y))
         get_viewport().set_input_as_handled()
     elif event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT:
         if event.pressed:

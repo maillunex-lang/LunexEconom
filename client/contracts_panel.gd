@@ -39,13 +39,23 @@ func setup(screen: Node) -> void:
     title.add_theme_font_size_override("font_size", 22)
     header.add_child(title)
     header.add_child(host._ui_button("Закрыть", hide_panel, 130))
+    var scroll := ScrollContainer.new()
+    scroll.name = "ContractsScroll"
+    scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+    scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+    box.add_child(scroll)
+    var inner := VBoxContainer.new()
+    inner.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+    scroll.add_child(inner)
     body = Label.new()
     body.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-    body.custom_minimum_size = Vector2(460, 70)
+    body.custom_minimum_size = Vector2(0, 70)
+    body.size_flags_horizontal = Control.SIZE_EXPAND_FILL
     body.add_theme_font_size_override("font_size", 16)
-    box.add_child(body)
+    inner.add_child(body)
     actions = VBoxContainer.new()
-    box.add_child(actions)
+    actions.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+    inner.add_child(actions)
     host.contracts_panel = panel
 
 func hide_panel() -> void:
@@ -62,10 +72,10 @@ func open_panel() -> void:
     refresh()
 
 func _place() -> void:
-    var size: Vector2 = (host as CanvasItem).get_viewport_rect().size
-    panel.size = Vector2(minf(540.0, size.x - 36.0), 460.0)
-    var nav: float = host.build_toolbar.position.y
-    panel.position = Vector2((size.x - panel.size.x) * 0.5, maxf(48.0, nav - panel.size.y - 12.0))
+    var area: Rect2 = host.panel_rect(host.build_toolbar.position.y)
+    panel.custom_minimum_size = area.size
+    panel.size = area.size
+    panel.position = area.position
 
 func refresh() -> void:
     if pending or not GameSession.is_authenticated():
