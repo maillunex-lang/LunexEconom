@@ -130,6 +130,9 @@ func _draw_building(p: Vector2, kind: String, owner: String = "") -> void:
         "warehouse":
             wall = Color("#8a7d5c")
             roof = Color("#b5a47a")
+        "shop":
+            wall = Color("#d8efe4")
+            roof = Color("#e7b45d")
     var base := PackedVector2Array([
         p + Vector2(-22, -5), p + Vector2(0, 6),
         p + Vector2(22, -5), p + Vector2(0, -16)
@@ -156,3 +159,7 @@ func _draw_building(p: Vector2, kind: String, owner: String = "") -> void:
         "warehouse":
             draw_rect(Rect2(p + Vector2(-7, -9), Vector2(14, 9)), Color("#4b5c65"))
             draw_line(p + Vector2(-7, -5), p + Vector2(7, -5), Color("#e4c99d"), 1.5)
+        "shop":
+            draw_rect(Rect2(p + Vector2(-14, -8), Vector2(28, 6)), Color("#e7b45d"))
+            draw_rect(Rect2(p + Vector2(-6, -2), Vector2(5, 7)), Color("#315647"))
+            draw_rect(Rect2(p + Vector2(2, -2), Vector2(5, 7)), Color("#243b2f"))

@@ -31,8 +31,8 @@ import roads  # noqa: E402
 
 T0 = 1_800_000_000
 CYCLE = ("farm", "mine", "factory", "warehouse")
-STRATEGIES = ("rotate", "hoard", "loan", "idle", "contract")
-_PREFIX = {"rotate": "rot", "hoard": "hor", "loan": "lon", "idle": "idl", "contract": "con"}
+STRATEGIES = ("rotate", "hoard", "loan", "idle", "contract", "shop")
+_PREFIX = {"rotate": "rot", "hoard": "hor", "loan": "lon", "idle": "idl", "contract": "con", "shop": "shp"}
 
 # Целые метрики месяца. Время шага сюда не входит: оно не детерминировано.
 METRIC_FIELDS = (
@@ -137,6 +137,16 @@ class Bot:
                     if world.try_build(self.name, kind, month):
                         self.built += 1
                         break
+            return
+        if self.strategy == "shop":
+            if self.built >= world.build_cap:
+                return
+            for kind in ("shop", "farm"):
+                if world.try_build(self.name, kind, month):
+                    self.built += 1
+                    return
+            if month == 0 and self.built < 1:
+                game_server.wallet(self.name)
             return
         if self.strategy == "rotate":
             if self.built >= world.build_cap:
@@ -938,6 +948,7 @@ def _suite(args):
         ("expand_48", dict(months=48, seed=7, strategies=("rotate",) * 6, npc_on=True, build_cap=10)),
         ("credit_60", dict(months=60, seed=3, strategies=("loan",) * 3, npc_on=True, build_cap=6)),
         ("contracts_24", dict(months=24, seed=11, strategies=("contract", "contract"), npc_on=True, build_cap=4)),
+        ("shop_36", dict(months=36, seed=11, strategies=("shop", "shop"), npc_on=True, build_cap=4)),
     ]
     runs = []
     for name, spec in specs:

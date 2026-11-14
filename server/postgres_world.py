@@ -14,7 +14,7 @@ import contracts
 
 CHUNK = 12
 MAX_COORD = 10000
-KINDS = {"farm":(2,2),"mine":(2,3),"factory":(3,2),"warehouse":(3,3),"school":(3,2),"hospital":(3,3),"park":(2,2)}
+KINDS = {"farm":(2,2),"mine":(2,3),"factory":(3,2),"warehouse":(3,3),"shop":(2,2),"school":(3,2),"hospital":(3,3),"park":(2,2)}
 
 def build(owner,payload):
     kind=payload.get("kind")
@@ -158,7 +158,10 @@ def market_state():
         now=int(time.time())
         clk=clock.state(db,"%s",now)
         production.advance(db,"%s",clk,now)
-        return 200,{"ok":True,"month_index":clk["month_index"],"products":production.quote(db,"%s",clk),"labor":production.labor_view(db,"%s",clk),"taxes":taxes.view(db,"%s"),"competitors":production.competitors(db,"%s")}
+        quotes=production.quote(db,"%s",clk)
+        labor=production.labor_view(db,"%s",clk)
+        import retail
+        return 200,{"ok":True,"month_index":clk["month_index"],"products":quotes,"labor":labor,"taxes":taxes.view(db,"%s"),"competitors":production.competitors(db,"%s"),"retail":retail.snapshot(db,"%s",clk,quotes,labor.get("scale",1))}
 
 def wallet(owner):
     with postgres_db.connect() as db:

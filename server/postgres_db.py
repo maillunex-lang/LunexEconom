@@ -100,6 +100,10 @@ CREATE TABLE IF NOT EXISTS trade_debts (
  debtor TEXT NOT NULL, creditor TEXT NOT NULL, amount BIGINT NOT NULL,
  PRIMARY KEY(debtor, creditor)
 );
+CREATE TABLE IF NOT EXISTS eco_owner_spend (
+ owner TEXT NOT NULL, month_index BIGINT NOT NULL, amount BIGINT NOT NULL,
+ PRIMARY KEY(owner, month_index)
+);
 """
 
 def init():

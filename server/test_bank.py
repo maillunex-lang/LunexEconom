@@ -35,6 +35,16 @@ class BankBase(unittest.TestCase):
                 return res
         self.fail("no site")
 
+    def mature(self, who):
+        """Age the company and record enough revenue that the full collateral limit applies."""
+        game_server.wallet(who)
+        with game_server.connect() as db:
+            db.execute("UPDATE building_ops SET start_month=start_month-? WHERE owner=?", (economy.LOAN_RAMP_MONTHS + 2, who))
+            for index in range(economy.LOAN_REVENUE_MONTHS):
+                db.execute("INSERT INTO company_reports(owner,month_index,revenue,input_cost,upkeep,profit,buildings) VALUES(?,?,?,?,?,?,?) "
+                           "ON CONFLICT(owner,month_index) DO UPDATE SET revenue=excluded.revenue",
+                           (who, -(index + 1), economy.LOAN_REVENUE_PROOF, 0, 0, 0, 1))
+
     def loan(self, who, action, amount=None, request_id=None):
         payload = {"action": action, "request_id": request_id or str(uuid.uuid4())}
         if amount is not None:
@@ -68,12 +78,44 @@ class LimitTests(BankBase):
         status, res = self.loan("alice", "take", 100_000)
         self.assertEqual((status, res["error"]), (409, "limit_exceeded"))
 
-    def test_limit_is_half_of_building_cost(self):
+    def test_newcomer_limit_is_a_small_share_and_a_mature_company_gets_half(self):
         self.build("alice", "factory")
         self.build("alice", "farm")
-        loan = game_server.wallet("alice")[1]["loan"]
-        self.assertEqual(loan["limit"], int((450_000 + 120_000) * economy.LOAN_LTV))
-        self.assertEqual(loan["available"], loan["limit"])
+        fresh = game_server.wallet("alice")[1]["loan"]
+        worth = 450_000 + 120_000
+        self.assertEqual(fresh["limit"], int(worth * economy.LOAN_NEW_LTV))
+        self.assertLess(fresh["limit"], int(worth * economy.LOAN_LTV))
+        self.assertIn("Новичок", fresh["limit_reason"])
+        self.mature("alice")
+        grown = game_server.wallet("alice")[1]["loan"]
+        self.assertEqual(grown["limit"], int(worth * economy.LOAN_LTV))
+        self.assertGreaterEqual(grown["age_months"], economy.LOAN_RAMP_MONTHS)
+        self.assertIn("Полный лимит", grown["limit_reason"])
+
+    def test_age_alone_or_revenue_alone_does_not_open_the_full_limit(self):
+        self.build("alice", "factory")
+        worth = 450_000
+        floor = int(worth * economy.LOAN_NEW_LTV)
+        full = int(worth * economy.LOAN_LTV)
+        game_server.wallet("alice")
+        with game_server.connect() as db:
+            opened = db.execute("SELECT start_month FROM building_ops WHERE owner='alice'").fetchone()[0]
+            db.execute("UPDATE building_ops SET start_month=? WHERE owner='alice'", (opened - economy.LOAN_RAMP_MONTHS - 2,))
+        aged = game_server.wallet("alice")[1]["loan"]
+        self.assertGreaterEqual(aged["age_months"], economy.LOAN_RAMP_MONTHS)
+        self.assertEqual(aged["revenue_avg"], 0)
+        self.assertEqual(aged["limit"], floor)          # old, but no confirmed revenue
+        self.assertLess(aged["limit"], full)
+        with game_server.connect() as db:
+            db.execute("UPDATE building_ops SET start_month=? WHERE owner='alice'", (opened,))
+            db.execute("INSERT INTO company_reports(owner,month_index,revenue,input_cost,upkeep,profit,buildings) VALUES(?,?,?,?,?,?,?) "
+                       "ON CONFLICT(owner,month_index) DO UPDATE SET revenue=excluded.revenue",
+                       ("alice", opened - 1, economy.LOAN_REVENUE_PROOF * 3, 0, 0, 0, 1))
+        rich = game_server.wallet("alice")[1]["loan"]
+        self.assertEqual(rich["age_months"], 0)
+        self.assertGreaterEqual(rich["revenue_avg"], economy.LOAN_REVENUE_PROOF)
+        self.assertEqual(rich["limit"], floor)          # revenue without time does not open the rest
+        self.assertIn("Новичок", rich["limit_reason"])
 
     def test_limit_is_capped(self):
         with mock.patch.object(economy, "LOAN_MAX", 50_000):
@@ -91,6 +133,7 @@ class LimitTests(BankBase):
 class TakeAndRepayTests(BankBase):
     def test_take_credits_the_wallet_and_ledger_stays_balanced(self):
         self.build("alice", "factory")
+        self.mature("alice")
         before = game_server.wallet("alice")[1]["balance"]
         status, res = self.loan("alice", "take", 200_000)
         self.assertEqual(status, 201, res)
@@ -101,14 +144,20 @@ class TakeAndRepayTests(BankBase):
 
     def test_cannot_exceed_the_limit(self):
         self.build("alice", "farm")
-        status, res = self.loan("alice", "take", 70_000)       # limit 60 000
+        newcomer = int(120_000 * economy.LOAN_NEW_LTV)
+        status, res = self.loan("alice", "take", newcomer + 1_000)
         self.assertEqual((status, res["error"]), (409, "limit_exceeded"))
-        self.assertEqual(res["limit"], 60_000)
-        self.assertEqual(self.loan("alice", "take", 60_000)[0], 201)
-        self.assertEqual(self.loan("alice", "take", 10_000)[1]["error"], "limit_exceeded")
+        self.assertEqual(res["limit"], newcomer)
+        self.assertEqual(self.loan("alice", "take", newcomer)[0], 201)
+        self.build("bob", "farm")
+        self.mature("bob")
+        self.assertEqual(self.loan("bob", "take", 70_000)[1]["error"], "limit_exceeded")
+        self.assertEqual(self.loan("bob", "take", 60_000)[0], 201)
+        self.assertEqual(self.loan("bob", "take", 10_000)[1]["error"], "limit_exceeded")
 
     def test_take_is_idempotent(self):
         self.build("alice", "factory")
+        self.mature("alice")
         rid = str(uuid.uuid4())
         a = self.loan("alice", "take", 100_000, rid)
         balance = game_server.wallet("alice")[1]["balance"]
@@ -119,6 +168,7 @@ class TakeAndRepayTests(BankBase):
 
     def test_partial_and_full_repayment(self):
         self.build("alice", "factory")
+        self.mature("alice")
         self.loan("alice", "take", 150_000)
         status, res = self.loan("alice", "repay", 50_000)
         self.assertEqual((status, res["loan"]["balance"]), (201, 100_000))
@@ -129,6 +179,7 @@ class TakeAndRepayTests(BankBase):
 
     def test_cannot_repay_more_than_cash(self):
         self.build("alice", "factory")
+        self.mature("alice")
         self.loan("alice", "take", 200_000)
         self.set_cash("alice", 10_000)
         self.assertEqual(self.loan("alice", "repay", 50_000)[1]["error"], "insufficient_funds")
@@ -136,6 +187,7 @@ class TakeAndRepayTests(BankBase):
 
     def test_overpayment_is_trimmed_to_the_debt(self):
         self.build("alice", "factory")
+        self.mature("alice")
         self.loan("alice", "take", 100_000)
         status, res = self.loan("alice", "repay", 500_000)
         self.assertEqual((status, res["repaid"], res["loan"]["balance"]), (201, 100_000, 0))
@@ -144,6 +196,7 @@ class TakeAndRepayTests(BankBase):
 class InterestTests(BankBase):
     def test_interest_is_paid_monthly_from_cash(self):
         self.build("alice", "farm")
+        self.mature("alice")
         self.loan("alice", "take", 60_000)
         w = self.month("alice", 3)
         self.assertEqual(w["loan"]["balance"], 60_000)          # interest paid in cash, principal untouched
@@ -157,6 +210,7 @@ class InterestTests(BankBase):
 
     def test_forecast_includes_interest(self):
         self.build("alice", "farm")
+        self.mature("alice")
         base = game_server.wallet("alice")[1]["forecast"]
         self.loan("alice", "take", 60_000)
         f = game_server.wallet("alice")[1]["forecast"]
@@ -165,6 +219,7 @@ class InterestTests(BankBase):
 
     def test_unpaid_interest_is_capitalized_and_counts_as_missed(self):
         self.build("alice", "factory")
+        self.mature("alice")
         self.loan("alice", "take", 200_000)
         self.set_cash("alice", 0)
         w = self.month("alice", 1)
@@ -173,6 +228,7 @@ class InterestTests(BankBase):
 
     def test_no_new_credit_while_in_default(self):
         self.build("alice", "factory")
+        self.mature("alice")
         self.loan("alice", "take", 100_000)
         self.set_cash("alice", 0)
         self.month("alice", 1)
@@ -185,6 +241,7 @@ class InterestTests(BankBase):
 class BankruptcyWithLoanTests(BankBase):
     def test_bank_is_the_last_creditor_and_loses_the_rest(self):
         self.build("alice", "factory")                          # no suppliers: pure cost
+        self.mature("alice")
         self.loan("alice", "take", 220_000)
         self.set_cash("alice", 60_000)
         w = self.month("alice", 8)
@@ -196,6 +253,7 @@ class BankruptcyWithLoanTests(BankBase):
     def test_written_off_loan_is_covered_by_the_treasury_and_the_bank_returns_to_zero(self):
         import economy
         self.build("alice", "factory")
+        self.mature("alice")
         self.loan("alice", "take", 220_000)
         self.set_cash("alice", 60_000)
         with game_server.connect() as db:
@@ -216,6 +274,7 @@ class BankruptcyWithLoanTests(BankBase):
 
     def test_proceeds_repay_the_bank_when_there_is_enough(self):
         self.build("alice", "factory")
+        self.mature("alice")
         self.loan("alice", "take", 50_000)
         self.set_cash("alice", 60_000)
         self.month("alice", 8)
@@ -228,6 +287,7 @@ class BankruptcyWithLoanTests(BankBase):
 class SellWithLoanTests(BankBase):
     def test_selling_the_last_building_repays_the_loan_first(self):
         res = self.build("alice", "farm")
+        self.mature("alice")
         self.loan("alice", "take", 60_000)
         status, out = game_server.sell("alice", {"object_id": res["object_id"], "request_id": str(uuid.uuid4())})
         self.assertEqual(status, 201)
@@ -237,6 +297,7 @@ class SellWithLoanTests(BankBase):
 
     def test_loan_without_buildings_still_costs_interest(self):
         res = self.build("alice", "farm")
+        self.mature("alice")
         self.loan("alice", "take", 60_000)
         self.set_cash("alice", 1_000_000)
         with game_server.connect() as db:

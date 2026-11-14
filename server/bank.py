@@ -15,8 +15,53 @@ def appraisal(db, ph, owner):
     return sum(economy.BUILD_COST.get(kind, 0) for kind, in db.execute(_q("SELECT kind FROM building_ops WHERE owner=%s", ph), (owner,)).fetchall())
 
 
+def company_age(db, ph, owner):
+    """How many completed game months the company has operated, counting the month it opened."""
+    started = db.execute(_q("SELECT MIN(start_month) FROM building_ops WHERE owner=%s", ph), (owner,)).fetchone()
+    if not started or started[0] is None:
+        return 0
+    row = db.execute("SELECT processed_through FROM world_state WHERE id=1").fetchone()
+    if row is None:
+        return 0
+    return max(0, int(row[0]) - int(started[0]) + 1)
+
+
+def trailing_revenue(db, ph, owner):
+    rows = db.execute(_q("SELECT revenue FROM company_reports WHERE owner=%s ORDER BY month_index DESC LIMIT %s", ph),
+                      (owner, economy.LOAN_REVENUE_MONTHS)).fetchall()
+    if not rows:
+        return 0
+    return sum(int(row[0]) for row in rows) // len(rows)
+
+
+def limit_detail(db, ph, owner):
+    """Collateral limit that grows with age and confirmed revenue. ``limit`` is what the bank will lend."""
+    worth = appraisal(db, ph, owner)
+    full = min(economy.LOAN_MAX, int(worth * economy.LOAN_LTV))
+    floor = min(full, int(worth * economy.LOAN_NEW_LTV))
+    age = company_age(db, ph, owner)
+    revenue = trailing_revenue(db, ph, owner)
+    ramp = economy.LOAN_RAMP_MONTHS
+    age_k = 1.0 if ramp <= 0 else min(1.0, age / float(ramp))
+    proof = economy.LOAN_REVENUE_PROOF
+    rev_k = 1.0 if proof <= 0 else min(1.0, revenue / float(proof))
+    maturity = age_k * rev_k
+    amount = min(economy.LOAN_MAX, int(round(floor + (full - floor) * maturity)))
+    if worth <= 0:
+        reason = "Нет залога: кредит открывается после строительства."
+    elif maturity >= 0.999:
+        reason = "Полный лимит: %d%% стоимости зданий." % int(round(economy.LOAN_LTV * 100))
+    else:
+        reason = ("Новичок: сейчас %d%% залога. Полные %d%% — после %d мес. работы и выручки от %d ₽/мес. "
+                  "Компании %d мес., средняя выручка %d ₽.") % (
+                      int(round(economy.LOAN_NEW_LTV * 100)), int(round(economy.LOAN_LTV * 100)),
+                      ramp, proof, age, revenue)
+    return {"limit": amount, "full_limit": full, "floor_limit": floor, "age_months": age,
+            "revenue_avg": revenue, "maturity": round(maturity, 3), "limit_reason": reason}
+
+
 def limit(db, ph, owner):
-    return min(economy.LOAN_MAX, int(appraisal(db, ph, owner) * economy.LOAN_LTV))
+    return limit_detail(db, ph, owner)["limit"]
 
 
 def balance(db, ph, owner):
@@ -37,9 +82,12 @@ def monthly_interest(loan_balance):
 
 def view(db, ph, owner, in_default=False):
     bal = balance(db, ph, owner)
-    lim = limit(db, ph, owner)
+    detail = limit_detail(db, ph, owner)
+    lim = detail["limit"]
     return {"balance": bal, "limit": lim, "available": 0 if in_default else max(0, lim - bal), "interest_rate": economy.LOAN_INTEREST,
-            "monthly_interest": monthly_interest(bal), "min": economy.LOAN_MIN, "in_default": bool(in_default)}
+            "monthly_interest": monthly_interest(bal), "min": economy.LOAN_MIN, "in_default": bool(in_default),
+            "full_limit": detail["full_limit"], "age_months": detail["age_months"], "revenue_avg": detail["revenue_avg"],
+            "maturity": detail["maturity"], "limit_reason": detail["limit_reason"]}
 
 
 def take(db, ph, owner, amount, now, in_default):

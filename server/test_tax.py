@@ -29,6 +29,10 @@ class TaxBase(unittest.TestCase):
         roads = mock.patch.object(economy, "ROAD_MAINTENANCE", 0)      # city road upkeep is tested in test_city.py
         roads.start()
         self.addCleanup(roads.stop)
+        # Exact tax cash is the subject. Owner consumption is covered by test_owner_spend.py.
+        spend = mock.patch.object(economy, "OWNER_SPEND_ENABLED", False)
+        spend.start()
+        self.addCleanup(spend.stop)
         self.cursor = 0
 
     def tearDown(self):
