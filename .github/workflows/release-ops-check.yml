@@ -17,6 +17,18 @@ jobs:
   ops-unit:
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: lunex_test
+          POSTGRES_PASSWORD: ci-only-temporary
+          POSTGRES_DB: lunex_restore_admin
+        ports:
+          - 15551:5432
+        options: >-
+          --health-cmd "pg_isready -U lunex_test -d lunex_restore_admin"
+          --health-interval 5s --health-timeout 3s --health-retries 10
     steps:
       - uses: actions/checkout@v4
       - name: Run offline operations tests
@@ -29,3 +41,18 @@ jobs:
           python3 -m pip install -q psycopg[binary]
           cd server
           python3 -m unittest -v test_health_ops
+      - name: Real PostgreSQL backup restore on disposable CI database
+        env:
+          PGPASSWORD: ci-only-temporary
+        run: |
+          set -euo pipefail
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq postgresql-client-16
+          export PGHOST=127.0.0.1 PGPORT=15551 PGUSER=lunex_test
+          psql -d lunex_restore_admin -v ON_ERROR_STOP=1 -c 'CREATE TABLE restore_probe (id integer primary key, payload text not null)'
+          psql -d lunex_restore_admin -v ON_ERROR_STOP=1 -c "INSERT INTO restore_probe VALUES (7, 'backup-restored')"
+          pg_dump -Fc -d lunex_restore_admin -f /tmp/lunex-restore-ci.dump
+          createdb lunex_restore_test_ci
+          python3 ops/postgres_restore_drill.py --backup /tmp/lunex-restore-ci.dump --admin-dsn postgresql://lunex_test:ci-only-temporary@127.0.0.1:15551/lunex_restore_admin --target lunex_restore_test_ci
+          test "$(psql -d lunex_restore_test_ci -Atc 'SELECT payload FROM restore_probe WHERE id=7')" = 'backup-restored'
+          dropdb lunex_restore_test_ci
