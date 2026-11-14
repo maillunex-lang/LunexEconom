@@ -32,7 +32,7 @@
 10. Не проверялось: нагрузка, два игрока одновременно на настоящем устройстве, длительная работа на боевой PostgreSQL.
 
 ## 5. Правила (обязательно)
-- **Ветка:** работай в ветке `grok/<тема>` от свежего `main`, **в `main` не пушить и PR не сливать** — слияние делает владелец проекта после проверки. Перед слиянием `git rebase origin/main`, все тесты и CI зелёные (в том числе `postgres-check`).
+- **Ветка:** вся работа — **только в одной ветке `GrokFirst`** (создай от свежего `main`, если её ещё нет). **В `main` не пушить, PR не сливать и не создавать** — слияние в `main` делает Claude по команде владельца проекта. Перед слиянием `git rebase origin/main`, все тесты и CI зелёные (в том числе `postgres-check`).
 - **Зоны файлов** (из `docs/PARALLEL_WORK.md`): экономические модули и их тесты, `world.gd`, `world_screen.gd`, `docs/PROGRESS.md` — зона Claude; `auth.py`, `ops/*`, `.github/workflows/android-*`, `chunk_renderer.gd`, `main.gd` — зона ChatGPT. **Твоё — новые файлы:** `server/contracts*.py`, `server/test_contracts*.py`, `docs/CONTRACTS.md`, `client/contracts_panel.gd` (и т. п.). В чужие файлы вноси **минимальные аддитивные хуки** (одна-две строки: регистрация маршрута, вызов функции) и перечисляй их в `docs/PROGRESS_GROK.md` (твой журнал).
 - **Две базы всегда:** любая новая таблица — в `economy.SCHEMA` (SQLite) **и** в `postgres_db.SCHEMA` (PostgreSQL, добавлять блоком, не трогая чужие строки); любая SQL-логика пишется через `ph` и работает на обеих; для PostgreSQL добавляй тест в `server/test_postgres_economy.py`-стиле (только в одноразовой БД `lunex_ci`, **никогда не по боевой**).
 - **SQLite только через `sqlite_util.open_db`** (иначе вернутся предупреждения `unclosed database`; регрессионный тест `test_sqlite_util.py` следит).
