@@ -56,7 +56,7 @@ func cell_kind(x: int, y: int) -> int:
     if server_cells.has(coord):
         var kind := str(server_cells[coord].get("kind", ""))
         if kind == "road_changed": return 3
-        if kind == "building_created": return 6
+        if kind == "building_created" or kind in ["farm", "mine", "factory"]: return 6
         if kind == "building_removed": return 0
     # Integer-only hash: independent of call order and frame rate.
     var h := (x * 73856093) ^ (y * 19349663) ^ SEED
