@@ -1,0 +1,16 @@
+[Unit]
+Description=LunexEconom validated landing and APK release sync
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=root
+Group=root
+ExecStart=/usr/bin/flock -n /run/lock/lunexeconom-deploy.lock /usr/bin/python3 /opt/lunexeconom-deploy/deploy.py
+TimeoutStartSec=180
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ReadWritePaths=/var/www/rikagro-game/lunexeconom /var/lib/lunexeconom-deploy /run/lock
+ProtectHome=true
