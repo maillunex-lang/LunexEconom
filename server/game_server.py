@@ -76,6 +76,8 @@ def build(owner, payload):
         uuid.UUID(request_id)
     except (ValueError, TypeError, AttributeError):
         return 400,{"error":"invalid_request_id"}
+    if payload.get("size") is not None:
+        return 409,{"error":"building_size_economy_pending"}
     try:
         w,h=building_dimensions.footprint(kind,payload.get("size"))
     except ValueError:
