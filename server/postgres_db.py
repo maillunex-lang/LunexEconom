@@ -64,6 +64,7 @@ CREATE TABLE IF NOT EXISTS company_status (owner TEXT PRIMARY KEY, missed INTEGE
 CREATE TABLE IF NOT EXISTS npc_state (owner TEXT PRIMARY KEY, acted_through BIGINT NOT NULL);
 CREATE TABLE IF NOT EXISTS company_state (owner TEXT PRIMARY KEY, settled_through BIGINT NOT NULL);
 CREATE TABLE IF NOT EXISTS monthly_reports (owner TEXT NOT NULL, month_index BIGINT NOT NULL, revenue BIGINT NOT NULL, upkeep BIGINT NOT NULL, profit BIGINT NOT NULL, buildings INTEGER NOT NULL, PRIMARY KEY(owner, month_index));
+CREATE TABLE IF NOT EXISTS auth_attempts (attempt_key TEXT PRIMARY KEY, window_start BIGINT NOT NULL, attempts INTEGER NOT NULL);
 CREATE TABLE IF NOT EXISTS commands (
  owner TEXT NOT NULL, request_id TEXT NOT NULL, response TEXT NOT NULL,
  PRIMARY KEY(owner,request_id)
