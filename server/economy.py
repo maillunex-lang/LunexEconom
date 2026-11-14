@@ -59,6 +59,7 @@ MIGRATION_OUT = 0.005
 BANKRUPT_AFTER_MISSED = 3
 DISTRESS_OUTPUT = 0.5
 LIQUIDATION_RATE = 0.4
+SELL_RATE = 0.5                # voluntary sale of a building: better than a forced liquidation, still a loss
 INVENTORY_LIQUIDATION_RATE = 0.5
 NPC_RECAPITAL_MONTHS = 6
 # A warehouse owner holds production back while last month's price was below reference * HOLD_BELOW
@@ -109,7 +110,7 @@ def terms():
     return {"currency": CURRENCY, "start_capital": START_CAPITAL,
             "building_costs": dict(BUILD_COST), "road_cell_cost": ROAD_CELL_COST,
             "hold_below": HOLD_BELOW,
-            "insolvency": {"bankrupt_after_missed": BANKRUPT_AFTER_MISSED, "liquidation_rate": LIQUIDATION_RATE, "distress_output": DISTRESS_OUTPUT},
+            "insolvency": {"bankrupt_after_missed": BANKRUPT_AFTER_MISSED, "liquidation_rate": LIQUIDATION_RATE, "sell_rate": SELL_RATE, "distress_output": DISTRESS_OUTPUT},
             "labor": {"base_wage": BASE_WAGE, "participation": PARTICIPATION, "base_population": BASE_POPULATION},
             "production": {k: {"product_id": v["product"], "product": MARKET[v["product"]]["name"] if v["product"] else "",
                                "output": v["output"], "unit_price": MARKET[v["product"]]["reference_price"] if v["product"] else 0,

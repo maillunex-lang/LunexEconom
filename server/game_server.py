@@ -104,6 +104,24 @@ def clock_state():
         db.commit()
     return result
 
+def sell(owner,payload):
+    object_id=payload.get("object_id")
+    request_id=payload.get("request_id")
+    if type(object_id) is not str or not 1<=len(object_id)<=64:return 400,{"error":"invalid_request"}
+    try:uuid.UUID(request_id)
+    except (ValueError,TypeError,AttributeError):return 400,{"error":"invalid_request_id"}
+    with LOCK, connect() as db:
+        db.execute("BEGIN IMMEDIATE")
+        prev=db.execute("SELECT response FROM commands WHERE owner=? AND request_id=?",(owner,request_id)).fetchone()
+        if prev:return 200,json.loads(prev[0])
+        now=int(time.time())
+        production.advance(db,"?",clock.state(db,"?",now),now)
+        status,result=production.sell_building(db,"?",owner,object_id,now)
+        if status==201:
+            db.execute("INSERT INTO commands VALUES(?,?,?)",(owner,request_id,json.dumps(result)))
+        db.commit()
+        return status,result
+
 def market_state():
     with LOCK, connect() as db:
         db.execute("BEGIN IMMEDIATE")
@@ -152,6 +170,8 @@ def chunk(cx,cy):
     items+=[{"x":x,"y":y,"kind":"road_changed","object_id":"","owner":owner} for x,y,owner in rds]
     return 200,{"cx":cx,"cy":cy,"version":row[0] if row else 0,"cells":items}
 
+ECONOMY_POST={"/sell":"sell"}
+
 class Handler(BaseHTTPRequestHandler):
     def _send(self,status,data):
         raw=json.dumps(data,ensure_ascii=False).encode()
@@ -169,6 +189,22 @@ class Handler(BaseHTTPRequestHandler):
         return profile["username"] if status==200 else None
     def _client(self):
         return self.headers.get("X-Real-IP",self.client_address[0])[:64] if self.client_address[0] in ("127.0.0.1","::1") else self.client_address[0]
+    def _economy_post(self):
+        """Economy commands (/sell, /loan); returns True when the request was handled."""
+        path=urlsplit(self.path).path
+        if path not in ECONOMY_POST:return False
+        try:
+            size=int(self.headers.get("Content-Length","0"))
+            payload=json.loads(self.rfile.read(size)) if 2<=size<=4096 else None
+        except (ValueError,UnicodeError,json.JSONDecodeError):payload=None
+        if not isinstance(payload,dict):
+            self._send(400,{"error":"invalid_body"});return True
+        owner=self._identity()
+        if not owner:
+            self._send(401,{"error":"unauthorized"});return True
+        npc_tick()
+        self._send(*globals()[ECONOMY_POST[path]](owner,payload))
+        return True
     def do_GET(self):
         url=urlsplit(self.path)
         if url.path in ("/market","/wallet","/world"):npc_tick()
@@ -193,6 +229,7 @@ class Handler(BaseHTTPRequestHandler):
             return self._send(*result)
         return self._send(404,{"error":"not_found"})
     def do_POST(self):
+        if self._economy_post():return
         path=urlsplit(self.path).path
         if path not in ("/auth/register","/auth/login","/auth/logout","/build"):
             return self._send(404,{"error":"not_found"})
@@ -220,6 +257,7 @@ if os.environ.get("LUNEX_DB_ENGINE") == "postgres":
     wallet = postgres_world.wallet
     clock_state = postgres_world.clock_state
     market_state = postgres_world.market_state
+    sell = postgres_world.sell
     NPC_CONNECT,NPC_PH = postgres_db.connect,"%s"
 
 if __name__=="__main__":

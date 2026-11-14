@@ -92,7 +92,7 @@ func apply_server_event(event: Dictionary) -> void:
             _set_server_road(coord, true)
             continue
         if kind == "building_removed": server_cells.erase(coord)
-        else: server_cells[coord] = {"kind":"building_created","building_kind":building_kind,"object_id":str(event.get("object_id", ""))}
+        else: server_cells[coord] = {"kind":"building_created","building_kind":building_kind,"object_id":str(event.get("object_id", "")),"owner":str(event.get("owner", ""))}
         _redraw_chunk_at(coord)
 
 func apply_chunk_snapshot(coord: Vector2i, cells: Array) -> void:
@@ -108,7 +108,7 @@ func apply_chunk_snapshot(coord: Vector2i, cells: Array) -> void:
             roads.segments[c] = true
         else:
             var bk := str(cell.get("building_kind", kind if kind in ["farm", "mine", "factory", "warehouse"] else ""))
-            server_cells[c] = {"kind":"building_created","building_kind":bk,"object_id":cell.get("object_id", "")}
+            server_cells[c] = {"kind":"building_created","building_kind":bk,"object_id":cell.get("object_id", ""),"owner":str(cell.get("owner", ""))}
     # Roads on the chunk border change the shape of roads in neighbouring chunks.
     for dx in range(-1, 2):
         for dy in range(-1, 2):
@@ -336,6 +336,13 @@ func place_building() -> Dictionary:
 func _redraw_build_area(origin: Vector2i, size: Vector2i) -> void:
     for cell in planner.footprint(origin, size):
         _redraw_chunk_at(cell)
+
+func building_info(cell: Vector2i) -> Dictionary:
+    """Server building on a cell: {kind, object_id, owner}, or an empty dictionary."""
+    if not server_cells.has(cell): return {}
+    var c: Dictionary = server_cells[cell]
+    if str(c.get("object_id", "")) == "": return {}
+    return {"kind": str(c.get("building_kind", "")), "object_id": str(c.get("object_id", "")), "owner": str(c.get("owner", ""))}
 
 func building_at(cell: Vector2i) -> String:
     if server_cells.has(cell):

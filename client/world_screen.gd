@@ -42,11 +42,17 @@ func _ready() -> void:
 func set_selection(cell: Vector2i) -> void:
     info.text = "Регион 01 · Участок %d:%d" % [cell.x, cell.y]
     if world.build_type.is_empty() and details_panel != null:
-        var kind: String = world.building_at(cell)
-        if kind.is_empty():
+        var b: Dictionary = world.building_info(cell)
+        if b.is_empty():
             details_panel.hide()
+            selected_building = {}
         else:
-            details_panel.get_node("VBoxContainer/Title").text = "Предприятие: " + kind
+            selected_building = b
+            var own := str(b["owner"]) == GameSession.username and GameSession.username != ""
+            var kind_name: String = KIND_NAMES.get(str(b["kind"]), str(b["kind"]))
+            details_panel.get_node("VBoxContainer/Title").text = "%s · %s" % [kind_name, "ваша компания" if own else _owner_name(str(b["owner"]))]
+            sell_button.visible = own
+            sell_button.text = "Продать за %s" % _fmt_money(int(float(building_costs.get(str(b["kind"]), 0)) * sell_rate))
             _show_panel(details_panel)
 func _update_safe_area() -> void:
     var v := get_viewport_rect().size
@@ -111,6 +117,10 @@ var section_body: Label
 var catalog_panel: PanelContainer
 var placement_panel: PanelContainer
 var details_panel: PanelContainer
+var sell_button: Button
+var selected_building: Dictionary = {}
+var sell_rate := 0.5
+var sell_pending := false
 var catalog_buttons: Array[Button] = []
 var ui_pending := false
 var build_toolbar: HBoxContainer
@@ -201,10 +211,13 @@ func _setup_ui_v1() -> void:
     details_panel.add_theme_stylebox_override("panel", _style())
     get_node("UIOverlay").add_child(details_panel)
     var details_content := VBoxContainer.new()
+    details_content.name = "VBoxContainer"
     details_panel.add_child(details_content)
     var title := Label.new()
     title.name = "Title"
     details_content.add_child(title)
+    sell_button = _ui_button("Продать", _sell_selected)
+    details_content.add_child(sell_button)
     details_content.add_child(_ui_button("Закрыть", func(): details_panel.hide()))
     details_panel.hide()
     section_panel = PanelContainer.new()
@@ -668,6 +681,7 @@ func _refresh_terms() -> void:
         if eco.get("building_costs", null) is Dictionary: building_costs = eco["building_costs"]
         road_cell_cost = int(eco.get("road_cell_cost", road_cell_cost))
         if eco.get("production", null) is Dictionary: production = eco["production"]
+        if eco.get("insolvency", null) is Dictionary: sell_rate = float(eco["insolvency"].get("sell_rate", sell_rate))
         if data.get("clock", null) is Dictionary:
             game_clock = data["clock"]
             clock_offset = float(game_clock.get("server_time", 0)) - Time.get_unix_time_from_system()
@@ -709,3 +723,48 @@ func _tick_game_date() -> void:
     var label := get_node_or_null("UIOverlay/HUD/Top/GameDate") as Label
     if label != null:
         label.text = _game_date_text(game_clock, Time.get_unix_time_from_system() + clock_offset)
+
+func _owner_name(owner: String) -> String:
+    for c in competitors:
+        if c is Dictionary and str(c.get("owner", "")) == owner: return str(c.get("name", owner))
+    return owner.trim_prefix("npc:") if owner.begins_with("npc:") else owner
+
+func _api_post(path: String, payload: Dictionary, callback: Callable) -> void:
+    """POST JSON to the game server with the account token; callback(code, data) gets the parsed answer ({} on errors)."""
+    if not GameSession.is_authenticated():
+        info.text = "Сначала войдите в аккаунт"
+        return
+    var req := HTTPRequest.new()
+    req.timeout = 12.0
+    add_child(req)
+    req.request_completed.connect(func(result: int, code: int, _headers: PackedStringArray, body: PackedByteArray) -> void:
+        req.queue_free()
+        if result != HTTPRequest.RESULT_SUCCESS:
+            callback.call(0, {})
+            return
+        var data = JSON.parse_string(body.get_string_from_utf8())
+        callback.call(code, data if data is Dictionary else {})
+    )
+    var headers := PackedStringArray(["Content-Type: application/json", "Authorization: Bearer " + GameSession.access_token])
+    if req.request(API_ROOT + path, headers, HTTPClient.METHOD_POST, JSON.stringify(payload)) != OK:
+        req.queue_free()
+        callback.call(0, {})
+
+func _sell_selected() -> void:
+    if sell_pending or selected_building.is_empty(): return
+    sell_pending = true
+    info.text = "Продаём здание..."
+    _api_post("sell", {"object_id": selected_building["object_id"], "request_id": _new_build_request_id()}, func(code: int, data: Dictionary) -> void:
+        sell_pending = false
+        if code == 200 or code == 201:
+            for event in data.get("events", []):
+                if event is Dictionary: world.apply_server_event(event)
+            if data.has("balance"): _set_balance(int(data["balance"]))
+            details_panel.hide()
+            selected_building = {}
+            info.text = "Продано за %s" % _fmt_money(int(data.get("price", 0)))
+            _refresh_wallet()
+        else:
+            var errors := {"not_owner": "Это здание не ваше", "not_found": "Здание уже продано", "unauthorized": "Сессия завершена, войдите снова"}
+            info.text = str(errors.get(str(data.get("error", "")), "Не удалось продать (HTTP %d)" % code))
+    )

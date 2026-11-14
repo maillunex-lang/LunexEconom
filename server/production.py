@@ -89,11 +89,14 @@ def _remove_building(db, ph, object_id, owner):
     grouped = {}
     for x, y in cells:
         grouped.setdefault((x // CHUNK, y // CHUNK), []).append([x, y])
+    events = []
     for (cx, cy), coords in sorted(grouped.items()):
         db.execute(_q("INSERT INTO chunks(cx,cy,version) VALUES(%s,%s,1) ON CONFLICT(cx,cy) DO UPDATE SET version=chunks.version+1", ph), (cx, cy))
         version = db.execute(_q("SELECT version FROM chunks WHERE cx=%s AND cy=%s", ph), (cx, cy)).fetchone()[0]
-        db.execute(_q("INSERT INTO events(cx,cy,version,kind,payload) VALUES(%s,%s,%s,%s,%s)", ph),
-                   (cx, cy, version, "building_removed", json.dumps({"object_id": object_id, "owner": owner, "cells": coords})))
+        data = {"object_id": object_id, "owner": owner, "cells": coords}
+        db.execute(_q("INSERT INTO events(cx,cy,version,kind,payload) VALUES(%s,%s,%s,%s,%s)", ph), (cx, cy, version, "building_removed", json.dumps(data)))
+        events.append({"cx": cx, "cy": cy, "version": version, "kind": "building_removed", **data})
+    return events
 
 
 def liquidate(db, ph, owner, month, now):
@@ -125,6 +128,38 @@ def liquidate(db, ph, owner, month, now):
     st.update(missed=0, wages_owed=0, input_owed=0, maint_owed=0, bankruptcies=st["bankruptcies"] + 1,
               last_bankruptcy_month=month, written_off=st["written_off"] + (owed - paid))
     _save_status(db, ph, owner, st)
+
+
+def sell_building(db, ph, owner, object_id, now):
+    """Voluntary sale of one building at SELL_RATE of its construction cost. Returns (status, result)."""
+    row = db.execute(_q("SELECT owner,kind FROM buildings WHERE id=%s", ph), (object_id,)).fetchone()
+    if row is None:
+        return 404, {"error": "not_found"}
+    if row[0] != owner:
+        return 403, {"error": "not_owner"}
+    kind = row[1]
+    price = int(economy.BUILD_COST.get(kind, 0) * economy.SELL_RATE)
+    events = _remove_building(db, ph, object_id, owner)
+    account = economy.player_account(owner)
+    if price:
+        economy.post(db, ph, "sale", "Продажа здания: %s" % kind, [(economy.CONSTRUCTION, -price), (account, price)], now)
+    # Stock above the remaining warehouse capacity cannot stay: it is sold at the liquidation share of the market price.
+    capacity = sum(_spec(k)["capacity"] for k, in db.execute(_q("SELECT kind FROM building_ops WHERE owner=%s", ph), (owner,)).fetchall()
+                   if _spec(k) and _spec(k).get("capacity"))
+    stock = {p: int(q) for p, q in db.execute(_q("SELECT product,qty FROM inventory WHERE owner=%s", ph), (owner,)).fetchall() if q > 0}
+    excess = sum(stock.values()) - capacity
+    sold_value = 0
+    for product in sorted(stock, key=lambda k: -stock[k]):
+        if excess <= 0:
+            break
+        take = min(stock[product], excess)
+        excess -= take
+        last = db.execute(_q("SELECT price FROM market_prices WHERE product=%s ORDER BY month_index DESC LIMIT 1", ph), (product,)).fetchone()
+        sold_value += int(take * (last[0] if last else economy.MARKET[product]["reference_price"]) * economy.INVENTORY_LIQUIDATION_RATE)
+        db.execute(_q("UPDATE inventory SET qty=%s WHERE owner=%s AND product=%s", ph), (stock[product] - take, owner, product))
+    if sold_value:
+        economy.post(db, ph, "sale", "Продажа лишних запасов", [(economy.MARKET_ACCOUNT, -sold_value), (account, sold_value)], now)
+    return 201, {"ok": True, "object_id": object_id, "kind": kind, "price": price + sold_value, "balance": economy.balance(db, ph, owner), "events": events}
 
 
 def labor_market(population, total_jobs):
