@@ -283,7 +283,9 @@ class EffectTests(CityBase):
         self.month(1)
         game_server.wallet("alice")
         self.assertGreater(roads, 0)
-        self.assertEqual(game_server.wallet("alice")[1]["balance"], alice_before + economy.MAYOR_SALARY)
+        with game_server.connect() as db:
+            collected = db.execute("SELECT COALESCE(SUM(paid),0) FROM company_taxes WHERE month_index=0").fetchone()[0]
+        self.assertEqual(game_server.wallet("alice")[1]["balance"], alice_before + economy.MAYOR_SALARY + int(economy.MAYOR_BONUS_SHARE * collected))
         self.assertLess(self.budget(), before + 100_000)
         self.ledger_ok()
 

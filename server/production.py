@@ -384,6 +384,10 @@ def step_month(db, ph, month, now):
     for owner in bankrupt:
         liquidate(db, ph, owner, month, now)
     city.monthly(db, ph, month, now)
+    city_cash = economy.balance(db, ph, economy.CITY) or 0
+    services = sum(economy.monthly_cost(k, lab["wage"]) for k, in db.execute(_q("SELECT kind FROM building_ops WHERE owner=%s", ph), (economy.CITY,)).fetchall())
+    health = 0.0 if _arrears(_status(db, ph, economy.CITY)) > 0 else (1.0 if services <= 0 else min(1.0, city_cash / (2.0 * services)))
+    city.update_rating(db, ph, month, quality, lab["unemployment"], health, now)
     city.tally_if_due(db, ph, month, lab["population"], lab["unemployment"], quality, now)
     db.execute(_q("INSERT INTO population(month_index,population,labor_force,jobs,wage,staffing_permille,demand_permille,next_population) VALUES(%s,%s,%s,%s,%s,%s,%s,%s) ON CONFLICT(month_index) DO NOTHING", ph),
                (month, lab["population"], lab["labor_force"], lab["jobs"], lab["wage"], int(staffing * 1000), int(lab["scale"] * 1000),
@@ -545,7 +549,11 @@ def city_view(db, ph, clk, owner=None):
             "social": {"counts": soc["counts"], "coverage": {k: round(v, 3) for k, v in soc["coverage"].items()}, "quality": round(soc["quality"], 3), "funded": soc["funded"]},
             "costs": {k: economy.BUILD_COST[k] for k in economy.SOCIAL_KINDS}, "serves": {k: economy.PRODUCTION[k]["serves"] for k in economy.SOCIAL_KINDS},
             "salary": economy.MAYOR_SALARY, "social_share": policy[1] and policy[0] / 1000.0, "tax_changed_month": int(policy[1]), "buildings": buildings,
-            "arrears": _arrears(_status(db, ph, economy.CITY)), "election": city.election_view(db, ph, month, owner)}
+            "arrears": _arrears(_status(db, ph, economy.CITY)), "election": city.election_view(db, ph, month, owner),
+            "rating": city.rating_view(db, ph),
+            "perks": {"salary": economy.MAYOR_SALARY, "bonus_share": economy.MAYOR_BONUS_SHARE, "term_bonus": [[t, b] for t, b in economy.TERM_BONUS],
+                      "max_terms": economy.MAX_CONSECUTIVE_TERMS, "terms_served": city.consecutive_terms(db, ph, m["owner"]) if not m["is_npc"] else 0},
+            "terms": city.terms_view(db, ph)}
 
 
 def holdings(db, ph, owner):

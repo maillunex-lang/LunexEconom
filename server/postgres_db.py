@@ -65,6 +65,8 @@ CREATE TABLE IF NOT EXISTS city_policy (id INTEGER PRIMARY KEY, profit_tax_permi
 CREATE TABLE IF NOT EXISTS company_tax_state (owner TEXT PRIMARY KEY, tax_owed BIGINT NOT NULL, vat_credit BIGINT NOT NULL);
 CREATE TABLE IF NOT EXISTS company_taxes (owner TEXT NOT NULL, month_index BIGINT NOT NULL, vat BIGINT NOT NULL, profit_tax BIGINT NOT NULL, property_tax BIGINT NOT NULL, paid BIGINT NOT NULL, PRIMARY KEY(owner, month_index));
 CREATE TABLE IF NOT EXISTS city_state (id INTEGER PRIMARY KEY, mayor TEXT NOT NULL, mayor_name TEXT NOT NULL, since_month BIGINT NOT NULL, term_end_month BIGINT NOT NULL);
+CREATE TABLE IF NOT EXISTS mayor_rating (month_index BIGINT PRIMARY KEY, mayor TEXT NOT NULL, residents_permille INTEGER NOT NULL, business_permille INTEGER NOT NULL, total_permille INTEGER NOT NULL, low_streak INTEGER NOT NULL);
+CREATE TABLE IF NOT EXISTS mayor_terms (mayor TEXT NOT NULL, name TEXT NOT NULL, from_month BIGINT NOT NULL, to_month BIGINT, reason TEXT, avg_rating_permille INTEGER, bonus BIGINT NOT NULL DEFAULT 0, PRIMARY KEY(from_month, mayor));
 CREATE TABLE IF NOT EXISTS election_candidates (election BIGINT NOT NULL, candidate TEXT NOT NULL, name TEXT NOT NULL, profit_permille INTEGER NOT NULL, property_permille INTEGER NOT NULL, social_permille INTEGER NOT NULL, slogan TEXT NOT NULL, PRIMARY KEY(election, candidate));
 CREATE TABLE IF NOT EXISTS election_votes (election BIGINT NOT NULL, voter TEXT NOT NULL, candidate TEXT NOT NULL, PRIMARY KEY(election, voter));
 CREATE TABLE IF NOT EXISTS election_results (election BIGINT PRIMARY KEY, winner TEXT NOT NULL, winner_name TEXT NOT NULL, tally TEXT NOT NULL, month_index BIGINT NOT NULL);

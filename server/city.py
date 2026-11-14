@@ -26,6 +26,8 @@ def ensure(db, ph, month=0):
     if db.execute("SELECT 1 FROM city_state WHERE id=1").fetchone() is None:
         db.execute(_q("INSERT INTO city_state(id,mayor,mayor_name,since_month,term_end_month) VALUES(1,%s,%s,%s,%s)", ph),
                    (ADMIN, ADMIN_NAME, month, month + economy.ELECTION_PERIOD))
+    if db.execute("SELECT 1 FROM mayor_terms").fetchone() is None:
+        db.execute(_q("INSERT INTO mayor_terms(mayor,name,from_month,to_month,reason,avg_rating_permille,bonus) VALUES(%s,%s,%s,NULL,NULL,NULL,0)", ph), (ADMIN, ADMIN_NAME, month))
     if db.execute("SELECT 1 FROM city_policy WHERE id=1").fetchone() is None:
         db.execute(_q("INSERT INTO city_policy(id,profit_tax_permille,property_tax_permille,social_share_permille,changed_month) VALUES(1,%s,%s,%s,%s)", ph),
                    (int(round(economy.DEFAULT_PROFIT_TAX * 1000)), int(round(economy.DEFAULT_PROPERTY_TAX * 1000)),
@@ -42,10 +44,107 @@ def is_mayor(db, ph, owner, month=0):
     return mayor(db, ph, month)["owner"] == owner
 
 
-def set_mayor(db, ph, owner, name, month):
+def set_mayor(db, ph, owner, name, month, reason="appointed", term_end=None, now=0):
+    """Hand over the office: close the current term (paying the end-of-term reward) and open a new one."""
     ensure(db, ph, month)
+    close_term(db, ph, month, reason, now)
+    db.execute(_q("INSERT INTO mayor_terms(mayor,name,from_month,to_month,reason,avg_rating_permille,bonus) VALUES(%s,%s,%s,NULL,NULL,NULL,0) "
+                  "ON CONFLICT(from_month,mayor) DO UPDATE SET name=excluded.name,to_month=NULL,reason=NULL,avg_rating_permille=NULL,bonus=0", ph), (owner, name, month))
     db.execute(_q("UPDATE city_state SET mayor=%s,mayor_name=%s,since_month=%s,term_end_month=%s WHERE id=1", ph),
-               (owner, name, month, month + economy.ELECTION_PERIOD))
+               (owner, name, month, term_end if term_end is not None else month + economy.ELECTION_PERIOD))
+
+
+def average_rating(db, ph, mayor_owner, from_month, to_month):
+    row = db.execute(_q("SELECT AVG(total_permille),COUNT(*) FROM mayor_rating WHERE mayor=%s AND month_index>=%s AND month_index<%s", ph),
+                     (mayor_owner, from_month, to_month)).fetchone()
+    return (float(row[0]) / 1000.0, int(row[1])) if row and row[1] else (None, 0)
+
+
+def term_bonus(avg):
+    for threshold, bonus in economy.TERM_BONUS:
+        if avg is not None and avg >= threshold:
+            return bonus
+    return 0
+
+
+def close_term(db, ph, month, reason, now=0):
+    """Close the open mayor term at `month`; a human mayor who finished the term earns the Republic's performance reward."""
+    row = db.execute("SELECT mayor,name,from_month FROM mayor_terms WHERE to_month IS NULL ORDER BY from_month DESC LIMIT 1").fetchone()
+    if row is None:
+        return 0
+    owner, name, start = row
+    avg, _count = average_rating(db, ph, owner, int(start), month)
+    bonus = 0
+    if not owner.startswith("npc:") and reason != "dismissed":
+        bonus = term_bonus(avg)
+        if bonus:
+            economy.ensure_wallet(db, ph, owner, now)
+            economy.post(db, ph, "city", "Награда за срок мэра (средний рейтинг %d%%)" % int(round(avg * 100)),
+                         [(economy.TREASURY, -bonus), (economy.player_account(owner), bonus)], now)
+    db.execute(_q("UPDATE mayor_terms SET to_month=%s,reason=%s,avg_rating_permille=%s,bonus=%s WHERE mayor=%s AND from_month=%s", ph),
+               (month, reason, None if avg is None else int(round(avg * 1000)), bonus, owner, start))
+    return bonus
+
+
+def consecutive_terms(db, ph, owner):
+    """How many terms in a row `owner` has governed (counting the open one)."""
+    count = 0
+    for mayor_owner, in db.execute("SELECT mayor FROM mayor_terms ORDER BY from_month DESC, COALESCE(to_month, 9223372036854775807) DESC").fetchall():
+        if mayor_owner != owner:
+            break
+        count += 1
+    return count
+
+
+def terms_view(db, ph, limit=5):
+    rows = db.execute(_q("SELECT mayor,name,from_month,to_month,reason,avg_rating_permille,bonus FROM mayor_terms ORDER BY from_month DESC, COALESCE(to_month, 9223372036854775807) DESC LIMIT %s", ph), (limit,)).fetchall()
+    return [{"mayor": m, "name": n, "from_month": int(f), "to_month": None if t is None else int(t), "reason": r,
+             "avg_rating": None if a is None else a / 1000.0, "bonus": int(b)} for m, n, f, t, r, a, b in rows]
+
+
+# ------------------------------------------------------------------ rating
+def current_rating(db, ph):
+    row = db.execute("SELECT residents_permille,business_permille,total_permille,low_streak FROM mayor_rating ORDER BY month_index DESC LIMIT 1").fetchone()
+    if not row:
+        return {"residents": 0.5, "business": 0.5, "total": 0.5, "low_streak": 0}
+    return {"residents": row[0] / 1000.0, "business": row[1] / 1000.0, "total": row[2] / 1000.0, "low_streak": int(row[3])}
+
+
+def instant_rating(quality, unemployment, budget_health, profit_tax, property_tax):
+    """Approval of the residents and of the business community for the current policy and city condition (0..1)."""
+    residents = 0.5 * quality + 0.3 * (1.0 - unemployment) + 0.2 * budget_health
+    if taxes.enabled():
+        burden = 0.6 * (profit_tax / economy.PROFIT_TAX_LIMITS[1]) + 0.4 * (property_tax / economy.PROPERTY_TAX_LIMITS[1])
+        business = 1.0 - burden
+    else:
+        business = 1.0
+    w = economy.RATING_RESIDENTS_WEIGHT
+    clamp = lambda v: min(max(v, 0.0), 1.0)
+    return clamp(residents), clamp(business), clamp(w * clamp(residents) + (1 - w) * clamp(business))
+
+
+def update_rating(db, ph, month, quality, unemployment, budget_health, now=0):
+    """Monthly smoothed rating of the sitting mayor; a human mayor who stays hopelessly unpopular is dismissed."""
+    m = mayor(db, ph, month)
+    rates = taxes.rates(db, ph)
+    res, biz, total = instant_rating(quality, unemployment, budget_health, rates["profit"], rates["property"])
+    prev = current_rating(db, ph)
+    k = economy.RATING_SMOOTHING
+    res, biz, total = (prev["residents"] * (1 - k) + res * k, prev["business"] * (1 - k) + biz * k, prev["total"] * (1 - k) + total * k)
+    streak = prev["low_streak"] + 1 if total < economy.DISMISS_BELOW else 0
+    db.execute(_q("INSERT INTO mayor_rating(month_index,mayor,residents_permille,business_permille,total_permille,low_streak) VALUES(%s,%s,%s,%s,%s,%s) "
+                  "ON CONFLICT(month_index) DO NOTHING", ph), (month, m["owner"], _permille(res), _permille(biz), _permille(total), streak))
+    if streak >= economy.DISMISS_AFTER and not m["is_npc"]:
+        set_mayor(db, ph, ADMIN, ADMIN_NAME, month + 1, reason="dismissed", term_end=m["term_end_month"], now=now)
+        db.execute(_q("UPDATE mayor_rating SET low_streak=0 WHERE month_index=%s", ph), (month,))
+        return "dismissed"
+    return None
+
+
+def rating_view(db, ph):
+    r = current_rating(db, ph)
+    return {"total": round(r["total"], 3), "residents": round(r["residents"], 3), "business": round(r["business"], 3), "low_streak": r["low_streak"],
+            "dismiss_below": economy.DISMISS_BELOW, "dismiss_after": economy.DISMISS_AFTER}
 
 
 def set_taxes(db, ph, owner, profit, prop, month):
@@ -99,10 +198,11 @@ def monthly(db, ph, month, now):
         economy.post(db, ph, "city", "Содержание дорог: %d" % road_cost, [(budget, -road_cost), (economy.UPKEEP, road_cost)], now)
         cash -= road_cost
     if not m["is_npc"]:
-        salary = min(economy.MAYOR_SALARY, max(cash, 0))
+        collected = db.execute(_q("SELECT COALESCE(SUM(paid),0) FROM company_taxes WHERE month_index=%s", ph), (month,)).fetchone()[0]
+        salary = min(economy.MAYOR_SALARY + int(economy.MAYOR_BONUS_SHARE * int(collected)), max(cash, 0))
         if salary:
             economy.ensure_wallet(db, ph, m["owner"], now)
-            economy.post(db, ph, "city", "Зарплата мэра: %d" % salary, [(budget, -salary), (economy.player_account(m["owner"]), salary)], now)
+            economy.post(db, ph, "city", "Зарплата и премия мэра: %d" % salary, [(budget, -salary), (economy.player_account(m["owner"]), salary)], now)
 
 
 # ---------------------------------------------------------------- elections
@@ -187,6 +287,8 @@ def register_candidate(db, ph, owner, profit, prop, slogan, month, now):
     election = m["term_end_month"]
     if jobs_of(db, ph, owner) <= 0:
         return 403, {"error": "no_company"}
+    if m["owner"] == owner and consecutive_terms(db, ph, owner) >= economy.MAX_CONSECUTIVE_TERMS:
+        return 403, {"error": "term_limit", "max_terms": economy.MAX_CONSECUTIVE_TERMS}
     if db.execute(_q("SELECT 1 FROM election_candidates WHERE election=%s AND candidate=%s", ph), (election, owner)).fetchone():
         return 409, {"error": "already_registered"}
     economy.ensure_wallet(db, ph, owner, now)
@@ -219,16 +321,16 @@ def _noise(election, candidate):
     return (int.from_bytes(digest[:4], "big") / 0xFFFFFFFF - 0.5) * 0.2          # +-0.1, deterministic
 
 
-def resident_shares(cands, incumbent, unemployment, quality, election):
+def resident_shares(cands, incumbent, unemployment, rating, election):
     """Share of the residents' votes for each candidate (softmax of a simple utility).
 
-    Residents like social spending, like low profit tax when jobs are scarce (unemployment) and reward an incumbent
-    for a good quality of life."""
+    Residents like social spending, like low profit tax when jobs are scarce (unemployment) and judge an incumbent
+    by the mayor rating (0..1): above 50 % helps, below hurts."""
     scores = {}
     for c in cands:
         u = 1.2 * c["social_share"] + 0.8 * unemployment * (1.0 - c["profit_tax"] / economy.PROFIT_TAX_LIMITS[1])
         if c["owner"] == incumbent:
-            u += 0.3 * quality
+            u += 0.8 * (rating - 0.5)
         scores[c["owner"]] = u + _noise(election, c["owner"])
     top = max(scores.values())
     weights = {k: math.exp(3.0 * (v - top)) for k, v in scores.items()}
@@ -243,7 +345,7 @@ def last_result(db, ph):
     return {"election": int(row[0]), "winner": row[1], "winner_name": row[2], "tally": json.loads(row[3]), "month_index": int(row[4])}
 
 
-def tally_if_due(db, ph, month, population, unemployment, quality, now):
+def tally_if_due(db, ph, month, population, unemployment, quality, now):          # `quality` kept for compatibility, the rating is stored
     """Count the votes when the last voting month completes; the winner takes office and promises become policy."""
     m = mayor(db, ph, month)
     election = m["term_end_month"]
@@ -252,9 +354,9 @@ def tally_if_due(db, ph, month, population, unemployment, quality, now):
     ensure_candidates(db, ph, month)
     cands = candidates(db, ph, election)
     if not cands:
-        set_mayor(db, ph, m["owner"], m["name"], election)             # nobody ran: the incumbent stays for another term
+        set_mayor(db, ph, m["owner"], m["name"], election, reason="re-elected", now=now)       # nobody ran: the incumbent stays
         return None
-    shares = resident_shares(cands, m["owner"], unemployment, quality, election)
+    shares = resident_shares(cands, m["owner"], unemployment, current_rating(db, ph)["total"], election)
     votes = {c["owner"]: shares[c["owner"]] * population for c in cands}
     player_votes = {c["owner"]: 0 for c in cands}
     for voter, candidate in db.execute(_q("SELECT voter,candidate FROM election_votes WHERE election=%s ORDER BY voter", ph), (election,)).fetchall():
@@ -267,7 +369,7 @@ def tally_if_due(db, ph, month, population, unemployment, quality, now):
               "resident_share": round(shares[c["owner"]], 3)} for c in order]
     db.execute(_q("INSERT INTO election_results(election,winner,winner_name,tally,month_index) VALUES(%s,%s,%s,%s,%s) ON CONFLICT(election) DO NOTHING", ph),
                (election, winner["owner"], winner["name"], json.dumps(tally, ensure_ascii=False), month))
-    set_mayor(db, ph, winner["owner"], winner["name"], election)
+    set_mayor(db, ph, winner["owner"], winner["name"], election, reason="re-elected" if winner["owner"] == m["owner"] else "term_ended", now=now)
     db.execute(_q("UPDATE city_policy SET profit_tax_permille=%s,property_tax_permille=%s,social_share_permille=%s,changed_month=%s WHERE id=1", ph),
                (_permille(winner["profit_tax"]), _permille(winner["property_tax"]), _permille(winner["social_share"]), election - 1))
     return winner["owner"]
@@ -288,6 +390,8 @@ def election_view(db, ph, month, owner=None):
     return {"phase": ph_name, "election_month": election, "fee": economy.ELECTION_FEE,
             "registration_start": election - economy.ELECTION_VOTING_MONTHS - economy.ELECTION_REGISTRATION_MONTHS,
             "voting_start": election - economy.ELECTION_VOTING_MONTHS, "candidates": cands, "my_vote": my_vote, "registered": registered,
-            "can_register": bool(owner) and ph_name == "registration" and not registered and not owner.startswith("npc:") and jobs_of(db, ph, owner) > 0,
+            "can_register": bool(owner) and ph_name == "registration" and not registered and not owner.startswith("npc:") and jobs_of(db, ph, owner) > 0
+                            and not (m["owner"] == owner and consecutive_terms(db, ph, owner) >= economy.MAX_CONSECUTIVE_TERMS),
+            "term_limit_reached": bool(owner) and m["owner"] == owner and consecutive_terms(db, ph, owner) >= economy.MAX_CONSECUTIVE_TERMS,
             "can_vote": bool(owner) and ph_name == "voting" and jobs_of(db, ph, owner) > 0,
             "vote_weight": vote_weight(db, ph, owner) if owner else 0, "last_result": last_result(db, ph)}

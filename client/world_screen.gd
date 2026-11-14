@@ -496,7 +496,11 @@ func _hit_ui_button(point: Vector2) -> Button:
         var stack: Array[Node] = [panel]
         while not stack.is_empty():
             var node: Node = stack.pop_back()
-            if node is Button and node.visible and node.get_global_rect().has_point(point):
+            # A hidden container hides its whole subtree: its buttons must not react to touches
+            # (a button's own `visible` flag stays true when only the parent is hidden).
+            if node is CanvasItem and not (node as CanvasItem).visible:
+                continue
+            if node is Button and node.is_visible_in_tree() and node.get_global_rect().has_point(point):
                 return node
             for child in node.get_children():
                 stack.append(child)
@@ -917,7 +921,15 @@ func _city_text() -> String:
     var lines: PackedStringArray = []
     var m: Dictionary = city.get("mayor", {})
     var who := "вы" if _is_mayor() else str(m.get("name", "—"))
-    lines.append("Мэр: %s (срок до %s)" % [who, _month_label(int(m.get("term_end_month", 0)))])
+    var perks: Dictionary = city.get("perks", {})
+    var served := int(perks.get("terms_served", 0))
+    var terms_text := (", сроков подряд %d из %d" % [served, int(perks.get("max_terms", 2))]) if served > 0 else ""
+    lines.append("Мэр: %s (срок до %s%s)" % [who, _month_label(int(m.get("term_end_month", 0))), terms_text])
+    var rating: Dictionary = city.get("rating", {})
+    if not rating.is_empty():
+        var streak := int(rating.get("low_streak", 0))
+        lines.append("Рейтинг мэра: %d%% (жители %d%%, бизнес %d%%)%s" % [int(round(float(rating.get("total", 0.0)) * 100.0)), int(round(float(rating.get("residents", 0.0)) * 100.0)), int(round(float(rating.get("business", 0.0)) * 100.0)),
+            (" — КРИТИЧЕСКИЙ: %d мес. из %d до отставки!" % [streak, int(rating.get("dismiss_after", 3))]) if streak > 0 and not bool(m.get("is_npc", true)) else ""])
     lines.append("Бюджет: %s · налоги за прошлый месяц %s · содержание служб %s/мес" % [_fmt_money(int(city.get("budget", 0))), _fmt_money(int(city.get("collected_last_month", 0))), _fmt_money(int(city.get("services_upkeep", 0)))])
     var t: Dictionary = city.get("taxes", {})
     if not t.is_empty() and bool(t.get("enabled", true)):
@@ -930,10 +942,20 @@ func _city_text() -> String:
         lines.append("Качество жизни: %d%% (больше выпуск и приток жителей)%s" % [int(round(float(soc.get("quality", 0.0)) * 100.0)), "" if bool(soc.get("funded", true)) else " — службы недофинансированы!"])
         for k in ["school", "hospital", "park"]:
             lines.append("%s: %d шт., охват %d%%, цена %s" % [KIND_NAMES[k], int(counts.get(k, 0)), int(round(float(cov.get(k, 0.0)) * 100.0)), _fmt_money(int(float(city.get("costs", {}).get(k, 0))))])
+    var perk_text := _perk_text(perks)
     if _is_mayor():
-        lines.append("Вы мэр: налоги можно менять раз в игровой месяц, зарплата %s/мес из бюджета." % _fmt_money(int(city.get("salary", 0))))
+        lines.append("Вы мэр: налоги можно менять раз в игровой месяц. " + perk_text)
+    elif perk_text != "":
+        lines.append("Должность мэра: " + perk_text)
     lines.append_array(_election_lines())
     return "\n".join(lines)
+
+func _perk_text(perks: Dictionary) -> String:
+    if perks.is_empty(): return ""
+    var tiers: PackedStringArray = []
+    for t in perks.get("term_bonus", []):
+        if t is Array and t.size() == 2: tiers.append("рейтинг от %d%% — %s" % [int(round(float(t[0]) * 100.0)), _fmt_money(int(t[1]))])
+    return "зарплата %s в месяц + %s%% собранных налогов; награда республики за срок: %s." % [_fmt_money(int(perks.get("salary", 0))), _pct(float(perks.get("bonus_share", 0.0))), ", ".join(tiers)]
 
 func _election_lines() -> PackedStringArray:
     var lines: PackedStringArray = []
@@ -945,6 +967,7 @@ func _election_lines() -> PackedStringArray:
     if phase == "registration":
         lines.append("ВЫБОРЫ МЭРА: идёт регистрация кандидатов (взнос %s), голосование с %s." % [_fmt_money(int(e.get("fee", 0))), _month_label(int(e.get("voting_start", 0)))])
         lines.append("Баллотироваться могут владельцы бизнеса; программа — налог на прибыль / налог на имущество.")
+        if bool(e.get("term_limit_reached", false)): lines.append("Вы управляли городом максимальное число сроков подряд — баллотироваться нельзя.")
     elif phase == "voting":
         lines.append("ВЫБОРЫ МЭРА: голосование до конца %s. Ваш голос весит %d." % [_month_label(month_end - 1), int(e.get("vote_weight", 0))])
     else:
@@ -982,6 +1005,7 @@ func _city_vote(candidate: String) -> void:
     )
 
 func _city_tax_step(d_profit: float, d_property: float) -> void:
+    if not _is_mayor(): return
     var t: Dictionary = city.get("taxes", {})
     if t.is_empty(): return
     var lim: Dictionary = t.get("limits", {})

@@ -91,6 +91,16 @@ PROPERTY_TAX_LIMITS = (0.0, 0.022)
 SOCIAL_PRODUCTIVITY = 0.10
 SOCIAL_GROWTH = 0.002
 MAYOR_SALARY = 40_000          # per game month from the budget, only for a human mayor
+MAYOR_BONUS_SHARE = 0.02       # performance bonus: share of the taxes the city collected in the month, paid from the budget
+TERM_BONUS = ((0.75, 600_000), (0.60, 300_000))   # end-of-term reward from the Republic (treasury, not the budget) by average rating
+# Mayor rating (0..1), smoothed monthly: 70 % residents' approval (quality of life, employment, healthy budget) +
+# 30 % business approval (tax burden). A human mayor below DISMISS_BELOW for DISMISS_AFTER months in a row is dismissed
+# (the administration governs until the next election). Nobody may govern more than MAX_CONSECUTIVE_TERMS terms in a row.
+RATING_RESIDENTS_WEIGHT = 0.7
+RATING_SMOOTHING = 0.2
+DISMISS_BELOW = 0.15
+DISMISS_AFTER = 3
+MAX_CONSECUTIVE_TERMS = 2
 ROAD_MAINTENANCE = 30          # per built road cell per month from the budget
 ELECTION_PERIOD = 12           # game months between elections (the length of a mayor's term)
 ELECTION_REGISTRATION_MONTHS = 2   # candidates register in the two months before voting starts
@@ -142,6 +152,8 @@ SCHEMA = (
     "CREATE TABLE IF NOT EXISTS company_tax_state(owner TEXT PRIMARY KEY, tax_owed BIGINT NOT NULL, vat_credit BIGINT NOT NULL)",
     "CREATE TABLE IF NOT EXISTS company_taxes(owner TEXT NOT NULL, month_index BIGINT NOT NULL, vat BIGINT NOT NULL, profit_tax BIGINT NOT NULL, property_tax BIGINT NOT NULL, paid BIGINT NOT NULL, PRIMARY KEY(owner, month_index))",
     "CREATE TABLE IF NOT EXISTS city_state(id INTEGER PRIMARY KEY, mayor TEXT NOT NULL, mayor_name TEXT NOT NULL, since_month BIGINT NOT NULL, term_end_month BIGINT NOT NULL)",
+    "CREATE TABLE IF NOT EXISTS mayor_rating(month_index BIGINT PRIMARY KEY, mayor TEXT NOT NULL, residents_permille INTEGER NOT NULL, business_permille INTEGER NOT NULL, total_permille INTEGER NOT NULL, low_streak INTEGER NOT NULL)",
+    "CREATE TABLE IF NOT EXISTS mayor_terms(mayor TEXT NOT NULL, name TEXT NOT NULL, from_month BIGINT NOT NULL, to_month BIGINT, reason TEXT, avg_rating_permille INTEGER, bonus BIGINT NOT NULL DEFAULT 0, PRIMARY KEY(from_month, mayor))",
     "CREATE TABLE IF NOT EXISTS election_candidates(election BIGINT NOT NULL, candidate TEXT NOT NULL, name TEXT NOT NULL, profit_permille INTEGER NOT NULL, property_permille INTEGER NOT NULL, social_permille INTEGER NOT NULL, slogan TEXT NOT NULL, PRIMARY KEY(election, candidate))",
     "CREATE TABLE IF NOT EXISTS election_votes(election BIGINT NOT NULL, voter TEXT NOT NULL, candidate TEXT NOT NULL, PRIMARY KEY(election, voter))",
     "CREATE TABLE IF NOT EXISTS election_results(election BIGINT PRIMARY KEY, winner TEXT NOT NULL, winner_name TEXT NOT NULL, tally TEXT NOT NULL, month_index BIGINT NOT NULL)",
@@ -165,7 +177,9 @@ def terms():
             "building_costs": dict(BUILD_COST), "road_cell_cost": ROAD_CELL_COST,
             "hold_below": HOLD_BELOW,
             "city": {"social_cost": {k: BUILD_COST[k] for k in SOCIAL_KINDS}, "serves": {k: PRODUCTION[k]["serves"] for k in SOCIAL_KINDS},
-                     "mayor_salary": MAYOR_SALARY, "election_period": ELECTION_PERIOD, "election_fee": ELECTION_FEE, "productivity": SOCIAL_PRODUCTIVITY},
+                     "mayor_salary": MAYOR_SALARY, "election_period": ELECTION_PERIOD, "election_fee": ELECTION_FEE,
+                     "bonus_share": MAYOR_BONUS_SHARE, "term_bonus": [[t, b] for t, b in TERM_BONUS], "max_terms": MAX_CONSECUTIVE_TERMS,
+                     "dismiss_below": DISMISS_BELOW, "dismiss_after": DISMISS_AFTER, "productivity": SOCIAL_PRODUCTIVITY},
             "insolvency": {"bankrupt_after_missed": BANKRUPT_AFTER_MISSED, "loan": {"interest": LOAN_INTEREST, "ltv": LOAN_LTV, "max": LOAN_MAX, "min": LOAN_MIN}, "liquidation_rate": LIQUIDATION_RATE, "sell_rate": SELL_RATE, "distress_output": DISTRESS_OUTPUT},
             "labor": {"base_wage": BASE_WAGE, "participation": PARTICIPATION, "base_population": BASE_POPULATION},
             "production": {k: {"product_id": v["product"], "product": MARKET[v["product"]]["name"] if v["product"] else "",

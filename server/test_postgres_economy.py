@@ -212,6 +212,50 @@ class PostgresEconomyTests(unittest.TestCase):
         self.assertEqual(self.sql("SELECT COUNT(*) FROM election_votes")[0][0], 1)
         self.assert_ledger()
 
+    def make_mayor(self, who, month=0):
+        import city
+        self.wallet(who)
+        postgres_world.city_state()
+        with postgres_db.connect() as db:
+            city.set_mayor(db, "%s", who, who, month, reason="test", now=self.now)
+
+    def rating_rows(self, owner, months, permille):
+        with postgres_db.connect() as db:
+            for m in months:
+                db.execute("INSERT INTO mayor_rating(month_index,mayor,residents_permille,business_permille,total_permille,low_streak) VALUES(%s,%s,%s,%s,%s,0) "
+                           "ON CONFLICT(month_index) DO UPDATE SET mayor=excluded.mayor,total_permille=excluded.total_permille", (m, owner, permille, permille, permille))
+
+    def test_mayor_rewards_term_limit_and_dismissal_on_postgres(self):
+        import city
+        view = postgres_world.city_state("alice")[1]
+        self.assertIn("rating", view)
+        self.assertEqual(view["perks"]["max_terms"], 2)
+        # a successful term earns the Republic's reward
+        self.make_mayor("alice", 0)
+        self.rating_rows("alice", range(0, 12), 800)
+        before = self.wallet("alice")["balance"]
+        self.now = T0 + 12 * DAY + 5
+        v = postgres_world.city_state("alice")[1]
+        term = next(t for t in v["terms"] if t["mayor"] == "alice")
+        self.assertEqual(term["bonus"], 600_000)
+        self.assertGreaterEqual(self.wallet("alice")["balance"] - before, 600_000)
+        # the term limit: two consecutive terms and no third
+        with postgres_db.connect() as db:
+            city.set_mayor(db, "%s", "carol", "carol", 12, reason="test", now=self.now)
+            city.set_mayor(db, "%s", "carol", "carol", 13, reason="re-elected", now=self.now)
+            city.set_mayor(db, "%s", "carol", "carol", 14, reason="re-elected", now=self.now)
+            self.assertEqual(city.consecutive_terms(db, "%s", "carol"), 3)
+        # an unpopular human mayor is dismissed
+        with postgres_db.connect() as db:
+            city.set_mayor(db, "%s", "dave", "dave", 15, reason="test", now=self.now)
+        self.rating_rows("dave", [14], 100)
+        with mock.patch.object(city, "instant_rating", return_value=(0.0, 0.0, 0.0)):
+            self.now = T0 + 19 * DAY + 5
+            v = postgres_world.city_state()[1]
+        self.assertEqual(v["mayor"]["owner"], "npc:administration")
+        self.assertEqual(next(t for t in v["terms"] if t["mayor"] == "dave")["reason"], "dismissed")
+        self.assert_ledger()
+
     def test_administration_builds_social_buildings_on_postgres(self):
         game_server.npc_tick()
         self.fund_budget(3_000_000)
