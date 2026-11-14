@@ -7,12 +7,12 @@ Sender: `lunexeconomy@mail.ru`. Mail.ru official settings: `smtp.mail.ru:465`, i
 The game service must NOT be restarted while Claude works on `main`. These commands are for an authorized administrator, **after** confirming the service account and deploy plan. Run in a trusted interactive SSH terminal; **never paste the password into ChatGPT, a shell command argument, GitHub, logs or screenshots**.
 
 ```sh
-sudo install -d -m 0700 -o root -g root /etc/lunexeconom
+sudo install -d -m 0750 -o root -g gamedev /etc/lunexeconom
 sudo install -m 0600 -o gamedev -g gamedev /dev/null /etc/lunexeconom/mailru-app-password
 sudo nano /etc/lunexeconom/mailru-app-password
 ```
 
-Enter only the app password in the editor. The file must be readable by the game service account; replace `gamedev` with that account if different. Limit directory traversal accordingly (the service account must be able to access the secret). Avoid root-only directory permissions if the service runs as `gamedev`. Prefer systemd LoadCredential when integrating with the production service.
+Enter only the app password in the editor. The file must be readable by the game service account; replace `gamedev` with that account if different. The directory permits traversal only to root and the `gamedev` group. Prefer systemd LoadCredential when integrating with the production service.
 
 ## Non-secret configuration
 
