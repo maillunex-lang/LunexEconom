@@ -11,6 +11,7 @@ import auth
 import sqlite_util
 import roads as road_rules
 import economy
+import building_dimensions
 import production
 import taxes
 import city
@@ -75,7 +76,10 @@ def build(owner, payload):
         uuid.UUID(request_id)
     except (ValueError, TypeError, AttributeError):
         return 400,{"error":"invalid_request_id"}
-    w,h=KINDS[kind]
+    try:
+        w,h=building_dimensions.footprint(kind,payload.get("size"))
+    except ValueError:
+        return 400,{"error":"invalid_building_size"}
     footprint=[(xx,yy) for xx in range(x,x+w) for yy in range(y,y+h)]
     if any(abs(xx)>MAX_COORD or abs(yy)>MAX_COORD for xx,yy in footprint):
         return 400,{"error":"outside_world"}
@@ -102,6 +106,8 @@ def build(owner, payload):
             return 402,{"error":"insufficient_funds","cost":cost,"balance":balance}
         db.execute("INSERT INTO buildings VALUES(?,?,?,?,?,?)",(object_id,owner,kind,x,y,now))
         production.register_building(db,"?",owner,object_id,kind,clk)
+        if payload.get("size") is not None:
+            db.execute("INSERT INTO building_dimensions(object_id,width,height) VALUES(?,?,?)",(object_id,w,h))
         db.executemany("INSERT INTO cells VALUES(?,?,?)",[(xx,yy,object_id) for xx,yy in footprint])
         db.executemany("INSERT INTO roads VALUES(?,?,?,?)",[(rx,ry,owner,now) for rx,ry in new_roads])
         events=[]
