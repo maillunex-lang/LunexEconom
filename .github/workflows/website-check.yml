@@ -2,7 +2,6 @@ name: Website checks
 on:
   push:
     branches: [main]
-    paths: ['web/**','ops/**','.github/workflows/website-check.yml']
   pull_request:
     paths: ['web/**','ops/**','.github/workflows/website-check.yml']
   workflow_dispatch:
