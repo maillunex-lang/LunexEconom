@@ -3,7 +3,7 @@ extends Node2D
 const TILE_W := 96.0
 const TILE_H := 48.0
 const CHUNK := 12
-const COLORS := [Color("#63865b"), Color("#72915e"), Color("#8ca66a"), Color("#b6a36d"), Color("#527f8d"), Color("#547c54")]
+const COLORS := [Color("#63865b"), Color("#72915e"), Color("#8ca66a"), Color("#b6a36d"), Color("#527f8d"), Color("#547c54"), Color("#b46f49")]
 var world: Node2D
 var chunk_coord: Vector2i
 
