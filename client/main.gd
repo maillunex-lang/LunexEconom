@@ -31,7 +31,7 @@ func _ready() -> void:
     request.request_completed.connect(_on_response)
     get_viewport().size_changed.connect(_layout)
     _show_home()
-    AssetDownloader.start()
+    # Remote artwork is disabled until the new licensed asset catalog is ready.
     call_deferred("_layout")
     # Remembered account: check it with the server (this also renews it) and go straight into the game.
     if GameSession.load_saved():
