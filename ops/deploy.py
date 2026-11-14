@@ -53,6 +53,7 @@ def release_metadata():
         if e.code == 404:
             return {"status": "unavailable", "version": None, "url": None, "sha256": None}
         raise
+    releases.sort(key=lambda r: r.get("tag_name") != "android-test-latest")
     for release in releases:
         if release.get("draft"):
             continue
@@ -71,7 +72,9 @@ def release_metadata():
             apk_dir.mkdir(parents=True, exist_ok=True)
             filename = (release["tag_name"] + "-" + name).replace("/", "_")
             dest = apk_dir / filename
-            if not dest.exists() or dest.stat().st_size != asset["size"]:
+            stamp = apk_dir / (filename + ".asset-id")
+            current_id = str(asset.get("id", ""))
+            if not dest.exists() or dest.stat().st_size != asset["size"] or not stamp.exists() or stamp.read_text() != current_id:
                 with tempfile.NamedTemporaryFile(dir=apk_dir, delete=False) as temp:
                     temp_name = Path(temp.name)
                 try:
@@ -85,11 +88,24 @@ def release_metadata():
                         if archive.testzip() is not None or "AndroidManifest.xml" not in archive.namelist():
                             raise ValueError("APK archive invalid")
                     os.replace(temp_name, dest)
+                    stamp.write_text(current_id)
                 finally:
                     temp_name.unlink(missing_ok=True)
             digest = hashlib.sha256(dest.read_bytes()).hexdigest()
-            # Public link is the original GitHub release asset, not a guessed local path.
-            return {"status": "published", "version": release["tag_name"], "url": url, "sha256": digest}
+            # Publish the verified APK from our VPS, not GitHub's login-gated artifacts.
+            BASE.mkdir(parents=True, exist_ok=True)
+            public_name = "Bashkiria-Honey-Oil-debug.apk" if release["tag_name"] == "android-test-latest" else name
+            public_path = BASE / public_name
+            if not public_path.exists() or hashlib.sha256(public_path.read_bytes()).hexdigest() != digest:
+                with tempfile.NamedTemporaryFile(dir=BASE, delete=False) as staged:
+                    staged_name = Path(staged.name)
+                try:
+                    shutil.copyfile(dest, staged_name)
+                    os.chmod(staged_name, 0o644)
+                    os.replace(staged_name, public_path)
+                finally:
+                    staged_name.unlink(missing_ok=True)
+            return {"status": "published", "version": release["tag_name"], "url": "https://rikagro.ru/lunexeconom/" + public_name, "sha256": digest, "channel": "debug" if release["tag_name"] == "android-test-latest" else "release", "tested_on_device": False}
     return {"status": "unavailable", "version": None, "url": None, "sha256": None}
 
 def main():
@@ -105,21 +121,21 @@ def main():
                    and run.get("conclusion") == "success" for run in runs.get("workflow_runs", []))
     if not approved:
         print("CI gate pending or failed for", commit, "- keeping current site")
-        return
-    with tempfile.TemporaryDirectory(prefix="lunex-stage-", dir=STATE) as stage_name:
-        stage = Path(stage_name)
-        for name in FILES:
-            (stage / name).write_bytes(fetch(f"https://raw.githubusercontent.com/{REPO}/{commit}/web/{name}"))
-        check_web(stage)
-        # Website assets are updated only after validation.
-        # Existing live files remain available during fetch/validation failures.
-        BASE.mkdir(parents=True, exist_ok=True)
-        for name in FILES:
-            tmp = BASE / (name + ".new")
-            shutil.copy2(stage / name, tmp)
-            os.chmod(tmp, 0o644)
-            os.replace(tmp, BASE / name)
-    (STATE / "deployed-sha").write_text(commit + "\n", encoding="utf-8")
+    if approved:
+      with tempfile.TemporaryDirectory(prefix="lunex-stage-", dir=STATE) as stage_name:
+          stage = Path(stage_name)
+          for name in FILES:
+              (stage / name).write_bytes(fetch(f"https://raw.githubusercontent.com/{REPO}/{commit}/web/{name}"))
+          check_web(stage)
+          # Website assets are updated only after validation.
+          # Existing live files remain available during fetch/validation failures.
+          BASE.mkdir(parents=True, exist_ok=True)
+          for name in FILES:
+              tmp = BASE / (name + ".new")
+              shutil.copy2(stage / name, tmp)
+              os.chmod(tmp, 0o644)
+              os.replace(tmp, BASE / name)
+      (STATE / "deployed-sha").write_text(commit + "\n", encoding="utf-8")
     # Release errors must never break the working website or remove the last valid APK link.
     try:
         metadata = release_metadata()
