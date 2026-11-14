@@ -120,3 +120,11 @@
 - Проверки Godot 4.7.2: `WORLD_TEST_PASS`, `WORLD_027_TEST_PASS`, `WORLD_027_INTEGRATION_PASS`, `WORLD_027_TOUCH_FIX_PASS`, `WORLD_027_GUI_CLICK_PASS`, `WORLD_027_TOUCH_E2E_PASS`. Последние два проверяют последовательности нажатий, создание и `cell_kind == 6` для фермы, шахты и завода. Это имитация ввода в Godot, **не физический Android-тест**.
 - Android APK `0.2.7.2-construction-input` versionCode 11 собран и подписан; SHA256 `914a324e10f03730bd75beb00856537f90aa4db32cffc06c491b4293b7c4b513`. HTTPS 200: https://rikagro.ru/lunexeconom/versions/Bashkiria-Honey-Oil-0.2.7.2-construction-input.apk .
 - Обновлены `updates/manifest.json`, `builds.json`, `release.json` и актуальная APK; резервные копии `/var/www/rikagro-game/lunexeconom/backups/pre-0.2.7.2-20261114`. `main` не менялась; серверная экономика/сохранение отсутствуют.
+
+### 2026-11-14: Android server-build integration (partial, pending full MMO verification)
+- Replaced the HUD's local sandbox construction confirmation with authenticated POST /build.
+- A fresh UUID v4 request ID is generated per command; only HTTP 200/201 with ok=true confirms a building.
+- Applied returned server events to the world; network and API errors are displayed in Russian.
+- Fixed server chunk snapshot rendering of farm/mine/factory kinds.
+- Verified Godot 4.7.2 headless startup without script errors and 7 existing Python unit tests in the earlier audit.
+- Outstanding: server-side ownership/roads/terrain policy, initial visible chunk snapshots, reconnect, concurrent-build tests, device APK validation. No production server restart or DB migration.
