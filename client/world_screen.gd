@@ -225,6 +225,7 @@ func _setup_ui_v1() -> void:
     for entry in [["farm","Ферма 2×2"],["mine","Шахта 2×3"],["factory","Завод 3×2"],["warehouse","Склад 3×3"],["shop","Магазин 2×2"]]:
         var kind: String = entry[0]
         tiles.add_child(_ui_button("%s · %s" % [entry[1], _fmt_money_short(int(building_costs[kind]))], func(): _choose_ui_build(kind), 190))
+    content.add_child(_ui_button("Все отрасли (33) · скоро", _open_trade_catalog, 390))
     catalog_panel.hide()
     placement_panel = PanelContainer.new()
     placement_panel.name = "PlacementCard"
@@ -621,6 +622,42 @@ func _open_section(section: String) -> void:
     _update_city_actions(section == "Город")
     _show_panel(section_panel)
     call_deferred("_layout_ui_v1")
+
+func _open_trade_catalog() -> void:
+    # Read-only catalogue: do not allow placement of unfinished specializations.
+    _open_section("Каталог отраслей")
+    section_body.text = "Загружаем торговые специализации..."
+    var req := HTTPRequest.new()
+    req.timeout = 8.0
+    add_child(req)
+    req.request_completed.connect(func(result: int, code: int, _headers: PackedStringArray, body: PackedByteArray) -> void:
+        req.queue_free()
+        if not is_instance_valid(section_panel) or not section_panel.visible or section_title.text != "Каталог отраслей":
+            return
+        if result != HTTPRequest.RESULT_SUCCESS or code != 200:
+            section_body.text = "Каталог пока недоступен. Действующие здания доступны через меню «Строить»."
+            return
+        var data = JSON.parse_string(body.get_string_from_utf8())
+        if not data is Dictionary or not data.get("trade_specializations", null) is Array:
+            section_body.text = "Сервер вернул некорректный каталог."
+            return
+        var lines: PackedStringArray = ["Торговые объекты (проектируются)", "Для строительства пока доступны базовые здания.", ""]
+        var last_category := ""
+        for item in data["trade_specializations"]:
+            if not item is Dictionary:
+                continue
+            var category := str(item.get("category", "Прочее"))
+            if category != last_category:
+                lines.append("● " + category)
+                last_category = category
+            lines.append("   • " + str(item.get("name", "Объект")) + " · скоро")
+        section_body.text = "\n".join(lines)
+    )
+    var err := req.request("https://rikagro.ru/lunexeconom/api/construction/catalog")
+    if err != OK:
+        req.queue_free()
+        section_body.text = "Не удалось запросить каталог (код %d)." % err
+
 
 func _open_catalog() -> void:
     world.cancel_build()
