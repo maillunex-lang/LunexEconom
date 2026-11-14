@@ -27,3 +27,10 @@ Base: main a9bb74cffb532107d5932e09bb81fc5433e32c34. Isolated branch ChatGPTAdmi
 - Added preview-only conflict checks against municipal draft footprints, with web button and two isolated stub-server tests.
 - Preview never writes to game world or financial ledgers; concurrent server changes can invalidate the result. Live placement requires a future server-authoritative transaction and RBAC.
 - No production deployment, nginx changes or Android patch rollout.
+
+## Iteration 4 · Opt-in Android visual patch bridge
+- Added `client/patch_visuals.gd` cache-only image resolver with allowlisted building kinds, SHA-256 recheck, image decoding and 2048px dimension ceiling.
+- The existing isometric chunk renderer can display downloaded building PNG/WebP textures instead of procedural placeholders, falling back safely when no patch is active. Ground anchor and ownership badge are preserved.
+- Patch activation triggers redraw of existing chunks, not a world-wide rebuild. No automatic network downloads, no autoload, no change to production APK or server.
+- Fixed preexisting GDScript parser issues in `livepatch.gd` (typed Variant and HashingContext SHA-256).
+- Headless Godot 4.7.2 `patch_visuals_smoke.gd` and `chunk_renderer_smoke.gd` passed; 12 Python studio tests passed. Device testing, signed manifests and rollout/rollback policy still required before enabling automatic patch checks.

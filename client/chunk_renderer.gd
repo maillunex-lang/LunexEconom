@@ -74,6 +74,16 @@ func _owner_color(owner: String) -> Color:
     return Color.from_hsv(float(value % 360) / 360.0, 0.58, 0.91)
 
 func _draw_building(p: Vector2, kind: String, owner: String = "") -> void:
+    if world != null and world.patch_visuals != null:
+        var tex: Texture2D = world.patch_visuals.texture_for(kind)
+        if tex != null:
+            # Keep ground anchoring consistent across replacement images.
+            var size := tex.get_size()
+            var scale_factor: float = minf(1.0, 88.0 / maxf(size.x, 1.0))
+            var displayed := size * scale_factor
+            draw_texture_rect(tex, Rect2(p - Vector2(displayed.x * 0.5, displayed.y), displayed), false)
+            draw_circle(p + Vector2(0, -22), 5.5, _owner_color(owner))
+            return
     var wall := Color("#b1a67c")
     var roof := Color("#d5c5a2")
     match kind:

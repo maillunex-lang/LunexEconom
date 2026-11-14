@@ -25,7 +25,7 @@ func _valid_asset(item: Variant) -> bool:
     var digest := str(item.get("sha256", ""))
     if digest.length() != 64 or not digest.is_valid_hex_number():
         return false
-    var size := item.get("size", 0)
+    var size: Variant = item.get("size", 0)
     if typeof(size) != TYPE_INT or size <= 0 or size > MAX_IMAGE:
         return false
     return str(item.get("url", "")) == "blobs/" + digest + "." + extension
@@ -88,7 +88,10 @@ func check_and_download() -> void:
         if bytes.size() != int(asset["size"]):
             all_ok = false
             break
-        var digest := bytes.sha256_buffer().hex_encode()
+        var hash_context := HashingContext.new()
+        hash_context.start(HashingContext.HASH_SHA256)
+        hash_context.update(bytes)
+        var digest: String = hash_context.finish().hex_encode()
         if digest != str(asset["sha256"]):
             all_ok = false
             break
