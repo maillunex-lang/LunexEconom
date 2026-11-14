@@ -42,3 +42,45 @@
 - ⬜ APK не опубликован как GitHub Release и не доступен с лендинга.
 - 🟡 Добавлены GitHub Actions для ручной сборки и публикации prerelease после отчёта об испытании на устройстве; CI workflow на GitHub ещё требует реального end-to-end подтверждения.
 - ⚠️ Сборка подписана debug-ключом; постоянная release-подпись ещё не настроена.
+
+## Этап 0.2: изолированный прототип (14.11.2026)
+- Ветка `nexus/isometric-world-0.2`; основная ветка и опубликованная APK не изменены.
+- Созданы `client/world.gd`, `client/world_screen.gd`, `client/world.tscn`, `client/tests/world_smoke.gd`, `docs/ISOMETRIC_0_2_PLAN.md`.
+- Первый Godot headless обнаружил ошибку `mini/maxi` с четырьмя аргументами; исправлено в `76068ab`.
+- Повторный headless-запуск сцены Godot 4.7.2 завершился без ошибок.
+- Тест `WORLD_TEST_PASS seed/roads/projection` прошёл: детерминизм клеток, дороги и обратная изометрическая проекция.
+- НЕ проверены: жесты на Android, визуальный рендеринг, safe area на устройствах, FPS, масштабирование, серверная синхронизация и APK. Статус этапа: **прототип, не релиз**.
+- Следующее: проверка взаимодействий/рендеринга, исправление ограничений камеры и затем тестовая сборка только после подтверждения.
+
+## 14.11.2026: BE-025/026 прототип
+- Отказ от фиксированного WORLD=144: расширяемый радиус доступных чанков; детерминированность не меняется после расширения.
+- Добавлен `client/road_network.gd`: единая координатная сеть, подъездные пути и BFS по связанным клеткам.
+- Добавлены HUD-кнопки `+ Территория` и `Проложить путь` в изолированную сцену `world.tscn`.
+- Godot 4.7.2 headless загрузил сцену без SCRIPT ERROR; `WORLD_TEST_PASS seed/roads/projection/expansion/connected-route/disconnected-route`.
+- Ограничения: это локальная демонстрация, нет сохранения/серверного авторитета/стоимости строительства/транспорта/проверки Android. В `main` и на сайт APK не публиковали.
+
+## 14.11.2026: 0.2.7 Road & Construction Sandbox
+
+- В ветке `nexus/isometric-world-0.2` реализованы визуальные дорожные соединения с битовой маской N/E/S/W и перерисовкой соседних клеток при изменении дороги.
+- Добавлены режим строительства, превью участка, проверки дорог, воды, занятых и серверных клеток; локальные прототипы: ферма 2×2, шахта 2×3, завод 3×2.
+- Добавлена нижняя сенсорная панель выбора здания, кнопки «Построить» и «Отмена». Экономика, владение, сохранение и серверная авторизация пока не реализованы.
+- Проверки на изолированном checkout: Godot 4.7.2 editor import без SCRIPT ERROR; `WORLD_TEST_PASS`, `WORLD_027_TEST_PASS`, `WORLD_027_INTEGRATION_PASS` (все exit 0). Сцена `world.tscn` запускалась headless без сообщений об ошибках, остановлена по timeout 8 с, это не полноценный тест устройства.
+- Debug APK версии `0.2.7-building-sandbox`, versionCode 9, Android arm64-v8a/x86_64 собран через Godot 4.7.2. `apksigner verify`: v2/v3 valid. SHA256: `e757414bc14fd4477d35a1724e81bbcb66167977032aa669a65ef67bbecb598d`, размер 56 998 494 байта.
+- Опубликован тестовый APK: https://rikagro.ru/lunexeconom/versions/Bashkiria-Honey-Oil-0.2.7-building-sandbox.apk ; HTTPS 200, `release.json` и `updates/manifest.json` проверены. Резервная копия файлов публикации сохранена в `/var/www/rikagro-game/lunexeconom/backups/pre-0.2.7-20261114`.
+- **Статус: прототип, Android-проверка на реальном устройстве ожидается.** Не подтверждены FPS, safe-area на разных экранах, интерактивность кнопок на телефоне, корректность визуальных перекрёстков и серверная синхронизация. `main` не меняли.
+
+## 14.11.2026: 0.2.7.1 Touch Construction Fix
+- По записи с Android обнаружена проблема: панель строительства оказалась посередине экрана, а события касания кнопок одновременно проходили в выбор клетки мира.
+- Исправлены `client/world.gd` (фильтрация GUI touch press/release и mouse events) и `client/world_screen.gd` (нижняя привязка панели, safe-area).
+- Добавлен `client/tests/world_027_touch_fix.gd`: `WORLD_027_TOUCH_FIX_PASS toolbar_bottom/ui_touch/selection/build` (Godot 4.7.2 headless exit 0). Ранее выполненные проверки 0.2.7 также проходили.
+- Собран Android debug APK versionCode 10, versionName `0.2.7.1-build-touch-fix`, подпись v2/v3 verified, SHA256 `aa6ff4ad3f8c86657e10155dc66db77e5f0ed4c6756ddef8b2006ff1f7d4b294`.
+- APK опубликован https://rikagro.ru/lunexeconom/versions/Bashkiria-Honey-Oil-0.2.7.1-build-touch-fix.apk, HTTPS 200. Обновлены manifest, release.json и builds.json; резервные копии: `/var/www/rikagro-game/lunexeconom/backups/pre-0.2.7.1-20261114`.
+- **Android QA ещё не выполнен для новой версии.** Это локальный строительный прототип без серверного сохранения. Ветка `main` не менялась.
+
+## 14.11.2026: 0.2.7.2 Construction Input Fix
+- Пользователь подтвердил, что в 0.2.7.1 зелёная подсветка сохранялась и кнопка «Построить» не действовала.
+- Новый тест `tests/world_027_gui_click.gd` воспроизвёл дефект: реальные mouse press/release в viewport не активировали даже кнопку выбора фермы (`world.build_type` оставался пустым), хотя вызов `world.place_building()` напрямую работал. Таким образом прежние unit/integration tests были недостаточны.
+- Добавлена независимая от GUI focus маршрутизация событий касания/мыши на кнопки панели через `world_screen.gd::_input` и hit-test прямоугольников. Для кнопок панели `mouse_filter=IGNORE` во избежание двойной активации. `world.gd` продолжает игнорировать касания UI, не изменяя выбранную клетку.
+- Проверки Godot 4.7.2: `WORLD_TEST_PASS`, `WORLD_027_TEST_PASS`, `WORLD_027_INTEGRATION_PASS`, `WORLD_027_TOUCH_FIX_PASS`, `WORLD_027_GUI_CLICK_PASS`, `WORLD_027_TOUCH_E2E_PASS`. Последние два проверяют последовательности нажатий, создание и `cell_kind == 6` для фермы, шахты и завода. Это имитация ввода в Godot, **не физический Android-тест**.
+- Android APK `0.2.7.2-construction-input` versionCode 11 собран и подписан; SHA256 `914a324e10f03730bd75beb00856537f90aa4db32cffc06c491b4293b7c4b513`. HTTPS 200: https://rikagro.ru/lunexeconom/versions/Bashkiria-Honey-Oil-0.2.7.2-construction-input.apk .
+- Обновлены `updates/manifest.json`, `builds.json`, `release.json` и актуальная APK; резервные копии `/var/www/rikagro-game/lunexeconom/backups/pre-0.2.7.2-20261114`. `main` не менялась; серверная экономика/сохранение отсутствуют.

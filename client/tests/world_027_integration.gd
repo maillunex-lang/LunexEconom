@@ -1,0 +1,30 @@
+extends SceneTree
+func _initialize() -> void:
+    call_deferred("_run")
+
+func _run() -> void:
+    var scene: PackedScene = load("res://world.tscn")
+    assert(scene != null)
+    var root: Control = scene.instantiate()
+    get_root().add_child(root)
+    await process_frame
+    var world = root.get_node("World")
+    assert(world != null)
+    world.choose_build("farm")
+    world.selected = Vector2i(1, 1)
+    var result: Dictionary = world.preview_build(world.selected)
+    assert(result.get("ok", false))
+    var built: Dictionary = world.place_building()
+    assert(built.get("ok", false))
+    assert(world.building_at(Vector2i(1, 1)) == "farm")
+    assert(world.building_at(Vector2i(2, 2)) == "farm")
+    assert(not world.preview_build(Vector2i(1, 1)).get("ok", false))
+    world.choose_build("mine")
+    assert(world.build_size("mine") == Vector2i(2, 3))
+    world.choose_build("factory")
+    assert(world.build_size("factory") == Vector2i(3, 2))
+    world.cancel_build()
+    assert(world.build_type.is_empty())
+    print("WORLD_027_INTEGRATION_PASS scene/building/occupied/types")
+    root.queue_free()
+    quit()
