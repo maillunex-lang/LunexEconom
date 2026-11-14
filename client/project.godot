@@ -2,15 +2,14 @@ config_version=5
 
 [application]
 config/name="Башкирия: Мёд и Нефть"
-run/main_scene="res://main.tscn"
+run/main_scene="res://world.tscn"
 config/features=PackedStringArray("4.7", "GL Compatibility")
 
 [display]
 window/size/viewport_width=1280
 window/size/viewport_height=720
 window/stretch/mode="canvas_items"
-window/stretch/aspect="expand"
-window/handheld/orientation=4
+window/handheld/orientation=0
 
 [rendering]
 renderer/rendering_method="gl_compatibility"
