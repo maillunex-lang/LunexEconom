@@ -58,3 +58,13 @@
 - Добавлены HUD-кнопки `+ Территория` и `Проложить путь` в изолированную сцену `world.tscn`.
 - Godot 4.7.2 headless загрузил сцену без SCRIPT ERROR; `WORLD_TEST_PASS seed/roads/projection/expansion/connected-route/disconnected-route`.
 - Ограничения: это локальная демонстрация, нет сохранения/серверного авторитета/стоимости строительства/транспорта/проверки Android. В `main` и на сайт APK не публиковали.
+
+## 14.11.2026: 0.2.7 Road & Construction Sandbox
+
+- В ветке `nexus/isometric-world-0.2` реализованы визуальные дорожные соединения с битовой маской N/E/S/W и перерисовкой соседних клеток при изменении дороги.
+- Добавлены режим строительства, превью участка, проверки дорог, воды, занятых и серверных клеток; локальные прототипы: ферма 2×2, шахта 2×3, завод 3×2.
+- Добавлена нижняя сенсорная панель выбора здания, кнопки «Построить» и «Отмена». Экономика, владение, сохранение и серверная авторизация пока не реализованы.
+- Проверки на изолированном checkout: Godot 4.7.2 editor import без SCRIPT ERROR; `WORLD_TEST_PASS`, `WORLD_027_TEST_PASS`, `WORLD_027_INTEGRATION_PASS` (все exit 0). Сцена `world.tscn` запускалась headless без сообщений об ошибках, остановлена по timeout 8 с, это не полноценный тест устройства.
+- Debug APK версии `0.2.7-building-sandbox`, versionCode 9, Android arm64-v8a/x86_64 собран через Godot 4.7.2. `apksigner verify`: v2/v3 valid. SHA256: `e757414bc14fd4477d35a1724e81bbcb66167977032aa669a65ef67bbecb598d`, размер 56 998 494 байта.
+- Опубликован тестовый APK: https://rikagro.ru/lunexeconom/versions/Bashkiria-Honey-Oil-0.2.7-building-sandbox.apk ; HTTPS 200, `release.json` и `updates/manifest.json` проверены. Резервная копия файлов публикации сохранена в `/var/www/rikagro-game/lunexeconom/backups/pre-0.2.7-20261114`.
+- **Статус: прототип, Android-проверка на реальном устройстве ожидается.** Не подтверждены FPS, safe-area на разных экранах, интерактивность кнопок на телефоне, корректность визуальных перекрёстков и серверная синхронизация. `main` не меняли.
