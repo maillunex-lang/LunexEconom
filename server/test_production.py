@@ -176,6 +176,16 @@ class WarehouseTests(ChainBase):
         self.assertLess(released, held)                                         # stock is sold off when the price is good
         self.assert_ledger_balanced()
 
+    def test_warehouse_sells_instead_of_holding_when_cash_is_short(self):
+        self.build("alice", "farm", 8, 10)
+        self.build("alice", "warehouse", 8, 30)
+        self.cheap_honey()
+        with game_server.connect() as db:
+            db.execute("UPDATE wallets SET balance=5000 WHERE account='player:alice'")
+        w = self.month("alice", 3)
+        self.assertEqual(w["inventory"]["used"], 0)         # no runway for costs: production is sold, not stored
+        self.assertGreaterEqual(w["balance"], 0)
+
     def test_warehouse_costs_upkeep(self):
         self.build("alice", "warehouse", 8, 10)
         w = game_server.wallet("alice")[1]

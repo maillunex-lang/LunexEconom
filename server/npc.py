@@ -48,9 +48,9 @@ def _rand(owner, month, salt):
     return int.from_bytes(digest[:8], "big")
 
 
-def _profit(spec, quotes):
+def _profit(spec, quotes, wage=economy.BASE_WAGE):
     """Expected monthly profit of one more building of this kind, or None when it cannot operate."""
-    profit = -spec["upkeep"]
+    profit = -(spec["upkeep"] + spec["jobs"] * wage)
     product = spec.get("product")
     if product:
         profit += spec["output"] * quotes[product]["price_if_added"]
@@ -61,7 +61,7 @@ def _profit(spec, quotes):
     return profit
 
 
-def choose_kind(persona, wallet, quotes):
+def choose_kind(persona, wallet, quotes, wage=economy.BASE_WAGE):
     """Best building kind to add now, or None."""
     holdings = wallet.get("holdings", {})
     total = sum(holdings.values())
@@ -79,7 +79,7 @@ def choose_kind(persona, wallet, quotes):
                 continue
             score = weight * 0.05            # only when nothing clearly profitable is available
         else:
-            profit = _profit(spec, quotes)
+            profit = _profit(spec, quotes, wage)
             if profit is None or profit <= 0 or cost / profit > MAX_PAYBACK_MONTHS:
                 continue
             score = weight / (cost / profit)
@@ -109,7 +109,8 @@ def act(persona, month, wallet_fn, market_fn, build_fn):
     if _rand(owner, month, "pace") % 1000 >= persona["pace"] * 1000:
         return None
     wallet = wallet_fn(owner)
-    kind = choose_kind(persona, wallet, market_fn())
+    market = market_fn()
+    kind = choose_kind(persona, wallet, market["products"], market.get("labor", {}).get("wage", economy.BASE_WAGE))
     if kind is None:
         return None
     total = sum(wallet.get("holdings", {}).values())

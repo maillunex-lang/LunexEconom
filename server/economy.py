@@ -15,7 +15,8 @@ ROAD_CELL_COST = 5_000
 TREASURY = "system:treasury"
 CONSTRUCTION = "system:construction"
 MARKET_ACCOUNT = "system:market"      # buys all production at the clearing price
-UPKEEP = "system:upkeep"      # sink for salaries and maintenance
+UPKEEP = "system:upkeep"      # sink for maintenance
+RESIDENTS = "system:residents"  # receives wages (residents' spending is not modelled as a closed loop yet)
 MAX_SETTLE_MONTHS = 600   # months processed per call when catching up
 
 # ---- Tunable balance tables: change numbers here, nothing else depends on them ----
@@ -23,17 +24,38 @@ MAX_SETTLE_MONTHS = 600   # months processed per call when catching up
 # `inputs`: raw materials consumed per full month at full capacity (bought from the market when the owner's own
 # stock is short). `capacity`: units of storage a warehouse adds (shared by all products of the owner).
 PRODUCTION = {
-    "farm":      {"product": "honey", "output": 100, "upkeep": 8_000},
-    "mine":      {"product": "oil",   "output": 40,  "upkeep": 30_000},
-    "factory":   {"product": "goods", "output": 60,  "upkeep": 56_000, "inputs": {"oil": 10, "honey": 20}},
-    "warehouse": {"product": None,    "output": 0,   "upkeep": 5_000,  "capacity": 400},
+    "farm":      {"product": "honey", "output": 100, "jobs": 4,  "upkeep": 2_000},
+    "mine":      {"product": "oil",   "output": 40,  "jobs": 10, "upkeep": 15_000},
+    "factory":   {"product": "goods", "output": 60,  "jobs": 20, "upkeep": 26_000, "inputs": {"oil": 10, "honey": 20}},
+    "warehouse": {"product": None,    "output": 0,   "jobs": 2,  "upkeep": 2_000,  "capacity": 400},
 }
+# `upkeep` is maintenance only; wages are jobs * wage. At BASE_WAGE the total equals the old lump-sum upkeep
+# (farm 8 000, mine 30 000, factory 56 000, warehouse 5 000), so building economics are unchanged at base wage.
+#
+# Residents and labour (one city for now):
+#   labour force      = population * PARTICIPATION
+#   staffing          = min(1, labour force / total jobs)  -> output of every producer is scaled by it
+#   wage              = BASE_WAGE * clamp((jobs / labour force) ** WAGE_ELASTICITY, 1, WAGE_MAX)   (sticky downwards)
+#   income ratio      = employed * wage / (labour force * BASE_WAGE)
+#   consumer demand   = base_demand * season * (population / BASE_POPULATION) * (1 - INCOME_WEIGHT + INCOME_WEIGHT * min(income ratio, INCOME_CAP))
+#   migration         = shortage of workers attracts people, unemployment drives them away; natural growth on top.
+BASE_WAGE = 1_500
+PARTICIPATION = 0.5
+BASE_POPULATION = 200
+MIN_POPULATION = 140
+WAGE_ELASTICITY = 0.8
+WAGE_MAX = 2.0
+INCOME_WEIGHT = 0.25
+INCOME_CAP = 1.5
+NATURAL_GROWTH = 0.003
+MIGRATION_IN = 0.03
+MIGRATION_OUT = 0.005
 # A warehouse owner holds production back while last month's price was below reference * HOLD_BELOW
 # and releases everything (stock included) once the price recovers.
-HOLD_BELOW = 1.0
+HOLD_BELOW = 0.9
 # Market: one world-wide market per product (regions/cities come later).
 #   price = reference_price * (demand / supply) ** (1 / elasticity), clamped to [MIN_PRICE_K, MAX_PRICE_K] x reference.
-#   demand = base_demand * season[calendar month] * (1 + DEMAND_GROWTH) ** month_index
+#   demand = base_demand * season[calendar month] * demand scale (population and income, see above)
 # base_demand = 2 buildings' output: the world absorbs two buildings of a kind at the reference price;
 # a lone first building enjoys a premium, a crowded market pushes prices (and profit) down.
 MARKET = {
@@ -44,7 +66,6 @@ MARKET = {
     "goods": {"name": "Товары", "reference_price": 2000, "base_demand": 120, "elasticity": 1.5,
               "season": [0.95, 0.90, 0.95, 1.00, 1.00, 1.00, 1.00, 1.05, 1.05, 1.05, 1.10, 1.25]},
 }
-DEMAND_GROWTH = 0.005     # population/demand growth per game month
 MIN_PRICE_K = 0.25
 MAX_PRICE_K = 2.5
 
@@ -56,6 +77,7 @@ SCHEMA = (
     "CREATE TABLE IF NOT EXISTS world_state(id INTEGER PRIMARY KEY, processed_through BIGINT NOT NULL)",
     "CREATE TABLE IF NOT EXISTS inventory(owner TEXT NOT NULL, product TEXT NOT NULL, qty BIGINT NOT NULL, PRIMARY KEY(owner, product))",
     "CREATE TABLE IF NOT EXISTS company_reports(owner TEXT NOT NULL, month_index BIGINT NOT NULL, revenue BIGINT NOT NULL, input_cost BIGINT NOT NULL, upkeep BIGINT NOT NULL, profit BIGINT NOT NULL, buildings INTEGER NOT NULL, PRIMARY KEY(owner, month_index))",
+    "CREATE TABLE IF NOT EXISTS population(month_index BIGINT PRIMARY KEY, population BIGINT NOT NULL, labor_force BIGINT NOT NULL, jobs BIGINT NOT NULL, wage BIGINT NOT NULL, staffing_permille INTEGER NOT NULL, demand_permille INTEGER NOT NULL, next_population BIGINT NOT NULL)",
     "CREATE TABLE IF NOT EXISTS npc_state(owner TEXT PRIMARY KEY, acted_through BIGINT NOT NULL)",
     "CREATE TABLE IF NOT EXISTS company_state(owner TEXT PRIMARY KEY, settled_through BIGINT NOT NULL)",
     "CREATE TABLE IF NOT EXISTS monthly_reports(owner TEXT NOT NULL, month_index BIGINT NOT NULL, revenue BIGINT NOT NULL, upkeep BIGINT NOT NULL, profit BIGINT NOT NULL, buildings INTEGER NOT NULL, PRIMARY KEY(owner, month_index))",
@@ -75,9 +97,10 @@ def terms():
     return {"currency": CURRENCY, "start_capital": START_CAPITAL,
             "building_costs": dict(BUILD_COST), "road_cell_cost": ROAD_CELL_COST,
             "hold_below": HOLD_BELOW,
+            "labor": {"base_wage": BASE_WAGE, "participation": PARTICIPATION, "base_population": BASE_POPULATION},
             "production": {k: {"product_id": v["product"], "product": MARKET[v["product"]]["name"] if v["product"] else "",
                                "output": v["output"], "unit_price": MARKET[v["product"]]["reference_price"] if v["product"] else 0,
-                               "upkeep": v["upkeep"], "inputs": dict(v.get("inputs", {})), "capacity": v.get("capacity", 0)}
+                               "upkeep": v["upkeep"], "jobs": v["jobs"], "inputs": dict(v.get("inputs", {})), "capacity": v.get("capacity", 0)}
                            for k, v in PRODUCTION.items()}}
 
 
@@ -134,9 +157,19 @@ def history(db, ph, owner, limit=20):
     return [{"kind": k, "memo": m, "time": c, "amount": a} for k, m, c, a in rows]
 
 
-def demand_for(product, month):
+def demand_for(product, month, scale=1.0):
+    """Consumer demand of the population for a product in a game month; `scale` = population and income effect."""
     m = MARKET[product]
-    return int(round(m["base_demand"] * m["season"][month % 12] * (1 + DEMAND_GROWTH) ** month))
+    return int(round(m["base_demand"] * m["season"][month % 12] * scale))
+
+
+def wage_cost(kind, wage, staffing=1.0):
+    return int(PRODUCTION[kind]["jobs"] * staffing * wage)
+
+
+def monthly_cost(kind, wage, staffing=1.0):
+    """Maintenance plus wages of a building at the given wage level."""
+    return PRODUCTION[kind]["upkeep"] + wage_cost(kind, wage, staffing)
 
 
 def price_for(product, supply, demand):

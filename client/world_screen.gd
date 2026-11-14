@@ -488,8 +488,9 @@ var wallet_inventory: Dictionary = {}
 var market_quotes: Dictionary = {}
 var competitors: Array = []
 var wallet_holdings: Dictionary = {}
+var labor: Dictionary = {}
 const KIND_NAMES := {"farm": "Ферма", "mine": "Шахта", "factory": "Завод", "warehouse": "Склад"}
-var production := {"farm": {"product_id": "honey", "output": 100, "unit_price": 200, "upkeep": 8000}, "mine": {"product_id": "oil", "output": 40, "unit_price": 1500, "upkeep": 30000}, "factory": {"product_id": "goods", "output": 60, "unit_price": 2000, "upkeep": 56000, "inputs": {"oil": 10, "honey": 20}}, "warehouse": {"product_id": "", "output": 0, "unit_price": 0, "upkeep": 5000, "capacity": 400}}
+var production := {"farm": {"product_id": "honey", "output": 100, "unit_price": 200, "upkeep": 2000, "jobs": 4}, "mine": {"product_id": "oil", "output": 40, "unit_price": 1500, "upkeep": 15000, "jobs": 10}, "factory": {"product_id": "goods", "output": 60, "unit_price": 2000, "upkeep": 26000, "jobs": 20, "inputs": {"oil": 10, "honey": 20}}, "warehouse": {"product_id": "", "output": 0, "unit_price": 0, "upkeep": 2000, "jobs": 2, "capacity": 400}}
 
 func _fmt_money(value: int) -> String:
     var digits := str(absi(value))
@@ -513,18 +514,20 @@ func _set_balance(value: int) -> void:
 func _month_profit(kind: String) -> int:
     var p = production.get(kind, null)
     if not p is Dictionary: return 0
-    var profit := -int(p.get("upkeep", 0))
+    var wage := int(labor.get("wage", 1500))
+    var staffing := float(labor.get("staffing", 1.0))
+    var profit := -(int(p.get("upkeep", 0)) + int(float(p.get("jobs", 0)) * staffing * wage))
     var pid := str(p.get("product_id", ""))
     if pid != "":
         var price := int(p.get("unit_price", 0))
         # Server quote: the price the market would settle at if this building were added.
         if market_quotes.has(pid): price = int(market_quotes[pid].get("price_if_added", price))
-        profit += int(p.get("output", 0)) * price
+        profit += int(float(p.get("output", 0)) * staffing * price)
     var inputs = p.get("inputs", {})
     if inputs is Dictionary:
         for raw in inputs.keys():
             var raw_price := int(market_quotes[raw].get("price", 0)) if market_quotes.has(raw) else 0
-            profit -= int(inputs[raw]) * raw_price
+            profit -= int(float(inputs[raw]) * staffing) * raw_price
     return profit
 
 func _supplier_warning(kind: String) -> String:
@@ -554,7 +557,7 @@ func _economy_text() -> String:
         return "Загрузка данных счёта..." if GameSession.is_authenticated() else "Войдите в аккаунт, чтобы увидеть баланс."
     var lines: PackedStringArray = ["Баланс: %s" % _fmt_money(wallet_balance)]
     if not wallet_forecast.is_empty():
-        lines.append("Прогноз в месяц: доход %s, сырьё %s, содержание %s, прибыль %s (зданий: %d)" % [
+        lines.append("Прогноз в месяц: доход %s, сырьё %s, зарплаты и обслуживание %s, прибыль %s (зданий: %d)" % [
             _fmt_money(int(wallet_forecast.get("revenue", 0))), _fmt_money(int(wallet_forecast.get("input_cost", 0))), _fmt_money(int(wallet_forecast.get("upkeep", 0))),
             _fmt_money(int(wallet_forecast.get("profit", 0))), int(wallet_forecast.get("buildings", 0))])
     var capacity := int(wallet_inventory.get("capacity", 0))
@@ -574,6 +577,9 @@ func _economy_text() -> String:
         for tx in wallet_transactions.slice(0, 3):
             if tx is Dictionary:
                 lines.append("%s%s  %s" % ["+" if int(tx.get("amount", 0)) >= 0 else "", _fmt_money(int(tx.get("amount", 0))), str(tx.get("memo", ""))])
+    if not labor.is_empty():
+        lines.append("Город: %d жителей, рабочих %d, мест %d, зарплата %s%s" % [int(labor.get("population", 0)), int(labor.get("labor_force", 0)), int(labor.get("jobs", 0)), _fmt_money(int(labor.get("wage", 0))),
+            " (нехватка рабочих)" if float(labor.get("staffing", 1.0)) < 1.0 else (" (безработица %d%%)" % int(float(labor.get("unemployment", 0.0)) * 100.0) if float(labor.get("unemployment", 0.0)) > 0.05 else "")])
     var mine := _holdings_text(wallet_holdings)
     if mine != "": lines.append("Мои здания: " + mine)
     var market := _market_lines()
@@ -623,6 +629,7 @@ func _refresh_market() -> void:
     _api_get("market", false, func(data: Dictionary) -> void:
         if data.get("products", null) is Dictionary: market_quotes = data["products"]
         if data.get("competitors", null) is Array: competitors = data["competitors"]
+        if data.get("labor", null) is Dictionary: labor = data["labor"]
     )
 
 func _refresh_terms() -> void:
@@ -647,6 +654,7 @@ func _refresh_wallet() -> void:
         wallet_forecast = data.get("forecast", {})
         wallet_inventory = data.get("inventory", {})
         wallet_holdings = data.get("holdings", {})
+        if data.get("labor", null) is Dictionary: labor = data["labor"]
         if data.get("market", null) is Dictionary: market_quotes = data["market"]
         if section_panel != null and section_panel.visible and section_title.text == "Экономика":
             section_body.text = _economy_text()

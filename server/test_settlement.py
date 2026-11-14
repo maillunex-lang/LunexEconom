@@ -41,7 +41,7 @@ class SettlementTests(unittest.TestCase):
 
     def test_economy_terms_include_production(self):
         t = economy.terms()["production"]["farm"]
-        self.assertEqual((t["output"], t["unit_price"], t["upkeep"]), (100, 200, 8000))
+        self.assertEqual((t["output"], t["unit_price"], t["upkeep"], t["jobs"]), (100, 200, 2000, 4))
 
     def test_no_income_before_month_ends(self):
         status, res = self.build()
@@ -56,7 +56,7 @@ class SettlementTests(unittest.TestCase):
         self.assertEqual(w["balance"], res["balance"] + 12_000)   # 100*200 - 8000
         self.assertEqual(len(w["reports"]), 1)
         self.assertEqual(w["reports"][0]["profit"], 12_000)
-        self.assertEqual(w["forecast"], {"revenue": 20_000, "input_cost": 0, "upkeep": 8_000, "profit": 12_000, "buildings": 1})
+        self.assertEqual(w["forecast"], {"revenue": 20_000, "input_cost": 0, "upkeep": 8_000, "wages": 6_000, "profit": 12_000, "buildings": 1})
 
     def test_settlement_is_idempotent(self):
         _, res = self.build()
@@ -97,7 +97,7 @@ class SettlementTests(unittest.TestCase):
         self.assertEqual((bad, total, negative), ([], 0, []))
 
     def test_upkeep_never_creates_debt(self):
-        broken = {"farm": {"product": "honey", "output": 1, "upkeep": 500_000}}
+        broken = {"farm": {"product": "honey", "output": 1, "jobs": 4, "upkeep": 500_000}}
         self.build()
         with mock.patch.dict(economy.PRODUCTION, broken, clear=False):
             with game_server.connect() as db:

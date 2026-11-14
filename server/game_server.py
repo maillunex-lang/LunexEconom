@@ -110,7 +110,7 @@ def market_state():
         now=int(time.time())
         clk=clock.state(db,"?",now)
         production.advance(db,"?",clk,now)
-        result={"ok":True,"month_index":clk["month_index"],"products":production.quote(db,"?",clk),"competitors":production.competitors(db,"?")}
+        result={"ok":True,"month_index":clk["month_index"],"products":production.quote(db,"?",clk),"labor":production.labor_view(db,"?",clk),"competitors":production.competitors(db,"?")}
         db.commit()
     return 200,result
 
@@ -119,7 +119,7 @@ NPC_CONNECT,NPC_PH=connect,"?"
 def npc_tick():
     """Let NPC competitors act for completed months (cheap no-op when nothing is pending)."""
     try:
-        return npc.tick(NPC_CONNECT,NPC_PH,clock_state,lambda:market_state()[1]["products"],lambda owner:wallet(owner)[1],build)
+        return npc.tick(NPC_CONNECT,NPC_PH,clock_state,lambda:market_state()[1],lambda owner:wallet(owner)[1],build)
     except Exception as exc:   # NPC trouble must never break player requests
         print("npc tick failed:",repr(exc))
         return 0

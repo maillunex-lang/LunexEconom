@@ -79,7 +79,7 @@ def market_state():
         now=int(time.time())
         clk=clock.state(db,"%s",now)
         production.advance(db,"%s",clk,now)
-        return 200,{"ok":True,"month_index":clk["month_index"],"products":production.quote(db,"%s",clk),"competitors":production.competitors(db,"%s")}
+        return 200,{"ok":True,"month_index":clk["month_index"],"products":production.quote(db,"%s",clk),"labor":production.labor_view(db,"%s",clk),"competitors":production.competitors(db,"%s")}
 
 def wallet(owner):
     with postgres_db.connect() as db:

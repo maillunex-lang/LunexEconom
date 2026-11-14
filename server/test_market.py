@@ -31,9 +31,9 @@ class PricingMathTests(unittest.TestCase):
         self.assertEqual(economy.price_for("oil", 0, 80), int(round(ref * economy.MAX_PRICE_K)))
         self.assertEqual(economy.price_for("oil", 10**9, 80), int(round(ref * economy.MIN_PRICE_K)))
 
-    def test_seasonal_demand_and_growth(self):
+    def test_seasonal_demand_and_population_scale(self):
         self.assertGreater(economy.demand_for("honey", 0), economy.demand_for("honey", 5))   # winter vs summer
-        self.assertGreater(economy.demand_for("honey", 12), economy.demand_for("honey", 0))  # growth over a year
+        self.assertGreater(economy.demand_for("honey", 0, 2.0), economy.demand_for("honey", 0))  # bigger/richer city buys more
 
     def test_one_building_gets_premium_two_get_reference_price_in_neutral_season(self):
         demand = economy.MARKET["honey"]["base_demand"]
