@@ -102,27 +102,34 @@ func _draw_test_building_or_fallback(p: Vector2, cell: Vector2i, owner: String) 
     var record: Dictionary = world.server_cells.get(cell, {})
     var object_id: String = str(record.get("object_id", ""))
     var anchor := cell
-    var width := 1
+    var min_x := cell.x
+    var max_x := cell.x
+    var min_y := cell.y
+    var max_y := cell.y
     if not object_id.is_empty():
-        for dx in range(-1, 2):
-            for dy in range(-1, 2):
-                var other := cell + Vector2i(dx, dy)
-                if str(world.server_cells.get(other, {}).get("object_id", "")) == object_id:
-                    if other.x < anchor.x or (other.x == anchor.x and other.y < anchor.y):
-                        anchor = other
-        if anchor != cell: return
-        var right := cell + Vector2i(1, 0)
-        var down := cell + Vector2i(0, 1)
-        if str(world.server_cells.get(right, {}).get("object_id", "")) == object_id or str(world.server_cells.get(down, {}).get("object_id", "")) == object_id:
-            width = 2
-    var key := "grocery" if kind == "shop" else test_sprites.house_variant(object_id, cell, width == 2)
+        # Server stores one object_id across occupied cells. Draw once per object.
+        for other in world.server_cells:
+            if str(world.server_cells[other].get("object_id", "")) != object_id:
+                continue
+            min_x = mini(min_x, other.x)
+            max_x = maxi(max_x, other.x)
+            min_y = mini(min_y, other.y)
+            max_y = maxi(max_y, other.y)
+        anchor = Vector2i(min_x, min_y)
+        if anchor != cell:
+            return
+    var cells_x := max_x - min_x + 1
+    var cells_y := max_y - min_y + 1
+    var is_long := kind == "house" and ((cells_x == 2 and cells_y == 1) or (cells_x == 1 and cells_y == 2))
+    var key := "grocery" if kind == "shop" else test_sprites.house_variant(object_id, cell, is_long)
     var tex: Texture2D = test_sprites.texture_for(key)
     if tex == null:
         _draw_building(p, kind, owner)
         return
-    var sprite_width: float = 170.0 if width == 2 else 88.0
-    var sprite_height: float = sprite_width * tex.get_height() / tex.get_width()
-    draw_texture_rect(tex, Rect2(p - Vector2(sprite_width * 0.5, sprite_height - 15.0), Vector2(sprite_width, sprite_height)), false)
+    var sprite_width: float = 170.0 if maxi(cells_x, cells_y) > 1 else 88.0
+    var sprite_height: float = sprite_width * float(tex.get_height()) / maxf(float(tex.get_width()), 1.0)
+    var center := world.iso(float(min_x + max_x) * 0.5, float(min_y + max_y) * 0.5)
+    draw_texture_rect(tex, Rect2(center - Vector2(sprite_width * 0.5, sprite_height - 15.0), Vector2(sprite_width, sprite_height)), false)
 
 func _owner_color(owner: String) -> Color:
     if owner.is_empty(): return Color("#9ca3a8")
