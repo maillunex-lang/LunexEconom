@@ -17,6 +17,7 @@ import city
 import npc
 import clock
 import contracts
+import stats
 if os.environ.get('LUNEX_DB_ENGINE') == 'postgres':
     import postgres_world
     import postgres_db
@@ -308,6 +309,19 @@ def health_details():
         details["database"] = {"engine": engine, "status": "unavailable"}
     return details
 
+def stats_leaderboard(owner, by="networth"):
+    # An actual read-only SQLite connection: no wallet initialization or world tick.
+    with sqlite_util.open_db(DB) as db:
+        db.execute("PRAGMA query_only=ON")
+        return stats.leaderboard(db, "?", owner, by)
+
+
+def stats_feed(owner, after=0):
+    with sqlite_util.open_db(DB) as db:
+        db.execute("PRAGMA query_only=ON")
+        return stats.feed(db, "?", owner, after)
+
+
 ECONOMY_POST={"/sell":"sell","/loan":"loan","/city/taxes":"city_taxes","/city/build":"city_build","/city/candidacy":"city_candidacy","/city/vote":"city_vote","/contracts/offer":"contracts_offer","/contracts/accept":"contracts_accept","/contracts/cancel":"contracts_cancel"}
 
 class Handler(BaseHTTPRequestHandler):
@@ -352,6 +366,17 @@ class Handler(BaseHTTPRequestHandler):
             return self._send(*contracts_state(owner))
         if url.path=="/city":return self._send(*city_state(self._identity()))
         if url.path=="/health":return self._send(200,health_details())
+        if url.path in ("/leaderboard", "/feed"):
+            owner = self._identity()
+            if not owner:return self._send(401, {"error":"unauthorized"})
+            query = parse_qs(url.query, keep_blank_values=True)
+            if url.path == "/leaderboard":
+                modes = query.get("by", ["networth"])
+                return self._send(*stats_leaderboard(owner, modes[0] if len(modes) == 1 else "invalid"))
+            values = query.get("after", ["0"])
+            if len(values) != 1 or not values[0].isascii() or not values[0].isdigit() or len(values[0]) > 10:
+                return self._send(400, {"error":"invalid_cursor"})
+            return self._send(*stats_feed(owner, int(values[0])))
         if url.path=="/world":
             now_clock=clock_state()
             return self._send(200,{"world_id":"bashkiria-main","month_seconds":now_clock["month_seconds"],"building_types":KINDS,"economy":economy.terms(),"clock":now_clock})
@@ -420,6 +445,8 @@ if os.environ.get("LUNEX_DB_ENGINE") == "postgres":
     contracts_accept = postgres_world.contracts_accept
     contracts_cancel = postgres_world.contracts_cancel
     NPC_CONNECT,NPC_PH = postgres_db.connect,"%s"
+    stats_leaderboard = postgres_world.stats_leaderboard
+    stats_feed = postgres_world.stats_feed
 
 if __name__=="__main__":
     if os.environ.get("LUNEX_DB_ENGINE") == "postgres":

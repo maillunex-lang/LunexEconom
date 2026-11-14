@@ -111,6 +111,9 @@ func _on_update_state(message: String, can_install: bool) -> void:
     $UIOverlay/HUD/Top/Update.text = "Установить" if can_install else "Обновить"
     $UIOverlay/HUD/Top/Update.tooltip_text = message
     $UIOverlay/HUD/Top/UpdateStatus.text = message
+var leaderboard_panel
+var feed_panel
+var stats_actions: HBoxContainer
 var section_panel: PanelContainer
 var section_title: Label
 var section_body: Label
@@ -272,9 +275,102 @@ func _setup_ui_v1() -> void:
     contracts_ui.name = "ContractsUI"
     add_child(contracts_ui)
     contracts_ui.setup(self)
+    stats_actions = HBoxContainer.new()
+    stats_actions.add_theme_constant_override("separation", 8)
+    stats_actions.add_child(_ui_button("🏆 Рейтинг", func(): _open_stats_panel("leaderboard"), 160))
+    stats_actions.add_child(_ui_button("📜 События", func(): _open_stats_panel("feed"), 160))
+    section_content.add_child(stats_actions)
+    stats_actions.hide()
     section_panel.hide()
+    _setup_stats_panels()
     get_viewport().size_changed.connect(_layout_ui_v1)
     call_deferred("_layout_ui_v1")
+
+# ---- Read-only company statistics panels, opened from «Меню». ----
+func _setup_stats_panels() -> void:
+    leaderboard_panel = load("res://leaderboard_panel.gd").new()
+    get_node("UIOverlay").add_child(leaderboard_panel)
+    leaderboard_panel.close_requested.connect(func(): leaderboard_panel.hide())
+    leaderboard_panel.sort_requested.connect(_refresh_leaderboard)
+    feed_panel = load("res://feed_panel.gd").new()
+    get_node("UIOverlay").add_child(feed_panel)
+    feed_panel.close_requested.connect(func(): feed_panel.hide())
+    feed_panel.refresh_requested.connect(_refresh_feed)
+
+
+func _layout_stats_panel(panel: Control, viewport_size: Vector2, nav_top: float) -> void:
+    # Keep the panel above bottom navigation and inside the landscape safe area.
+    var screen := DisplayServer.screen_get_size()
+    var safe := DisplayServer.get_display_safe_area()
+    var left_safe := 20.0
+    var right_safe := 20.0
+    if OS.has_feature("mobile") and screen.x > 0 and safe.size.x > 0:
+        left_safe = maxf(left_safe, safe.position.x * viewport_size.x / screen.x + 12.0)
+        right_safe = maxf(right_safe, (screen.x - safe.end.x) * viewport_size.x / screen.x + 12.0)
+    panel.size = Vector2(minf(600.0, viewport_size.x - left_safe - right_safe),
+        minf(270.0, maxf(165.0, nav_top - 70.0)))
+    panel.position = Vector2(maxf(left_safe, (viewport_size.x - panel.size.x) * 0.5),
+        maxf(64.0, nav_top - panel.size.y - 10.0))
+
+
+func _open_stats_panel(which: String) -> void:
+    world.cancel_build()
+    section_panel.hide()
+    catalog_panel.hide()
+    placement_panel.hide()
+    details_panel.hide()
+    leaderboard_panel.hide()
+    feed_panel.hide()
+    if which == "leaderboard":
+        _show_panel(leaderboard_panel)
+        _refresh_leaderboard("networth")
+    elif which == "feed":
+        _show_panel(feed_panel)
+        _refresh_feed()
+    call_deferred("_layout_ui_v1")
+
+
+func _stats_request(path: String, callback: Callable) -> void:
+    if not GameSession.is_authenticated():
+        callback.call(false, {})
+        return
+    var request := HTTPRequest.new()
+    request.timeout = 8.0
+    add_child(request)
+    request.request_completed.connect(func(result: int, status: int, _headers: PackedStringArray, data: PackedByteArray) -> void:
+        request.queue_free()
+        var parsed = JSON.parse_string(data.get_string_from_utf8())
+        callback.call(result == HTTPRequest.RESULT_SUCCESS and status == 200 and parsed is Dictionary,
+            parsed if parsed is Dictionary else {})
+    )
+    var headers := PackedStringArray(["Authorization: Bearer " + GameSession.access_token])
+    if request.request(API_ROOT + path, headers) != OK:
+        request.queue_free()
+        callback.call(false, {})
+
+
+func _refresh_leaderboard(sort_by: String = "networth") -> void:
+    if leaderboard_panel == null:
+        return
+    leaderboard_panel.show_loading()
+    _stats_request("leaderboard?by=" + sort_by, func(ok: bool, data: Dictionary) -> void:
+        if ok:
+            leaderboard_panel.render(data)
+        else:
+            leaderboard_panel.show_error()
+    )
+
+
+func _refresh_feed() -> void:
+    if feed_panel == null:
+        return
+    feed_panel.show_loading()
+    _stats_request("feed?after=0", func(ok: bool, data: Dictionary) -> void:
+        if ok:
+            feed_panel.render(data)
+        else:
+            feed_panel.show_error()
+    )
 
 func _layout_ui_v1(override_size: Vector2 = Vector2.ZERO) -> void:
     var size := override_size if override_size != Vector2.ZERO else get_viewport_rect().size
@@ -297,6 +393,10 @@ func _layout_ui_v1(override_size: Vector2 = Vector2.ZERO) -> void:
     if section_panel != null:
         section_panel.size.x = minf(500, usable_width)
         section_panel.position = Vector2((size.x - section_panel.size.x) * 0.5, maxf(65, nav_top - section_panel.size.y - 12))
+    if leaderboard_panel != null:
+        _layout_stats_panel(leaderboard_panel, size, nav_top)
+    if feed_panel != null:
+        _layout_stats_panel(feed_panel, size, nav_top)
 
 func _setup_top_hud() -> void:
     var top: HBoxContainer = $UIOverlay/HUD/Top
@@ -348,6 +448,8 @@ func _open_section(section: String) -> void:
     details_panel.hide()
     if contracts_panel != null:
         contracts_panel.hide()
+    if leaderboard_panel != null: leaderboard_panel.hide()
+    if feed_panel != null: feed_panel.hide()
     section_title.text = section
     match section:
         "Город":
@@ -360,6 +462,7 @@ func _open_section(section: String) -> void:
             section_body.text = "Маршруты поставок и транспортные задания находятся в разработке. Дорожная сеть доступна на карте."
         "Меню":
             section_body.text = "Башкирия: Мёд и Нефть\nВерсия интерфейса 1.0\nУправление: одним пальцем двигайте карту, двумя изменяйте масштаб. Дороги к зданиям прокладываются автоматически."
+    stats_actions.visible = section == "Меню"
     section_actions.visible = section == "Экономика"
     if contract_shortcut != null:
         contract_shortcut.visible = section == "Экономика"
@@ -375,6 +478,8 @@ func _open_catalog() -> void:
     placement_panel.hide()
     details_panel.hide()
     section_panel.hide()
+    if leaderboard_panel != null: leaderboard_panel.hide()
+    if feed_panel != null: feed_panel.hide()
     call_deferred("_layout_ui_v1")
 
 func _choose_ui_build(kind: String) -> void:
@@ -492,7 +597,7 @@ func _new_build_request_id() -> String:
 
 func is_world_ui_point(point: Vector2) -> bool:
     if $UIOverlay/HUD/Top.get_global_rect().has_point(point): return true
-    for panel in [build_toolbar, catalog_panel, placement_panel, details_panel, section_panel, contracts_panel]:
+    for panel in [build_toolbar, catalog_panel, placement_panel, details_panel, section_panel, contracts_panel, leaderboard_panel, feed_panel]:
         if panel != null and panel.visible and panel.get_global_rect().has_point(point):
             return true
     return false
@@ -502,7 +607,7 @@ func is_world_ui_point(point: Vector2) -> bool:
 var ui_touch_buttons: Dictionary = {}
 var ui_mouse_button: Button = null
 func _hit_ui_button(point: Vector2) -> Button:
-    for panel in [catalog_panel, placement_panel, details_panel, section_panel, build_toolbar, contracts_panel]:
+    for panel in [catalog_panel, placement_panel, details_panel, section_panel, build_toolbar, contracts_panel, leaderboard_panel, feed_panel]:
         if panel == null or not panel.visible or not panel.get_global_rect().has_point(point):
             continue
         var stack: Array[Node] = [panel]

@@ -1,0 +1,87 @@
+name: GPTFirst isolated read-only stats verification
+on:
+  push:
+    branches: [GPTFirst]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  sqlite-and-ops:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python -m pip install "psycopg[binary]"
+      - name: All SQLite server tests (required exact command)
+        working-directory: server
+        env:
+          LUNEX_DB_ENGINE: sqlite
+        run: python -W ignore -m unittest discover -p 'test_*.py'
+      - name: All operations tests (required exact command)
+        working-directory: ops
+        run: python -m unittest discover -p 'test_*.py'
+  postgres-isolated:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: lunex_ci
+          POSTGRES_PASSWORD: ci-only-not-production
+          POSTGRES_DB: lunex_ci
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U lunex_ci -d lunex_ci"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 15
+    env:
+      LUNEX_DB_ENGINE: postgres
+      LUNEX_PG_HOST: 127.0.0.1
+      LUNEX_PG_PORT: '5432'
+      LUNEX_PG_DB: lunex_ci
+      LUNEX_PG_USER: lunex_ci
+      LUNEX_PG_PASSWORD: ci-only-not-production
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python -m pip install "psycopg[binary]"
+      - name: Initialize isolated PostgreSQL schema
+        working-directory: server
+        run: python -c 'import postgres_db; postgres_db.init()'
+      - name: Isolated PostgreSQL 16 integration and stats
+        working-directory: server
+        run: python -W ignore -m unittest test_postgres_integration test_postgres_world_ci test_postgres_economy test_postgres_stats -v
+  godot-offline:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Godot 4.7.2 locally on isolated runner
+        run: |
+          set -euo pipefail
+          curl -fL --retry 3 --max-time 180 "https://github.com/godotengine/godot-builds/releases/download/4.7.2-stable/Godot_v4.7.2-stable_linux.x86_64.zip" -o /tmp/godot.zip
+          mkdir -p /tmp/godot
+          unzip -q /tmp/godot.zip -d /tmp/godot
+          GODOT=$(find /tmp/godot -name 'Godot_v4.7.2-stable_linux.x86_64' -type f -print -quit)
+          test -n "$GODOT"
+          chmod +x "$GODOT"
+          echo "GODOT=$GODOT" >> "$GITHUB_ENV"
+      - name: Headless import and script validation
+        run: |
+          set -euo pipefail
+          "$GODOT" --headless --path client --import 2>&1 | tee /tmp/godot-import.log
+          if grep -E 'SCRIPT ERROR|Parse Error' /tmp/godot-import.log; then exit 1; fi
+      - name: Offline panel smoke without contacting live API
+        run: |
+          set -euo pipefail
+          "$GODOT" --headless --path client --script res://tests/stats_panels_smoke.gd 2>&1 | tee /tmp/godot-smoke.log
+          grep -q 'STATS_PANELS_SMOKE_PASS' /tmp/godot-smoke.log
+          if grep -E 'SCRIPT ERROR|Parse Error|ERROR:' /tmp/godot-smoke.log; then exit 1; fi
