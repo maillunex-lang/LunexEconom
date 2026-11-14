@@ -81,6 +81,8 @@ def handler_factory(store, token, game=None):
 
         def do_GET(self):
             path = urlsplit(self.path).path
+            if path == "/art/manifest.json":
+                return self.send(200, art_catalog.public_manifest())
             if path == "/health":
                 return self.send(200, {"status": "ok", "signing": store.signing_enabled, "game_admin": game.configured})
             if path in ("/patch/manifest.json", "/patch/manifest.sig"):
