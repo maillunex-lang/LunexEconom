@@ -1,0 +1,17 @@
+name: Android APK (manual beta build)
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  android:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - name: Prepare Godot and Android toolchain
+        run: |
+          echo "Android build remains gated until export presets, keystore handling and verified Android client are configured."
+          echo "No APK is published from this workflow."
+      - name: Check project exists
+        run: test -f client/project.godot
