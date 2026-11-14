@@ -719,7 +719,15 @@ func _cancel_ui_build() -> void:
 func show_build_preview(result: Dictionary) -> void:
     if result.get("ok", false):
         var road_len: int = (result.get("access", []) as Array).size()
-        var total := int(building_costs.get(world.build_type, 0)) + road_len * road_cell_cost
+        var base_cost := int(building_costs.get(world.build_type, 0))
+        if world.build_square_size > 0:
+            var legacy_area := 4
+            match world.build_type:
+                "mine", "factory": legacy_area = 6
+                "warehouse": legacy_area = 9
+            var new_area := world.build_square_size * world.build_square_size
+            base_cost = (base_cost * new_area + legacy_area - 1) / legacy_area
+        var total := base_cost + road_len * road_cell_cost
         if city_mode:
             info.text = "Из бюджета: %s (в казне %s)" % [_fmt_money(total), _fmt_money(int(city.get("budget", 0)))]
             if build_hint != null: build_hint.text = info.text
