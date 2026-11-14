@@ -112,6 +112,7 @@ func _style() -> StyleBoxFlat:
 func _ui_button(label: String, callback: Callable, width: float = 130) -> Button:
     var b := Button.new()
     b.text = label
+    b.mouse_filter = Control.MOUSE_FILTER_IGNORE
     b.custom_minimum_size = Vector2(width, 58)
     b.add_theme_font_size_override("font_size", 18)
     b.pressed.connect(callback)
@@ -226,3 +227,47 @@ func is_world_ui_point(point: Vector2) -> bool:
         if panel != null and panel.visible and panel.get_global_rect().has_point(point):
             return true
     return false
+
+# Dedicated touch router for Android: GUI focus can be unavailable on
+# canvas-stretched viewports. Only route releases inside the same button.
+var ui_touch_buttons: Dictionary = {}
+var ui_mouse_button: Button = null
+func _hit_ui_button(point: Vector2) -> Button:
+    for panel in [catalog_panel, placement_panel, details_panel, build_toolbar]:
+        if panel == null or not panel.visible or not panel.get_global_rect().has_point(point):
+            continue
+        var stack: Array[Node] = [panel]
+        while not stack.is_empty():
+            var node: Node = stack.pop_back()
+            if node is Button and node.visible and node.get_global_rect().has_point(point):
+                return node
+            for child in node.get_children():
+                stack.append(child)
+    return null
+
+func _input(event: InputEvent) -> void:
+    if event is InputEventScreenTouch:
+        if event.pressed:
+            var target := _hit_ui_button(event.position)
+            if target != null:
+                ui_touch_buttons[event.index] = target
+                get_viewport().set_input_as_handled()
+        elif ui_touch_buttons.has(event.index):
+            var target: Button = ui_touch_buttons[event.index]
+            ui_touch_buttons.erase(event.index)
+            if target == _hit_ui_button(event.position):
+                target.pressed.emit()
+            get_viewport().set_input_as_handled()
+    elif event is InputEventScreenDrag and ui_touch_buttons.has(event.index):
+        get_viewport().set_input_as_handled()
+    elif event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT:
+        if event.pressed:
+            ui_mouse_button = _hit_ui_button(event.position)
+            if ui_mouse_button != null:
+                get_viewport().set_input_as_handled()
+        elif ui_mouse_button != null:
+            var target := ui_mouse_button
+            ui_mouse_button = null
+            if target == _hit_ui_button(event.position):
+                target.pressed.emit()
+            get_viewport().set_input_as_handled()
