@@ -181,6 +181,7 @@ func _on_response(result: int, code: int, _headers: PackedStringArray, body: Pac
         return
     if code == 200 and data.has("token"):
         token = str(data.token)
+        GameSession.sign_in(token, str(data.get("username", "")))
         _enter_world()
     else:
         var errors := {"invalid_username":"Проверьте имя игрока", "invalid_email":"Некорректная почта", "invalid_password":"Пароль должен содержать 10–128 символов", "account_exists":"Аккаунт уже существует", "invalid_credentials":"Неверный логин или пароль", "rate_limited":"Слишком много попыток, попробуйте позже"}
