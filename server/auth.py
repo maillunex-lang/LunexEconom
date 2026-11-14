@@ -10,6 +10,7 @@ import postgres_db
 import threading
 import time
 import smtplib
+import ssl
 from email.message import EmailMessage
 
 DB_PATH = os.environ.get("LUNEX_AUTH_DB", "/home/gamedev/projects/LunexEconom-runtime/accounts.sqlite3")
@@ -125,24 +126,42 @@ def _digest(token):
 
 
 def _send_account_email(address, subject, message):
-    """Fail closed if authenticated TLS email delivery is not configured."""
+    """Send using authenticated SMTP over TLS; fail closed if unavailable.
+
+    Mail.ru uses implicit TLS on port 465. The application password is read
+    from a root-managed file, never committed to the repository.
+    """
     host = os.environ.get("LUNEX_SMTP_HOST")
     sender = os.environ.get("LUNEX_SMTP_FROM")
     user = os.environ.get("LUNEX_SMTP_USER")
-    password = os.environ.get("LUNEX_SMTP_PASSWORD")
-    if not all((host, sender, user, password)):
+    password_file = os.environ.get("LUNEX_SMTP_PASSWORD_FILE")
+    if not all((host, sender, user, password_file)):
         return False
     try:
+        with open(password_file, encoding="utf-8") as handle:
+            password = handle.read().strip()
+        if not password:
+            return False
+        port = int(os.environ.get("LUNEX_SMTP_PORT", "465"))
         email = EmailMessage()
         email["From"], email["To"], email["Subject"] = sender, address, subject
         email.set_content(message)
-        with smtplib.SMTP(host, int(os.environ.get("LUNEX_SMTP_PORT", "587")), timeout=10) as smtp:
-            smtp.starttls()
-            smtp.login(user, password)
-            smtp.send_message(email)
+        context = ssl.create_default_context()
+        if port == 465:
+            with smtplib.SMTP_SSL(host, port, timeout=10, context=context) as smtp:
+                smtp.login(user, password)
+                smtp.send_message(email)
+        else:
+            with smtplib.SMTP(host, port, timeout=10) as smtp:
+                smtp.ehlo()
+                smtp.starttls(context=context)
+                smtp.ehlo()
+                smtp.login(user, password)
+                smtp.send_message(email)
         return True
-    except (OSError, smtplib.SMTPException):
+    except (OSError, ValueError, smtplib.SMTPException, ssl.SSLError):
         return False
+
 
 
 def _issue_email_token(identifier, purpose, client):
