@@ -133,6 +133,8 @@ var section_panel: PanelContainer
 var section_title: Label
 var section_scroll: ScrollContainer
 var section_body: Label
+var size_panel: PanelContainer
+var pending_size_kind := ""
 var catalog_panel: PanelContainer
 var placement_panel: PanelContainer
 var details_panel: PanelContainer
@@ -227,6 +229,17 @@ func _setup_ui_v1() -> void:
         tiles.add_child(_ui_button("%s · %s" % [entry[1], _fmt_money_short(int(building_costs[kind]))], func(): _choose_ui_build(kind), 190))
     content.add_child(_ui_button("Все отрасли (33) · скоро", _open_trade_catalog, 390))
     catalog_panel.hide()
+    size_panel = PanelContainer.new()
+    size_panel.name = "BuildSizePicker"
+    size_panel.add_theme_stylebox_override("panel", _style())
+    get_node("UIOverlay").add_child(size_panel)
+    var size_content := VBoxContainer.new()
+    size_panel.add_child(size_content)
+    size_content.add_child(_ui_button("Выберите размер · ×", func(): size_panel.hide(), 280))
+    for n in [1, 2, 3]:
+        var square_size: int = n
+        size_content.add_child(_ui_button("%d×%d" % [n, n], func(): _choose_ui_build_size(pending_size_kind, square_size), 210))
+    size_panel.hide()
     placement_panel = PanelContainer.new()
     placement_panel.name = "PlacementCard"
     placement_panel.add_theme_stylebox_override("panel", _style())
@@ -511,6 +524,7 @@ func _layout_ui_v1(override_size: Vector2 = Vector2.ZERO) -> void:
     var size := override_size if override_size != Vector2.ZERO else get_viewport_rect().size
     var usable_width := size.x - 40.0
     catalog_panel.size.x = minf(565.0, usable_width)
+    if size_panel != null: size_panel.size.x = minf(330.0, usable_width)
     placement_panel.size.x = minf(420.0, usable_width)
     details_panel.size.x = minf(275.0, usable_width * 0.46)
     var bottom_safe := 20.0
@@ -524,6 +538,7 @@ func _layout_ui_v1(override_size: Vector2 = Vector2.ZERO) -> void:
     var nav_top := build_toolbar.position.y
     catalog_panel.position = Vector2((size.x - catalog_panel.size.x) * 0.5, maxf(65, nav_top - catalog_panel.size.y - 12))
     placement_panel.position = Vector2((size.x - placement_panel.size.x) * 0.5, maxf(65, nav_top - placement_panel.size.y - 12))
+    if size_panel != null: size_panel.position = Vector2((size.x - size_panel.size.x) * 0.5, maxf(65, nav_top - size_panel.size.y - 12))
     details_panel.position = Vector2(size.x - details_panel.size.x - 22, maxf(85, (size.y - details_panel.size.y) * 0.5))
     if section_panel != null:
         var area := panel_rect(nav_top)
@@ -674,8 +689,21 @@ func _open_catalog() -> void:
     call_deferred("_layout_ui_v1")
 
 func _choose_ui_build(kind: String) -> void:
+    if kind in ["farm", "mine", "factory", "warehouse", "shop"]:
+        pending_size_kind = kind
+        for n in [1, 2, 3]:
+            var b: Button = size_panel.get_child(0).get_child(n)
+            b.visible = n <= (2 if kind == "shop" else 3)
+        catalog_panel.hide()
+        _show_panel(size_panel)
+        call_deferred("_layout_ui_v1")
+        return
+    _choose_ui_build_size(kind, 0)
+
+func _choose_ui_build_size(kind: String, square_size: int) -> void:
     city_mode = false
-    world.choose_build(kind)
+    size_panel.hide()
+    world.choose_build(kind, square_size)
     catalog_panel.hide()
     _show_panel(placement_panel)
     details_panel.hide()
@@ -732,6 +760,8 @@ func _place_building() -> void:
     # Preview is advisory only. Server is the final authority.
     var request_id := _new_build_request_id()
     var payload := {"kind": world.build_type, "x": world.selected.x, "y": world.selected.y, "request_id": request_id}
+    if world.build_square_size > 0:
+        payload["size"] = world.build_square_size
     ui_pending = true
     info.text = "Проверяем строительство на сервере..."
     var req := HTTPRequest.new()
