@@ -331,15 +331,58 @@ func show_build_preview(result: Dictionary) -> void:
 
 func _place_building() -> void:
     if ui_pending: return
+    if not GameSession.is_authenticated():
+        info.text = "Сначала войдите в аккаунт"
+        return
+    if world.build_type.is_empty() or world.selected == Vector2i(-1, -1):
+        info.text = "Выберите место строительства"
+        return
+    # Preview is advisory only. Server is the final authority.
+    var request_id := _new_build_request_id()
+    var payload := {"kind": world.build_type, "x": world.selected.x, "y": world.selected.y, "request_id": request_id}
     ui_pending = true
-    var result: Dictionary = world.place_building()
-    if result.get("ok", false):
-        world.cancel_build()
-        placement_panel.hide()
-        info.text = "Построено: %s · участок %s · дорога +%d" % [str(result.get("object_id", "")), str(world.selected), int(result.get("road_cells", 0))]
-    else:
-        show_build_preview(result)
-    ui_pending = false
+    info.text = "Проверяем строительство на сервере..."
+    var req := HTTPRequest.new()
+    req.timeout = 12.0
+    add_child(req)
+    req.request_completed.connect(func(result: int, code: int, _headers: PackedStringArray, body: PackedByteArray) -> void:
+        ui_pending = false
+        req.queue_free()
+        if result != HTTPRequest.RESULT_SUCCESS:
+            info.text = "Нет соединения. Повторите попытку после подключения"
+            return
+        var data = JSON.parse_string(body.get_string_from_utf8())
+        if not data is Dictionary:
+            info.text = "Некорректный ответ сервера"
+            return
+        if code == 200 or code == 201:
+            if not bool(data.get("ok", false)):
+                info.text = "Сервер не подтвердил строительство"
+                return
+            for event in data.get("events", []):
+                if event is Dictionary:
+                    world.apply_server_event(event)
+            world.cancel_build()
+            placement_panel.hide()
+            info.text = "Построено на сервере: " + str(data.get("object_id", ""))
+        else:
+            var errors := {"occupied":"Участок уже занят", "invalid_build":"Неверное место или тип здания", "outside_world":"За пределами карты", "unauthorized":"Сессия завершена, войдите снова", "invalid_request_id":"Ошибка команды строительства"}
+            info.text = str(errors.get(str(data.get("error", "")), "Сервер отклонил строительство (HTTP %d)" % code))
+    )
+    var headers := PackedStringArray(["Content-Type: application/json", "Authorization: Bearer " + GameSession.access_token])
+    var err := req.request("https://rikagro.ru/lunexeconom/api/build", headers, HTTPClient.METHOD_POST, JSON.stringify(payload))
+    if err != OK:
+        ui_pending = false
+        req.queue_free()
+        info.text = "Не удалось отправить запрос: %d" % err
+
+func _new_build_request_id() -> String:
+    var crypto := Crypto.new()
+    var bytes := crypto.generate_random_bytes(16)
+    bytes[6] = (bytes[6] & 15) | 64
+    bytes[8] = (bytes[8] & 63) | 128
+    var hex := bytes.hex_encode()
+    return "%s-%s-%s-%s-%s" % [hex.substr(0,8),hex.substr(8,4),hex.substr(12,4),hex.substr(16,4),hex.substr(20,12)]
 
 func is_world_ui_point(point: Vector2) -> bool:
     if $UIOverlay/HUD/Top.get_global_rect().has_point(point): return true
