@@ -18,6 +18,7 @@ import npc
 import clock
 import contracts
 import stats
+import social
 if os.environ.get('LUNEX_DB_ENGINE') == 'postgres':
     import postgres_world
     import postgres_db
@@ -47,7 +48,7 @@ def _prepare(db):
     db.execute("CREATE TABLE IF NOT EXISTS events(seq INTEGER PRIMARY KEY AUTOINCREMENT,cx INTEGER NOT NULL,cy INTEGER NOT NULL,version INTEGER NOT NULL,kind TEXT NOT NULL,payload TEXT NOT NULL)")
     db.execute("CREATE TABLE IF NOT EXISTS roads(x INTEGER NOT NULL,y INTEGER NOT NULL,owner TEXT NOT NULL,created INTEGER NOT NULL,PRIMARY KEY(x,y))")
     db.execute("CREATE TABLE IF NOT EXISTS commands(owner TEXT NOT NULL,request_id TEXT NOT NULL,response TEXT NOT NULL,PRIMARY KEY(owner,request_id))")
-    for statement in economy.SCHEMA + clock.SCHEMA:
+    for statement in economy.SCHEMA + clock.SCHEMA + social.SCHEMA:
         db.execute(statement)
     db.commit()
 
@@ -221,10 +222,35 @@ NPC_CONNECT,NPC_PH=connect,"?"
 def npc_tick():
     """Let NPC competitors act for completed months (cheap no-op when nothing is pending)."""
     try:
-        return npc.tick(NPC_CONNECT,NPC_PH,clock_state,lambda:market_state()[1],lambda owner:wallet(owner)[1],build,lambda:city_state()[1])
+        acted = npc.tick(NPC_CONNECT,NPC_PH,clock_state,lambda:market_state()[1],lambda owner:wallet(owner)[1],build,lambda:city_state()[1])
     except Exception as exc:   # NPC trouble must never break player requests
         print("npc tick failed:",repr(exc))
-        return 0
+        acted = 0
+    _social_tick()
+    return acted
+
+
+def _social_tick():
+    """Distribute alliance dividends after the monthly step. Failures stay off the player path."""
+    try:
+        ph = NPC_PH
+        if ph == "%s":
+            with NPC_CONNECT() as db:
+                db.execute("SELECT pg_advisory_xact_lock(20261114)")
+                now = int(time.time())
+                clk = clock.state(db, ph, now)
+                production.advance(db, ph, clk, now)
+                social.distribute_pending(db, ph, clk, now)
+            return
+        with LOCK, NPC_CONNECT() as db:
+            db.execute("BEGIN IMMEDIATE")
+            now = int(time.time())
+            clk = clock.state(db, ph, now)
+            production.advance(db, ph, clk, now)
+            social.distribute_pending(db, ph, clk, now)
+            db.commit()
+    except Exception as exc:
+        print("social tick failed:", repr(exc))
 
 def wallet(owner):
     with LOCK, connect() as db:
@@ -322,6 +348,44 @@ def stats_feed(owner, after=0):
         return stats.feed(db, "?", owner, after)
 
 
+def soc_post(owner, path, payload, client):
+    with LOCK, connect() as db:
+        db.execute("BEGIN IMMEDIATE")
+        now = int(time.time())
+        clk = clock.state(db, "?", now)
+        production.advance(db, "?", clk, now)
+        social.distribute_pending(db, "?", clk, now)
+        status, result = social.perform_post(db, "?", owner, path, payload, client, now, clk)
+        db.commit()
+        return status, result
+
+
+def soc_get(owner, path, query):
+    args = {}
+    for key, values in query.items():
+        if len(values) != 1:
+            return 400, {"error": "invalid_query"}
+        args[key] = values[0]
+    if path in social.READ_ONLY:
+        with LOCK, connect() as db:
+            db.execute("BEGIN IMMEDIATE")
+            row = db.execute("SELECT epoch,month_seconds,base_index FROM world_clock WHERE id=1").fetchone()
+            if row is not None:
+                args["month"] = str(clock.month_index((int(row[0]), int(row[1]), int(row[2])), int(time.time())))
+            status, result = social.perform_get(db, "?", owner, path, args, None)
+            db.commit()
+            return status, result
+    with LOCK, connect() as db:
+        db.execute("BEGIN IMMEDIATE")
+        now = int(time.time())
+        clk = clock.state(db, "?", now)
+        production.advance(db, "?", clk, now)
+        social.distribute_pending(db, "?", clk, now)
+        status, result = social.perform_get(db, "?", owner, path, args, clk)
+        db.commit()
+        return status, result
+
+
 ECONOMY_POST={"/sell":"sell","/loan":"loan","/city/taxes":"city_taxes","/city/build":"city_build","/city/candidacy":"city_candidacy","/city/vote":"city_vote","/contracts/offer":"contracts_offer","/contracts/accept":"contracts_accept","/contracts/cancel":"contracts_cancel"}
 
 class Handler(BaseHTTPRequestHandler):
@@ -357,8 +421,34 @@ class Handler(BaseHTTPRequestHandler):
         npc_tick()
         self._send(*globals()[ECONOMY_POST[path]](owner,payload))
         return True
+    def _soc_post(self):
+        path = urlsplit(self.path).path
+        if path not in social.POST:
+            return False
+        try:
+            size = int(self.headers.get("Content-Length", "0"))
+            payload = json.loads(self.rfile.read(size)) if 2 <= size <= 4096 else None
+        except (ValueError, UnicodeError, json.JSONDecodeError):
+            payload = None
+        if not isinstance(payload, dict):
+            self._send(400, {"error": "invalid_body"})
+            return True
+        owner = self._identity()
+        if not owner:
+            self._send(401, {"error": "unauthorized"})
+            return True
+        npc_tick()
+        self._send(*soc_post(owner, path, payload, self._client()))
+        return True
     def do_GET(self):
         url=urlsplit(self.path)
+        if url.path in social.GET:
+            owner = self._identity()
+            if not owner:
+                return self._send(401, {"error": "unauthorized"})
+            if url.path not in social.READ_ONLY:
+                npc_tick()
+            return self._send(*soc_get(owner, url.path, parse_qs(url.query, keep_blank_values=True)))
         if url.path in ("/market","/wallet","/world","/city","/contracts"):npc_tick()
         if url.path=="/contracts":
             owner=self._identity()
@@ -397,6 +487,7 @@ class Handler(BaseHTTPRequestHandler):
             return self._send(*result)
         return self._send(404,{"error":"not_found"})
     def do_POST(self):
+        if self._soc_post():return
         if self._economy_post():return
         path=urlsplit(self.path).path
         if path not in ("/auth/register","/auth/login","/auth/logout","/auth/verify/request","/auth/verify/confirm","/auth/password/request","/auth/password/reset","/auth/rotate","/auth/logout-all","/build"):
@@ -447,6 +538,8 @@ if os.environ.get("LUNEX_DB_ENGINE") == "postgres":
     NPC_CONNECT,NPC_PH = postgres_db.connect,"%s"
     stats_leaderboard = postgres_world.stats_leaderboard
     stats_feed = postgres_world.stats_feed
+    soc_post = postgres_world.soc_post
+    soc_get = postgres_world.soc_get
 
 if __name__=="__main__":
     if os.environ.get("LUNEX_DB_ENGINE") == "postgres":

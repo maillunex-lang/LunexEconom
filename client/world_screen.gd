@@ -131,6 +131,13 @@ var build_toolbar: HBoxContainer
 var build_hint: Label
 var contracts_panel: Control
 var contract_shortcut: Control
+var alliance_panel: Control
+var messages_panel: Control
+var exchange_panel: Control
+var charts_panel: Control
+var achievements_panel: Control
+var social_actions: HBoxContainer
+var market_social: HBoxContainer
 var toolbar_touches: Dictionary = {}
 var toolbar_mouse_button: Button = null
 
@@ -292,8 +299,22 @@ func _setup_ui_v1() -> void:
     stats_actions.add_child(_ui_button("📜 События", func(): _open_stats_panel("feed"), 160))
     body_box.add_child(stats_actions)
     stats_actions.hide()
+    social_actions = HBoxContainer.new()
+    social_actions.add_theme_constant_override("separation", 8)
+    social_actions.add_child(_ui_button("Альянс", func(): _open_social_panel("alliance"), 140))
+    social_actions.add_child(_ui_button("Сообщения", func(): _open_social_panel("messages"), 160))
+    social_actions.add_child(_ui_button("Звания", func(): _open_social_panel("achievements"), 140))
+    body_box.add_child(social_actions)
+    social_actions.hide()
+    market_social = HBoxContainer.new()
+    market_social.add_theme_constant_override("separation", 8)
+    market_social.add_child(_ui_button("Биржа", func(): _open_social_panel("exchange"), 140))
+    market_social.add_child(_ui_button("Графики", func(): _open_social_panel("charts"), 150))
+    body_box.add_child(market_social)
+    market_social.hide()
     section_panel.hide()
     _setup_stats_panels()
+    _setup_social_panels()
     get_viewport().size_changed.connect(_layout_ui_v1)
     call_deferred("_layout_ui_v1")
 
@@ -307,6 +328,62 @@ func _setup_stats_panels() -> void:
     get_node("UIOverlay").add_child(feed_panel)
     feed_panel.close_requested.connect(func(): feed_panel.hide())
     feed_panel.refresh_requested.connect(_refresh_feed)
+
+
+func _setup_social_panels() -> void:
+    alliance_panel = load("res://alliance_panel.gd").new()
+    messages_panel = load("res://messages_panel.gd").new()
+    exchange_panel = load("res://exchange_panel.gd").new()
+    charts_panel = load("res://charts_panel.gd").new()
+    achievements_panel = load("res://achievements_panel.gd").new()
+    for panel in [alliance_panel, messages_panel, exchange_panel, charts_panel, achievements_panel]:
+        get_node("UIOverlay").add_child(panel)
+        panel.bind_host(self)
+        panel.close_requested.connect(panel.hide)
+        panel.hide()
+
+
+func _social_by_name(which: String) -> Control:
+    match which:
+        "alliance":
+            return alliance_panel
+        "messages":
+            return messages_panel
+        "exchange":
+            return exchange_panel
+        "charts":
+            return charts_panel
+        "achievements":
+            return achievements_panel
+    return null
+
+
+func _hide_social_panels() -> void:
+    for panel in [alliance_panel, messages_panel, exchange_panel, charts_panel, achievements_panel]:
+        if panel != null:
+            panel.hide()
+
+
+func _open_social_panel(which: String) -> void:
+    var panel := _social_by_name(which)
+    if panel == null:
+        return
+    world.cancel_build()
+    section_panel.hide()
+    catalog_panel.hide()
+    placement_panel.hide()
+    details_panel.hide()
+    if contracts_panel != null:
+        contracts_panel.hide()
+    if leaderboard_panel != null:
+        leaderboard_panel.hide()
+    if feed_panel != null:
+        feed_panel.hide()
+    _hide_social_panels()
+    _show_panel(panel)
+    if panel.has_method("refresh"):
+        panel.refresh()
+    call_deferred("_layout_ui_v1")
 
 
 func panel_rect(nav_top: float) -> Rect2:
@@ -340,6 +417,7 @@ func _open_stats_panel(which: String) -> void:
     details_panel.hide()
     leaderboard_panel.hide()
     feed_panel.hide()
+    _hide_social_panels()
     if which == "leaderboard":
         _show_panel(leaderboard_panel)
         _refresh_leaderboard("networth")
@@ -418,6 +496,9 @@ func _layout_ui_v1(override_size: Vector2 = Vector2.ZERO) -> void:
         _layout_stats_panel(leaderboard_panel, size, nav_top)
     if feed_panel != null:
         _layout_stats_panel(feed_panel, size, nav_top)
+    for panel in [alliance_panel, messages_panel, exchange_panel, charts_panel, achievements_panel]:
+        if panel != null:
+            _layout_stats_panel(panel, size, nav_top)
 
 func _setup_top_hud() -> void:
     var top: HBoxContainer = $UIOverlay/HUD/Top
@@ -471,6 +552,7 @@ func _open_section(section: String) -> void:
         contracts_panel.hide()
     if leaderboard_panel != null: leaderboard_panel.hide()
     if feed_panel != null: feed_panel.hide()
+    _hide_social_panels()
     section_title.text = section
     match section:
         "Город":
@@ -484,7 +566,11 @@ func _open_section(section: String) -> void:
         "Меню":
             section_body.text = "Башкирия: Мёд и Нефть\nВерсия интерфейса 1.0\nУправление: одним пальцем двигайте карту, двумя изменяйте масштаб. Дороги к зданиям прокладываются автоматически."
     stats_actions.visible = section == "Меню"
+    if social_actions != null:
+        social_actions.visible = section == "Меню"
     section_actions.visible = section == "Экономика"
+    if market_social != null:
+        market_social.visible = section == "Экономика"
     if contract_shortcut != null:
         contract_shortcut.visible = section == "Экономика"
     _update_city_actions(section == "Город")
@@ -501,6 +587,7 @@ func _open_catalog() -> void:
     section_panel.hide()
     if leaderboard_panel != null: leaderboard_panel.hide()
     if feed_panel != null: feed_panel.hide()
+    _hide_social_panels()
     call_deferred("_layout_ui_v1")
 
 func _choose_ui_build(kind: String) -> void:
@@ -618,7 +705,7 @@ func _new_build_request_id() -> String:
 
 func is_world_ui_point(point: Vector2) -> bool:
     if $UIOverlay/HUD/Top.get_global_rect().has_point(point): return true
-    for panel in [build_toolbar, catalog_panel, placement_panel, details_panel, section_panel, contracts_panel, leaderboard_panel, feed_panel]:
+    for panel in [build_toolbar, catalog_panel, placement_panel, details_panel, section_panel, contracts_panel, leaderboard_panel, feed_panel, alliance_panel, messages_panel, exchange_panel, charts_panel, achievements_panel]:
         if panel != null and panel.visible and panel.get_global_rect().has_point(point):
             return true
     return false
@@ -628,7 +715,7 @@ func is_world_ui_point(point: Vector2) -> bool:
 var ui_touch_buttons: Dictionary = {}
 var ui_mouse_button: Button = null
 func _ui_panels() -> Array:
-    return [catalog_panel, placement_panel, details_panel, section_panel, build_toolbar, contracts_panel, leaderboard_panel, feed_panel]
+    return [catalog_panel, placement_panel, details_panel, section_panel, build_toolbar, contracts_panel, leaderboard_panel, feed_panel, alliance_panel, messages_panel, exchange_panel, charts_panel, achievements_panel]
 
 func _hit_ui_button(point: Vector2) -> Button:
     for panel in _ui_panels():
