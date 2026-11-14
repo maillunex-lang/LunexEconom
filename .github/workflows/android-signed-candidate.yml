@@ -1,19 +1,35 @@
-name: Android signed release candidate (isolated branch)
+name: Android signed release candidate
 
+# Manual only. Builds a release-signed APK as a downloadable artifact (no VPS deployment, no GitHub Release).
+# Real signing needs the four LUNEX_ANDROID_* secrets (see docs/ANDROID_SIGNING.md).
+# "pipeline check" mode uses a throw-away key so the whole release pipeline can be verified without any secret;
+# its artifact is clearly named TEST-KEY and must never be distributed.
 on:
   workflow_dispatch:
+    inputs:
+      pipeline_check_with_temporary_key:
+        description: "Verify the release pipeline with a throw-away key (artifact is NOT a release)"
+        type: boolean
+        default: false
 
 permissions:
   contents: read
 
 jobs:
   signed-apk:
-    if: github.ref == 'refs/heads/chatgpt/accounts-infra'
+    if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
+    environment: android-signing
     timeout-minutes: 50
+    env:
+      TEST_KEY_MODE: ${{ inputs.pipeline_check_with_temporary_key }}
     steps:
       - uses: actions/checkout@v4
-      - name: Require release signing secrets
+        with:
+          fetch-depth: 0
+      - name: Stamp build number (unique increasing versionCode)
+        run: python3 ops/stamp_build.py --count "$(git rev-list --count HEAD)"
+      - name: Resolve signing material
         env:
           STORE_B64: ${{ secrets.LUNEX_ANDROID_KEYSTORE_BASE64 }}
           STORE_PASS: ${{ secrets.LUNEX_ANDROID_KEYSTORE_PASSWORD }}
@@ -21,9 +37,29 @@ jobs:
           KEY_PASS: ${{ secrets.LUNEX_ANDROID_KEY_PASSWORD }}
         run: |
           set -euo pipefail
-          for name in STORE_B64 STORE_PASS KEY_ALIAS KEY_PASS; do
-            if [ -z "${!name}" ]; then echo "::error::Missing Android signing secret: $name"; exit 1; fi
-          done
+          umask 077
+          mkdir -p "$RUNNER_TEMP/android-signing"
+          KEYSTORE="$RUNNER_TEMP/android-signing/release.jks"
+          if [ "$TEST_KEY_MODE" = "true" ]; then
+            ALIAS="lunex-pipeline-check"
+            PASS="$(openssl rand -hex 16)"
+            echo "::add-mask::$PASS"
+            keytool -genkeypair -keystore "$KEYSTORE" -alias "$ALIAS" -keyalg RSA -keysize 2048 -validity 2 -storetype PKCS12 \
+              -storepass "$PASS" -keypass "$PASS" -dname "CN=LunexEconom pipeline check, O=TEST KEY NOT FOR RELEASE"
+            echo "::warning::Pipeline check with a THROW-AWAY key: the artifact is not a release and must not be distributed."
+          else
+            for name in STORE_B64 STORE_PASS KEY_ALIAS KEY_PASS; do
+              if [ -z "${!name}" ]; then echo "::error::Missing Android signing secret: $name"; exit 1; fi
+            done
+            [ "$STORE_PASS" = "$KEY_PASS" ] || { echo "::error::Godot export requires identical key and store passwords"; exit 1; }
+            echo "::add-mask::$STORE_PASS"
+            echo "::add-mask::$KEY_ALIAS"
+            printf '%s' "$STORE_B64" | base64 --decode > "$KEYSTORE"
+            ALIAS="$KEY_ALIAS"
+            PASS="$STORE_PASS"
+          fi
+          test -s "$KEYSTORE"
+          { echo "LUNEX_KEYSTORE_PATH=$KEYSTORE"; echo "LUNEX_KEY_ALIAS=$ALIAS"; echo "LUNEX_STORE_PASS=$PASS"; } >> "$GITHUB_ENV"
       - uses: android-actions/setup-android@v3
         with:
           packages: 'platform-tools platforms;android-35 build-tools;35.0.0'
@@ -40,46 +76,28 @@ jobs:
           curl -fL --retry 3 --max-time 240 "https://github.com/godotengine/godot-builds/releases/download/4.7.2-stable/Godot_v4.7.2-stable_export_templates.tpz" -o "$RUNNER_TEMP/godot/templates.tpz"
           unzip -q "$RUNNER_TEMP/godot/templates.tpz" -d "$RUNNER_TEMP/godot/templates"
           cp -a "$RUNNER_TEMP/godot/templates/templates/." "$HOME/.local/share/godot/export_templates/4.7.2.stable/"
-      - name: Decode signing key and configure Godot
-        env:
-          STORE_B64: ${{ secrets.LUNEX_ANDROID_KEYSTORE_BASE64 }}
-          STORE_PASS: ${{ secrets.LUNEX_ANDROID_KEYSTORE_PASSWORD }}
-          KEY_ALIAS: ${{ secrets.LUNEX_ANDROID_KEY_ALIAS }}
-          KEY_PASS: ${{ secrets.LUNEX_ANDROID_KEY_PASSWORD }}
+      - name: Configure release signing in the export preset
         run: |
           set -euo pipefail
-          umask 077
-          mkdir -p "$RUNNER_TEMP/android-signing"
-          printf '%s' "$STORE_B64" | base64 --decode > "$RUNNER_TEMP/android-signing/release.jks"
-          test -s "$RUNNER_TEMP/android-signing/release.jks"
-          echo "::add-mask::$STORE_PASS"
-          echo "::add-mask::$KEY_PASS"
-          echo "::add-mask::$KEY_ALIAS"
           python3 - <<'PY'
+          import os, re
           from pathlib import Path
-          import os
           p = Path("client/export_presets.cfg")
           text = p.read_text()
-          required = 'package/unique_name="ru.lunex.bashkiriahoneyoil"'
-          assert required in text, "Unexpected package ID"
+          assert 'package/unique_name="ru.lunex.bashkiriahoneyoil"' in text, "Unexpected package ID"
           def esc(s):
               return s.replace("\\", "\\\\").replace('"', '\\"').replace("\n", "")
           values = {
-              "keystore/release": str(Path(os.environ["RUNNER_TEMP"]) / "android-signing/release.jks"),
-              "keystore/release_user": os.environ["KEY_ALIAS"],
-              "keystore/release_password": os.environ["STORE_PASS"],
+              "keystore/release": os.environ["LUNEX_KEYSTORE_PATH"],
+              "keystore/release_user": os.environ["LUNEX_KEY_ALIAS"],
+              "keystore/release_password": os.environ["LUNEX_STORE_PASS"],
           }
-          # Godot Android export uses keystore/release_password as store password.
-          # Key password is supplied via GODOT_ANDROID_KEYSTORE_RELEASE_PASSWORD only
-          # if the chosen keystore uses the same password for key and store.
-          assert os.environ["STORE_PASS"] == os.environ["KEY_PASS"], "Godot export requires matching key/store passwords in this workflow"
           for key, value in values.items():
-              import re
               line = key + '="' + esc(value) + '"'
               if re.search(r"^" + re.escape(key) + r"=", text, flags=re.M):
                   text = re.sub(r"^" + re.escape(key) + r"=.*$", lambda _: line, text, flags=re.M)
               else:
-                  text += "\n" + line + "\n"
+                  text = text.rstrip("\n") + "\n" + line + "\n"
           p.write_text(text)
           PY
       - name: Export release APK
@@ -93,18 +111,31 @@ jobs:
         run: |
           set -euo pipefail
           APK=build/LunexEconom-release.apk
-          "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --verbose --print-certs "$APK" > build/signature-report.txt
+          "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --verbose --print-certs "$APK" | tee build/signature-report.txt
           "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging "$APK" > build/apk-badging.txt
           grep -q "package: name='ru.lunex.bashkiriahoneyoil'" build/apk-badging.txt
           grep -q 'arm64-v8a' build/apk-badging.txt
+          grep -q 'x86_64' build/apk-badging.txt
+          EXPECTED=$(python3 -c "import json;print(json.load(open('client/build_info.json'))['version_code'])")
+          grep -q "versionCode='$EXPECTED'" build/apk-badging.txt || { echo "::error::versionCode does not match the stamped build number $EXPECTED"; exit 1; }
+          if grep -qi "Android Debug" build/signature-report.txt; then echo "::error::The release APK is signed with the debug certificate"; exit 1; fi
+          if grep -q "debuggable" build/apk-badging.txt; then echo "::error::The release APK is debuggable"; exit 1; fi
           sha256sum "$APK" > build/SHA256SUMS
+          {
+            echo "### Android release candidate"
+            echo "- versionCode: $EXPECTED"
+            echo "- SHA-256: $(cut -d' ' -f1 build/SHA256SUMS)"
+            echo "- signing mode: $([ "$TEST_KEY_MODE" = "true" ] && echo 'THROW-AWAY TEST KEY (not a release)' || echo 'release key from repository secrets')"
+            grep -E "Signer #1 certificate (DN|SHA-256)" build/signature-report.txt | sed 's/^/- /'
+          } >> "$GITHUB_STEP_SUMMARY"
       - uses: actions/upload-artifact@v4
         with:
-          name: lunexeconom-signed-release-candidate
+          name: ${{ inputs.pipeline_check_with_temporary_key && 'lunexeconom-release-pipeline-check-TEST-KEY-NOT-A-RELEASE' || 'lunexeconom-signed-release-candidate' }}
           path: |
             build/LunexEconom-release.apk
             build/SHA256SUMS
             build/apk-badging.txt
+            build/signature-report.txt
           if-no-files-found: error
           retention-days: 7
       - name: Erase temporary signing material

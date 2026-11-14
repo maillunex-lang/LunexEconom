@@ -7,6 +7,7 @@ import secrets
 import sqlite3
 import psycopg
 import postgres_db
+import sqlite_util
 import threading
 import time
 import smtplib
@@ -25,7 +26,14 @@ ITERATIONS = 310_000
 def _db():
     if USE_POSTGRES:
         return postgres_db.connect()
-    db = sqlite3.connect(DB_PATH, timeout=10)
+    db = sqlite_util.open_db(DB_PATH)
+    try:
+        return _prepare_sqlite(db)
+    except BaseException:
+        db.close()
+        raise
+
+def _prepare_sqlite(db):
     db.execute("PRAGMA busy_timeout=10000")
     db.execute("PRAGMA journal_mode=WAL")
     db.execute("CREATE TABLE IF NOT EXISTS users (id INTEGER PRIMARY KEY, username TEXT UNIQUE NOT NULL, email TEXT UNIQUE NOT NULL, salt BLOB NOT NULL, password_hash BLOB NOT NULL, created_at INTEGER NOT NULL)")

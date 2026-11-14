@@ -1,8 +1,8 @@
-# Android signed APK: isolated release-candidate pipeline
+# Android signed APK: release-candidate pipeline
 
 Workflow: `.github/workflows/android-signed-candidate.yml`.
 
-**Safety:** manual `workflow_dispatch` only, job restricted to `chatgpt/accounts-infra`, no VPS deployment, no GitHub Release, no `main` modification. The workflow **fails closed** if secrets are missing.
+**Safety:** manual `workflow_dispatch` only; the job runs from `main` (the former `chatgpt/accounts-infra` restriction was removed after the merge: that branch can be deleted, which would have made the job unrunnable). It uses the GitHub Environment `android-signing` (create it under Settings → Environments, add **required reviewers** and move the four secrets there so only approved runs can read them), has `contents: read`, no VPS deployment, no GitHub Release. The workflow **fails closed** if secrets are missing.
 
 ## One-time signing key setup
 
@@ -30,10 +30,16 @@ Required GitHub Actions secrets:
 
 ## Running
 
-GitHub → Actions → Android signed release candidate (isolated branch) → Run workflow → select `chatgpt/accounts-infra`. Download artifact `lunexeconom-signed-release-candidate`. Verify SHA256 and install on a physical Android phone; check landscape, safe area, login, building and world synchronization.
+GitHub → Actions → Android signed release candidate → Run workflow (branch `main`). Download artifact `lunexeconom-signed-release-candidate`. Verify SHA256 and install on a physical Android phone; check landscape, safe area, login, building and world synchronization.
 
-This workflow does not automatically publish or deploy the APK. Do not merge into main while Claude is working. Existing debug APKs may use a different signing certificate and cannot be upgraded in place with this release key; uninstalling a debug app can erase its local data. Confirm signing certificate migration before distributing broadly.
+This workflow does not automatically publish or deploy the APK. Existing debug APKs may use a different signing certificate and cannot be upgraded in place with this release key; uninstalling a debug app can erase its local data. Confirm signing certificate migration before distributing broadly.
+
+## Version numbers
+Every CI build (debug and release candidate) is stamped by `ops/stamp_build.py` with a unique, increasing `versionCode` equal to the commit count (`git rev-list --count HEAD`) and `versionName` `0.3.<count>`. The same number is written to `client/build_info.json`, which the in-game updater reads as the installed version (it used to be a hard-coded constant). The workflows fail if `aapt` reports a different `versionCode` than the stamped one.
+
+## Verifying the pipeline without the real key
+Run the workflow with **pipeline_check_with_temporary_key = true**. It generates a throw-away key on the runner, builds, signs and verifies the release APK (package ID, ABIs, versionCode, not debug-signed, not debuggable) and uploads an artifact named `lunexeconom-release-pipeline-check-TEST-KEY-NOT-A-RELEASE`. That artifact must never be distributed; it only proves that the pipeline works.
 
 ## Current status
 
-Pipeline is configured but **no production signing key has been supplied** and **no signed release artifact has been generated or device-tested**.
+Pipeline verified end-to-end in pipeline-check mode (see docs/PROGRESS.md); **no production signing key has been supplied** and **no real signed release artifact has been generated or device-tested**.

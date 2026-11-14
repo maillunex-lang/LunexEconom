@@ -33,7 +33,7 @@ func _ready() -> void:
     $UIOverlay/HUD/Top/Update.pressed.connect(func() -> void:
         if not updater.downloaded_apk.is_empty():
             updater.install_apk()
-        elif not updater.manifest.is_empty() and int(updater.manifest["apk"]["version_code"]) > 11:
+        elif not updater.manifest.is_empty() and int(updater.manifest["apk"]["version_code"]) > updater.local_version:
             updater.download_apk()
         else:
             updater.check()

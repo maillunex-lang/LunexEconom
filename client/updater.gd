@@ -3,12 +3,19 @@ extends Node
 signal state_changed(message: String, can_install: bool)
 const MANIFEST_URL := "https://rikagro.ru/lunexeconom/updates/manifest.json"
 const BASE_URL := "https://rikagro.ru/lunexeconom/versions/"
-const LOCAL_VERSION := 11
+## Installed build number: CI stamps it into res://build_info.json (ops/stamp_build.py) together with the export preset.
+var local_version := _read_local_version()
 const MAX_APK_BYTES := 160 * 1024 * 1024
 const MAX_CONTENT_BYTES := 2 * 1024 * 1024
 var manifest: Dictionary = {}
 var downloaded_apk := ""
 var busy := false
+
+func _read_local_version() -> int:
+    var file := FileAccess.open("res://build_info.json", FileAccess.READ)
+    if file == null: return 0
+    var data = JSON.parse_string(file.get_as_text())
+    return int(data.get("version_code", 0)) if data is Dictionary else 0
 
 func check() -> void:
     if busy: return
@@ -30,7 +37,7 @@ func check() -> void:
         manifest = data
         _check_content()
         var apk: Dictionary = manifest["apk"]
-        if int(apk["version_code"]) > LOCAL_VERSION:
+        if int(apk["version_code"]) > local_version:
             state_changed.emit("Доступна версия %s. Нажмите «Обновить»." % str(apk["version_name"]), false)
         else:
             state_changed.emit("Версия актуальна · %s" % str(apk["version_name"]), false)
@@ -64,7 +71,7 @@ func _valid_manifest(data: Variant) -> bool:
 func download_apk() -> void:
     if busy or manifest.is_empty(): return
     var apk: Dictionary = manifest["apk"]
-    if int(apk["version_code"]) <= LOCAL_VERSION:
+    if int(apk["version_code"]) <= local_version:
         state_changed.emit("Установлена актуальная версия", false)
         return
     busy = true

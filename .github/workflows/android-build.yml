@@ -14,6 +14,10 @@ jobs:
     timeout-minutes: 45
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Stamp build number (unique increasing versionCode)
+        run: python3 ops/stamp_build.py --count "$(git rev-list --count HEAD)"
       - uses: android-actions/setup-android@v3
         with:
           packages: 'platform-tools platforms;android-35 build-tools;35.0.0'
@@ -60,6 +64,8 @@ jobs:
           AAPT="$ANDROID_HOME/build-tools/35.0.0/aapt"
           "$AAPT" dump badging build/*.apk | tee build/apk-badging.txt
           grep -q 'arm64-v8a' build/apk-badging.txt
+          EXPECTED=$(python3 -c "import json;print(json.load(open('client/build_info.json'))['version_code'])")
+          grep -q "versionCode='$EXPECTED'" build/apk-badging.txt || { echo "::error::APK versionCode does not match the stamped build number $EXPECTED"; exit 1; }
           grep -q 'x86_64' build/apk-badging.txt
           "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --verbose build/*.apk
       - uses: actions/upload-artifact@v4

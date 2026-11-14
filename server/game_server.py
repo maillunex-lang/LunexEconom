@@ -8,6 +8,7 @@ import threading
 import time
 import uuid
 import auth
+import sqlite_util
 import roads as road_rules
 import economy
 import production
@@ -24,7 +25,15 @@ KINDS = {"farm":(2,2), "mine":(2,3), "factory":(3,2), "warehouse":(3,3)}
 LOCK = threading.RLock()
 
 def connect():
-    db = sqlite3.connect(DB, timeout=10)
+    db = sqlite_util.open_db(DB)
+    try:
+        _prepare(db)
+    except BaseException:
+        db.close()
+        raise
+    return db
+
+def _prepare(db):
     db.execute("PRAGMA journal_mode=WAL")
     db.execute("PRAGMA busy_timeout=10000")
     db.execute("PRAGMA foreign_keys=ON")
@@ -37,7 +46,7 @@ def connect():
     for statement in economy.SCHEMA + clock.SCHEMA:
         db.execute(statement)
     db.commit()
-    return db
+
 
 def build(owner, payload):
     kind=payload.get("kind")

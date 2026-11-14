@@ -1,5 +1,6 @@
 """Persistent authoritative event log, internal write API only. SQLite test backend."""
-import json, sqlite3, threading
+import json, threading
+import sqlite_util
 from pathlib import Path
 
 DB = Path(__file__).with_name('world_state.sqlite3')
@@ -8,7 +9,14 @@ CHUNK = 12
 ALLOWED = {'building_created', 'building_removed', 'road_changed'}
 
 def connect():
-    db = sqlite3.connect(DB, timeout=5)
+    db = sqlite_util.open_db(DB, timeout=5)
+    try:
+        return _prepare(db)
+    except BaseException:
+        db.close()
+        raise
+
+def _prepare(db):
     db.execute('PRAGMA busy_timeout=5000')
     db.execute('PRAGMA journal_mode=WAL')
     db.execute('CREATE TABLE IF NOT EXISTS chunks (cx INTEGER NOT NULL, cy INTEGER NOT NULL, version INTEGER NOT NULL DEFAULT 0, PRIMARY KEY(cx,cy))')
