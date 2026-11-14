@@ -52,6 +52,7 @@ CREATE TABLE IF NOT EXISTS market_prices (product TEXT NOT NULL, month_index BIG
 CREATE TABLE IF NOT EXISTS world_state (id INTEGER PRIMARY KEY, processed_through BIGINT NOT NULL);
 CREATE TABLE IF NOT EXISTS inventory (owner TEXT NOT NULL, product TEXT NOT NULL, qty BIGINT NOT NULL, PRIMARY KEY(owner, product));
 CREATE TABLE IF NOT EXISTS company_reports (owner TEXT NOT NULL, month_index BIGINT NOT NULL, revenue BIGINT NOT NULL, input_cost BIGINT NOT NULL, upkeep BIGINT NOT NULL, profit BIGINT NOT NULL, buildings INTEGER NOT NULL, PRIMARY KEY(owner, month_index));
+CREATE TABLE IF NOT EXISTS npc_state (owner TEXT PRIMARY KEY, acted_through BIGINT NOT NULL);
 CREATE TABLE IF NOT EXISTS company_state (owner TEXT PRIMARY KEY, settled_through BIGINT NOT NULL);
 CREATE TABLE IF NOT EXISTS monthly_reports (owner TEXT NOT NULL, month_index BIGINT NOT NULL, revenue BIGINT NOT NULL, upkeep BIGINT NOT NULL, profit BIGINT NOT NULL, buildings INTEGER NOT NULL, PRIMARY KEY(owner, month_index));
 CREATE TABLE IF NOT EXISTS commands (

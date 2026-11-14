@@ -11,6 +11,7 @@ import auth
 import roads as road_rules
 import economy
 import production
+import npc
 import clock
 if os.environ.get('LUNEX_DB_ENGINE') == 'postgres':
     import postgres_world
@@ -109,9 +110,19 @@ def market_state():
         now=int(time.time())
         clk=clock.state(db,"?",now)
         production.advance(db,"?",clk,now)
-        result={"ok":True,"month_index":clk["month_index"],"products":production.quote(db,"?",clk)}
+        result={"ok":True,"month_index":clk["month_index"],"products":production.quote(db,"?",clk),"competitors":production.competitors(db,"?")}
         db.commit()
     return 200,result
+
+NPC_CONNECT,NPC_PH=connect,"?"
+
+def npc_tick():
+    """Let NPC competitors act for completed months (cheap no-op when nothing is pending)."""
+    try:
+        return npc.tick(NPC_CONNECT,NPC_PH,clock_state,lambda:market_state()[1]["products"],lambda owner:wallet(owner)[1],build)
+    except Exception as exc:   # NPC trouble must never break player requests
+        print("npc tick failed:",repr(exc))
+        return 0
 
 def wallet(owner):
     with LOCK, connect() as db:
@@ -160,6 +171,7 @@ class Handler(BaseHTTPRequestHandler):
         return self.headers.get("X-Real-IP",self.client_address[0])[:64] if self.client_address[0] in ("127.0.0.1","::1") else self.client_address[0]
     def do_GET(self):
         url=urlsplit(self.path)
+        if url.path in ("/market","/wallet","/world"):npc_tick()
         if url.path=="/health":return self._send(200,{"ok":True,"service":"lunexeconom-game","version":"0.2.0"})
         if url.path=="/world":
             now_clock=clock_state()
@@ -198,6 +210,7 @@ class Handler(BaseHTTPRequestHandler):
             return self._send(*auth.logout(bearer[7:] if bearer.startswith("Bearer ") else ""))
         owner=self._identity()
         if not owner:return self._send(401,{"error":"unauthorized"})
+        npc_tick()
         return self._send(*build(owner,payload))
 
 if os.environ.get("LUNEX_DB_ENGINE") == "postgres":
@@ -207,6 +220,7 @@ if os.environ.get("LUNEX_DB_ENGINE") == "postgres":
     wallet = postgres_world.wallet
     clock_state = postgres_world.clock_state
     market_state = postgres_world.market_state
+    NPC_CONNECT,NPC_PH = postgres_db.connect,"%s"
 
 if __name__=="__main__":
     if os.environ.get("LUNEX_DB_ENGINE") == "postgres":

@@ -224,10 +224,28 @@ def reports(db, ph, owner, limit=6):
     return [{"month_index": m, "revenue": r, "input_cost": i, "upkeep": u, "profit": p, "buildings": b} for m, r, i, u, p, b in rows]
 
 
+def holdings(db, ph, owner):
+    """Number of buildings per kind."""
+    out = {}
+    for kind, in db.execute(_q("SELECT kind FROM building_ops WHERE owner=%s", ph), (owner,)).fetchall():
+        out[kind] = out.get(kind, 0) + 1
+    return out
+
+
+def competitors(db, ph):
+    """NPC companies visible to players."""
+    import npc
+    result = []
+    for persona in npc.PERSONAS:
+        h = holdings(db, ph, persona["owner"])
+        result.append({"owner": persona["owner"], "name": persona["name"], "buildings": sum(h.values()), "holdings": h})
+    return result
+
+
 def wallet(db, ph, owner, clk, now):
     advance(db, ph, clk, now)
     bal = economy.ensure_wallet(db, ph, owner, now)
     quotes = quote(db, ph, clk)
     return {"ok": True, "balance": bal, "currency": economy.CURRENCY, "transactions": economy.history(db, ph, owner),
             "forecast": forecast(db, ph, owner, quotes), "reports": reports(db, ph, owner), "month_index": clk["month_index"],
-            "market": quotes, "inventory": inventory_view(db, ph, owner)}
+            "market": quotes, "inventory": inventory_view(db, ph, owner), "holdings": holdings(db, ph, owner)}

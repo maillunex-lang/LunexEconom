@@ -486,6 +486,9 @@ var wallet_reports: Array = []
 var wallet_forecast: Dictionary = {}
 var wallet_inventory: Dictionary = {}
 var market_quotes: Dictionary = {}
+var competitors: Array = []
+var wallet_holdings: Dictionary = {}
+const KIND_NAMES := {"farm": "Ферма", "mine": "Шахта", "factory": "Завод", "warehouse": "Склад"}
 var production := {"farm": {"product_id": "honey", "output": 100, "unit_price": 200, "upkeep": 8000}, "mine": {"product_id": "oil", "output": 40, "unit_price": 1500, "upkeep": 30000}, "factory": {"product_id": "goods", "output": 60, "unit_price": 2000, "upkeep": 56000, "inputs": {"oil": 10, "honey": 20}}, "warehouse": {"product_id": "", "output": 0, "unit_price": 0, "upkeep": 5000, "capacity": 400}}
 
 func _fmt_money(value: int) -> String:
@@ -571,12 +574,28 @@ func _economy_text() -> String:
         for tx in wallet_transactions.slice(0, 3):
             if tx is Dictionary:
                 lines.append("%s%s  %s" % ["+" if int(tx.get("amount", 0)) >= 0 else "", _fmt_money(int(tx.get("amount", 0))), str(tx.get("memo", ""))])
+    var mine := _holdings_text(wallet_holdings)
+    if mine != "": lines.append("Мои здания: " + mine)
     var market := _market_lines()
     if not market.is_empty():
         lines.append("")
         lines.append("Рынок:")
         lines.append_array(market)
+    if not competitors.is_empty():
+        lines.append("")
+        lines.append("Конкуренты:")
+        for c in competitors:
+            if c is Dictionary:
+                var held := _holdings_text(c.get("holdings", {}))
+                lines.append("%s — %d зд.%s" % [str(c.get("name", "")), int(c.get("buildings", 0)), (" (" + held + ")") if held != "" else ""])
     return "\n".join(lines)
+
+func _holdings_text(h) -> String:
+    if not h is Dictionary or h.is_empty(): return ""
+    var parts: PackedStringArray = []
+    for kind in ["farm", "mine", "factory", "warehouse"]:
+        if h.has(kind): parts.append("%s ×%d" % [KIND_NAMES[kind], int(h[kind])])
+    return ", ".join(parts)
 
 func _month_label(index: int) -> String:
     return "%s %d" % [MONTH_NAMES[index % 12], 2027 + index / 12]
@@ -603,6 +622,7 @@ func _api_get(path: String, auth: bool, callback: Callable) -> void:
 func _refresh_market() -> void:
     _api_get("market", false, func(data: Dictionary) -> void:
         if data.get("products", null) is Dictionary: market_quotes = data["products"]
+        if data.get("competitors", null) is Array: competitors = data["competitors"]
     )
 
 func _refresh_terms() -> void:
@@ -626,6 +646,7 @@ func _refresh_wallet() -> void:
         wallet_reports = data.get("reports", [])
         wallet_forecast = data.get("forecast", {})
         wallet_inventory = data.get("inventory", {})
+        wallet_holdings = data.get("holdings", {})
         if data.get("market", null) is Dictionary: market_quotes = data["market"]
         if section_panel != null and section_panel.visible and section_title.text == "Экономика":
             section_body.text = _economy_text()
