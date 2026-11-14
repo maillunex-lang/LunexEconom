@@ -8,6 +8,7 @@ func _ready() -> void:
     call_deferred("_update_safe_area")
     $HUD/Top/Expand.pressed.connect(_expand)
     $HUD/Top/Connect.pressed.connect(_connect)
+    _setup_build_toolbar()
     _connect_server()
     var sync = load("res://world_sync.gd").new()
     sync.world = world
@@ -80,3 +81,62 @@ func _on_update_state(message: String, can_install: bool) -> void:
     $HUD/Top/Update.text = "Установить" if can_install else "Обновить"
     $HUD/Top/Update.tooltip_text = message
     $HUD/Top/UpdateStatus.text = message
+var build_toolbar: HBoxContainer
+var build_hint: Label
+
+func _setup_build_toolbar() -> void:
+    build_toolbar = HBoxContainer.new()
+    build_toolbar.name = "ConstructionToolbar"
+    build_toolbar.set_anchors_preset(Control.PRESET_CENTER_BOTTOM)
+    build_toolbar.anchor_left = 0.0
+    build_toolbar.anchor_right = 1.0
+    build_toolbar.anchor_top = 1.0
+    build_toolbar.anchor_bottom = 1.0
+    build_toolbar.offset_top = -84.0
+    build_toolbar.offset_bottom = -12.0
+    build_toolbar.alignment = BoxContainer.ALIGNMENT_CENTER
+    build_toolbar.add_theme_constant_override("separation", 10)
+    add_child(build_toolbar)
+    for entry in [["farm", "Ферма 2×2"], ["mine", "Шахта 2×3"], ["factory", "Завод 3×2"]]:
+        var button := Button.new()
+        button.text = str(entry[1])
+        button.custom_minimum_size = Vector2(116, 56)
+        var kind: String = str(entry[0])
+        button.pressed.connect(func() -> void:
+            world.choose_build(kind)
+            info.text = "Выберите участок: %s" % kind
+        )
+        build_toolbar.add_child(button)
+    var confirm := Button.new()
+    confirm.text = "Построить"
+    confirm.custom_minimum_size = Vector2(112, 56)
+    confirm.pressed.connect(_place_building)
+    build_toolbar.add_child(confirm)
+    var cancel := Button.new()
+    cancel.text = "Отмена"
+    cancel.custom_minimum_size = Vector2(92, 56)
+    cancel.pressed.connect(func() -> void:
+        world.cancel_build()
+        info.text = "Строительство отменено"
+    )
+    build_toolbar.add_child(cancel)
+
+func show_build_preview(result: Dictionary) -> void:
+    if result.get("ok", false):
+        info.text = "Участок подходит · нажмите Построить"
+    else:
+        var messages := {
+            "road_overlap": "Нельзя строить на дороге",
+            "occupied": "Участок занят",
+            "no_road_access": "Нужен подъезд к дороге",
+            "outside_explored_area": "Территория ещё не открыта",
+            "invalid_size": "Неверный размер участка"
+        }
+        info.text = str(messages.get(str(result.get("reason", "")), "Участок не подходит"))
+
+func _place_building() -> void:
+    var result: Dictionary = world.place_building()
+    if result.get("ok", false):
+        info.text = "Здание размещено (локальный прототип)"
+    else:
+        show_build_preview(result)
