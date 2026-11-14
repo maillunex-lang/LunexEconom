@@ -11,6 +11,9 @@ import threading
 import time
 import smtplib
 import ssl
+import json
+import urllib.request
+import urllib.error
 from email.message import EmailMessage
 
 DB_PATH = os.environ.get("LUNEX_AUTH_DB", "/home/gamedev/projects/LunexEconom-runtime/accounts.sqlite3")
@@ -125,12 +128,45 @@ def _digest(token):
     return hashlib.sha256(token.encode("utf-8")).hexdigest()
 
 
+def _send_resend_email(address, subject, message):
+    """HTTPS delivery using a verified domain and a protected API key file."""
+    sender = os.environ.get("LUNEX_EMAIL_FROM")
+    key_file = os.environ.get("LUNEX_RESEND_API_KEY_FILE")
+    if not sender or not key_file:
+        return False
+    try:
+        with open(key_file, encoding="utf-8") as handle:
+            api_key = handle.read().strip()
+        if not api_key:
+            return False
+        payload = json.dumps({
+            "from": sender, "to": [address],
+            "subject": subject, "text": message,
+        }).encode("utf-8")
+        request = urllib.request.Request(
+            "https://api.resend.com/emails",
+            data=payload,
+            headers={
+                "Authorization": "Bearer " + api_key,
+                "Content-Type": "application/json",
+                "User-Agent": "LunexEconom/1.0",
+            },
+            method="POST",
+        )
+        with urllib.request.urlopen(request, timeout=10) as response:
+            return response.status == 200
+    except (OSError, ValueError, urllib.error.URLError):
+        return False
+
+
 def _send_account_email(address, subject, message):
     """Send using authenticated SMTP over TLS; fail closed if unavailable.
 
     Mail.ru uses implicit TLS on port 465. The application password is read
     from a root-managed file, never committed to the repository.
     """
+    if os.environ.get("LUNEX_EMAIL_PROVIDER") == "resend":
+        return _send_resend_email(address, subject, message)
     host = os.environ.get("LUNEX_SMTP_HOST")
     sender = os.environ.get("LUNEX_SMTP_FROM")
     user = os.environ.get("LUNEX_SMTP_USER")
