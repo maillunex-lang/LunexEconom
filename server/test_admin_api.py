@@ -287,6 +287,21 @@ class CityGenerationAdminTests(AdminBase):
         self.assertEqual(again["cities"][0]["placed"], 0)                    # idempotent
         self.assertEqual(self.houses(), 25)
 
+    def test_first_generation_over_a_played_world_needs_the_wipe_confirmation(self):
+        with game_server.connect() as db:
+            db.execute("INSERT INTO wallets(account,balance) VALUES('player:bob',5)")
+        status, data = self.call("POST", "/admin/cities/seed", {"city_id": "ufa"})          # a dry run only reports
+        self.assertEqual((status, data["wipes_world"], data["world_counts"]["wallets"]), (200, True, 1))
+        status, data = self.call("POST", "/admin/cities/seed", {"city_id": "ufa", "dry_run": False})
+        self.assertEqual((status, data["error"]), (409, "wipe_required"))
+        self.assertEqual(self.houses(), 0)
+        status, data = self.call("POST", "/admin/cities/seed", {"city_id": "ufa", "dry_run": False, "wipe": True})
+        self.assertEqual(status, 200)
+        self.assertEqual(self.houses(), 25)
+        with game_server.connect() as db:
+            self.assertEqual(db.execute("SELECT COUNT(*) FROM wallets WHERE account='player:bob'").fetchone()[0], 0)
+            self.assertIn("ERASED", db.execute("SELECT detail FROM adm_audit WHERE action='cities_seed' ORDER BY id DESC").fetchone()[0])
+
     def test_all_cities_and_validation(self):
         self.assertEqual(self.call("POST", "/admin/cities/seed", {"city_id": "atlantis", "dry_run": False})[0], 400)
         self.assertEqual(self.call("POST", "/admin/cities/seed", {"dry_run": False})[0], 400)

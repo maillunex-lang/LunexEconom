@@ -19,12 +19,20 @@ class RegionMathTests(unittest.TestCase):
         self.assertEqual(regions.region_of(-3, 373), "sterlitamak")
 
     def test_transit_time_grows_with_distance(self):
-        near = regions.transit_months("ufa", "sterlitamak")
-        far = regions.transit_months("ufa", "sibay")
+        near = regions.transit_hours("ufa", "sterlitamak")
+        far = regions.transit_hours("ufa", "sibay")
         self.assertGreaterEqual(near, 1)
         self.assertGreater(far, near)
-        self.assertEqual(regions.transit_months("ufa", "ufa"), 0)
-        self.assertEqual(regions.transit_months("ufa", "sibay"), regions.transit_months("sibay", "ufa"))
+        self.assertEqual(regions.transit_hours("ufa", "ufa"), 0)
+        self.assertEqual(regions.transit_hours("ufa", "sibay"), regions.transit_hours("sibay", "ufa"))
+
+    def test_trip_times_are_like_in_real_life(self):
+        self.assertTrue(1 <= regions.transit_hours("ufa", "sterlitamak") <= 3)      # about 175 km
+        self.assertTrue(5 <= regions.transit_hours("ufa", "sibay") <= 7)            # about 517 km: roughly 6 hours
+        for a in regions.region_ids():
+            for b in regions.region_ids():
+                self.assertLess(regions.transit_hours(a, b), 24)                      # nothing on this map takes a day
+                self.assertEqual(regions.transit_months(a, b), 0)                     # so a shipment lands within the month
 
     def test_transport_cost_grows_with_distance(self):
         self.assertLess(regions.unit_cost("honey", "ufa", "sterlitamak"), regions.unit_cost("honey", "ufa", "sibay"))
@@ -91,7 +99,7 @@ class TwoCityWorldTests(unittest.TestCase):
         with game_server.connect() as db:
             return db.execute("SELECT product,origin,destination,qty,depart_month,arrive_month,status FROM trade_shipments ORDER BY depart_month,id").fetchall()
 
-    def test_farms_in_another_city_supply_a_factory_with_a_delay(self):
+    def test_farms_in_another_city_supply_a_factory(self):
         self.rich("alice")
         self.rich("bob")
         for _ in range(6):
@@ -101,21 +109,21 @@ class TwoCityWorldTests(unittest.TestCase):
         self.month(8)
         ships = self.shipments()
         self.assertTrue(ships, "honey must travel from the farms' city to the Ufa factory")
-        gap = regions.transit_months("sterlitamak", "ufa")
         for product, origin, destination, qty, depart, arrive, status in ships:
             self.assertEqual((origin, destination), ("sterlitamak", "ufa"))
-            self.assertEqual(arrive - depart, gap)
+            self.assertEqual(arrive, depart)                    # hours on the road: delivered within the same month
+            self.assertEqual(status, "delivered")
             self.assertGreater(qty, 0)
         with game_server.connect() as db:
             imports = db.execute("SELECT COALESCE(SUM(imports),0) FROM market_prices_region WHERE region='ufa' AND product='honey'").fetchone()[0]
             bad = db.execute("SELECT tx_id FROM ledger_entries GROUP BY tx_id HAVING SUM(amount)<>0").fetchall()
             pops = db.execute("SELECT COUNT(*) FROM region_population WHERE region='sterlitamak'").fetchone()[0]
-        self.assertGreater(imports, 0)                      # arrived only after the transit time
+        self.assertGreater(imports, 0)
         self.assertEqual(bad, [])
         self.assertGreater(pops, 0)                         # the second city has its own labour market
 
     def test_farther_city_receives_later(self):
-        self.assertGreater(regions.transit_months("sibay", "ufa"), regions.transit_months("sterlitamak", "ufa"))
+        self.assertGreater(regions.transit_hours("sibay", "ufa"), regions.transit_hours("sterlitamak", "ufa"))
 
     def test_overview_lists_cities_prices_and_shipments(self):
         self.rich("alice")
@@ -131,7 +139,7 @@ class TwoCityWorldTests(unittest.TestCase):
         self.assertEqual(ids[0], "ufa")
         self.assertIn("sterlitamak", ids)
         self.assertTrue(all("honey" in c["prices"] for c in view["cities"]))
-        self.assertTrue(any(l["from"] == "sterlitamak" and l["to"] == "ufa" and l["months"] >= 1 for l in view["lanes"]))
+        self.assertTrue(any(l["from"] == "sterlitamak" and l["to"] == "ufa" and l["hours"] >= 1 for l in view["lanes"]))
 
     def test_one_city_world_has_no_shipments(self):
         self.rich("alice")

@@ -100,7 +100,18 @@
     try {
       const real = dry === false;
       if (real && !window.confirm("Создать дома в «" + label + "»? Это изменит игровой мир (деньги и экономика не затрагиваются).")) return;
-      const r = await api("/api/game/cities/seed", { method: "POST", body: JSON.stringify({ city_id: which, dry_run: !real }) });
+      let wipe = false;
+      if (real) {
+        const plan = await api("/api/game/cities/seed", { method: "POST", body: JSON.stringify({ city_id: which, dry_run: true }) });
+        const counts = plan.world_counts || {};
+        if (plan.wipes_world && Object.values(counts).some(v => v > 0)) {
+          // the very first generation starts the world from a clean slate: accounts stay, everything else is erased
+          if (!window.confirm("ПЕРВАЯ ГЕНЕРАЦИЯ СТИРАЕТ ВЕСЬ ИГРОВОЙ МИР: здания " + (counts.buildings || 0) + ", кошельки " + (counts.wallets || 0) + ", дороги " + (counts.roads || 0) + ". Аккаунты игроков сохранятся. Резервная копия базы сделана?")) return;
+          if (window.prompt("Для подтверждения введите слово СТЕРЕТЬ") !== "СТЕРЕТЬ") return;
+          wipe = true;
+        }
+      }
+      const r = await api("/api/game/cities/seed", { method: "POST", body: JSON.stringify({ city_id: which, dry_run: !real, wipe }) });
       const placed = r.cities.reduce((a, c) => a + c.placed, 0);
       say("citiesmessage", (real ? "Создано домов: " : "План (ничего не записано): будет создано домов: ") + placed + " в городах: " + r.cities.filter(c => c.placed > 0).length);
       if (real) { await loadCities(); await loadOverview(); await loadAudit(); }

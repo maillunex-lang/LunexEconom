@@ -78,10 +78,10 @@ func _run() -> void:
         _fail("camera transition failed")
         return
     panel.economy_view = {"cities": [{"id": "city_5", "population": 98, "jobs": 40, "wage": 900, "staffing": 1.0,
-        "prices": {"honey": {"price": 480}}}], "lanes": [{"from": "city_5", "to": "ufa", "road_km": 175, "months": 2}],
-        "shipments": [{"origin": "city_5", "destination": "ufa", "qty": 120}]}
+        "prices": {"honey": {"price": 480}}}], "lanes": [{"from": "city_5", "to": "ufa", "road_km": 175, "hours": 3}],
+        "recent": [{"origin": "city_5", "destination": "ufa", "qty": 120, "hours": 3}]}
     var econ := "\n".join(panel.economy_lines("city_5"))
-    if econ.find("доставка 2 мес.") < 0 or econ.find("мёд 480") < 0 or econ.find("отправлено отсюда 120") < 0:
+    if econ.find("около 3 ч") < 0 or econ.find("мёд 480") < 0 or econ.find("отправлено отсюда: 120") < 0:
         host.queue_free()
         _fail("economy lines: " + econ)
         return

@@ -148,17 +148,13 @@ func economy_lines(city_id: String) -> PackedStringArray:
         lines.append("Цены здесь: " + ", ".join(parts))
     for lane in economy_view.get("lanes", []):
         if lane is Dictionary and str(lane.get("from", "")) == city_id and str(lane.get("to", "")) == "ufa":
-            lines.append("До Уфы: %d км по дорогам, доставка %d мес." % [int(lane.get("road_km", 0)), int(lane.get("months", 0))])
-    var incoming := 0
-    var outgoing := 0
-    for shipment in economy_view.get("shipments", []):
-        if shipment is Dictionary:
-            if str(shipment.get("destination", "")) == city_id:
-                incoming += int(shipment.get("qty", 0))
-            elif str(shipment.get("origin", "")) == city_id:
-                outgoing += int(shipment.get("qty", 0))
-    if incoming or outgoing:
-        lines.append("В пути: едет сюда %d ед., отправлено отсюда %d ед." % [incoming, outgoing])
+            lines.append("До Уфы: %d км по дорогам, в пути около %d ч." % [int(lane.get("road_km", 0)), int(lane.get("hours", 0))])
+    var sent := 0
+    for shipment in economy_view.get("recent", []):
+        if shipment is Dictionary and str(shipment.get("origin", "")) == city_id:
+            sent += int(shipment.get("qty", 0))
+    if sent:
+        lines.append("В этом месяце отправлено отсюда: %d ед." % sent)
     return lines
 
 func _fail() -> void:

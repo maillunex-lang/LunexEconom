@@ -69,6 +69,24 @@ class PostgresCityGenTests(unittest.TestCase):
         self.assertEqual(self.scalar("SELECT COUNT(*) FROM buildings WHERE owner='town:ufa'"), 25 + citygen.GROW_PER_MONTH)
         self.assertEqual(self.scalar("SELECT COUNT(*) FROM (SELECT tx_id FROM ledger_entries GROUP BY tx_id HAVING SUM(amount)<>0) x"), 0)
 
+    def test_first_generation_erases_the_world_but_not_accounts_on_postgres(self):
+        postgres_world.wallet("alice")
+        status, _ = postgres_world.build("alice", {"kind": "farm", "x": 1, "y": 1, "request_id": "00000000-0000-4000-8000-0000000000bb"})
+        self.assertEqual(status, 201)
+        users_before = self.scalar("SELECT COUNT(*) FROM users")
+        with postgres_db.connect() as db:
+            db.execute("SELECT pg_advisory_xact_lock(20261114)")
+            with self.assertRaises(citygen.WipeRequired):
+                citygen.seed(db, "%s", ["ufa"], NOW)
+        self.assertEqual(self.scalar("SELECT COUNT(*) FROM buildings WHERE owner='alice'"), 1)
+        with postgres_db.connect() as db:
+            db.execute("SELECT pg_advisory_xact_lock(20261114)")
+            citygen.seed(db, "%s", ["ufa"], NOW, wipe=True)
+        self.assertEqual(self.scalar("SELECT COUNT(*) FROM buildings WHERE owner='alice'"), 0)
+        self.assertEqual(self.scalar("SELECT COUNT(*) FROM wallets"), 0)
+        self.assertEqual(self.scalar("SELECT COUNT(*) FROM users"), users_before)
+        self.assertEqual(self.scalar("SELECT COUNT(*) FROM buildings WHERE owner='town:ufa'"), 25)
+
     def test_admin_route_on_postgres(self):
         ctx = {"actor": "pg-test", "ip": "198.51.100.1"}
         status, data = postgres_world.admin_request("POST", "/admin/cities/seed", {}, {"city_id": "ufa"}, ctx)

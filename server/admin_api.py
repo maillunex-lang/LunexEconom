@@ -250,10 +250,17 @@ def seed_cities(db, ph, payload, actor, ip, now):
     if which != "all" and which not in known:
         return 400, {"error": "unknown_city"}
     dry = payload.get("dry_run", True) is not False
-    result = citygen.seed(db, ph, "all" if which == "all" else [which], now, dry_run=dry)
+    first = citygen.is_first_generation(db, ph)
+    counts = citygen.world_counts(db, ph) if first else {}
+    try:
+        result = citygen.seed(db, ph, "all" if which == "all" else [which], now, dry_run=dry, wipe=payload.get("wipe") is True)
+    except citygen.WipeRequired as error:
+        return 409, {"error": "wipe_required", "counts": error.counts,
+                     "message": "The first generation erases the whole game world (accounts stay). Make a backup and repeat with \"wipe\": true."}
     if not dry:
-        audit(db, ph, actor, "cities_seed", str(which), "houses placed: %d" % sum(r["placed"] for r in result), ip, now)
-    return 200, {"ok": True, "dry_run": dry, "cities": result}
+        wiped = first and any(counts.values())
+        audit(db, ph, actor, "cities_seed", str(which), "houses placed: %d%s" % (sum(r["placed"] for r in result), "; WORLD ERASED first: %s" % counts if wiped else ""), ip, now)
+    return 200, {"ok": True, "dry_run": dry, "first_generation": first, "wipes_world": first, "world_counts": counts, "cities": result}
 
 
 # ---------- dispatch ----------

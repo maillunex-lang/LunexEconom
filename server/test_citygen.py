@@ -159,6 +159,7 @@ class SeedTests(WorldBase):
 
     def test_player_buildings_and_roads_are_never_overwritten(self):
         lot = citygen.plan("ufa")[0]
+        self.seed(["yanaul"])                                          # not the first generation any more: nothing is erased
         with game_server.connect() as db:
             db.execute("INSERT INTO buildings VALUES('mine1','alice','farm',?,?,?)", (lot[0], lot[1], NOW))
             db.execute("INSERT INTO cells VALUES(?,?,'mine1')", lot)
@@ -169,6 +170,37 @@ class SeedTests(WorldBase):
         self.assertEqual(self.scalar("SELECT object_id FROM cells WHERE x=? AND y=?", lot), "mine1")
         self.assertEqual(self.scalar("SELECT COUNT(*) FROM cells c JOIN buildings b ON b.id=c.object_id WHERE b.owner='town:ufa' AND c.x=? AND c.y=?", (second[0] + 1, second[1] + 1)), 0)
         self.assertEqual(self.scalar("SELECT COUNT(*) FROM buildings WHERE owner='town:ufa'"), citygen.target_houses(geo.get_city("ufa"), 200))
+
+    def test_the_first_generation_erases_the_world_after_confirmation_and_keeps_accounts(self):
+        game_server.wallet("alice")
+        status, built = game_server.build("alice", {"kind": "farm", "x": 1, "y": 1, "request_id": "00000000-0000-4000-8000-0000000000aa"})
+        self.assertEqual(status, 201)
+        self.assertGreater(self.scalar("SELECT COUNT(*) FROM wallets"), 0)
+        dry = self.seed(["ufa"], dry=True)                              # a dry run erases nothing
+        self.assertEqual(self.scalar("SELECT COUNT(*) FROM buildings"), 1)
+        with game_server.connect() as db:
+            db.execute("BEGIN IMMEDIATE")
+            with self.assertRaises(citygen.WipeRequired) as caught:
+                citygen.seed(db, "?", ["ufa"], NOW)
+            db.rollback()
+        self.assertGreaterEqual(caught.exception.counts["buildings"], 1)
+        self.assertEqual(self.scalar("SELECT COUNT(*) FROM buildings"), 1)    # refused: nothing written
+        with game_server.connect() as db:
+            db.execute("BEGIN IMMEDIATE")
+            citygen.seed(db, "?", ["ufa"], NOW, wipe=True)
+            db.commit()
+        self.assertEqual(self.scalar("SELECT COUNT(*) FROM buildings WHERE owner='alice'"), 0)
+        self.assertEqual(self.scalar("SELECT COUNT(*) FROM wallets"), 0)
+        self.assertEqual(self.scalar("SELECT COUNT(*) FROM ledger_tx"), 0)
+        self.assertEqual(self.scalar("SELECT COUNT(*) FROM world_clock"), 0)
+        self.assertEqual(self.scalar("SELECT COUNT(*) FROM buildings WHERE owner='town:ufa'"), 25)
+        game_server.wallet("alice")                                      # a player starts again with the starting capital
+        self.assertEqual(self.scalar("SELECT balance FROM wallets WHERE account='player:alice'"), economy.START_CAPITAL)
+        self.seed(["ufa"])                                              # the second generation never wipes
+        self.assertEqual(self.scalar("SELECT COUNT(*) FROM wallets WHERE account='player:alice'"), 1)
+
+    def test_an_empty_world_needs_no_confirmation(self):
+        self.assertEqual(len(self.seed(["ufa"])), 1)
 
     def test_players_cannot_build_or_sell_houses(self):
         self.seed(["ufa"])

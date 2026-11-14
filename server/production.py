@@ -403,7 +403,8 @@ def step_month(db, ph, month, now):
                     offers_r[origin][owner] -= taken
                     transport_by[(owner, origin)] = transport_by.get((owner, origin), 0) + taken
                     freight_by[(owner, origin)] = freight_by.get((owner, origin), 0) + taken * regions.unit_cost(product, origin, destination)
-                regions.dispatch(db, ph, product, origin, destination, qty, month, "ship:%d:%s:%s:%s" % (month, product, origin, destination))
+                if regions.dispatch(db, ph, product, origin, destination, qty, month, "ship:%d:%s:%s:%s" % (month, product, origin, destination)):
+                    received[destination] += qty              # a trip of hours: the goods are in the destination's market this month
                 sent[origin] += qty
         price_r, fill_r, supply_r = {}, {}, {}
         for region in active:

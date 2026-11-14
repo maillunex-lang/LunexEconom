@@ -15,8 +15,8 @@ import economy
 import geo
 
 HOME = "ufa"                    # the game city: legacy `population` table, mayor, social buildings
-KM_PER_MONTH = 150              # road kilometres a shipment covers in one game month
-MIN_TRANSIT_MONTHS = 1          # any shipment between two cities takes at least a month
+SPEED_KMH = 85                  # a lorry on the road: 500 km is about 6 hours, like in real life
+MONTH_HOURS = 720               # a game month is 30 days; trips shorter than that are delivered within the month
 TRANSPORT_COST_PER_KM = 0.0006  # of the reference price per unit per road km (175 km is about 10 %)
 MIN_MARGIN_RATIO = 0.04         # a lane is used only if the price gap beats the transport cost by this share of the reference price
 SURPLUS_SHARE = 1.0             # share of a region's genuine surplus (supply beyond its own demand) that may be shipped out
@@ -101,11 +101,17 @@ def road_km(a, b):
     return float(_road_matrix()[a][b])
 
 
-def transit_months(a, b):
-    """Whole game months a shipment needs; 0 inside one city, otherwise it grows with the road distance."""
+def transit_hours(a, b):
+    """Hours on the road, as in real life (500 km is about 6 hours); 0 inside one city. Grows with the road distance."""
     if a == b:
         return 0
-    return max(MIN_TRANSIT_MONTHS, int(math.ceil(road_km(a, b) / KM_PER_MONTH)))
+    return max(1, int(math.ceil(road_km(a, b) / SPEED_KMH)))
+
+
+def transit_months(a, b):
+    """Whole game months of delay. The economy settles once a month, so a trip of hours lands within the same month (0);
+    only a trip longer than a month (not possible on this map, kept for a bigger world) is delayed to a later settlement."""
+    return transit_hours(a, b) // MONTH_HOURS
 
 
 def unit_cost(product, a, b):
@@ -209,8 +215,11 @@ def arrivals(db, ph, product, month):
 
 
 def dispatch(db, ph, product, origin, destination, qty, month, shipment_id):
-    db.execute(_q("INSERT INTO trade_shipments(id,product,origin,destination,qty,unit_cost,depart_month,arrive_month,status) VALUES(%s,%s,%s,%s,%s,%s,%s,%s,'transit')", ph),
-               (shipment_id, product, origin, destination, int(qty), unit_cost(product, origin, destination), month, month + transit_months(origin, destination)))
+    """Record a shipment. Returns True when it arrives within the same month (the normal case): the caller adds it to the destination's supply."""
+    arrive = month + transit_months(origin, destination)
+    db.execute(_q("INSERT INTO trade_shipments(id,product,origin,destination,qty,unit_cost,depart_month,arrive_month,status) VALUES(%s,%s,%s,%s,%s,%s,%s,%s,%s)", ph),
+               (shipment_id, product, origin, destination, int(qty), unit_cost(product, origin, destination), month, arrive, "delivered" if arrive <= month else "transit"))
+    return arrive <= month
 
 
 def plan_exports(product, regions, offers, local_demand, arriving, previous, in_transit):
@@ -230,7 +239,7 @@ def plan_exports(product, regions, offers, local_demand, arriving, previous, in_
                 continue
             margin = previous.get(b, ref) - previous.get(a, ref) - unit_cost(product, a, b)
             if margin > MIN_MARGIN_RATIO * ref:
-                lanes.append((-margin, transit_months(a, b), a, b))
+                lanes.append((-margin, transit_hours(a, b), a, b))
     plan = []
     for _, _, a, b in sorted(lanes):
         qty = min(surplus[a], lacking[b])
@@ -263,5 +272,9 @@ def overview(db, ph):
                        "staffing": (int(pop[4]) / 1000.0) if pop else 1.0, "prices": prices})
     shipments = [{"product": p, "origin": o, "destination": d, "qty": int(q), "depart_month": int(dm), "arrive_month": int(am)}
                  for p, o, d, q, dm, am in db.execute("SELECT product,origin,destination,qty,depart_month,arrive_month FROM trade_shipments WHERE status='transit' ORDER BY arrive_month,id").fetchall()]
-    lanes = [{"from": a, "to": b, "road_km": round(road_km(a, b)), "months": transit_months(a, b)} for a in active for b in active if a != b]
-    return {"month": month, "km_per_month": KM_PER_MONTH, "cities": cities, "shipments": shipments, "lanes": lanes}
+    recent = []
+    if month is not None:
+        recent = [{"product": p, "origin": o, "destination": d, "qty": int(q), "hours": transit_hours(o, d)}
+                  for p, o, d, q in db.execute(_q("SELECT product,origin,destination,qty FROM trade_shipments WHERE depart_month=%s ORDER BY id", ph), (month,)).fetchall()]
+    lanes = [{"from": a, "to": b, "road_km": round(road_km(a, b)), "hours": transit_hours(a, b), "months": transit_months(a, b)} for a in active for b in active if a != b]
+    return {"month": month, "speed_kmh": SPEED_KMH, "cities": cities, "shipments": shipments, "recent": recent, "lanes": lanes}

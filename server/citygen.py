@@ -207,9 +207,79 @@ def seed_city(db, ph, city_id, now, population=None, max_new=None, dry_run=False
     return result
 
 
-def seed(db, ph, city_ids, now, dry_run=False):
-    """`city_ids`: list of ids or the string 'all'. Returns one summary per city."""
+# ---------- the first generation starts the world from a clean slate ----------
+KEEP_TABLES = {"users", "sessions", "auth_attempts", "auth_tokens", "email_verified", "schema_migrations", "geo_seed"}    # accounts and operator data
+DELETE_FIRST = ("cells", "building_ops")                 # rows that point at buildings
+
+
+class WipeRequired(Exception):
+    """The first generation would erase a world that already has players' data; the operator must confirm."""
+
+    def __init__(self, counts):
+        super().__init__("the first generation erases the game world")
+        self.counts = counts
+
+
+def _tables(db, ph):
+    if ph == "?":
+        rows = db.execute("SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'").fetchall()
+    else:
+        rows = db.execute("SELECT tablename FROM pg_tables WHERE schemaname='public'").fetchall()
+    return [r[0] for r in rows]
+
+
+def _wiped(name):
+    return name not in KEEP_TABLES and not name.startswith("adm_")
+
+
+def is_first_generation(db, ph):
+    return int(db.execute("SELECT COUNT(*) FROM geo_seed").fetchone()[0]) == 0
+
+
+def world_counts(db, ph):
+    """What a wipe would erase (zero everywhere means an empty world: nothing to confirm)."""
+    out = {}
+    for table in ("buildings", "wallets", "roads", "trade_contracts", "loans"):
+        if table in _tables(db, ph):
+            out[table] = int(db.execute("SELECT COUNT(*) FROM " + table).fetchone()[0])
+    return out
+
+
+def wipe_world(db, ph):
+    """Erase the whole game world (buildings, roads, money, markets, companies, social data, clock). Accounts, sessions, operator data stay.
+    Chunk versions are bumped and event numbers keep counting up, so connected clients reload the empty world instead of showing stale cells."""
+    names = [n for n in _tables(db, ph) if _wiped(n)]
+    ordered = [n for n in DELETE_FIRST if n in names] + [n for n in names if n not in DELETE_FIRST and n not in ("chunks", "world_clock")]
+    if ph == "?":
+        db.execute("PRAGMA defer_foreign_keys=ON")        # checked at commit, when everything is gone
+        for name in ordered:
+            db.execute("DELETE FROM " + name)             # AUTOINCREMENT counters (event numbers) are kept
+    else:
+        plain = [n for n in ordered if n != "events"]
+        if "events" in ordered:
+            db.execute("DELETE FROM events")              # not TRUNCATE ... RESTART: event numbers keep counting up
+        if plain:
+            db.execute("TRUNCATE TABLE " + ",".join(sorted(plain)) + " CASCADE")
+    if "chunks" in names:
+        db.execute("UPDATE chunks SET version=version+1")
+    if "world_clock" in names:
+        db.execute("DELETE FROM world_clock")            # the calendar restarts at the first call (month 0)
+    return len(ordered)
+
+
+def seed(db, ph, city_ids, now, dry_run=False, wipe=False):
+    """`city_ids`: list of ids or the string 'all'. Returns one summary per city.
+
+    The very first generation (nothing seeded yet) starts the world from a clean slate: with `wipe=True` the game world is erased first
+    (accounts stay). If the world holds data and `wipe` is not set, WipeRequired is raised and nothing is written. A dry run never writes.
+    """
     ids = [c["id"] for c in geo.cities()] if city_ids == "all" else list(city_ids)
+    if not dry_run and is_first_generation(db, ph):
+        counts = world_counts(db, ph)
+        if any(counts.values()):
+            if not wipe:
+                raise WipeRequired(counts)
+            wipe_world(db, ph)
     population = economic_population(db, ph)
     return [seed_city(db, ph, cid, now, population=population, dry_run=dry_run) for cid in ids]
 
@@ -235,7 +305,7 @@ def status(db, ph):
 def _main(argv):
     import time
     apply = "--apply" in argv
-    args = [a for a in argv if a != "--apply"]
+    args = [a for a in argv if a not in ("--apply", "--wipe")]
     command = args[0] if args else "status"
     which = "all" if "--all" in args else ([args[args.index("--city") + 1]] if "--city" in args else None)
     import os
@@ -252,7 +322,14 @@ def _main(argv):
         if command == "status":
             print(json.dumps(status(db, ph), ensure_ascii=False, indent=1))
         elif command == "seed" and which is not None:
-            print(json.dumps(seed(db, ph, which, int(time.time()), dry_run=not apply), ensure_ascii=False, indent=1))
+            first = is_first_generation(db, ph)
+            if first:
+                print("FIRST GENERATION: the game world will be ERASED first (accounts stay). Currently: %s" % json.dumps(world_counts(db, ph)))
+            try:
+                print(json.dumps(seed(db, ph, which, int(time.time()), dry_run=not apply, wipe="--wipe" in argv), ensure_ascii=False, indent=1))
+            except WipeRequired as error:
+                print("REFUSED: the world holds data %s. Make a backup, then repeat with --apply --wipe" % json.dumps(error.counts), file=sys.stderr)
+                return 3
             print("APPLIED" if apply else "DRY RUN: nothing was written (add --apply)")
             if apply:
                 db.commit()

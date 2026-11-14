@@ -46,7 +46,7 @@ class PostgresRegionTests(unittest.TestCase):
             db.execute("UPDATE wallets SET balance=%s WHERE account=%s", (50_000_000, economy.player_account(who)))
             db.execute("UPDATE wallets SET balance=balance-%s WHERE account=%s", (49_000_000, economy.TREASURY))
 
-    def test_shipments_arrive_after_the_transit_time(self):
+    def test_shipments_between_cities_arrive_within_the_month(self):
         self.rich("alice")
         self.rich("bob")
         for _ in range(6):
@@ -63,7 +63,7 @@ class PostgresRegionTests(unittest.TestCase):
         self.assertTrue(ships)
         for origin, destination, depart, arrive in ships:
             self.assertEqual((origin, destination), ("sterlitamak", "ufa"))
-            self.assertEqual(arrive - depart, regions.transit_months("sterlitamak", "ufa"))
+            self.assertEqual(arrive, depart)
         self.assertEqual(bad, [])
         self.assertGreater(pops, 0)
         self.assertIn("sterlitamak", [c["id"] for c in view["cities"]])
