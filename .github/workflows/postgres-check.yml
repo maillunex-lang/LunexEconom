@@ -49,6 +49,8 @@ jobs:
       - name: PostgreSQL integration tests
         working-directory: server
         run: python -m unittest test_postgres_integration -v
-      - name: Full server test suite (SQLite fixtures remain isolated)
+      - name: Full server regression suite (SQLite fixtures remain isolated)
         working-directory: server
+        env:
+          LUNEX_DB_ENGINE: sqlite
         run: python -m unittest discover -p 'test_*.py' -v
