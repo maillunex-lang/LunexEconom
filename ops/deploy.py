@@ -155,7 +155,7 @@ def publish_update_manifest(metadata):
             or not isinstance(sha, str) or not re.fullmatch(r"[0-9a-f]{64}", sha)
             or not isinstance(size, int) or size <= 0 or size > 160 * 1024 * 1024
             or not isinstance(url, str)
-            or not re.fullmatch(r"https://rikagro\\.ru/lunexeconom/versions/[A-Za-z0-9._-]+\\.apk", url)):
+            or not re.fullmatch(r"https://rikagro\.ru/lunexeconom/versions/[A-Za-z0-9._-]+\.apk", url)):
         raise ValueError("invalid signed release metadata for updater")
     target = BASE / "updates" / "manifest.json"
     target.parent.mkdir(parents=True, exist_ok=True)
