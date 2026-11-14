@@ -803,7 +803,7 @@ func _place_building() -> void:
             if data.has("balance") and not from_budget: _set_balance(int(data["balance"]))
             info.text = ("Построено за счёт бюджета: %s" if from_budget else "Построено за %s") % _fmt_money(int(data.get("cost", 0))) + ((" · дорога +%d кл." % road_cells) if road_cells > 0 else "")
         else:
-            var errors := {"occupied":"Участок уже занят", "invalid_build":"Неверное место или тип здания", "outside_world":"За пределами карты", "unauthorized":"Сессия завершена, войдите снова", "invalid_request_id":"Ошибка команды строительства", "water":"Нельзя строить на воде", "road_overlap":"Нельзя строить на дороге", "no_road_access":"Дорогу к участку проложить нельзя"}
+            var errors := {"occupied":"Участок уже занят", "invalid_build":"Неверное место или тип здания", "building_size_economy_pending":"Выбор размера появится после завершения экономического баланса и тестов", "outside_world":"За пределами карты", "unauthorized":"Сессия завершена, войдите снова", "invalid_request_id":"Ошибка команды строительства", "water":"Нельзя строить на воде", "road_overlap":"Нельзя строить на дороге", "no_road_access":"Дорогу к участку проложить нельзя"}
             if str(data.get("error", "")) == "insufficient_funds":
                 _set_balance(int(data.get("balance", wallet_balance)))
                 info.text = "Недостаточно средств: нужно %s, на счёте %s" % [_fmt_money(int(data.get("cost", 0))), _fmt_money(int(data.get("balance", 0)))]
