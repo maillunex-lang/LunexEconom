@@ -32,3 +32,13 @@
 - решение: готово / на проверке / заблокировано.
 
 Никогда не отмечать задачи «готово» только по созданным файлам. Не приписывать неисполненные тесты.
+
+## Android export и публикация (14.11.2026)
+- ✅ Добавлен `client/export_presets.cfg` для ARM64, Android landscape, package `ru.lunex.bashkiriahoneyoil`.
+- ✅ Включён ETC2/ASTC импорт для Android.
+- ✅ На VPS выполнен реальный Godot 4.7.2 export-debug: `build/Bashkiria-Honey-Oil-debug.apk` (~27 МБ).
+- ✅ `apksigner verify`: подпись v2/v3 валидна; package и версия подтверждены `aapt`.
+- ⬜ Android-устройство не подключено к VPS: установка, запуск, safe area и жесты **не проверены**.
+- ⬜ APK не опубликован как GitHub Release и не доступен с лендинга.
+- 🟡 Добавлены GitHub Actions для ручной сборки и публикации prerelease после отчёта об испытании на устройстве; CI workflow на GitHub ещё требует реального end-to-end подтверждения.
+- ⚠️ Сборка подписана debug-ключом; постоянная release-подпись ещё не настроена.
