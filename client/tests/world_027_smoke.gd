@@ -9,7 +9,7 @@ func _initialize() -> void:
     assert(topology.affected_cells(Vector2i(11, 11)).size() == 5)
     var world = load("res://world.gd").new()
     var valid = planner.preview(Vector2i(4, 4), Vector2i(2, 2), roads, world)
-    assert(not valid.ok and valid.reason == "no_road_access")
+    assert(valid.ok and valid.access.size() > 0)
     var near_road = planner.preview(Vector2i(1, 2), Vector2i(2, 2), roads, world)
     assert(near_road.ok)
     var buildable = planner.preview(Vector2i(1, 1), Vector2i(2, 2), roads, world)

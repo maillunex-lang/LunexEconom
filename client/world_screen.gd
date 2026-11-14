@@ -312,7 +312,8 @@ func _cancel_ui_build() -> void:
 
 func show_build_preview(result: Dictionary) -> void:
     if result.get("ok", false):
-        info.text = "Участок подходит · нажмите Построить"
+        var road_len: int = (result.get("access", []) as Array).size()
+        info.text = "Участок подходит · нажмите Построить" if road_len == 0 else "Участок подходит · дорога %d кл. построится сама" % road_len
         if build_hint != null: build_hint.text = info.text
     else:
         var messages := {
@@ -335,7 +336,7 @@ func _place_building() -> void:
     if result.get("ok", false):
         world.cancel_build()
         placement_panel.hide()
-        info.text = "Построено: %s · участок %s" % [str(result.get("object_id", "")), str(world.selected)]
+        info.text = "Построено: %s · участок %s · дорога +%d" % [str(result.get("object_id", "")), str(world.selected), int(result.get("road_cells", 0))]
     else:
         show_build_preview(result)
     ui_pending = false

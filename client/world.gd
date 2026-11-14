@@ -298,7 +298,13 @@ func place_building() -> Dictionary:
         return {"ok": false, "reason": "occupied"}
     building_records[object_id] = {"kind": build_type, "origin": selected, "cells": cells}
     for cell in cells: _redraw_chunk_at(cell)
-    return {"ok": true, "reason": "sandbox_only", "object_id": object_id}
+    # Auto-build the access road to the nearest existing road.
+    var access: Array[Vector2i] = result.get("access", [] as Array[Vector2i])
+    if not access.is_empty() and roads.add_path(access):
+        for road_cell in access:
+            for affected in preload("res://road_topology.gd").affected_cells(road_cell):
+                _redraw_chunk_at(affected)
+    return {"ok": true, "reason": "sandbox_only", "object_id": object_id, "road_cells": access.size()}
 
 func _redraw_build_area(origin: Vector2i, size: Vector2i) -> void:
     for cell in planner.footprint(origin, size):
