@@ -1,3 +1,13 @@
+## 2026-11-14 — Раунд 2: release ops (в работе)
+
+- От свежего main `eac2b748` создана ветка `chatgpt/release-ops`. Claude продолжает экономику в main, запрещённые файлы не изменены.
+- `android-release.yml` переведён с debug-артефакта на подписанный release candidate; проверяются SHA-256, отчёт испытания, сведения о версии и сертификате.
+- `android-signed-candidate.yml` включает `client/build_info.json` в артефакт, `android-release.yml` публикует его вместе с APK.
+- `ops/deploy.py`: версия из release asset `build_info.json`, проверенный APK размещается в `versions/`, `updates/manifest.json` публикуется атомарно, debug исключён, откат кода и конфликт SHA запрещены. Добавлены пять модульных тестов в `ops/test_deploy.py`.
+- Добавлены `docs/device-tests/TEMPLATE.md` и инструкция ручной переустановки `/opt/lunexeconom-deploy/deploy.py` в `docs/DEPLOYMENT.md`.
+- **Ограничения:** CI, реальные release-артефакты, испытание на Android и публикация манифеста на VPS пока не подтверждены. VPS и production не трогали. Перед слиянием требуются rebase на свежий main, зелёные CI/postgres-check и сообщение Claude с итоговым SHA.
+- Далее: локально/CI проверить новый deploy, затем PostgreSQL restore drill, локальный API load test, расширение health и оптимизация карты.
+
 # ChatGPT: параллельная работа по инфраструктуре и аккаунтам
 
 ## 2026-11-14 — PostgreSQL 16 CI, первый этап
