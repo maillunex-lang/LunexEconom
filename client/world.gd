@@ -80,8 +80,8 @@ func cell_kind(x: int, y: int) -> int:
     if planner.occupied.has(coord): return 6
     if roads.is_road(Vector2i(x, y)):
         return 3 # roads
-    if n < 8:
-        return 4 # water
+    if ROAD_SCRIPT.is_water(coord):
+        return 4 # the river is the only water
     if n < 24:
         return 5 # trees
     return n % 3

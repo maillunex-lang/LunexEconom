@@ -18,22 +18,16 @@ func _draw() -> void:
     if world == null: return
     var start_usec: int = Time.get_ticks_usec()
     var footprint: Array[Vector2i] = []
-    var geography = null
-    var cities_here: Array = []
     var season_month := -1
     var seasons_on := false
     var host = world.get_parent()
     if host != null:
-        geography = host.get("regional_map_panel")
         var clock_data = host.get("game_clock")
         if clock_data is Dictionary and not clock_data.is_empty():
             var span := maxi(int(clock_data.get("month_seconds", 86400)), 1)
             var elapsed := maxf(Time.get_unix_time_from_system() + float(host.get("clock_offset")) - float(clock_data.get("epoch", 0)), 0.0)
             season_month = int(clock_data.get("base_index", 0)) + int(elapsed / span)
             seasons_on = bool(host.get("seasons_enabled"))
-    if geography != null and geography.loaded:
-        cities_here = CITY_LAYOUT.cities_in_chunk(geography.cities, chunk_coord, CHUNK)
-
     var preview_ok: bool = false
     if not world.build_type.is_empty():
         footprint = world.planner.footprint(world.selected, world.build_size(world.build_type))
@@ -48,25 +42,7 @@ func _draw() -> void:
             if seasons_on and kind not in [3, 6]:
                 color = SEASONS.tinted(color, season_month, true)
             draw_colored_polygon(pts, color)
-            # Background never replaces existing roads, player buildings, water or trees.
-            if kind in [0, 1, 2] and geography != null and geography.loaded:
-                var cell := Vector2i(x, y)
-                var is_highway: bool = geography.highway_cells.has(cell)
-                if is_highway:
-                    draw_line(p + Vector2(-14, -7), p + Vector2(14, 7), Color("#a9a18c"), 7.0, true)
-                elif world.camera != null and world.camera.zoom.x >= 0.65:
-                    for city in cities_here:
-                        var visual: String = CITY_LAYOUT.visual_at(city, x, y, kind)
-                        if visual == "street":
-                            draw_line(p + Vector2(-14, 0), p + Vector2(14, 0), Color("#8f9893"), 5.0, true)
-                        elif visual == "square":
-                            draw_rect(Rect2(p + Vector2(-12,-5), Vector2(24, 11)), Color("#d0c39e"))
-                        elif visual == "house":
-                            pass        # real, server-generated houses replace the flat background houses (docs/CITYGEN.md)
-                        elif visual == "industrial":
-                            draw_rect(Rect2(p + Vector2(-12, -14), Vector2(22, 13)), Color("#89979c"))
-                        if visual != "":
-                            break
+            # The empty world has no background roads, streets or houses: roads are only the city crossroads and the access roads of buildings.
 
             if kind == 3:
                 _draw_road(p, Vector2i(x, y))

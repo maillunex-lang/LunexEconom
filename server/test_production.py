@@ -34,7 +34,7 @@ class ChainBase(unittest.TestCase):
         """Build on the next free valid site (x/y are ignored: test sites are picked so they are not water)."""
         for _ in range(400):
             self._cursor = getattr(self, "_cursor", 0) + 1
-            status, res = game_server.build(who, {"kind": kind, "x": 8, "y": 10 + 7 * self._cursor, "request_id": rid()})
+            status, res = game_server.build(who, {"kind": kind, "x": 2, "y": 2 + 4 * self._cursor, "request_id": rid()})
             if status == 201:
                 return res
             self.assertIn(res.get("error"), ("water", "road_overlap", "occupied", "no_road_access"), res)
@@ -91,16 +91,16 @@ class FactoryChainTests(ChainBase):
         self.assert_ledger_balanced()
 
     def test_own_suppliers_supply_factory_without_market_purchase(self):
-        for kind, y in (("farm", 10), ("mine", 30), ("factory", 50)):
-            self.build("alice", kind, 8, y)
+        for kind in ("farm", "mine", "factory"):
+            self.build("alice", kind)
         r = self.month("alice")["reports"][0]
         self.assertEqual(r["input_cost"], 0)               # inputs came from own stock
         self.assertEqual(r["buildings"], 3)
         self.assert_ledger_balanced()
 
     def test_integrated_producer_sells_less_raw_than_it_makes(self):
-        for kind, y in (("farm", 10), ("mine", 30), ("factory", 50)):
-            self.build("alice", kind, 8, y)
+        for kind in ("farm", "mine", "factory"):
+            self.build("alice", kind)
         self.month("alice")
         with game_server.connect() as db:
             honey_supply, oil_supply = (db.execute("SELECT supply FROM market_prices WHERE product=? AND month_index=0", (p,)).fetchone()[0] for p in ("honey", "oil"))

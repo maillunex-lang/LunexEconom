@@ -17,37 +17,32 @@ NOW = 1_800_000_000
 
 
 class PlanTests(unittest.TestCase):
-    def test_every_city_has_a_plan_that_covers_its_target(self):
+    def test_every_city_has_candidates_that_cover_its_target(self):
         for city in geo.cities():
-            lots = citygen.plan(city["id"])
-            self.assertGreaterEqual(len(lots), citygen.target_houses(city, 200), city["id"])
+            self.assertGreaterEqual(len(citygen.plan(city["id"])), citygen.target_houses(city, 200), city["id"])
 
-    def test_plan_is_deterministic_and_lots_are_valid(self):
+    def test_candidates_are_deterministic_and_valid(self):
         for city in geo.cities():
             first = citygen.plan(city["id"])
-            citygen._plan.cache_clear()
+            citygen._candidates.cache_clear()
             self.assertEqual(first, citygen.plan(city["id"]), city["id"])
-            seen = set()
-            for x, y in first:
-                cells = [(x + i, y + j) for i in range(2) for j in range(2)]
-                self.assertFalse(set(cells) & seen, "lots overlap")
-                seen |= set(cells)
-                for c in cells:
-                    self.assertEqual(citygen.terrain(*c), "grass", (city["id"], c))
-                    self.assertFalse(roads.is_water(*c) or roads.is_base_road(*c))
-                    self.assertFalse(citygen.is_street(city, *c) or citygen.is_square(city, *c))
-                    self.assertLessEqual(((c[0] - city["x"]) ** 2 + (c[1] - city["y"]) ** 2) ** 0.5, city["radius"])
+            for w, h in ((1, 1), (1, 2), (2, 1), (1, 3), (3, 1)):
+                for x, y in citygen._candidates(city["id"], w, h):
+                    for i in range(w):
+                        for j in range(h):
+                            c = (x + i, y + j)
+                            self.assertEqual(citygen.terrain(*c), "grass", (city["id"], c))
+                            self.assertFalse(roads.is_water(*c) or roads.is_base_road(*c))
+                            self.assertLessEqual(((c[0] - city["x"]) ** 2 + (c[1] - city["y"]) ** 2) ** 0.5, city["radius"] + 1)
 
-    def test_the_start_area_of_the_game_city_stays_free_for_players(self):
-        city = geo.get_city("ufa")
-        for x, y in citygen.plan("ufa"):
-            self.assertGreaterEqual(((x + 1 - city["x"]) ** 2 + (y + 1 - city["y"]) ** 2) ** 0.5, citygen.INNER_FREE_GAME_CITY - 1)
-
-    def test_houses_stand_along_streets(self):
-        city = geo.get_city("sterlitamak")
-        for x, y in citygen.plan("sterlitamak"):
-            ring = [(x + i, y + j) for i in range(-1, 3) for j in range(-1, 3) if not (0 <= i < 2 and 0 <= j < 2)]
-            self.assertTrue(any(citygen.is_street(city, *c) for c in ring))
+    def test_a_block_of_sixteen_houses_is_ten_one_by_one_three_one_by_two_three_one_by_three(self):
+        sizes = [citygen.shape_of(i) for i in range(16)]
+        self.assertEqual(sizes.count((1, 1)), 10)
+        self.assertEqual(sizes.count((1, 2)), 3)
+        self.assertEqual(sizes.count((1, 3)), 3)
+        self.assertEqual(citygen.MIN_HOUSES, 16)
+        for city in geo.cities():
+            self.assertGreaterEqual(citygen.target_houses(city, 0), 16)
 
     def test_house_ids_are_stable_and_unique(self):
         ids = {citygen.house_id("ufa", x, y) for x, y in citygen.plan("ufa")}
@@ -97,16 +92,57 @@ class SeedTests(WorldBase):
         result = self.seed()
         self.assertEqual(len(result), 20)
         for r in result:
-            self.assertEqual(r["placed"], min(r["target"], r["plan_size"]), r["city_id"])
+            self.assertEqual(r["placed"], r["target"], r["city_id"])
+            self.assertGreaterEqual(r["placed"], 16)
             owner = citygen.owner_of(r["city_id"])
             self.assertEqual(self.scalar("SELECT COUNT(*) FROM buildings WHERE owner=? AND kind='house'", (owner,)), r["placed"])
-        houses = self.scalar("SELECT COUNT(*) FROM buildings WHERE kind='house'")
-        self.assertEqual(self.scalar("SELECT COUNT(*) FROM cells"), houses * 4)
-        self.assertEqual(self.scalar("SELECT COUNT(*) FROM events WHERE kind='building_created'") >= houses, True)
         with game_server.connect() as db:
             self.assertEqual(db.execute("SELECT COUNT(*) FROM cells c LEFT JOIN buildings b ON b.id=c.object_id WHERE b.id IS NULL").fetchone()[0], 0)
-            versions = dict(db.execute("SELECT cx,cy FROM chunks").fetchall())
-            self.assertTrue(versions)
+            self.assertTrue(db.execute("SELECT COUNT(*) FROM chunks").fetchone()[0])
+            self.assertTrue(db.execute("SELECT COUNT(*) FROM events WHERE kind='road_changed'").fetchone()[0])
+
+    def test_every_city_has_ten_small_three_double_three_triple_houses_by_the_crossroads(self):
+        self.seed()
+        with game_server.connect() as db:
+            for city in geo.cities():
+                owner = citygen.owner_of(city["id"])
+                sizes = [r[0] for r in db.execute("SELECT COUNT(c.x) FROM buildings b JOIN cells c ON c.object_id=b.id WHERE b.owner=? GROUP BY b.id ORDER BY b.created, b.id", (owner,)).fetchall()]
+                self.assertEqual([sizes.count(1) >= 10, sizes.count(2) >= 3, sizes.count(3) >= 3], [True, True, True], city["id"])
+                nearest = db.execute("SELECT MIN(ABS(c.x-?)+ABS(c.y-?)) FROM buildings b JOIN cells c ON c.object_id=b.id WHERE b.owner=?", (city["x"], city["y"], owner)).fetchone()[0]
+                self.assertLessEqual(nearest, 4, city["id"])             # the first houses stand at the crossroads
+
+    def test_every_house_is_connected_by_road_to_the_crossroads_and_nothing_is_on_water(self):
+        self.seed()
+        with game_server.connect() as db:
+            dynamic = {(x, y) for x, y in db.execute("SELECT x,y FROM roads")}
+            houses = {}
+            for object_id, x, y in db.execute("SELECT object_id,x,y FROM cells"):
+                houses.setdefault(object_id, []).append((x, y))
+        self.assertFalse(any(roads.is_water(*c) for c in dynamic))
+        for cells in houses.values():
+            self.assertFalse(any(roads.is_water(*c) or roads.is_base_road(*c) or c in dynamic for c in cells))
+
+        def is_road(c):
+            return roads.is_base_road(*c) or c in dynamic
+
+        for cells in houses.values():
+            seen = {c for c in cells}
+            queue = [(c[0] + dx, c[1] + dy) for c in cells for dx, dy in roads.DIRS]
+            reached = False
+            seen |= set(queue)
+            while queue and not reached:
+                cur = queue.pop()
+                if not is_road(cur):
+                    continue
+                if roads.is_base_road(*cur):
+                    reached = True
+                    break
+                for dx, dy in roads.DIRS:
+                    n = (cur[0] + dx, cur[1] + dy)
+                    if n not in seen and is_road(n):
+                        seen.add(n)
+                        queue.append(n)
+            self.assertTrue(reached, cells)
 
     def test_running_it_twice_creates_nothing_new(self):
         self.seed()

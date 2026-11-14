@@ -157,6 +157,9 @@ def distance_km(a, b):
     return r * 2 * math.atan2(math.sqrt(h), math.sqrt(1 - h))
 
 
+WATER_PENALTY = 8
+
+
 def _path(start, goal):
     """Deterministic eight-neighbor A*: stays on the existing dry terrain."""
     if start == goal:
@@ -192,10 +195,8 @@ def _path(start, goal):
             nx, ny = x + dx, y + dy
             if not (min_x <= nx <= max_x and min_y <= ny <= max_y):
                 continue
-            if roads.is_water(nx, ny):
-                continue
             candidate = (nx, ny)
-            next_cost = cost + step
+            next_cost = cost + step * (WATER_PENALTY if roads.is_water(nx, ny) else 1)       # a highway crosses the river by a bridge, never along it
             if next_cost >= best.get(candidate, 2 ** 62):
                 continue
             best[candidate] = next_cost

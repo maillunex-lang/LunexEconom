@@ -2,10 +2,37 @@ extends RefCounted
 ## Deterministic road graph prototype. Roads are orthogonal tile edges.
 ## Production MMO must persist roads and validate commands on the server.
 const SEED := 18273
+const ARM := 4                  # the crossroads in a city centre: two roads of 2*ARM+1 cells (mirrors server/roads.py)
+const RIVER_X := 230
+const RIVER_KNOT := 64
+## Centres of the 20 cities (server/geo.py); parity is checked by server/test_roads.py.
+const CITY_CENTERS: Array[Vector2i] = [Vector2i(0, 0), Vector2i(-3, 373), Vector2i(-12, 453), Vector2i(-328, -450), Vector2i(-481, 87), Vector2i(468, 260), Vector2i(520, 676), Vector2i(-7, 593), Vector2i(-36, 659), Vector2i(-435, 46), Vector2i(14, 430), Vector2i(-82, -226), Vector2i(-356, 209), Vector2i(-212, -250), Vector2i(453, 717), Vector2i(668, 128), Vector2i(-180, 174), Vector2i(2, -97), Vector2i(-391, -388), Vector2i(-199, -511)]
 var segments: Dictionary = {}
 
+static func is_base_road(cell: Vector2i) -> bool:
+    for center in CITY_CENTERS:
+        if (cell.x == center.x and absi(cell.y - center.y) <= ARM) or (cell.y == center.y and absi(cell.x - center.x) <= ARM):
+            return true
+    return false
+
+static func terrain_noise(x: int, y: int) -> int:
+    var h := (x * 73856093) ^ (y * 19349663) ^ SEED
+    h = (h ^ (h >> 13)) * 1274126177
+    return posmod(h ^ (h >> 16), 100)
+
+## Centre column of the river in row y (integer maths, identical to server/roads.py::river_x).
+static func river_x(y: int) -> int:
+    var k: int = floori(float(y) / float(RIVER_KNOT))
+    var r: int = y - k * RIVER_KNOT
+    var a: int = terrain_noise(k, 7919) * 2 / 5
+    var b: int = terrain_noise(k + 1, 7919) * 2 / 5
+    return RIVER_X - 20 + (a * (RIVER_KNOT - r) + b * r) / RIVER_KNOT
+
+static func is_water(cell: Vector2i) -> bool:
+    return absi(cell.x - river_x(cell.y)) <= 1 and not is_base_road(cell)
+
 func is_road(cell: Vector2i) -> bool:
-    return cell.x == 0 or cell.y == 0 or posmod(cell.x, 19) == 0 or posmod(cell.y, 23) == 0 or segments.has(cell)
+    return segments.has(cell) or is_base_road(cell)
 
 func neighbors(cell: Vector2i) -> Array[Vector2i]:
     var result: Array[Vector2i] = []
@@ -17,14 +44,15 @@ func neighbors(cell: Vector2i) -> Array[Vector2i]:
 
 func connect_site(site: Vector2i, max_distance: int = 128) -> Array[Vector2i]:
     # Candidate path, not committed until server-side validation exists.
-    # Connect to closest grid spine with a Manhattan path, preserving existing roads.
+    # Connect to the nearest cell of a city crossroads with a Manhattan path.
     var target := site
-    var dx: int = mini(posmod(site.x, 19), 19 - posmod(site.x, 19))
-    var dy: int = mini(posmod(site.y, 23), 23 - posmod(site.y, 23))
-    if dx <= dy:
-        target.x = int(round(float(site.x) / 19.0)) * 19
-    else:
-        target.y = int(round(float(site.y) / 23.0)) * 23
+    var best := 1 << 30
+    for center in CITY_CENTERS:
+        for candidate in [Vector2i(center.x, clampi(site.y, center.y - ARM, center.y + ARM)), Vector2i(clampi(site.x, center.x - ARM, center.x + ARM), center.y)]:
+            var distance: int = absi(candidate.x - site.x) + absi(candidate.y - site.y)
+            if distance < best:
+                best = distance
+                target = candidate
     var path: Array[Vector2i] = [site]
     var current := site
     while current != target and path.size() <= max_distance:

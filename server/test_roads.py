@@ -13,21 +13,44 @@ def rid():
 
 
 def find_water():
-    for x in range(1, 60):
-        for y in range(1, 60):
-            if roads.is_water(x, y):
-                return x, y
+    for y in range(1, 60):
+        x = roads.river_x(y)
+        if roads.is_water(x, y):
+            return x, y
 
 
 class RoadRulesTests(unittest.TestCase):
     def test_base_grid(self):
-        self.assertTrue(roads.is_base_road(0, 5))
-        self.assertTrue(roads.is_base_road(19, 7))
-        self.assertTrue(roads.is_base_road(-19, 7))
+        # the only base roads are the crossroads in the centres of the cities
+        self.assertTrue(roads.is_base_road(0, 4))
+        self.assertTrue(roads.is_base_road(-4, 0))
+        self.assertTrue(roads.is_base_road(-3, 373))          # Sterlitamak
+        self.assertFalse(roads.is_base_road(0, 5))
+        self.assertFalse(roads.is_base_road(19, 7))
         self.assertFalse(roads.is_base_road(5, 5))
 
+    def test_water_is_one_river_and_not_ponds(self):
+        water = [(x, y) for x in range(-400, 700) for y in range(-60, 760) if roads.is_water(x, y)]
+        self.assertTrue(water)
+        for x, y in water:
+            self.assertLessEqual(abs(x - roads.river_x(y)), 1)
+        self.assertFalse(any(roads.is_water(x, y) for x in range(-90, 91) for y in range(-90, 91)))      # none in or around Ufa
+        import geo
+        for city in geo.cities():                                          # no city lies on the river
+            self.assertFalse(any(roads.is_water(x, y) for x in range(city["x"] - city["radius"], city["x"] + city["radius"] + 1)
+                                 for y in range(city["y"] - city["radius"], city["y"] + city["radius"] + 1)), city["id"])
+
+    def test_client_mirror_has_the_same_centres_and_river(self):
+        import re
+        import geo
+        text = open(os.path.join(os.path.dirname(__file__), "..", "client", "road_network.gd"), encoding="utf-8").read()
+        pairs = [(int(a), int(b)) for a, b in re.findall(r"Vector2i\((-?\d+), (-?\d+)\)", text.split("CITY_CENTERS", 1)[1].split("\n", 1)[0])]
+        self.assertEqual(pairs, [(c["x"], c["y"]) for c in geo.cities()])
+        for const, value in (("ARM", roads.ARM), ("RIVER_X", roads.RIVER_X), ("RIVER_KNOT", roads.RIVER_KNOT)):
+            self.assertIn("const %s := %d" % (const, value), text)
+
     def test_plan_touching_road_needs_no_path(self):
-        err, path = roads.plan_access([(1, 5), (2, 5)], set(), set(), 10000)
+        err, path = roads.plan_access([(1, 1), (2, 1)], set(), set(), 10000)
         self.assertIsNone(err)
         self.assertEqual(path, [])
 
@@ -100,7 +123,7 @@ class BuildRoadTests(unittest.TestCase):
     def test_rejections(self):
         self.assertEqual(self.build("farm", 8, 10)[0], 201)
         self.assertEqual(self.build("farm", 8, 10)[1]["error"], "occupied")
-        self.assertEqual(self.build("farm", 0, 10)[1]["error"], "road_overlap")
+        self.assertEqual(self.build("farm", 0, 0)[1]["error"], "road_overlap")
         wx, wy = find_water()
         self.assertEqual(self.build("farm", wx, wy)[1]["error"], "water")
 

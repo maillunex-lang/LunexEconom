@@ -53,7 +53,7 @@ class GeoTests(unittest.TestCase):
             cells = route["cells"]
             self.assertEqual(cells[0], [cities[route["from"]]["x"], cities[route["from"]]["y"]])
             self.assertEqual(cells[-1], [cities[route["to"]]["x"], cities[route["to"]]["y"]])
-            self.assertTrue(all(not roads.is_water(x, y) for x, y in cells))
+            self.assertLessEqual(sum(roads.is_water(x, y) for x, y in cells), 6)          # at most one bridge over the river
             self.assertTrue(all(max(abs(x1 - x2), abs(y1 - y2)) == 1
                                 for (x1, y1), (x2, y2) in zip(cells, cells[1:])))
             self.assertGreater(route["road_km"], route["distance_km"] * 0.75)

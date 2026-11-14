@@ -6,6 +6,9 @@ so client previews and server decisions agree. The server is the final authority
 from collections import deque
 
 SEED = 18273
+ARM = 4                 # a city's crossroads: two roads of 2*ARM+1 cells through the city centre
+RIVER_X = 230           # the river runs north-south between Ufa and Beloretsk; no city lies on it
+RIVER_KNOT = 64         # rows between the points the river bends at
 SEARCH_RADIUS = 32      # cells around the footprint loaded for access-road search
 MAX_VISITED = 6000
 DIRS = ((0, -1), (1, 0), (0, 1), (-1, 0))
@@ -23,12 +26,37 @@ def terrain_noise(x, y):
     return (h ^ (h >> 16)) % 100
 
 
+def _centers():
+    global _CENTERS
+    if _CENTERS is None:
+        import geo
+        _CENTERS = tuple((c["x"], c["y"]) for c in geo.cities())
+    return _CENTERS
+
+
+_CENTERS = None
+
+
 def is_base_road(x, y):
-    return x == 0 or y == 0 or x % 19 == 0 or y % 23 == 0
+    """The only roads of the empty world: a crossroads in the centre of every city. All other roads are built by access paths."""
+    for cx, cy in _centers():
+        if (x == cx and abs(y - cy) <= ARM) or (y == cy and abs(x - cx) <= ARM):
+            return True
+    return False
+
+
+def river_x(y):
+    """Centre column of the river in row y: bends at every RIVER_KNOT rows, integer arithmetic only (mirrored in client/world.gd)."""
+    k = y // RIVER_KNOT
+    r = y - k * RIVER_KNOT
+    a = terrain_noise(k, 7919) * 2 // 5
+    b = terrain_noise(k + 1, 7919) * 2 // 5
+    return RIVER_X - 20 + (a * (RIVER_KNOT - r) + b * r) // RIVER_KNOT
 
 
 def is_water(x, y):
-    return not is_base_road(x, y) and terrain_noise(x, y) < 8
+    """Water is one river and nothing else: no scattered ponds. A road cell is never water (bridge)."""
+    return abs(x - river_x(y)) <= 1 and not is_base_road(x, y)
 
 
 def search_box(footprint, radius=SEARCH_RADIUS):
