@@ -92,7 +92,12 @@ SOCIAL_PRODUCTIVITY = 0.10
 SOCIAL_GROWTH = 0.002
 MAYOR_SALARY = 40_000          # per game month from the budget, only for a human mayor
 ROAD_MAINTENANCE = 30          # per built road cell per month from the budget
-ELECTION_PERIOD = 12           # game months between elections
+ELECTION_PERIOD = 12           # game months between elections (the length of a mayor's term)
+ELECTION_REGISTRATION_MONTHS = 2   # candidates register in the two months before voting starts
+ELECTION_VOTING_MONTHS = 2         # voting lasts two months; the result is counted when the last of them completes
+ELECTION_FEE = 50_000              # candidacy fee paid into the city budget
+VOTE_WEIGHT_BASE = 10              # a player's vote weight = base + per_job * jobs of the player's company
+VOTE_WEIGHT_PER_JOB = 5
 RESERVED_OWNERS = ("city",)    # nobody may register under these names
 
 # ---- Bank: one revolving loan per company, secured by its buildings ----
@@ -137,6 +142,9 @@ SCHEMA = (
     "CREATE TABLE IF NOT EXISTS company_tax_state(owner TEXT PRIMARY KEY, tax_owed BIGINT NOT NULL, vat_credit BIGINT NOT NULL)",
     "CREATE TABLE IF NOT EXISTS company_taxes(owner TEXT NOT NULL, month_index BIGINT NOT NULL, vat BIGINT NOT NULL, profit_tax BIGINT NOT NULL, property_tax BIGINT NOT NULL, paid BIGINT NOT NULL, PRIMARY KEY(owner, month_index))",
     "CREATE TABLE IF NOT EXISTS city_state(id INTEGER PRIMARY KEY, mayor TEXT NOT NULL, mayor_name TEXT NOT NULL, since_month BIGINT NOT NULL, term_end_month BIGINT NOT NULL)",
+    "CREATE TABLE IF NOT EXISTS election_candidates(election BIGINT NOT NULL, candidate TEXT NOT NULL, name TEXT NOT NULL, profit_permille INTEGER NOT NULL, property_permille INTEGER NOT NULL, social_permille INTEGER NOT NULL, slogan TEXT NOT NULL, PRIMARY KEY(election, candidate))",
+    "CREATE TABLE IF NOT EXISTS election_votes(election BIGINT NOT NULL, voter TEXT NOT NULL, candidate TEXT NOT NULL, PRIMARY KEY(election, voter))",
+    "CREATE TABLE IF NOT EXISTS election_results(election BIGINT PRIMARY KEY, winner TEXT NOT NULL, winner_name TEXT NOT NULL, tally TEXT NOT NULL, month_index BIGINT NOT NULL)",
     "CREATE TABLE IF NOT EXISTS npc_state(owner TEXT PRIMARY KEY, acted_through BIGINT NOT NULL)",
     "CREATE TABLE IF NOT EXISTS company_state(owner TEXT PRIMARY KEY, settled_through BIGINT NOT NULL)",
     "CREATE TABLE IF NOT EXISTS monthly_reports(owner TEXT NOT NULL, month_index BIGINT NOT NULL, revenue BIGINT NOT NULL, upkeep BIGINT NOT NULL, profit BIGINT NOT NULL, buildings INTEGER NOT NULL, PRIMARY KEY(owner, month_index))",
@@ -157,7 +165,7 @@ def terms():
             "building_costs": dict(BUILD_COST), "road_cell_cost": ROAD_CELL_COST,
             "hold_below": HOLD_BELOW,
             "city": {"social_cost": {k: BUILD_COST[k] for k in SOCIAL_KINDS}, "serves": {k: PRODUCTION[k]["serves"] for k in SOCIAL_KINDS},
-                     "mayor_salary": MAYOR_SALARY, "election_period": ELECTION_PERIOD, "productivity": SOCIAL_PRODUCTIVITY},
+                     "mayor_salary": MAYOR_SALARY, "election_period": ELECTION_PERIOD, "election_fee": ELECTION_FEE, "productivity": SOCIAL_PRODUCTIVITY},
             "insolvency": {"bankrupt_after_missed": BANKRUPT_AFTER_MISSED, "loan": {"interest": LOAN_INTEREST, "ltv": LOAN_LTV, "max": LOAN_MAX, "min": LOAN_MIN}, "liquidation_rate": LIQUIDATION_RATE, "sell_rate": SELL_RATE, "distress_output": DISTRESS_OUTPUT},
             "labor": {"base_wage": BASE_WAGE, "participation": PARTICIPATION, "base_population": BASE_POPULATION},
             "production": {k: {"product_id": v["product"], "product": MARKET[v["product"]]["name"] if v["product"] else "",

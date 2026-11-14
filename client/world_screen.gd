@@ -257,6 +257,15 @@ func _setup_ui_v1() -> void:
     city_actions.add_child(build_row)
     section_content.add_child(city_actions)
     city_actions.hide()
+    reg_actions = HBoxContainer.new()
+    reg_actions.add_child(_ui_button("Кандидат: 8% / 1%", func(): _city_register(0.08, 0.010), 170))
+    reg_actions.add_child(_ui_button("Кандидат: 13% / 2.2%", func(): _city_register(0.13, 0.022), 190))
+    reg_actions.add_child(_ui_button("Кандидат: 18% / 2.2%", func(): _city_register(0.18, 0.022), 190))
+    section_content.add_child(reg_actions)
+    reg_actions.hide()
+    vote_actions = HBoxContainer.new()
+    section_content.add_child(vote_actions)
+    vote_actions.hide()
     section_panel.hide()
     get_viewport().size_changed.connect(_layout_ui_v1)
     call_deferred("_layout_ui_v1")
@@ -344,7 +353,7 @@ func _open_section(section: String) -> void:
         "Меню":
             section_body.text = "Башкирия: Мёд и Нефть\nВерсия интерфейса 1.0\nУправление: одним пальцем двигайте карту, двумя изменяйте масштаб. Дороги к зданиям прокладываются автоматически."
     section_actions.visible = section == "Экономика"
-    city_actions.visible = section == "Город" and _is_mayor()
+    _update_city_actions(section == "Город")
     _show_panel(section_panel)
     call_deferred("_layout_ui_v1")
 
@@ -539,6 +548,8 @@ var loan: Dictionary = {}
 var loan_pending := false
 var section_actions: HBoxContainer
 var city_actions: VBoxContainer
+var reg_actions: HBoxContainer
+var vote_actions: HBoxContainer
 var city: Dictionary = {}
 var city_mode := false
 const LOAN_STEP := 100000
@@ -795,6 +806,8 @@ func _owner_name(owner: String) -> String:
     for c in competitors:
         if c is Dictionary and str(c.get("owner", "")) == owner: return str(c.get("name", owner))
     if owner == "city": return "Город"
+    for c in _election().get("candidates", []):
+        if c is Dictionary and str(c.get("owner", "")) == owner: return str(c.get("name", owner))
     return owner.trim_prefix("npc:") if owner.begins_with("npc:") else owner
 
 func _api_post(path: String, payload: Dictionary, callback: Callable) -> void:
@@ -874,12 +887,30 @@ func _is_mayor() -> bool:
     return m is Dictionary and GameSession.username != "" and str(m.get("owner", "")) == GameSession.username
 
 func _refresh_city() -> void:
-    _api_get("city", false, func(data: Dictionary) -> void:
+    _api_get("city", GameSession.is_authenticated(), func(data: Dictionary) -> void:
         city = data
         if section_panel != null and section_panel.visible and section_title.text == "Город":
             section_body.text = _city_text()
-            city_actions.visible = _is_mayor()
+            _update_city_actions(true)
     )
+
+func _election() -> Dictionary:
+    var e = city.get("election", {})
+    return e if e is Dictionary else {}
+
+func _update_city_actions(in_city_section: bool) -> void:
+    var e := _election()
+    city_actions.visible = in_city_section and _is_mayor()
+    reg_actions.visible = in_city_section and not _is_mayor() and bool(e.get("can_register", false))
+    var can_vote := in_city_section and bool(e.get("can_vote", false))
+    vote_actions.visible = can_vote
+    if can_vote:
+        for child in vote_actions.get_children(): child.queue_free()
+        for c in e.get("candidates", []):
+            if c is Dictionary:
+                var owner := str(c.get("owner", ""))
+                var mark := "✓ " if str(e.get("my_vote", "")) == owner else ""
+                vote_actions.add_child(_ui_button("%s%s" % [mark, str(c.get("name", owner)).left(14)], func(): _city_vote(owner), 150))
 
 func _city_text() -> String:
     if city.is_empty(): return "Загрузка данных города..."
@@ -901,7 +932,54 @@ func _city_text() -> String:
             lines.append("%s: %d шт., охват %d%%, цена %s" % [KIND_NAMES[k], int(counts.get(k, 0)), int(round(float(cov.get(k, 0.0)) * 100.0)), _fmt_money(int(float(city.get("costs", {}).get(k, 0))))])
     if _is_mayor():
         lines.append("Вы мэр: налоги можно менять раз в игровой месяц, зарплата %s/мес из бюджета." % _fmt_money(int(city.get("salary", 0))))
+    lines.append_array(_election_lines())
     return "\n".join(lines)
+
+func _election_lines() -> PackedStringArray:
+    var lines: PackedStringArray = []
+    var e := _election()
+    if e.is_empty(): return lines
+    lines.append("")
+    var phase := str(e.get("phase", "idle"))
+    var month_end := int(e.get("election_month", 0))
+    if phase == "registration":
+        lines.append("ВЫБОРЫ МЭРА: идёт регистрация кандидатов (взнос %s), голосование с %s." % [_fmt_money(int(e.get("fee", 0))), _month_label(int(e.get("voting_start", 0)))])
+        lines.append("Баллотироваться могут владельцы бизнеса; программа — налог на прибыль / налог на имущество.")
+    elif phase == "voting":
+        lines.append("ВЫБОРЫ МЭРА: голосование до конца %s. Ваш голос весит %d." % [_month_label(month_end - 1), int(e.get("vote_weight", 0))])
+    else:
+        lines.append("Следующие выборы: регистрация с %s." % _month_label(int(e.get("registration_start", 0))))
+    if phase != "idle":
+        for c in e.get("candidates", []):
+            if c is Dictionary:
+                lines.append("• %s: прибыль %s%%, имущество %s%%, соцрасходы %d%% — %s" % [str(c.get("name", "")), _pct(float(c.get("profit_tax", 0.0))), _pct(float(c.get("property_tax", 0.0))), int(round(float(c.get("social_share", 0.0)) * 100.0)), str(c.get("slogan", ""))])
+        if str(e.get("my_vote", "")) != "": lines.append("Ваш голос отдан: %s" % _owner_name(str(e["my_vote"])))
+    var last = e.get("last_result", null)
+    if last is Dictionary:
+        lines.append("Итог прошлых выборов (%s): победил %s" % [_month_label(int(last.get("election", 0))), str(last.get("winner_name", ""))])
+    return lines
+
+func _city_register(profit: float, prop: float) -> void:
+    _api_post("city/candidacy", {"profit_tax": profit, "property_tax": prop, "slogan": "Прибыль %s%%, имущество %s%%" % [_pct(profit), _pct(prop)]}, func(code: int, data: Dictionary) -> void:
+        if code == 201:
+            info.text = "Вы зарегистрированы кандидатом в мэры"
+            _refresh_city()
+            _refresh_wallet()
+        else:
+            var errors := {"not_registration_period": "Регистрация кандидатов закрыта", "already_registered": "Вы уже зарегистрированы", "no_company": "Баллотироваться могут владельцы бизнеса",
+                "insufficient_funds": "Не хватает денег на взнос кандидата", "out_of_limits": "Программа вне допустимых пределов", "unauthorized": "Сессия завершена, войдите снова"}
+            info.text = str(errors.get(str(data.get("error", "")), "Не удалось зарегистрироваться (HTTP %d)" % code))
+    )
+
+func _city_vote(candidate: String) -> void:
+    _api_post("city/vote", {"candidate": candidate}, func(code: int, data: Dictionary) -> void:
+        if code == 200:
+            info.text = "Голос принят: %s" % _owner_name(candidate)
+            _refresh_city()
+        else:
+            var errors := {"not_voting_period": "Голосование сейчас закрыто", "unknown_candidate": "Нет такого кандидата", "no_company": "Голосуют владельцы бизнеса", "unauthorized": "Сессия завершена, войдите снова"}
+            info.text = str(errors.get(str(data.get("error", "")), "Не удалось проголосовать (HTTP %d)" % code))
+    )
 
 func _city_tax_step(d_profit: float, d_property: float) -> void:
     var t: Dictionary = city.get("taxes", {})

@@ -151,15 +151,36 @@ def loan(owner,payload):
         db.commit()
         return status,result
 
-def city_state():
+def city_state(owner=None):
     with LOCK, connect() as db:
         db.execute("BEGIN IMMEDIATE")
         now=int(time.time())
         clk=clock.state(db,"?",now)
         production.advance(db,"?",clk,now)
-        result=production.city_view(db,"?",clk)
+        result=production.city_view(db,"?",clk,owner)
         db.commit()
     return 200,result
+
+def city_candidacy(owner,payload):
+    with LOCK, connect() as db:
+        db.execute("BEGIN IMMEDIATE")
+        now=int(time.time())
+        clk=clock.state(db,"?",now)
+        production.advance(db,"?",clk,now)
+        city.ensure_candidates(db,"?",clk["month_index"])
+        status,result=city.register_candidate(db,"?",owner,payload.get("profit_tax"),payload.get("property_tax"),payload.get("slogan"),clk["month_index"],now)
+        db.commit()
+    return status,result
+
+def city_vote(owner,payload):
+    with LOCK, connect() as db:
+        db.execute("BEGIN IMMEDIATE")
+        now=int(time.time())
+        clk=clock.state(db,"?",now)
+        production.advance(db,"?",clk,now)
+        status,result=city.cast_vote(db,"?",owner,payload.get("candidate"),clk["month_index"])
+        db.commit()
+    return status,result
 
 def city_taxes(owner,payload):
     with LOCK, connect() as db:
@@ -231,7 +252,7 @@ def chunk(cx,cy):
     items+=[{"x":x,"y":y,"kind":"road_changed","object_id":"","owner":owner} for x,y,owner in rds]
     return 200,{"cx":cx,"cy":cy,"version":row[0] if row else 0,"cells":items}
 
-ECONOMY_POST={"/sell":"sell","/loan":"loan","/city/taxes":"city_taxes","/city/build":"city_build"}
+ECONOMY_POST={"/sell":"sell","/loan":"loan","/city/taxes":"city_taxes","/city/build":"city_build","/city/candidacy":"city_candidacy","/city/vote":"city_vote"}
 
 class Handler(BaseHTTPRequestHandler):
     def _send(self,status,data):
@@ -269,7 +290,7 @@ class Handler(BaseHTTPRequestHandler):
     def do_GET(self):
         url=urlsplit(self.path)
         if url.path in ("/market","/wallet","/world","/city"):npc_tick()
-        if url.path=="/city":return self._send(*city_state())
+        if url.path=="/city":return self._send(*city_state(self._identity()))
         if url.path=="/health":return self._send(200,{"ok":True,"service":"lunexeconom-game","version":"0.2.0"})
         if url.path=="/world":
             now_clock=clock_state()
@@ -331,6 +352,8 @@ if os.environ.get("LUNEX_DB_ENGINE") == "postgres":
     city_state = postgres_world.city_state
     city_taxes = postgres_world.city_taxes
     city_build = postgres_world.city_build
+    city_candidacy = postgres_world.city_candidacy
+    city_vote = postgres_world.city_vote
     loan = postgres_world.loan
     NPC_CONNECT,NPC_PH = postgres_db.connect,"%s"
 

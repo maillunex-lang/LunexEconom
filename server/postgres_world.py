@@ -109,13 +109,30 @@ def loan(owner,payload):
             db.execute("INSERT INTO commands(owner,request_id,response) VALUES(%s,%s,%s)",(owner,request_id,json.dumps(result)))
         return status,result
 
-def city_state():
+def city_state(owner=None):
     with postgres_db.connect() as db:
         db.execute("SELECT pg_advisory_xact_lock(20261114)")
         now=int(time.time())
         clk=clock.state(db,"%s",now)
         production.advance(db,"%s",clk,now)
-        return 200,production.city_view(db,"%s",clk)
+        return 200,production.city_view(db,"%s",clk,owner)
+
+def city_candidacy(owner,payload):
+    with postgres_db.connect() as db:
+        db.execute("SELECT pg_advisory_xact_lock(20261114)")
+        now=int(time.time())
+        clk=clock.state(db,"%s",now)
+        production.advance(db,"%s",clk,now)
+        city.ensure_candidates(db,"%s",clk["month_index"])
+        return city.register_candidate(db,"%s",owner,payload.get("profit_tax"),payload.get("property_tax"),payload.get("slogan"),clk["month_index"],now)
+
+def city_vote(owner,payload):
+    with postgres_db.connect() as db:
+        db.execute("SELECT pg_advisory_xact_lock(20261114)")
+        now=int(time.time())
+        clk=clock.state(db,"%s",now)
+        production.advance(db,"%s",clk,now)
+        return city.cast_vote(db,"%s",owner,payload.get("candidate"),clk["month_index"])
 
 def city_taxes(owner,payload):
     with postgres_db.connect() as db:

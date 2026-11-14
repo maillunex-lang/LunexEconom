@@ -189,6 +189,29 @@ class PostgresEconomyTests(unittest.TestCase):
         self.assertGreaterEqual(v["budget"], 0)
         self.assert_ledger()
 
+    def test_full_election_cycle_on_postgres(self):
+        self.build("alice", "farm")
+        self.wallet("alice")
+        self.now = T0 + 8 * DAY + 5
+        e = postgres_world.city_state("alice")[1]["election"]
+        self.assertEqual(e["phase"], "registration")
+        self.assertEqual({c["owner"] for c in e["candidates"]}, {"npc:growth-party", "npc:social-course", "npc:administration"})
+        self.assertEqual(postgres_world.city_candidacy("alice", {"profit_tax": 0.10, "property_tax": 0.015, "slogan": "x"})[0], 201)
+        self.assertEqual(postgres_world.city_candidacy("alice", {"profit_tax": 0.10, "property_tax": 0.015})[1]["error"], "already_registered")
+        self.assertEqual(postgres_world.city_vote("alice", {"candidate": "alice"})[1]["error"], "not_voting_period")
+        self.now = T0 + 10 * DAY + 5
+        status, res = postgres_world.city_vote("alice", {"candidate": "alice"})
+        self.assertEqual(status, 200, res)
+        self.assertEqual(postgres_world.city_state("alice")[1]["election"]["my_vote"], "alice")
+        self.now = T0 + 12 * DAY + 5
+        v = postgres_world.city_state("alice")[1]
+        self.assertEqual(v["mayor"]["since_month"], 12)
+        self.assertEqual(v["mayor"]["term_end_month"], 24)
+        self.assertIsNotNone(v["election"]["last_result"])
+        self.assertEqual(v["election"]["last_result"]["winner"], v["mayor"]["owner"])
+        self.assertEqual(self.sql("SELECT COUNT(*) FROM election_votes")[0][0], 1)
+        self.assert_ledger()
+
     def test_administration_builds_social_buildings_on_postgres(self):
         game_server.npc_tick()
         self.fund_budget(3_000_000)

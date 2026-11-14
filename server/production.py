@@ -384,6 +384,7 @@ def step_month(db, ph, month, now):
     for owner in bankrupt:
         liquidate(db, ph, owner, month, now)
     city.monthly(db, ph, month, now)
+    city.tally_if_due(db, ph, month, lab["population"], lab["unemployment"], quality, now)
     db.execute(_q("INSERT INTO population(month_index,population,labor_force,jobs,wage,staffing_permille,demand_permille,next_population) VALUES(%s,%s,%s,%s,%s,%s,%s,%s) ON CONFLICT(month_index) DO NOTHING", ph),
                (month, lab["population"], lab["labor_force"], lab["jobs"], lab["wage"], int(staffing * 1000), int(lab["scale"] * 1000),
                 next_population(population, total_jobs, lab["labor_force"], quality)))
@@ -528,7 +529,7 @@ def loan_command(db, ph, owner, payload, now):
     return status, result
 
 
-def city_view(db, ph, clk):
+def city_view(db, ph, clk, owner=None):
     """Public state of the city: mayor, budget, taxes, social services and what the budget collected last month."""
     month = clk["month_index"]
     m = city.mayor(db, ph, month)
@@ -544,7 +545,7 @@ def city_view(db, ph, clk):
             "social": {"counts": soc["counts"], "coverage": {k: round(v, 3) for k, v in soc["coverage"].items()}, "quality": round(soc["quality"], 3), "funded": soc["funded"]},
             "costs": {k: economy.BUILD_COST[k] for k in economy.SOCIAL_KINDS}, "serves": {k: economy.PRODUCTION[k]["serves"] for k in economy.SOCIAL_KINDS},
             "salary": economy.MAYOR_SALARY, "social_share": policy[1] and policy[0] / 1000.0, "tax_changed_month": int(policy[1]), "buildings": buildings,
-            "arrears": _arrears(_status(db, ph, economy.CITY))}
+            "arrears": _arrears(_status(db, ph, economy.CITY)), "election": city.election_view(db, ph, month, owner)}
 
 
 def holdings(db, ph, owner):
