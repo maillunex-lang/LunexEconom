@@ -86,6 +86,8 @@ func _on_update_state(message: String, can_install: bool) -> void:
     $HUD/Top/UpdateStatus.text = message
 var build_toolbar: HBoxContainer
 var build_hint: Label
+var toolbar_touches: Dictionary = {}
+var toolbar_mouse_button: Button = null
 
 func _setup_build_toolbar() -> void:
     build_toolbar = HBoxContainer.new()
@@ -104,6 +106,7 @@ func _setup_build_toolbar() -> void:
     for entry in [["farm", "Ферма 2×2"], ["mine", "Шахта 2×3"], ["factory", "Завод 3×2"]]:
         var button := Button.new()
         button.text = str(entry[1])
+        button.mouse_filter = Control.MOUSE_FILTER_IGNORE
         button.custom_minimum_size = Vector2(116, 56)
         var kind: String = str(entry[0])
         button.pressed.connect(func() -> void:
@@ -113,11 +116,13 @@ func _setup_build_toolbar() -> void:
         build_toolbar.add_child(button)
     var confirm := Button.new()
     confirm.text = "Построить"
+    confirm.mouse_filter = Control.MOUSE_FILTER_IGNORE
     confirm.custom_minimum_size = Vector2(112, 56)
     confirm.pressed.connect(_place_building)
     build_toolbar.add_child(confirm)
     var cancel := Button.new()
     cancel.text = "Отмена"
+    cancel.mouse_filter = Control.MOUSE_FILTER_IGNORE
     cancel.custom_minimum_size = Vector2(92, 56)
     cancel.pressed.connect(func() -> void:
         world.cancel_build()
@@ -152,3 +157,40 @@ func is_world_ui_point(point: Vector2) -> bool:
     if build_toolbar != null and build_toolbar.get_global_rect().has_point(point):
         return true
     return false
+
+# Android-friendly explicit hit testing: no dependency on Control GUI focus
+# or synthesized mouse events. World._input separately ignores this toolbar.
+func _toolbar_button_at(point: Vector2) -> Button:
+    if build_toolbar == null or not build_toolbar.get_global_rect().has_point(point):
+        return null
+    for child in build_toolbar.get_children():
+        if child is Button and child.get_global_rect().has_point(point):
+            return child
+    return null
+
+func _input(event: InputEvent) -> void:
+    if event is InputEventScreenTouch:
+        if event.pressed:
+            var button := _toolbar_button_at(event.position)
+            if button != null:
+                toolbar_touches[event.index] = button
+                get_viewport().set_input_as_handled()
+        elif toolbar_touches.has(event.index):
+            var pressed_button: Button = toolbar_touches[event.index]
+            toolbar_touches.erase(event.index)
+            if pressed_button == _toolbar_button_at(event.position):
+                pressed_button.pressed.emit()
+            get_viewport().set_input_as_handled()
+    elif event is InputEventScreenDrag and toolbar_touches.has(event.index):
+        get_viewport().set_input_as_handled()
+    elif event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT:
+        if event.pressed:
+            toolbar_mouse_button = _toolbar_button_at(event.position)
+            if toolbar_mouse_button != null:
+                get_viewport().set_input_as_handled()
+        elif toolbar_mouse_button != null:
+            var pressed_button := toolbar_mouse_button
+            toolbar_mouse_button = null
+            if pressed_button == _toolbar_button_at(event.position):
+                pressed_button.pressed.emit()
+            get_viewport().set_input_as_handled()
