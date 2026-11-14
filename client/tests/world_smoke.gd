@@ -13,7 +13,7 @@ func _initialize() -> void:
         if world.cell_kind(x, 2) != world.cell_kind(1, 2):
             different = true
     assert(different)
-    var before := world.cell_kind(500, -700)
+    var before: int = world.cell_kind(500, -700)
     world.expand_city(50)
     assert(world.expansion_radius > 500)
     assert(world.cell_kind(500, -700) == before)
