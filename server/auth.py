@@ -5,15 +5,20 @@ import os
 import re
 import secrets
 import sqlite3
+import psycopg
+import postgres_db
 import threading
 import time
 
 DB_PATH = os.environ.get("LUNEX_AUTH_DB", "/home/gamedev/projects/LunexEconom-runtime/accounts.sqlite3")
+USE_POSTGRES = os.environ.get("LUNEX_DB_ENGINE") == "postgres"
 _lock = threading.RLock()
 _attempts = {}
 ITERATIONS = 310_000
 
 def _db():
+    if USE_POSTGRES:
+        return postgres_db.connect()
     db = sqlite3.connect(DB_PATH, timeout=10)
     db.execute("PRAGMA busy_timeout=10000")
     db.execute("PRAGMA journal_mode=WAL")
@@ -41,7 +46,7 @@ def _rate_limit(key):
 def _session(db, user_id, username):
     token = secrets.token_urlsafe(32)
     expires = int(time.time()) + 7*86400
-    db.execute("INSERT INTO sessions(token_hash,user_id,expires_at) VALUES(?,?,?)", (hashlib.sha256(token.encode()).hexdigest(),user_id,expires))
+    db.execute("INSERT INTO sessions(token_hash,user_id,expires_at) VALUES("+("%s,%s,%s" if USE_POSTGRES else "?,?,?")+")", (hashlib.sha256(token.encode()).hexdigest(),user_id,expires))
     db.commit()
     return 200, {"token": token, "expires_at": expires, "username": username}
 
@@ -56,11 +61,11 @@ def register(payload, client):
     salt = secrets.token_bytes(16)
     with _lock, _db() as db:
         try:
-            cursor=db.execute("INSERT INTO users(username,email,salt,password_hash,created_at) VALUES(?,?,?,?,?)",(username,email,salt,_hash_password(password,salt),int(time.time())))
+            cursor=db.execute("INSERT INTO users(username,email,salt,password_hash,created_at) VALUES("+("%s,%s,%s,%s,%s" if USE_POSTGRES else "?,?,?,?,?")+")"+(" RETURNING id" if USE_POSTGRES else ""), (username,email,salt,_hash_password(password,salt),int(time.time())))
             db.commit()
-        except sqlite3.IntegrityError:
+        except (sqlite3.IntegrityError, psycopg.errors.UniqueViolation):
             return 409, {"error":"account_exists"}
-        return _session(db,cursor.lastrowid,username)
+        return _session(db,cursor.fetchone()[0] if USE_POSTGRES else cursor.lastrowid,username)
 
 def login(payload, client):
     if not _rate_limit("login:"+client): return 429, {"error":"rate_limited"}
@@ -68,7 +73,7 @@ def login(payload, client):
     password = payload.get("password","")
     if not isinstance(password,str) or len(password)>128: return 400, {"error":"invalid_credentials"}
     with _lock, _db() as db:
-        row=db.execute("SELECT id,username,salt,password_hash FROM users WHERE username=? OR email=?",(identifier,identifier.lower())).fetchone()
+        row=db.execute("SELECT id,username,salt,password_hash FROM users WHERE username="+("%s" if USE_POSTGRES else "?")+" OR email="+("%s" if USE_POSTGRES else "?")",(identifier,identifier.lower())).fetchone()
         if row is None:
             _hash_password(password,secrets.token_bytes(16))
             return 401, {"error":"invalid_credentials"}
@@ -80,13 +85,13 @@ def profile(token):
     if not token: return 401, {"error":"unauthorized"}
     digest=hashlib.sha256(token.encode()).hexdigest()
     with _lock, _db() as db:
-        row=db.execute("SELECT u.username,s.expires_at FROM sessions s JOIN users u ON u.id=s.user_id WHERE s.token_hash=?",(digest,)).fetchone()
+        row=db.execute("SELECT u.username,s.expires_at FROM sessions s JOIN users u ON u.id=s.user_id WHERE s.token_hash="+("%s" if USE_POSTGRES else "?")",(digest,)).fetchone()
         if row is None or row[1] < time.time(): return 401, {"error":"unauthorized"}
         return 200, {"username":row[0]}
 
 def logout(token):
     if token:
         with _lock, _db() as db:
-            db.execute("DELETE FROM sessions WHERE token_hash=?",(hashlib.sha256(token.encode()).hexdigest(),))
+            db.execute("DELETE FROM sessions WHERE token_hash="+("%s" if USE_POSTGRES else "?")",(hashlib.sha256(token.encode()).hexdigest(),))
             db.commit()
     return 200, {"ok":True}
