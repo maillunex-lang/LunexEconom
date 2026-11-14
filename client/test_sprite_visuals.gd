@@ -13,10 +13,20 @@ var textures: Dictionary = {}
 func _init() -> void:
     for key in SPRITES:
         var path: String = ROOT + SPRITES[key]
+        var cache_path: String = "user://downloaded_art/" + SPRITES[key]
+        if FileAccess.file_exists(cache_path):
+            var img := Image.new()
+            if img.load(ProjectSettings.globalize_path(cache_path)) == OK:
+                textures[key] = ImageTexture.create_from_image(img)
+                continue
         if ResourceLoader.exists(path):
             var resource = load(path)
             if resource is Texture2D:
                 textures[key] = resource
+
+func refresh() -> void:
+    textures.clear()
+    _init()
 
 func texture_for(key: String) -> Texture2D:
     return textures.get(key, null)
