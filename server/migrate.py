@@ -15,7 +15,18 @@ import postgres_db
 DIRECTORY = Path(__file__).with_name("migrations")
 FILE_PATTERN = re.compile(r"^(\d{3})_([a-z][a-z0-9_]*)\.sql$")
 TABLE_PATTERN = re.compile(r"CREATE\s+TABLE\s+IF\s+NOT\s+EXISTS\s+([a-z_][a-z_0-9]*)", re.I)
-BASELINE_TABLES = frozenset(TABLE_PATTERN.findall(postgres_db.SCHEMA))
+SCHEMA_TABLES = frozenset(TABLE_PATTERN.findall(postgres_db.SCHEMA))
+
+
+def _baseline_tables():
+    """Tables of migration 001 as written in its file: the baseline is a fixed snapshot, it does not follow postgres_db.SCHEMA.
+
+    Tables that appear in postgres_db.SCHEMA later get their own numbered migration (002, 003, ...)."""
+    files = sorted(DIRECTORY.glob("*.sql"))
+    return frozenset(TABLE_PATTERN.findall(files[0].read_text(encoding="utf-8"))) if files else frozenset()
+
+
+BASELINE_TABLES = _baseline_tables()
 
 
 @dataclass(frozen=True)
@@ -37,8 +48,12 @@ def load_migrations():
         migrations.append(Migration(int(match[1]), match[2], sql, hashlib.sha256(sql.encode("utf-8")).hexdigest()))
     if not migrations or [m.version for m in migrations] != list(range(1, len(migrations) + 1)):
         raise RuntimeError("Migration versions must start at 001 and be consecutive")
-    if frozenset(TABLE_PATTERN.findall(migrations[0].sql)) != BASELINE_TABLES:
-        raise RuntimeError("Baseline tables differ from postgres_db.SCHEMA")
+    described = set()
+    for migration in migrations:
+        described |= set(TABLE_PATTERN.findall(migration.sql))
+    # Every table that postgres_db.SCHEMA creates must be described by some migration and no baseline table may disappear from it.
+    if not BASELINE_TABLES <= SCHEMA_TABLES or SCHEMA_TABLES - described:
+        raise RuntimeError("Migrations do not describe postgres_db.SCHEMA: add a numbered migration for new tables")
     return migrations
 
 

@@ -35,15 +35,20 @@ class PostgresMigrationTests(unittest.TestCase):
 
     def test_clean_baseline_matches_legacy_schema(self):
         result = migrate.up(self.db)
-        self.assertEqual(result["applied_now"], [1])
+        migrations = migrate.load_migrations()
+        self.assertEqual(result["applied_now"], [m.version for m in migrations])      # 001 baseline, then every later migration
+        described = set()
+        for migration in migrations:
+            described |= set(migrate.TABLE_PATTERN.findall(migration.sql))
         names = {row[0] for row in self.db.execute(
             "SELECT tablename FROM pg_catalog.pg_tables WHERE schemaname=%s", (self.schema,)
         ).fetchall()}
-        self.assertEqual(names, migrate.BASELINE_TABLES | {"schema_migrations"})
+        self.assertEqual(names, described | {"schema_migrations"})
+        self.assertEqual(described, migrate.SCHEMA_TABLES)               # the migrations describe exactly postgres_db.SCHEMA
         self.assertEqual(migrate.status(self.db)["pending"], [])
         self.assertEqual(self.db.execute(
             "SELECT COUNT(*) FROM schema_migrations"
-        ).fetchone()[0], 1)
+        ).fetchone()[0], len(migrations))
 
     def test_legacy_baseline_does_not_rewrite_data(self):
         for statement in postgres_db.SCHEMA.split(";"):
@@ -56,7 +61,8 @@ class PostgresMigrationTests(unittest.TestCase):
         )
         self.db.commit()
         self.assertTrue(migrate.status(self.db)["legacy_baseline"])
-        self.assertEqual(migrate.up(self.db)["applied_now"], [1])
+        # 001 is only recorded (the legacy tables are kept untouched); later migrations are idempotent and run
+        self.assertEqual(migrate.up(self.db)["applied_now"], [m.version for m in migrate.load_migrations()])
         self.assertEqual(self.db.execute("SELECT count(*) FROM users").fetchone()[0], 1)
         self.assertEqual(self.db.execute(
             "SELECT created_at FROM users WHERE username='baseline_account'"

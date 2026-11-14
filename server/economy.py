@@ -144,7 +144,7 @@ RESIDENT_SPEND_TO_MARKET = True
 # that is actually earning stays in the black (about 10% of after-tax profit plus the reserve), while the stock of
 # unspent owner profit stops compounding. See docs/OWNER_SPENDING.md.
 OWNER_SPEND_ENABLED = True
-OWNER_SPEND_SHARE = 0.90
+OWNER_SPEND_SHARE = 0.35      # was 0.90 in Grok1two: the owner kept 10 % of the profit and could not save for the next building; see docs/OWNER_SPENDING.md
 OWNER_SPEND_RESERVE_MONTHS = 3
 # Retail: a shop sells consumer goods to residents at a markup. With no shops the wage loop is unchanged.
 # See docs/RETAIL.md.
