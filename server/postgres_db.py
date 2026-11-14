@@ -113,4 +113,6 @@ def init():
                 db.execute(statement)
         import social
         social.ensure(db, "%s")
+        import admin_api
+        admin_api.ensure(db, "%s", postgres=True)
         db.commit()

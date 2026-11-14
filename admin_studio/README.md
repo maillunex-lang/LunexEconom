@@ -1,6 +1,6 @@
 # Lunex World Studio · LivePatch MVP
 
-**Status:** isolated prototype. No production deployment, no nginx configuration, no game database writes.
+**Status:** integrated into `main` but **not deployed anywhere** (no systemd unit, no nginx route). Full guide, security model and operating procedure: [`docs/ADMIN.md`](../docs/ADMIN.md). The studio never writes to the game database: game moderation goes through the game server's loopback-only `/admin/*` API (`server/admin_api.py`).
 
 Run in a disposable environment:
 
@@ -28,4 +28,4 @@ Set LUNEX_WORLD_PREVIEW_UPSTREAM to the trusted, operator-controlled game server
 ### Release history and rollback (iteration 5)
 Admin GET /api/releases lists the 100 latest immutable releases. POST /api/rollback-release with JSON {"revision":1} republishes that historical snapshot as a new revision, after checking that the referenced blobs still exist. No assets or historical records are deleted. Clients never downgrade automatically. Client `restore_previous()` is a manual emergency rollback of the cached manifest after verifying its referenced blobs.
 
-**Do not enable production auto-updates yet:** the transport is HTTPS but the manifest lacks an application-level Ed25519 signature verified against a pinned public key in the APK. A maliciously altered manifest could otherwise direct content replacement. Require signing, trusted-key distribution, staged channels and on-device tests before activation.
+**Hardening added at integration:** header-only image size limits (server and client), RSA-SHA256 signed releases verified in the client against a key shipped in the APK (private key stays offline; `sign_release.py`), sign-in throttling and read timeouts, audit with client address, real JSON number handling in the Android validator. **Still do not enable production auto-updates:** the transport is HTTPS but the manifest lacks an application-level Ed25519 signature verified against a pinned public key in the APK. A maliciously altered manifest could otherwise direct content replacement. Require signing, trusted-key distribution, staged channels and on-device tests before activation.

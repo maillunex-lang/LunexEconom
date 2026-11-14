@@ -19,6 +19,7 @@ import clock
 import contracts
 import stats
 import social
+import admin_api
 if os.environ.get('LUNEX_DB_ENGINE') == 'postgres':
     import postgres_world
     import postgres_db
@@ -50,6 +51,7 @@ def _prepare(db):
     db.execute("CREATE TABLE IF NOT EXISTS commands(owner TEXT NOT NULL,request_id TEXT NOT NULL,response TEXT NOT NULL,PRIMARY KEY(owner,request_id))")
     for statement in economy.SCHEMA + clock.SCHEMA + social.SCHEMA:
         db.execute(statement)
+    admin_api.ensure(db, "?")
     db.commit()
 
 
@@ -358,6 +360,21 @@ def stats_feed(owner, after=0):
         return stats.feed(db, "?", owner, after)
 
 
+def admin_request(method, path, args, payload, ctx):
+    """Administrative request (already authenticated by the handler). The world lock keeps writes serialized like every other command."""
+    with LOCK, connect() as db:
+        db.execute("BEGIN IMMEDIATE")
+        status, result = admin_api.handle(db, "?", method, path, args, payload, ctx, int(time.time()), auth)
+        db.commit()
+        return status, result
+
+
+def announcement_state():
+    with sqlite_util.open_db(DB) as db:
+        db.execute("PRAGMA query_only=ON")
+        return admin_api.announcement(db, "?")
+
+
 def soc_post(owner, path, payload, client):
     with LOCK, connect() as db:
         db.execute("BEGIN IMMEDIATE")
@@ -441,6 +458,33 @@ class Handler(BaseHTTPRequestHandler):
         npc_tick()
         self._send(*globals()[ECONOMY_POST[path]](owner,payload))
         return True
+    def _admin(self, method):
+        """/admin/*: loopback listener only, never via the proxy, long bearer token, throttled, audited. Everything else answers 404."""
+        url = urlsplit(self.path)
+        if not admin_api.request_allowed(self.headers, self.client_address[0]):
+            return self._send(404, {"error": "not_found"})
+        ok, throttled = admin_api.token_ok(self.headers.get("Authorization", ""), time.time())
+        if throttled:
+            return self._send(429, {"error": "rate_limited"})
+        if not ok:
+            return self._send(401, {"error": "unauthorized"})
+        args = {}
+        for key, values in parse_qs(url.query, keep_blank_values=True).items():
+            if len(values) != 1:
+                return self._send(400, {"error": "invalid_query"})
+            args[key] = values[0]
+        payload = {}
+        if method == "POST":
+            try:
+                size = int(self.headers.get("Content-Length", "0"))
+                payload = json.loads(self.rfile.read(size)) if 2 <= size <= 4096 else None
+            except (ValueError, UnicodeError, json.JSONDecodeError):
+                payload = None
+            if not isinstance(payload, dict):
+                return self._send(400, {"error": "invalid_body"})
+        ctx = {"actor": str(self.headers.get("X-Admin-Actor", "admin"))[:32], "ip": str(self.headers.get("X-Admin-Client", self.client_address[0]))[:64]}
+        return self._send(*admin_request(method, url.path, args, payload, ctx))
+
     def _soc_post(self):
         path = urlsplit(self.path).path
         if path not in social.POST:
@@ -462,6 +506,10 @@ class Handler(BaseHTTPRequestHandler):
         return True
     def do_GET(self):
         url=urlsplit(self.path)
+        if url.path.startswith("/admin/"):
+            return self._admin("GET")
+        if url.path == "/announcement":
+            return self._send(*announcement_state())
         if url.path in ("/geo/regions", "/geo/cities", "/geo/routes"):
             import geo
             if url.path == "/geo/regions":
@@ -514,6 +562,8 @@ class Handler(BaseHTTPRequestHandler):
             return self._send(*result)
         return self._send(404,{"error":"not_found"})
     def do_POST(self):
+        if urlsplit(self.path).path.startswith("/admin/"):
+            return self._admin("POST")
         if self._soc_post():return
         if self._economy_post():return
         path=urlsplit(self.path).path
@@ -567,6 +617,8 @@ if os.environ.get("LUNEX_DB_ENGINE") == "postgres":
     stats_feed = postgres_world.stats_feed
     soc_post = postgres_world.soc_post
     soc_get = postgres_world.soc_get
+    admin_request = postgres_world.admin_request
+    announcement_state = postgres_world.announcement_state
 
 if __name__=="__main__":
     if os.environ.get("LUNEX_DB_ENGINE") == "postgres":

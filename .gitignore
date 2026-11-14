@@ -10,3 +10,8 @@ __pycache__/
 *.jks
 build/
 dist/
+# Signing keys must never be committed (the PUBLIC key client/livepatch_public.pem is the only .pem that belongs in the repository)
+*.pem
+!client/livepatch_public.pem
+*.key
+admin_studio/data/

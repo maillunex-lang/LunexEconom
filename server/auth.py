@@ -25,6 +25,10 @@ _attempts = {}
 ITERATIONS = 310_000
 RESERVED_NAMES = ("city",)   # pseudo-owners of the game (city budget); keep in sync with economy.RESERVED_OWNERS
 
+# Administrative account blocks (see docs/ADMIN.md). `until` NULL = permanent. Checked on every session lookup and on login.
+BANS_TABLE = "CREATE TABLE IF NOT EXISTS adm_bans (username TEXT PRIMARY KEY, reason TEXT NOT NULL, banned_at BIGINT NOT NULL, until BIGINT, actor TEXT NOT NULL)"
+
+
 def _db():
     if USE_POSTGRES:
         return postgres_db.connect()
@@ -43,6 +47,7 @@ def _prepare_sqlite(db):
     db.execute("CREATE TABLE IF NOT EXISTS auth_attempts (attempt_key TEXT PRIMARY KEY, window_start BIGINT NOT NULL, attempts INTEGER NOT NULL)")
     db.execute("CREATE TABLE IF NOT EXISTS auth_tokens (token_hash TEXT PRIMARY KEY, user_id BIGINT NOT NULL REFERENCES users(id), purpose TEXT NOT NULL, expires_at BIGINT NOT NULL)")
     db.execute("CREATE TABLE IF NOT EXISTS email_verified (user_id BIGINT PRIMARY KEY REFERENCES users(id), verified_at BIGINT NOT NULL)")
+    db.execute(BANS_TABLE)
     db.commit()
     return db
 
@@ -116,6 +121,9 @@ def login(payload, client):
             return 401, {"error":"invalid_credentials"}
         if not hmac.compare_digest(_hash_password(password,row[2]),row[3]):
             return 401, {"error":"invalid_credentials"}
+        ban = _active_ban(db, row[1])
+        if ban is not None:
+            return 403, {"error":"banned","reason":ban["reason"],"until":ban["until"]}
         return _session(db,row[0],row[1])
 
 def profile(token):
@@ -124,7 +132,73 @@ def profile(token):
     with _lock, _db() as db:
         row=db.execute("SELECT u.username,s.expires_at FROM sessions s JOIN users u ON u.id=s.user_id WHERE s.token_hash="+("%s" if USE_POSTGRES else "?"),(digest,)).fetchone()
         if row is None or row[1] < time.time(): return 401, {"error":"unauthorized"}
+        if _active_ban(db, row[0]) is not None: return 403, {"error":"banned"}
         return 200, {"username":row[0]}
+
+def _ph():
+    return "%s" if USE_POSTGRES else "?"
+
+
+def _active_ban(db, username):
+    row = db.execute("SELECT reason,until FROM adm_bans WHERE username=" + _ph(), (username,)).fetchone()
+    if row is None:
+        return None
+    if row[1] is not None and int(row[1]) <= time.time():
+        return None
+    return {"reason": row[0], "until": None if row[1] is None else int(row[1])}
+
+
+def ban_user(username, reason, days, actor):
+    """Block an account and end its sessions. `days` None/0 = permanent. Returns (status, result)."""
+    reason = str(reason or "").strip()
+    if not 1 <= len(reason) <= 200 or any(ord(c) < 32 for c in reason):
+        return 400, {"error": "invalid_reason"}
+    if days is not None and (type(days) is not int or not 0 <= days <= 3650):
+        return 400, {"error": "invalid_days"}
+    now = int(time.time())
+    until = now + days * 86400 if days else None
+    with _lock, _db() as db:
+        row = db.execute("SELECT id,username FROM users WHERE username=" + _ph(), (str(username),)).fetchone()
+        if row is None:
+            return 404, {"error": "user_not_found"}
+        db.execute("DELETE FROM adm_bans WHERE username=" + _ph(), (row[1],))
+        db.execute("INSERT INTO adm_bans(username,reason,banned_at,until,actor) VALUES(" + ",".join([_ph()] * 5) + ")", (row[1], reason, now, until, str(actor)[:64]))
+        db.execute("DELETE FROM sessions WHERE user_id=" + _ph(), (row[0],))
+        db.commit()
+    return 200, {"ok": True, "username": row[1], "until": until}
+
+
+def unban_user(username):
+    with _lock, _db() as db:
+        row = db.execute("SELECT username FROM adm_bans WHERE username=" + _ph(), (str(username),)).fetchone()
+        if row is None:
+            return 404, {"error": "not_banned"}
+        db.execute("DELETE FROM adm_bans WHERE username=" + _ph(), (row[0],))
+        db.commit()
+    return 200, {"ok": True, "username": row[0]}
+
+
+def list_users(query="", limit=50):
+    """Account list for administrators: no e-mail addresses, no password material."""
+    limit = max(1, min(int(limit), 200))
+    like = "%" + str(query).replace("\\", "").replace("%", "").replace("_", "")[:32] + "%"
+    with _lock, _db() as db:
+        rows = db.execute("SELECT u.id,u.username,u.created_at,b.reason,b.until FROM users u LEFT JOIN adm_bans b ON b.username=u.username "
+                          "WHERE u.username LIKE " + _ph() + " ORDER BY u.id DESC LIMIT " + str(limit), (like,)).fetchall()
+        now = time.time()
+        return [{"id": r[0], "username": r[1], "created": int(r[2]),
+                 "banned": r[3] is not None and (r[4] is None or int(r[4]) > now),
+                 "ban_reason": r[3], "ban_until": None if r[4] is None else int(r[4])} for r in rows]
+
+
+def admin_counts():
+    with _lock, _db() as db:
+        users = db.execute("SELECT COUNT(*) FROM users").fetchone()[0]
+        now = int(time.time())
+        bans = db.execute("SELECT COUNT(*) FROM adm_bans WHERE until IS NULL OR until>" + _ph(), (now,)).fetchone()[0]
+        sessions = db.execute("SELECT COUNT(*) FROM sessions WHERE expires_at>" + _ph(), (now,)).fetchone()[0]
+        return {"accounts": int(users), "active_bans": int(bans), "active_sessions": int(sessions)}
+
 
 def logout(token):
     if token:

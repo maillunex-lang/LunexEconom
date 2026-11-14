@@ -271,3 +271,21 @@ def soc_get(owner, path, query):
         production.advance(db, "%s", clk, now)
         social.distribute_pending(db, "%s", clk, now)
         return social.perform_get(db, "%s", owner, path, args, clk)
+
+
+def admin_request(method, path, args, payload, ctx):
+    import admin_api
+    import auth
+    with postgres_db.connect() as db:
+        if method == "POST":
+            db.execute("SELECT pg_advisory_xact_lock(20261114)")
+        else:
+            db.execute("SET TRANSACTION READ ONLY")
+        return admin_api.handle(db, "%s", method, path, args, payload, ctx, int(time.time()), auth)
+
+
+def announcement_state():
+    import admin_api
+    with postgres_db.connect() as db:
+        db.execute("SET TRANSACTION READ ONLY")
+        return admin_api.announcement(db, "%s")

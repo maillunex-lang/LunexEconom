@@ -9,7 +9,8 @@ from urllib.request import Request, urlopen
 from livepatch import Store
 from server import handler_factory
 
-PNG = b"\x89PNG\r\n\x1a\n" + b"fake test bytes"
+import fixtures
+PNG = fixtures.png()
 TOKEN = "a" * 40
 
 class PatchTests(unittest.TestCase):

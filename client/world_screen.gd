@@ -345,6 +345,7 @@ func _setup_ui_v1() -> void:
     _setup_social_panels()
     get_viewport().size_changed.connect(_layout_ui_v1)
     call_deferred("_layout_ui_v1")
+    call_deferred("_refresh_announcement")
 
 # ---- Read-only company statistics panels, opened from «Меню». ----
 func _setup_stats_panels() -> void:
@@ -597,7 +598,8 @@ func _open_section(section: String) -> void:
         "Логистика":
             section_body.text = "Маршруты поставок и транспортные задания находятся в разработке. Дорожная сеть доступна на карте."
         "Меню":
-            section_body.text = "Башкирия: Мёд и Нефть\nВерсия интерфейса 1.0\nУправление: одним пальцем двигайте карту, двумя изменяйте масштаб. Дороги к зданиям прокладываются автоматически."
+            section_body.text = _menu_text()
+            _refresh_announcement()
     if tutorial_panel != null:
         if section == "Город": tutorial_panel.notify("city_opened")
         elif section == "Экономика": tutorial_panel.notify("economy_opened")
@@ -1065,6 +1067,24 @@ func _api_get(path: String, auth: bool, callback: Callable) -> void:
         headers.append("Authorization: Bearer " + GameSession.access_token)
     if req.request(API_ROOT + path, headers) != OK:
         req.queue_free()
+
+var announcement_text := ""
+
+## Server-wide notice from the administrators (public, plain text, shown in a Label: never interpreted as markup).
+func _refresh_announcement() -> void:
+    _api_get("announcement", false, func(data: Dictionary) -> void:
+        announcement_text = str(data.get("text", "")).strip_edges().substr(0, 200)
+        if announcement_text != "":
+            info.text = "📢 " + announcement_text
+        if section_panel != null and section_panel.visible and section_title.text == "Меню":
+            section_body.text = _menu_text()
+    )
+
+func _menu_text() -> String:
+    var text := "Башкирия: Мёд и Нефть\nВерсия интерфейса 1.0\nУправление: одним пальцем двигайте карту, двумя изменяйте масштаб. Дороги к зданиям прокладываются автоматически."
+    if announcement_text != "":
+        text += "\n\n📢 Объявление: " + announcement_text
+    return text
 
 func _refresh_market() -> void:
     _api_get("market", false, func(data: Dictionary) -> void:

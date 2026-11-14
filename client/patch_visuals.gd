@@ -7,17 +7,15 @@ const SUPPORTED := ["farm", "mine", "factory", "warehouse", "school", "hospital"
 const MAX_DIMENSION := 2048
 var textures: Dictionary = {}
 var active_revision: int = 0
+var key_override := ""      # tests only: path of a public key replacing res://livepatch_public.pem
 
 func activate_from_cache() -> bool:
-    var path := "user://livepatch/manifest.json"
-    if not FileAccess.file_exists(path):
-        return false
-    var file := FileAccess.open(path, FileAccess.READ)
-    if file == null:
-        return false
-    var data = JSON.parse_string(file.get_as_text())
     var verifier = PATCH_SCRIPT.new()
-    if not verifier._valid_manifest(data):
+    if key_override != "":
+        verifier.public_key_path = key_override
+    # Only a manifest whose signature verifies against the public key in the APK is ever activated.
+    var data: Variant = verifier.load_verified_manifest()
+    if data == null:
         verifier.free()
         return false
     var next_textures: Dictionary = {}
@@ -32,6 +30,9 @@ func activate_from_cache() -> bool:
             continue
         var local_path := "user://livepatch/" + str(entry["sha256"]) + "." + str(entry["extension"])
         if not FileAccess.file_exists(local_path) or FileAccess.get_sha256(local_path) != str(entry["sha256"]):
+            verifier.free()
+            return false
+        if not verifier.file_dimensions_ok(local_path, str(entry["extension"])):    # header check BEFORE decoding
             verifier.free()
             return false
         var img := Image.new()
