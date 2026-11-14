@@ -25,6 +25,8 @@ const COLORS := [
 var camera: Camera2D
 var selected := Vector2i(-1, -1)
 var touch_points: Dictionary = {}
+var ui_touch_indices: Dictionary = {}
+var ui_mouse_press := false
 var dragging := false
 var moved := false
 var pinch_distance := 0.0
@@ -146,13 +148,27 @@ func _process(delta: float) -> void:
         _update_visible_chunks()
 
 func _input(event: InputEvent) -> void:
-    # Receive gestures even if a Control consumed GUI input; ignore the top HUD strip.
-    if event is InputEventScreenTouch and event.pressed:
-        var top = get_parent().get_node("HUD/Top")
-        if top.get_global_rect().has_point(event.position): return
-    if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
-        var top = get_parent().get_node("HUD/Top")
-        if top.get_global_rect().has_point(event.position): return
+    # _input also receives events consumed by GUI. Never select a world tile
+    # when the user presses or releases a construction/HUD button.
+    if event is InputEventScreenTouch:
+        if event.pressed and get_parent().is_world_ui_point(event.position):
+            ui_touch_indices[event.index] = true
+            return
+        if ui_touch_indices.has(event.index):
+            if not event.pressed:
+                ui_touch_indices.erase(event.index)
+            return
+    if event is InputEventScreenDrag and ui_touch_indices.has(event.index):
+        return
+    if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT:
+        if event.pressed:
+            ui_mouse_press = get_parent().is_world_ui_point(event.position)
+            if ui_mouse_press: return
+        elif ui_mouse_press:
+            ui_mouse_press = false
+            return
+    if event is InputEventMouseMotion and ui_mouse_press:
+        return
     if event is InputEventScreenTouch:
         if event.pressed:
             touch_points[event.index] = event.position
