@@ -179,7 +179,7 @@ func _input(event: InputEvent) -> void:
                 last_pinch_midpoint = (pair[0] + pair[1]) * 0.5
                 moved = true
         else:
-            if touch_points.size() == 1 and not moved:
+            if touch_points.size() == 1 and not moved and not get_parent().is_world_ui_point(event.position):
                 select_screen(event.position)
             touch_points.erase(event.index)
             pinch_distance = 0.0
@@ -212,7 +212,7 @@ func _input(event: InputEvent) -> void:
             if dragging:
                 moved = false
                 last_mouse = event.position
-            elif not moved:
+            elif not moved and not get_parent().is_world_ui_point(event.position):
                 select_screen(event.position)
     elif event is InputEventMouseMotion and dragging:
         target_position -= event.relative * PAN_SENSITIVITY / target_zoom
