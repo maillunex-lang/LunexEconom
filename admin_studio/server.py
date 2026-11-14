@@ -21,7 +21,7 @@ STATIC = ROOT / "static"
 MAX_BODY = 12 * 1024 * 1024
 FAIL_LIMIT, FAIL_WINDOW = 10, 300          # failed sign-ins per client address and window
 REQUEST_TIMEOUT = 15                       # seconds a client may stall while sending a request (slow-loris guard)
-STATIC_TYPES = {"index.html": "text/html", "app.js": "text/javascript", "world.js": "text/javascript", "game.js": "text/javascript", "style.css": "text/css"}
+STATIC_TYPES = {"index.html": "text/html", "app.js": "text/javascript", "world.js": "text/javascript", "game.js": "text/javascript", "navigation.js": "text/javascript", "style.css": "text/css"}
 LOOPBACK = ("127.0.0.1", "::1")
 
 def handler_factory(store, token, game=None):
