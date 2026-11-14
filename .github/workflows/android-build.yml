@@ -94,7 +94,7 @@ jobs:
         run: |
           set -euo pipefail
           test -s dist/Bashkiria-Honey-Oil-debug.apk
-          sha256sum -c dist/SHA256SUMS
+          (cd dist && sed 's#build/##g' SHA256SUMS | sha256sum -c -)
           if ! gh release view android-test-latest --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
             gh release create android-test-latest --repo "$GITHUB_REPOSITORY" --prerelease --title "Android: latest test APK (not device-tested)" --notes "Automatic debug APK for manual Android installation. Not a production release."
           fi
