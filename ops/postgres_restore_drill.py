@@ -9,6 +9,7 @@ import os
 import re
 import subprocess
 import sys
+from urllib.parse import urlsplit
 
 SAFE_DB = re.compile(r"^lunex_restore_test_[a-z0-9_]{1,40}$")
 
@@ -16,8 +17,9 @@ SAFE_DB = re.compile(r"^lunex_restore_test_[a-z0-9_]{1,40}$")
 def run_drill(backup, admin_dsn, target, *, runner=subprocess.run):
     if not SAFE_DB.fullmatch(target):
         raise ValueError("target must begin with lunex_restore_test_")
-    if not admin_dsn or not admin_dsn.startswith("postgresql://"):
-        raise ValueError("explicit PostgreSQL admin DSN required")
+    parsed = urlsplit(admin_dsn)
+    if parsed.scheme != "postgresql" or parsed.hostname not in ("localhost", "127.0.0.1", "::1") or parsed.port is None or parsed.port == 15439 or parsed.path != "/lunex_restore_admin":
+        raise ValueError("explicit isolated loopback test cluster DSN required (not production port)")
     if not os.path.isfile(backup) or os.path.getsize(backup) == 0:
         raise ValueError("backup missing or empty")
     # The operator-provided admin DSN must point at a disposable test cluster.
@@ -27,7 +29,7 @@ def run_drill(backup, admin_dsn, target, *, runner=subprocess.run):
     check = runner(["psql", admin_dsn, "-X", "-v", "ON_ERROR_STOP=1",
                     "-Atc", "SELECT current_database(), inet_server_port()"],
                    env=env, capture_output=True, text=True, check=True, timeout=15)
-    if "lunex_restore_admin" not in check.stdout:
+    if check.stdout.strip() != "lunex_restore_admin|" + str(parsed.port):
         raise ValueError("admin DSN must connect to lunex_restore_admin database")
     # Restore only to the explicit disposable target, never via embedded backup ownership.
     runner(["pg_restore", "--exit-on-error", "--no-owner", "--no-acl",
