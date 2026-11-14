@@ -73,7 +73,7 @@ def login(payload, client):
     password = payload.get("password","")
     if not isinstance(password,str) or len(password)>128: return 400, {"error":"invalid_credentials"}
     with _lock, _db() as db:
-        row=db.execute("SELECT id,username,salt,password_hash FROM users WHERE username="+("%s" if USE_POSTGRES else "?")+" OR email="+("%s" if USE_POSTGRES else "?")",(identifier,identifier.lower())).fetchone()
+        row=db.execute("SELECT id,username,salt,password_hash FROM users WHERE username="+("%s" if USE_POSTGRES else "?")+" OR email="+("%s" if USE_POSTGRES else "?"),(identifier,identifier.lower())).fetchone()
         if row is None:
             _hash_password(password,secrets.token_bytes(16))
             return 401, {"error":"invalid_credentials"}
