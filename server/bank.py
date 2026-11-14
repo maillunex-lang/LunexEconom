@@ -85,9 +85,17 @@ def paid_interest(db, ph, owner, amount):
         _change(db, ph, owner, d_interest=amount)
 
 
-def write_off(db, ph, owner):
-    """Bankruptcy: whatever is still owed to the bank is lost. Returns the written-off amount."""
+def write_off(db, ph, owner, now=None):
+    """Bankruptcy: whatever is still owed to the bank is lost. Returns the written-off amount.
+
+    The loan money was created by the bank (system:bank went negative) and has been spent, so the loss would stay in the ledger
+    as a permanent negative bank balance without any loan behind it. The Republic's treasury covers the loss instead: system:bank
+    again reflects only live loans and the loss is visible on system:treasury (the money supply that was issued to the players).
+    """
     bal = balance(db, ph, owner)
     if bal > 0:
         _change(db, ph, owner, d_balance=-bal)
+        if now is not None:
+            economy.post(db, ph, "loan", "Списание безнадёжного кредита, потери банка покрывает казна: %d" % bal,
+                         [(economy.TREASURY, -bal), (economy.BANK, bal)], now)
     return bal

@@ -193,6 +193,27 @@ class BankruptcyWithLoanTests(BankBase):
         self.assertGreaterEqual(w["balance"], 0)
         self.ledger_ok()
 
+    def test_written_off_loan_is_covered_by_the_treasury_and_the_bank_returns_to_zero(self):
+        import economy
+        self.build("alice", "factory")
+        self.loan("alice", "take", 220_000)
+        self.set_cash("alice", 60_000)
+        with game_server.connect() as db:
+            bank_before = db.execute("SELECT balance FROM wallets WHERE account=?", (economy.BANK,)).fetchone()[0]
+            treasury_before = db.execute("SELECT balance FROM wallets WHERE account=?", (economy.TREASURY,)).fetchone()[0]
+        w = self.month("alice", 8)
+        self.assertEqual(w["company"]["bankruptcies"], 1)
+        with game_server.connect() as db:
+            bank = db.execute("SELECT balance FROM wallets WHERE account=?", (economy.BANK,)).fetchone()[0]
+            loans_left = db.execute("SELECT COALESCE(SUM(balance),0) FROM loans").fetchone()[0]
+            memos = [m for (m,) in db.execute("SELECT memo FROM ledger_tx WHERE kind='loan' AND memo LIKE 'Списание%'").fetchall()]
+            treasury = db.execute("SELECT balance FROM wallets WHERE account=?", (economy.TREASURY,)).fetchone()[0]
+        self.assertEqual(loans_left, 0)
+        self.assertTrue(memos)                                   # the write-off was posted to the ledger
+        self.assertGreaterEqual(bank, bank_before)               # the bank no longer carries a loan that does not exist
+        self.assertLess(treasury, treasury_before)               # the Republic took the loss
+        self.ledger_ok()
+
     def test_proceeds_repay_the_bank_when_there_is_enough(self):
         self.build("alice", "factory")
         self.loan("alice", "take", 50_000)

@@ -18,7 +18,7 @@ CONSTRUCTION = "system:construction"
 MARKET_ACCOUNT = "system:market"      # buys all production at the clearing price
 UPKEEP = "system:upkeep"      # sink for maintenance
 BANK = "system:bank"            # lends and collects interest; may be negative (it creates the loan money)
-RESIDENTS = "system:residents"  # receives wages (residents' spending is not modelled as a closed loop yet)
+RESIDENTS = "system:residents"  # receives wages and spends them on consumer goods (money returns to system:market)
 MAX_SETTLE_MONTHS = 600   # months processed per call when catching up
 
 # ---- Tunable balance tables: change numbers here, nothing else depends on them ----
@@ -118,9 +118,16 @@ LOAN_INTEREST = 0.015
 LOAN_LTV = 0.5
 LOAN_MAX = 5_000_000
 LOAN_MIN = 10_000
-# A warehouse owner holds production back while last month's price was below reference * HOLD_BELOW
-# and releases everything (stock included) once the price recovers.
+# A warehouse owner holds production back while the recent average price is below reference * HOLD_BELOW. The held share grows
+# with the depth of the fall (the full output is held only at HOLD_BELOW * (1 - HOLD_DEPTH)) and the stock is released gradually
+# (RELEASE_SHARE of it per month, all of it at once while the price is above the reference). Fractions instead of an all-or-nothing
+# rule keep all warehouses from switching in the same month (supply 0 -> price at the ceiling -> everything dumped -> price at the floor).
 HOLD_BELOW = 0.9
+HOLD_DEPTH = 0.5
+HOLD_SMOOTH_MONTHS = 3
+RELEASE_SHARE = 0.34
+# Residents spend the wages they earned on consumer goods: money flows system:residents -> system:market (closed money circle).
+RESIDENT_SPEND_TO_MARKET = True
 # Market: one world-wide market per product (regions/cities come later).
 #   price = reference_price * (demand / supply) ** (1 / elasticity), clamped to [MIN_PRICE_K, MAX_PRICE_K] x reference.
 #   demand = base_demand * season[calendar month] * demand scale (population and income, see above)
@@ -191,7 +198,7 @@ def build_cost(kind, road_cells):
 def terms():
     return {"currency": CURRENCY, "start_capital": START_CAPITAL,
             "building_costs": dict(BUILD_COST), "road_cell_cost": ROAD_CELL_COST,
-            "hold_below": HOLD_BELOW,
+            "hold_below": HOLD_BELOW, "hold_depth": HOLD_DEPTH, "release_share": RELEASE_SHARE,
             "contracts": {"products": list(CONTRACT_PRODUCTS), "price_min_k": CONTRACT_PRICE_MIN_K, "price_max_k": CONTRACT_PRICE_MAX_K,
                           "qty": [CONTRACT_QTY_MIN, CONTRACT_QTY_MAX], "term_months": [CONTRACT_TERM_MIN, CONTRACT_TERM_MAX],
                           "max_active": CONTRACT_MAX_ACTIVE, "max_open": CONTRACT_MAX_OPEN},

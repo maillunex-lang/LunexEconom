@@ -174,9 +174,12 @@ class LiquidationTests(BankruptcyBase):
         self.set_cash("alice", 0)
         with game_server.connect() as db:
             db.execute("INSERT INTO inventory(owner,product,qty) VALUES('alice','honey',300) ON CONFLICT(owner,product) DO UPDATE SET qty=300")
-            db.execute("INSERT INTO company_status(owner,missed,wages_owed,input_owed,maint_owed,bankruptcies,last_bankruptcy_month,written_off) VALUES('alice',2,1,0,0,0,NULL,0) ON CONFLICT(owner) DO UPDATE SET missed=2,wages_owed=1")
-        w = self.month("alice", 1)
-        self.assertEqual(w["inventory"]["used"], 0)
+            production.liquidate(db, "?", "alice", 1, 1_800_000_000)
+            left = db.execute("SELECT COALESCE(SUM(qty),0) FROM inventory WHERE owner='alice'").fetchone()[0]
+            memos = " | ".join(m for (m,) in db.execute("SELECT memo FROM ledger_tx WHERE kind='liquidation'").fetchall())
+        self.assertEqual(left, 0)
+        self.assertIn("продажа запасов", memos)
+        w = game_server.wallet("alice")[1]
         self.assertGreater(w["balance"], 0)
         self.assert_ledger_balanced()
 

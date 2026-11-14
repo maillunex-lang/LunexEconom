@@ -134,6 +134,40 @@ class FactoryChainTests(ChainBase):
         self.assert_ledger_balanced()
 
 
+class HoldShareTests(unittest.TestCase):
+    """Warehouses react proportionally to the fall of the smoothed price instead of switching all at once."""
+
+    def share(self, prices):
+        ref = economy.MARKET["honey"]["reference_price"]
+
+        class Fake:
+            def execute(self, sql, params):
+                month = params[1]
+                value = prices.get(month)
+                return type("R", (), {"fetchone": lambda self_: None if value is None else (value,)})()
+        # month 10 asks for prices of months 9, 8, 7 (HOLD_SMOOTH_MONTHS)
+        return production._hold_share(Fake(), "?", "honey", 10, ref), ref
+
+    def test_no_history_or_price_above_threshold_holds_nothing(self):
+        self.assertEqual(self.share({})[0], 0.0)
+        ref = economy.MARKET["honey"]["reference_price"]
+        self.assertEqual(self.share({9: ref, 8: ref, 7: ref})[0], 0.0)
+
+    def test_share_grows_with_the_depth_of_the_fall_and_is_capped(self):
+        ref = economy.MARKET["honey"]["reference_price"]
+        mild = self.share({9: int(ref * 0.85), 8: int(ref * 0.85), 7: int(ref * 0.85)})[0]
+        deep = self.share({9: int(ref * 0.6), 8: int(ref * 0.6), 7: int(ref * 0.6)})[0]
+        floor = self.share({9: int(ref * 0.3), 8: int(ref * 0.3), 7: int(ref * 0.3)})[0]
+        self.assertTrue(0.0 < mild < deep <= 1.0)
+        self.assertEqual(floor, 1.0)
+
+    def test_one_bad_month_does_not_flip_the_warehouse(self):
+        ref = economy.MARKET["honey"]["reference_price"]
+        spike = self.share({9: int(ref * 0.5), 8: ref, 7: ref})[0]       # smoothed: a single dip is a partial hold at most
+        full = self.share({9: int(ref * 0.5), 8: int(ref * 0.5), 7: int(ref * 0.5)})[0]
+        self.assertLess(spike, full)
+
+
 class WarehouseTests(ChainBase):
     def cheap_honey(self):
         """Force a low honey price: many farms from other players flood the market."""
@@ -174,6 +208,16 @@ class WarehouseTests(ChainBase):
             db.execute("DELETE FROM building_ops WHERE owner LIKE 'rival%'")   # competitors disappear: price recovers
         released = self.month("alice", 3)["inventory"]["used"]
         self.assertLess(released, held)                                         # stock is sold off when the price is good
+        self.assert_ledger_balanced()
+
+    def test_stock_is_released_gradually_not_dumped_at_once(self):
+        self.build("alice", "farm", 8, 10)
+        self.build("alice", "warehouse", 8, 30)
+        with game_server.connect() as db:
+            db.execute("INSERT INTO inventory(owner,product,qty) VALUES('alice','honey',300) ON CONFLICT(owner,product) DO UPDATE SET qty=300")
+        used = self.month("alice", 1)["inventory"]["used"]
+        self.assertGreater(used, 0)          # the price is at the reference: part of the stock is still in the warehouse
+        self.assertLess(used, 300)           # ... but part of it was sold
         self.assert_ledger_balanced()
 
     def test_warehouse_sells_instead_of_holding_when_cash_is_short(self):

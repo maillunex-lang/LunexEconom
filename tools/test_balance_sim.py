@@ -83,7 +83,9 @@ class ScenarioTests(unittest.TestCase):
         self.assertGreaterEqual(last["population"], balance_sim.economy.MIN_POPULATION)
         self.assertEqual(last["wallet_sum"], 0)
         self.assertEqual(last["ledger_sum"], 0)
-        self.assertTrue(any(flag["code"] == "open_loop" for flag in first["flags"]))
+        # Residents spend their wages (system:residents -> system:market): no hoarded wages, so no open_loop flag.
+        self.assertFalse(any(flag["code"] == "open_loop" for flag in first["flags"]))
+        self.assertLess(last["residents"], 1_000_000)
         for row in first["rows"]:
             for product in ("honey", "oil", "goods"):
                 floor, ceil = balance_sim.price_limits(product)

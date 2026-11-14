@@ -109,15 +109,31 @@ class LabourWorldTests(unittest.TestCase):
         self.assertEqual(lab["jobs"], 4 + 10)
 
     def test_wages_paid_to_residents_and_ledger_balanced(self):
-        self.build("alice", "farm")
-        self.month(2)
-        game_server.wallet("alice")
+        # Wages are what residents earn; their spending is switched off here so that the balance shows the earnings alone.
+        with unittest.mock.patch.object(economy, "RESIDENT_SPEND_TO_MARKET", False):
+            self.build("alice", "farm")
+            self.month(2)
+            game_server.wallet("alice")
         with game_server.connect() as db:
             residents = db.execute("SELECT balance FROM wallets WHERE account=?", (economy.RESIDENTS,)).fetchone()[0]
             total = db.execute("SELECT COALESCE(SUM(balance),0) FROM wallets").fetchone()[0]
             bad = db.execute("SELECT tx_id FROM ledger_entries GROUP BY tx_id HAVING SUM(amount)<>0").fetchall()
         self.assertEqual(residents, 2 * 6_000)        # 4 farm workers * 1500 for two months
         self.assertEqual((total, bad), (0, []))
+
+    def test_residents_spend_wages_and_the_money_circle_closes(self):
+        self.build("alice", "farm")
+        self.month(6)
+        game_server.wallet("alice")
+        with game_server.connect() as db:
+            earned = db.execute("SELECT COALESCE(SUM(e.amount),0) FROM ledger_entries e JOIN ledger_tx t ON t.id=e.tx_id WHERE e.account=? AND t.kind='monthly'", (economy.RESIDENTS,)).fetchone()[0]
+            spent = -db.execute("SELECT COALESCE(SUM(e.amount),0) FROM ledger_entries e JOIN ledger_tx t ON t.id=e.tx_id WHERE e.account=? AND t.kind='residents'", (economy.RESIDENTS,)).fetchone()[0]
+            residents = db.execute("SELECT balance FROM wallets WHERE account=?", (economy.RESIDENTS,)).fetchone()[0]
+            bad = db.execute("SELECT tx_id FROM ledger_entries GROUP BY tx_id HAVING SUM(amount)<>0").fetchall()
+        self.assertGreater(spent, 0)
+        self.assertGreaterEqual(residents, 0)                 # residents never spend more than they earned
+        self.assertEqual(earned - spent, residents)
+        self.assertEqual(bad, [])
 
     def test_empty_city_does_not_collapse(self):
         # no jobs at all for years: unemployment erodes the city only slowly and never below the floor

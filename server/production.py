@@ -59,6 +59,19 @@ def _price_row(db, ph, product, month):
     return int(row[0]) if row else None
 
 
+def _hold_share(db, ph, product, month, ref):
+    """Share (0..1) of the output a warehouse holds back, from the average price of the last months (smoothed against whipsaw)."""
+    rows = [_price_row(db, ph, product, month - 1 - i) for i in range(economy.HOLD_SMOOTH_MONTHS)]
+    rows = [r for r in rows if r is not None]
+    if not rows:
+        return 0.0
+    threshold = ref * economy.HOLD_BELOW
+    average = sum(rows) / len(rows)
+    if average >= threshold:
+        return 0.0
+    return min(1.0, (threshold - average) / (threshold * economy.HOLD_DEPTH))
+
+
 def _save_inventory(db, ph, owner, stock):
     for product, qty in sorted(stock.items()):
         db.execute(_q("INSERT INTO inventory(owner,product,qty) VALUES(%s,%s,%s) ON CONFLICT(owner,product) DO UPDATE SET qty=excluded.qty", ph),
@@ -141,7 +154,7 @@ def liquidate(db, ph, owner, month, now):
     if pay_bank:
         economy.post(db, ph, "liquidation", "Банкротство: погашение кредита", [(account, -pay_bank), (economy.BANK, pay_bank)], now)
         bank._change(db, ph, owner, d_balance=-pay_bank, d_repaid=pay_bank)
-    lost_to_bank = bank.write_off(db, ph, owner)
+    lost_to_bank = bank.write_off(db, ph, owner, now)
     st.update(missed=0, wages_owed=0, input_owed=0, maint_owed=0, tax_owed=0, bankruptcies=st["bankruptcies"] + 1,
               last_bankruptcy_month=month, written_off=st["written_off"] + (owed - paid) + lost_to_bank)
     _save_status(db, ph, owner, st)
@@ -253,10 +266,12 @@ def step_month(db, ph, month, now):
     prices = {}
     import contracts as trade_contracts
     contract_deliveries = []
+    consumer_spend = 0           # value of what residents bought this month (consumer demand x fill x price)
     for product in product_order():
         ref = economy.MARKET[product]["reference_price"]
         previous = _price_row(db, ph, product, month - 1)
-        hold = previous is not None and previous < ref * economy.HOLD_BELOW
+        hold_share = _hold_share(db, ph, product, month, ref)
+        release_all = previous is not None and previous >= ref       # price above the reference: the warehouse sells everything
         produced_map = {}
         for owner, c in companies.items():
             produced = 0
@@ -284,11 +299,16 @@ def step_month(db, ph, month, now):
                 c["need_ext"][product] = need - internal
             # A warehouse never starves the company of cash: it holds stock only while two months of costs are covered.
             runway = c["cash"] >= 2 * (c["maint"] + int(c["jobs"] * lab["wage"]))
-            if c["capacity"] > 0 and hold and runway:
+            if c["capacity"] > 0 and hold_share > 0 and runway:
                 free = max(0, c["capacity"] - sum(v for k, v in c["stock"].items() if k != product) - stock)
-                held = min(produced, free)
-                stock += held
-                offers[owner] = produced - held
+                held = min(int(produced * hold_share), free)
+                released = int(stock * economy.RELEASE_SHARE * (1 - hold_share))     # a falling market releases less
+                stock += held - released
+                offers[owner] = produced - held + released
+            elif c["capacity"] > 0 and not release_all and stock > 0:
+                released = int(stock * economy.RELEASE_SHARE) or stock                # gradual release, never an all-at-once dump
+                stock -= released
+                offers[owner] = produced + released
             else:
                 offers[owner] = produced + stock
                 stock = 0
@@ -299,6 +319,7 @@ def step_month(db, ph, month, now):
         price = economy.price_for(product, supply, demand)
         prices[product] = price
         fill = 1.0 if demand <= 0 else min(1.0, supply / demand)
+        consumer_spend += int((demand - demand_ext) * fill * price)
         for owner, c in companies.items():
             c["revenue"] += offers[owner] * price
             c["rev_by"][product] = c["rev_by"].get(product, 0) + offers[owner] * price
@@ -391,6 +412,11 @@ def step_month(db, ph, month, now):
         bank.paid_interest(db, ph, owner, paid)
         bank.capitalize(db, ph, owner, due - paid)
     trade_contracts.settle(db, ph, month, contract_deliveries, now, bankrupt)
+    if economy.RESIDENT_SPEND_TO_MARKET and consumer_spend > 0:
+        row = db.execute(_q("SELECT balance FROM wallets WHERE account=%s", ph), (economy.RESIDENTS,)).fetchone()
+        spend = min(consumer_spend, max(0, int(row[0]) if row else 0))
+        if spend:
+            economy.post(db, ph, "residents", "Жители потратили зарплату на товары: %d" % spend, [(economy.RESIDENTS, -spend), (economy.MARKET_ACCOUNT, spend)], now)
     for owner in bankrupt:
         liquidate(db, ph, owner, month, now)
     city.monthly(db, ph, month, now)
