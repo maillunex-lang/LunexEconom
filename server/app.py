@@ -5,6 +5,8 @@ import json
 import os
 import threading
 import uuid
+from urllib.parse import parse_qs
+import world_events
 
 WORLD_ID = "bashkiria-main"
 MONTH_SECONDS = 86400
@@ -39,7 +41,16 @@ class Handler(BaseHTTPRequestHandler):
         self.wfile.write(payload)
 
     def do_GET(self):
-        status, data = response(urlsplit(self.path).path)
+        url = urlsplit(self.path)
+        try:
+            query = parse_qs(url.query)
+            if url.path == '/events':
+                return self._send(200, world_events.changes(int(query.get('after',['0'])[0])))
+            if url.path == '/chunk':
+                return self._send(200, world_events.snapshot(int(query['cx'][0]),int(query['cy'][0])))
+        except (ValueError,KeyError,IndexError):
+            return self._send(400, {'error':'invalid_query'})
+        status, data = response(url.path)
         self._send(status, data)
 
     def do_POST(self):
