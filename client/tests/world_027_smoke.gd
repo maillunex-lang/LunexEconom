@@ -18,8 +18,9 @@ func _initialize() -> void:
     assert(access.ok)
     assert(planner.footprint(Vector2i(4, 4), Vector2i(2, 3)).size() == 6)
     assert(planner.footprint(Vector2i.ZERO, Vector2i(0, 2)).is_empty())
-    assert(planner.reserve_preview([Vector2i(4, 4)], "test"))
-    assert(not planner.reserve_preview([Vector2i(4, 4)], "other"))
+    var reserved: Array[Vector2i] = [Vector2i(4, 4)]
+    assert(planner.reserve_preview(reserved, "test"))
+    assert(not planner.reserve_preview(reserved, "other"))
     planner.clear_preview("test")
     assert(not planner.occupied.has(Vector2i(4, 4)))
     print("WORLD_027_TEST_PASS topology/footprint/road-access/preview-reservation")
