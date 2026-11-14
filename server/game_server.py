@@ -8,6 +8,9 @@ import threading
 import time
 import uuid
 import auth
+if os.environ.get('LUNEX_DB_ENGINE') == 'postgres':
+    import postgres_world
+    import postgres_db
 
 DB = os.environ.get("LUNEX_WORLD_DB", "/home/gamedev/projects/LunexEconom-server/world.sqlite3")
 CHUNK = 12
@@ -137,6 +140,14 @@ class Handler(BaseHTTPRequestHandler):
         if not owner:return self._send(401,{"error":"unauthorized"})
         return self._send(*build(owner,payload))
 
+if os.environ.get("LUNEX_DB_ENGINE") == "postgres":
+    build = postgres_world.build
+    events = postgres_world.events
+    chunk = postgres_world.chunk
+
 if __name__=="__main__":
-    connect().close()
+    if os.environ.get("LUNEX_DB_ENGINE") == "postgres":
+        postgres_db.init()
+    else:
+        connect().close()
     ThreadingHTTPServer(("127.0.0.1",int(os.environ.get("LUNEX_PORT","18767"))),Handler).serve_forever()
