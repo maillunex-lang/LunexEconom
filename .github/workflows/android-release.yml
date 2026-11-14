@@ -1,0 +1,82 @@
+name: Publish device-tested Android release
+on:
+  workflow_dispatch:
+    inputs:
+      build_run_id:
+        description: "Successful Android APK workflow run ID with artifact android-debug-apk"
+        required: true
+        type: string
+      device_test_report:
+        description: "Path in repository to approved device test report, e.g. docs/device-tests/0.1.0.md"
+        required: true
+        type: string
+      release_tag:
+        description: "Unique prerelease tag, e.g. v0.1.0-alpha.1"
+        required: true
+        type: string
+permissions:
+  actions: read
+  contents: write
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    environment: android-release
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate release request and test evidence
+        env:
+          BUILD_RUN_ID: ${{ inputs.build_run_id }}
+          REPORT: ${{ inputs.device_test_report }}
+          TAG: ${{ inputs.release_tag }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          [[ "$BUILD_RUN_ID" =~ ^[0-9]+$ ]]
+          [[ "$TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+-(alpha|beta|rc)\.[0-9]+$ ]]
+          [[ "$REPORT" =~ ^docs/device-tests/[A-Za-z0-9._/-]+\.md$ ]]
+          test -f "$REPORT"
+          grep -q '^Result: PASS$' "$REPORT"
+          grep -q '^Device: ' "$REPORT"
+          grep -q '^APK SHA256: ' "$REPORT"
+          test "$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$BUILD_RUN_ID" --jq '.conclusion')" = success
+          test "$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$BUILD_RUN_ID" --jq '.head_sha')" = "$GITHUB_SHA"
+          if gh release view "$TAG" >/dev/null 2>&1; then echo "Tag already exists"; exit 1; fi
+      - uses: actions/download-artifact@v4
+        with:
+          name: android-debug-apk
+          run-id: ${{ inputs.build_run_id }}
+          github-token: ${{ github.token }}
+          path: dist
+      - name: Verify APK, signing and device test SHA
+        env:
+          REPORT: ${{ inputs.device_test_report }}
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          import hashlib, zipfile, os, re
+          apks=list(Path("dist").glob("*.apk"))
+          assert len(apks)==1, "Expected one APK"
+          apk=apks[0]
+          assert apk.stat().st_size>100000
+          with zipfile.ZipFile(apk) as z:
+              assert "AndroidManifest.xml" in z.namelist()
+              assert z.testzip() is None
+          report=Path(os.environ["REPORT"]).read_text()
+          m=re.search(r"^APK SHA256: ([a-f0-9]{64})$",report,re.M)
+          assert m, "Missing SHA256 in device test report"
+          actual=hashlib.sha256(apk.read_bytes()).hexdigest()
+          assert actual==m.group(1), "Device-tested APK hash mismatch"
+          print("Verified device-tested APK",actual)
+          PY
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq apksigner
+          apksigner verify --verbose dist/*.apk
+      - name: Publish prerelease
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ inputs.release_tag }}
+          REPORT: ${{ inputs.device_test_report }}
+        run: |
+          set -euo pipefail
+          gh release create "$TAG" dist/*.apk dist/SHA256SUMS --prerelease --target "$GITHUB_SHA" --title "Башкирия: Мёд и Нефть $TAG" --notes-file "$REPORT"
