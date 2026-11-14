@@ -47,8 +47,16 @@ jobs:
           PGPASSWORD: ci-only-temporary
         run: |
           set -euo pipefail
-          sudo apt-get update -qq
-          sudo apt-get install -y -qq postgresql-client
+          # The client tools must have the same major version as the server (16): a newer pg_dump writes settings such
+          # as `transaction_timeout` that PostgreSQL 16 rejects, and the runner image ships a newer client. Use the
+          # tools of the same image as the service container instead of the distribution package.
+          mkdir -p "$RUNNER_TEMP/pg16bin"
+          for tool in psql pg_dump pg_restore createdb dropdb; do
+            printf '#!/usr/bin/env bash\nexec docker run --rm -i --network host -e PGPASSWORD -e PGHOST -e PGPORT -e PGUSER -e PGCONNECT_TIMEOUT -v /tmp:/tmp postgres:16-alpine %s "$@"\n' "$tool" > "$RUNNER_TEMP/pg16bin/$tool"
+            chmod +x "$RUNNER_TEMP/pg16bin/$tool"
+          done
+          export PATH="$RUNNER_TEMP/pg16bin:$PATH"
+          pg_dump --version
           export PGHOST=127.0.0.1 PGPORT=15551 PGUSER=lunex_test
           psql -d lunex_restore_admin -v ON_ERROR_STOP=1 -c 'CREATE TABLE restore_probe (id integer primary key, payload text not null)'
           psql -d lunex_restore_admin -v ON_ERROR_STOP=1 -c "INSERT INTO restore_probe VALUES (7, 'backup-restored')"
