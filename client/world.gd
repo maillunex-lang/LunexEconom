@@ -24,6 +24,14 @@ var dragging := false
 var moved := false
 var pinch_distance := 0.0
 var last_mouse := Vector2.ZERO
+# Frame-rate independent camera easing. Targets follow touch; visible camera catches up.
+const PAN_RESPONSE := 13.0
+const ZOOM_RESPONSE := 10.0
+const PAN_SENSITIVITY := 0.78
+const ZOOM_SENSITIVITY := 0.70
+var target_position := Vector2.ZERO
+var target_zoom := 1.0
+var last_pinch_midpoint := Vector2.ZERO
 
 func _ready() -> void:
     camera = Camera2D.new()
@@ -31,6 +39,8 @@ func _ready() -> void:
     camera.enabled = true
     camera.position = Vector2(0, 300)
     camera.zoom = Vector2.ONE
+    target_position = camera.position
+    target_zoom = camera.zoom.x
     add_child(camera)
     _update_visible_chunks()
 
@@ -117,7 +127,12 @@ func _redraw_chunk_at(cell: Vector2i) -> void:
     var coord := Vector2i(floori(float(cell.x) / CHUNK), floori(float(cell.y) / CHUNK))
     if active_chunks.has(coord): active_chunks[coord].queue_redraw()
 
-func _process(_delta: float) -> void:
+func _process(delta: float) -> void:
+    var pan_alpha := 1.0 - exp(-PAN_RESPONSE * minf(delta, 0.1))
+    var zoom_alpha := 1.0 - exp(-ZOOM_RESPONSE * minf(delta, 0.1))
+    camera.position = camera.position.lerp(target_position, pan_alpha)
+    var z := lerpf(camera.zoom.x, target_zoom, zoom_alpha)
+    camera.zoom = Vector2(z, z)
     if camera.position != last_camera_position or camera.zoom.x != last_zoom:
         last_camera_position = camera.position
         last_zoom = camera.zoom.x
@@ -138,6 +153,7 @@ func _input(event: InputEvent) -> void:
             if touch_points.size() == 2:
                 var pair := touch_points.values()
                 pinch_distance = pair[0].distance_to(pair[1])
+                last_pinch_midpoint = (pair[0] + pair[1]) * 0.5
                 moved = true
         else:
             if touch_points.size() == 1 and not moved:
@@ -149,21 +165,25 @@ func _input(event: InputEvent) -> void:
         var old: Vector2 = touch_points.get(event.index, event.position - event.relative)
         touch_points[event.index] = event.position
         if touch_points.size() == 1:
-            camera.position -= (event.position - old) / camera.zoom
+            target_position -= (event.position - old) * PAN_SENSITIVITY / target_zoom
             moved = true
         elif touch_points.size() == 2:
             var points := touch_points.values()
             var dist: float = points[0].distance_to(points[1])
             if pinch_distance > 0.0:
-                set_zoom(camera.zoom.x * dist / pinch_distance)
+                var ratio := dist / pinch_distance
+                set_zoom(target_zoom * pow(ratio, ZOOM_SENSITIVITY))
+            var midpoint: Vector2 = (points[0] + points[1]) * 0.5
+            target_position -= (midpoint - last_pinch_midpoint) * PAN_SENSITIVITY / target_zoom
+            last_pinch_midpoint = midpoint
             pinch_distance = dist
             moved = true
         clamp_camera()
     elif event is InputEventMouseButton:
         if event.button_index == MOUSE_BUTTON_WHEEL_UP and event.pressed:
-            set_zoom(camera.zoom.x * 1.12)
+            set_zoom(target_zoom * 1.12)
         elif event.button_index == MOUSE_BUTTON_WHEEL_DOWN and event.pressed:
-            set_zoom(camera.zoom.x / 1.12)
+            set_zoom(target_zoom / 1.12)
         elif event.button_index == MOUSE_BUTTON_LEFT:
             dragging = event.pressed
             if dragging:
@@ -172,7 +192,7 @@ func _input(event: InputEvent) -> void:
             elif not moved:
                 select_screen(event.position)
     elif event is InputEventMouseMotion and dragging:
-        camera.position -= event.relative / camera.zoom
+        target_position -= event.relative * PAN_SENSITIVITY / target_zoom
         moved = true
         clamp_camera()
 
@@ -188,13 +208,13 @@ func select_screen(pos: Vector2) -> void:
 
 func set_zoom(z: float) -> void:
     var v := clampf(z, 0.45, 2.3)
-    camera.zoom = Vector2(v, v)
+    target_zoom = v
     clamp_camera()
 
 func clamp_camera() -> void:
     # Exploration camera can move beyond discovered chunks; no fixed world edge.
-    camera.position.x = clampf(camera.position.x, -500000.0, 500000.0)
-    camera.position.y = clampf(camera.position.y, -500000.0, 500000.0)
+    target_position.x = clampf(target_position.x, -500000.0, 500000.0)
+    target_position.y = clampf(target_position.y, -500000.0, 500000.0)
 
 func expand_city(chunks: int = 1) -> void:
     expansion_radius += maxi(chunks, 1) * CHUNK
