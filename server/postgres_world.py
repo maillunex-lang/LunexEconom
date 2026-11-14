@@ -185,3 +185,18 @@ def chunk(cx,cy):
     items=[{"x":x,"y":y,"kind":"building_created","building_kind":kind,"object_id":oid,"owner":owner} for x,y,kind,oid,owner in cells]
     items+=[{"x":x,"y":y,"kind":"road_changed","object_id":"","owner":owner} for x,y,owner in rds]
     return 200,{"cx":cx,"cy":cy,"version":row[0] if row else 0,"cells":items}
+
+
+# Read-only company statistics. Never acquire the world mutation lock or advance time.
+def stats_leaderboard(owner, by="networth"):
+    import stats
+    with postgres_db.connect() as db:
+        db.execute("SET TRANSACTION READ ONLY")
+        return stats.leaderboard(db, "%s", owner, by)
+
+
+def stats_feed(owner, after=0):
+    import stats
+    with postgres_db.connect() as db:
+        db.execute("SET TRANSACTION READ ONLY")
+        return stats.feed(db, "%s", owner, after)
