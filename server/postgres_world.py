@@ -5,6 +5,7 @@ import uuid
 import psycopg
 import postgres_db
 import roads as road_rules
+import economy
 
 CHUNK = 12
 MAX_COORD = 10000
@@ -39,6 +40,8 @@ def build(owner,payload):
         new_roads=[c for c in path if not road_rules.is_base_road(*c) and c not in dynamic]
         oid=uuid.uuid4().hex
         now=int(time.time())
+        paid,cost,balance=economy.charge_build(db,"%s",owner,kind,len(new_roads),now)
+        if not paid:return 402,{"error":"insufficient_funds","cost":cost,"balance":balance}
         db.execute("INSERT INTO buildings(id,owner,kind,x,y,created) VALUES(%s,%s,%s,%s,%s,%s)",(oid,owner,kind,x,y,now))
         with db.cursor() as cursor:
             cursor.executemany("INSERT INTO cells(x,y,object_id) VALUES(%s,%s,%s)",[(xx,yy,oid) for xx,yy in footprint])
@@ -56,9 +59,14 @@ def build(owner,payload):
                 seq=db.execute("""INSERT INTO events(cx,cy,version,kind,payload)
                     VALUES(%s,%s,%s,%s,%s) RETURNING seq""",(cx,cy,version,kind_name,json.dumps(data))).fetchone()[0]
                 events.append({"seq":seq,"cx":cx,"cy":cy,"version":version,"kind":kind_name,**data})
-        result={"ok":True,"object_id":oid,"road_cells":len(new_roads),"events":events}
+        result={"ok":True,"object_id":oid,"road_cells":len(new_roads),"cost":cost,"balance":balance,"events":events}
         db.execute("INSERT INTO commands(owner,request_id,response) VALUES(%s,%s,%s)",(owner,request_id,json.dumps(result)))
         return 201,result
+
+def wallet(owner):
+    with postgres_db.connect() as db:
+        db.execute("SELECT pg_advisory_xact_lock(20261114)")
+        return 200,economy.wallet(db,"%s",owner,int(time.time()))
 
 def events(after):
     if type(after) is not int or after<0:return 400,{"error":"invalid_cursor"}

@@ -9,6 +9,7 @@ import time
 import uuid
 import auth
 import roads as road_rules
+import economy
 if os.environ.get('LUNEX_DB_ENGINE') == 'postgres':
     import postgres_world
     import postgres_db
@@ -30,6 +31,8 @@ def connect():
     db.execute("CREATE TABLE IF NOT EXISTS events(seq INTEGER PRIMARY KEY AUTOINCREMENT,cx INTEGER NOT NULL,cy INTEGER NOT NULL,version INTEGER NOT NULL,kind TEXT NOT NULL,payload TEXT NOT NULL)")
     db.execute("CREATE TABLE IF NOT EXISTS roads(x INTEGER NOT NULL,y INTEGER NOT NULL,owner TEXT NOT NULL,created INTEGER NOT NULL,PRIMARY KEY(x,y))")
     db.execute("CREATE TABLE IF NOT EXISTS commands(owner TEXT NOT NULL,request_id TEXT NOT NULL,response TEXT NOT NULL,PRIMARY KEY(owner,request_id))")
+    for statement in economy.SCHEMA:
+        db.execute(statement)
     db.commit()
     return db
 
@@ -64,6 +67,9 @@ def build(owner, payload):
         new_roads=[c for c in path if not road_rules.is_base_road(*c) and c not in dynamic]
         object_id=uuid.uuid4().hex
         now=int(time.time())
+        paid,cost,balance=economy.charge_build(db,"?",owner,kind,len(new_roads),now)
+        if not paid:
+            return 402,{"error":"insufficient_funds","cost":cost,"balance":balance}
         db.execute("INSERT INTO buildings VALUES(?,?,?,?,?,?)",(object_id,owner,kind,x,y,now))
         db.executemany("INSERT INTO cells VALUES(?,?,?)",[(xx,yy,object_id) for xx,yy in footprint])
         db.executemany("INSERT INTO roads VALUES(?,?,?,?)",[(rx,ry,owner,now) for rx,ry in new_roads])
@@ -80,10 +86,17 @@ def build(owner, payload):
                 payload=json.dumps(data)
                 seq=db.execute("INSERT INTO events(cx,cy,version,kind,payload) VALUES(?,?,?,?,?)",(cx,cy,version,kind_name,payload)).lastrowid
                 events.append({"seq":seq,"cx":cx,"cy":cy,"version":version,"kind":kind_name,**data})
-        result={"ok":True,"object_id":object_id,"road_cells":len(new_roads),"events":events}
+        result={"ok":True,"object_id":object_id,"road_cells":len(new_roads),"cost":cost,"balance":balance,"events":events}
         db.execute("INSERT INTO commands VALUES(?,?,?)",(owner,request_id,json.dumps(result)))
         db.commit()
         return 201,result
+
+def wallet(owner):
+    with LOCK, connect() as db:
+        db.execute("BEGIN IMMEDIATE")
+        result=economy.wallet(db,"?",owner,int(time.time()))
+        db.commit()
+    return 200,result
 
 def events(after):
     if type(after) is not int or after<0:return 400,{"error":"invalid_cursor"}
@@ -125,10 +138,14 @@ class Handler(BaseHTTPRequestHandler):
     def do_GET(self):
         url=urlsplit(self.path)
         if url.path=="/health":return self._send(200,{"ok":True,"service":"lunexeconom-game","version":"0.2.0"})
-        if url.path=="/world":return self._send(200,{"world_id":"bashkiria-main","month_seconds":86400,"building_types":KINDS})
+        if url.path=="/world":return self._send(200,{"world_id":"bashkiria-main","month_seconds":86400,"building_types":KINDS,"economy":economy.terms()})
         if url.path=="/auth/me":
             status,data=auth.profile(self.headers.get("Authorization","")[7:] if self.headers.get("Authorization","").startswith("Bearer ") else "")
             return self._send(status,data)
+        if url.path=="/wallet":
+            owner=self._identity()
+            if not owner:return self._send(401,{"error":"unauthorized"})
+            return self._send(*wallet(owner))
         if url.path in ("/events","/chunk"):
             if not self._identity():return self._send(401,{"error":"unauthorized"})
             try:
@@ -161,6 +178,7 @@ if os.environ.get("LUNEX_DB_ENGINE") == "postgres":
     build = postgres_world.build
     events = postgres_world.events
     chunk = postgres_world.chunk
+    wallet = postgres_world.wallet
 
 if __name__=="__main__":
     if os.environ.get("LUNEX_DB_ENGINE") == "postgres":

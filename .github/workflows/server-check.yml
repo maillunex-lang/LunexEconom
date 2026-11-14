@@ -20,6 +20,6 @@ jobs:
         working-directory: server
         run: |
           python -m py_compile *.py
-          python -m unittest test_roads test_app test_auth -v
+          python -m unittest test_roads test_economy test_app test_auth -v
       - name: Test deployment scripts
         run: python -m unittest discover -s ops -p 'test_*.py' -v

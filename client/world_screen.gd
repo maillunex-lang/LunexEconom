@@ -20,6 +20,8 @@ func _ready() -> void:
     _setup_build_toolbar()
     _setup_ui_v1()
     _setup_top_hud()
+    _refresh_terms()
+    _refresh_wallet()
     _connect_server()
     var sync = load("res://world_sync.gd").new()
     sync.world = world
@@ -176,7 +178,7 @@ func _setup_ui_v1() -> void:
     content.add_child(tiles)
     for entry in [["farm","Ферма 2×2"],["mine","Шахта 2×3"],["factory","Завод 3×2"]]:
         var kind: String = entry[0]
-        tiles.add_child(_ui_button(entry[1], func(): _choose_ui_build(kind), 170))
+        tiles.add_child(_ui_button("%s · %s" % [entry[1], _fmt_money_short(int(building_costs[kind]))], func(): _choose_ui_build(kind), 190))
     catalog_panel.hide()
     placement_panel = PanelContainer.new()
     placement_panel.name = "PlacementCard"
@@ -260,7 +262,7 @@ func _setup_top_hud() -> void:
     var money := Label.new()
     money.name = "Balance"
     money.text = "₽ —"
-    money.tooltip_text = "Баланс появится после подключения экономики"
+    money.tooltip_text = "Баланс компании"
     money.add_theme_font_size_override("font_size", 18)
     top.add_child(money)
     top.move_child(money, 1)
@@ -281,7 +283,8 @@ func _open_section(section: String) -> void:
         "Дороги":
             section_body.text = "Выберите клетку на карте и нажмите «Проложить дорогу». Подключение проверяется по дорожной сети."
         "Экономика":
-            section_body.text = "Экономика предприятия пока не подключена. Баланс и производственные показатели появятся после реализации серверной экономики."
+            section_body.text = _economy_text()
+            _refresh_wallet()
         "Логистика":
             section_body.text = "Маршруты поставок и транспортные задания находятся в разработке. Дорожная сеть доступна на карте."
         "Меню":
@@ -313,7 +316,13 @@ func _cancel_ui_build() -> void:
 func show_build_preview(result: Dictionary) -> void:
     if result.get("ok", false):
         var road_len: int = (result.get("access", []) as Array).size()
-        info.text = "Участок подходит · нажмите Построить" if road_len == 0 else "Участок подходит · дорога %d кл. построится сама" % road_len
+        var total := int(building_costs.get(world.build_type, 0)) + road_len * road_cell_cost
+        var text := "Цена %s" % _fmt_money(total)
+        if road_len > 0: text += " (с дорогой %d кл.)" % road_len
+        if wallet_balance >= 0 and total > wallet_balance:
+            text += " · не хватает %s" % _fmt_money(total - wallet_balance)
+        info.text = text
+
         if build_hint != null: build_hint.text = info.text
     else:
         var messages := {
@@ -365,10 +374,16 @@ func _place_building() -> void:
             world.cancel_build()
             placement_panel.hide()
             var road_cells := int(data.get("road_cells", 0))
-            info.text = "Построено на сервере" + ((" · дорога +%d кл." % road_cells) if road_cells > 0 else "")
+            if data.has("balance"): _set_balance(int(data["balance"]))
+            info.text = "Построено за %s" % _fmt_money(int(data.get("cost", 0))) + ((" · дорога +%d кл." % road_cells) if road_cells > 0 else "")
         else:
             var errors := {"occupied":"Участок уже занят", "invalid_build":"Неверное место или тип здания", "outside_world":"За пределами карты", "unauthorized":"Сессия завершена, войдите снова", "invalid_request_id":"Ошибка команды строительства", "water":"Нельзя строить на воде", "road_overlap":"Нельзя строить на дороге", "no_road_access":"Дорогу к участку проложить нельзя"}
-            info.text = str(errors.get(str(data.get("error", "")), "Сервер отклонил строительство (HTTP %d)" % code))
+            if str(data.get("error", "")) == "insufficient_funds":
+                _set_balance(int(data.get("balance", wallet_balance)))
+                info.text = "Недостаточно средств: нужно %s, на счёте %s" % [_fmt_money(int(data.get("cost", 0))), _fmt_money(int(data.get("balance", 0)))]
+            else:
+                info.text = str(errors.get(str(data.get("error", "")), "Сервер отклонил строительство (HTTP %d)" % code))
+            if build_hint != null: build_hint.text = info.text
     )
     var headers := PackedStringArray(["Content-Type: application/json", "Authorization: Bearer " + GameSession.access_token])
     var err := req.request("https://rikagro.ru/lunexeconom/api/build", headers, HTTPClient.METHOD_POST, JSON.stringify(payload))
@@ -435,3 +450,74 @@ func _input(event: InputEvent) -> void:
             if target == _hit_ui_button(event.position):
                 target.pressed.emit()
             get_viewport().set_input_as_handled()
+
+# ---- Economy (server-authoritative; the client only displays) ----
+const API_ROOT := "https://rikagro.ru/lunexeconom/api/"
+var building_costs := {"farm": 120000, "mine": 300000, "factory": 450000}
+var road_cell_cost := 5000
+var wallet_balance := -1
+var wallet_transactions: Array = []
+
+func _fmt_money(value: int) -> String:
+    var digits := str(absi(value))
+    var out := ""
+    for i in digits.length():
+        if i > 0 and (digits.length() - i) % 3 == 0: out += " "
+        out += digits[i]
+    return ("-" if value < 0 else "") + out + " ₽"
+
+func _fmt_money_short(value: int) -> String:
+    if value >= 1000 and value % 1000 == 0: return "%d тыс ₽" % (value / 1000)
+    return _fmt_money(value)
+
+func _set_balance(value: int) -> void:
+    wallet_balance = value
+    var label := get_node_or_null("UIOverlay/HUD/Top/Balance") as Label
+    if label != null:
+        label.text = _fmt_money(value)
+        label.tooltip_text = "Баланс компании"
+
+func _economy_text() -> String:
+    if wallet_balance < 0:
+        return "Загрузка данных счёта..." if GameSession.is_authenticated() else "Войдите в аккаунт, чтобы увидеть баланс."
+    var lines: PackedStringArray = ["Баланс: %s" % _fmt_money(wallet_balance), ""]
+    for tx in wallet_transactions.slice(0, 5):
+        if tx is Dictionary:
+            lines.append("%s%s  %s" % ["+" if int(tx.get("amount", 0)) >= 0 else "", _fmt_money(int(tx.get("amount", 0))), str(tx.get("memo", ""))])
+    if wallet_transactions.is_empty(): lines.append("Операций пока нет.")
+    return "\n".join(lines)
+
+func _api_get(path: String, auth: bool, callback: Callable) -> void:
+    var req := HTTPRequest.new()
+    req.timeout = 8.0
+    add_child(req)
+    req.request_completed.connect(func(result: int, code: int, _headers: PackedStringArray, body: PackedByteArray) -> void:
+        req.queue_free()
+        if result != HTTPRequest.RESULT_SUCCESS or code != 200: return
+        var data = JSON.parse_string(body.get_string_from_utf8())
+        if data is Dictionary: callback.call(data)
+    )
+    var headers := PackedStringArray()
+    if auth:
+        if not GameSession.is_authenticated():
+            req.queue_free()
+            return
+        headers.append("Authorization: Bearer " + GameSession.access_token)
+    if req.request(API_ROOT + path, headers) != OK:
+        req.queue_free()
+
+func _refresh_terms() -> void:
+    _api_get("world", false, func(data: Dictionary) -> void:
+        var eco = data.get("economy", null)
+        if not eco is Dictionary: return
+        if eco.get("building_costs", null) is Dictionary: building_costs = eco["building_costs"]
+        road_cell_cost = int(eco.get("road_cell_cost", road_cell_cost))
+    )
+
+func _refresh_wallet() -> void:
+    _api_get("wallet", true, func(data: Dictionary) -> void:
+        _set_balance(int(data.get("balance", 0)))
+        wallet_transactions = data.get("transactions", [])
+        if section_panel != null and section_panel.visible and section_title.text == "Экономика":
+            section_body.text = _economy_text()
+    )
