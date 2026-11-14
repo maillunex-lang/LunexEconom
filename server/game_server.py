@@ -247,7 +247,7 @@ class Handler(BaseHTTPRequestHandler):
     def do_POST(self):
         if self._economy_post():return
         path=urlsplit(self.path).path
-        if path not in ("/auth/register","/auth/login","/auth/logout","/build"):
+        if path not in ("/auth/register","/auth/login","/auth/logout","/auth/verify/request","/auth/verify/confirm","/auth/password/request","/auth/password/reset","/auth/rotate","/auth/logout-all","/build"):
             return self._send(404,{"error":"not_found"})
         try:
             size=int(self.headers.get("Content-Length","0"))
@@ -261,6 +261,14 @@ class Handler(BaseHTTPRequestHandler):
         if path=="/auth/logout":
             bearer=self.headers.get("Authorization","")
             return self._send(*auth.logout(bearer[7:] if bearer.startswith("Bearer ") else ""))
+        if path=="/auth/verify/request":return self._send(*auth.request_verification(payload,self._client()))
+        if path=="/auth/verify/confirm":return self._send(*auth.confirm_email(payload,self._client()))
+        if path=="/auth/password/request":return self._send(*auth.request_password_reset(payload,self._client()))
+        if path=="/auth/password/reset":return self._send(*auth.reset_password(payload,self._client()))
+        if path in ("/auth/rotate","/auth/logout-all"):
+            bearer=self.headers.get("Authorization","")
+            token=bearer[7:] if bearer.startswith("Bearer ") else ""
+            return self._send(*(auth.rotate_token(token) if path=="/auth/rotate" else auth.logout_all(token)))
         owner=self._identity()
         if not owner:return self._send(401,{"error":"unauthorized"})
         npc_tick()
