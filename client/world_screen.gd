@@ -3,7 +3,7 @@ extends Control
 @onready var hud: MarginContainer = $HUD
 @onready var info: Label = $HUD/Top/Info
 func _ready() -> void:
-    add_to_group("world_hud")
+    # Keep HUD in screen coordinates, independent of the World Camera2D.\n    # Otherwise camera panning/zooming moves all menus off-screen.\n    hud.top_level = true\n    add_to_group("world_hud")
     get_viewport().size_changed.connect(_update_safe_area)
     call_deferred("_update_safe_area")
     $HUD/Top/Expand.pressed.connect(_expand)
@@ -159,7 +159,7 @@ func _setup_ui_v1() -> void:
     catalog_panel = PanelContainer.new()
     catalog_panel.name = "BuildCatalog"
     catalog_panel.add_theme_stylebox_override("panel", _style())
-    add_child(catalog_panel)
+    add_child(catalog_panel)\n    catalog_panel.top_level = true
     var content := VBoxContainer.new()
     catalog_panel.add_child(content)
     content.add_child(_ui_button("Строительство  ×", func(): catalog_panel.hide(), 230))
@@ -172,7 +172,7 @@ func _setup_ui_v1() -> void:
     placement_panel = PanelContainer.new()
     placement_panel.name = "PlacementCard"
     placement_panel.add_theme_stylebox_override("panel", _style())
-    add_child(placement_panel)
+    add_child(placement_panel)\n    placement_panel.top_level = true
     var place_content := VBoxContainer.new()
     placement_panel.add_child(place_content)
     build_hint = Label.new()
@@ -187,7 +187,7 @@ func _setup_ui_v1() -> void:
     details_panel = PanelContainer.new()
     details_panel.name = "EnterpriseDetails"
     details_panel.add_theme_stylebox_override("panel", _style())
-    add_child(details_panel)
+    add_child(details_panel)\n    details_panel.top_level = true
     var details_content := VBoxContainer.new()
     details_panel.add_child(details_content)
     var title := Label.new()
@@ -198,7 +198,7 @@ func _setup_ui_v1() -> void:
     section_panel = PanelContainer.new()
     section_panel.name = "SectionPanel"
     section_panel.add_theme_stylebox_override("panel", _style())
-    add_child(section_panel)
+    add_child(section_panel)\n    section_panel.top_level = true
     var section_content := VBoxContainer.new()
     section_panel.add_child(section_content)
     var header := HBoxContainer.new()
