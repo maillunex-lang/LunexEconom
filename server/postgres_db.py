@@ -5,9 +5,15 @@ import psycopg
 
 def connect():
     password_file = Path(os.environ.get("LUNEX_PG_PASSWORD_FILE", "/home/gamedev/projects/LunexEconom-server/secrets/postgres-password"))
-    password = password_file.read_text().strip()
-    return psycopg.connect(host="127.0.0.1", port=15439, dbname=os.environ.get("LUNEX_PG_DB", "lunexeconom"),
-                           user="lunexeconom", password=password, connect_timeout=5)
+    # CI uses an isolated PostgreSQL 16 service; production keeps its secret file.
+    password = os.environ.get("LUNEX_PG_PASSWORD")
+    if password is None:
+        password = password_file.read_text().strip()
+    return psycopg.connect(host=os.environ.get("LUNEX_PG_HOST", "127.0.0.1"),
+                           port=int(os.environ.get("LUNEX_PG_PORT", "15439")),
+                           dbname=os.environ.get("LUNEX_PG_DB", "lunexeconom"),
+                           user=os.environ.get("LUNEX_PG_USER", "lunexeconom"),
+                           password=password, connect_timeout=5)
 
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS users (
