@@ -1,0 +1,25 @@
+name: Server checks
+on:
+  push:
+    branches: [main]
+    paths: ['server/**', 'ops/**', '.github/workflows/server-check.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install dependencies
+        run: pip install "psycopg[binary]"
+      - name: Compile and test server
+        working-directory: server
+        run: |
+          python -m py_compile *.py
+          python -m unittest test_roads test_app test_auth -v
+      - name: Test deployment scripts
+        run: python -m unittest discover -s ops -p 'test_*.py' -v

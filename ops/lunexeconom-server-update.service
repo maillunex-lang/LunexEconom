@@ -1,0 +1,16 @@
+[Unit]
+Description=LunexEconom game server auto-update from GitHub main (CI-gated, with rollback)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=root
+Group=root
+ExecStart=/usr/bin/flock -n /run/lock/lunexeconom-server-update.lock /usr/bin/python3 /opt/lunexeconom-deploy/update_server.py
+TimeoutStartSec=240
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=read-only
+ReadWritePaths=/home/gamedev/projects/LunexEconom-server /var/lib/lunexeconom-server-update /run/lock

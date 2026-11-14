@@ -1,0 +1,12 @@
+[Unit]
+Description=Check GitHub main for validated LunexEconom server updates
+
+[Timer]
+OnBootSec=3min
+OnUnitActiveSec=5min
+RandomizedDelaySec=20s
+Persistent=true
+Unit=lunexeconom-server-update.service
+
+[Install]
+WantedBy=timers.target

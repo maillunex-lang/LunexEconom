@@ -1,3 +1,30 @@
+## Автообновление сервера (CI-gate + откат)
+
+Скрипт `ops/update_server.py` + `lunexeconom-server-update.timer` (каждые ~5 минут):
+1. берёт SHA последнего коммита `main`; если он уже развёрнут или ранее падал — ничего не делает;
+2. требует успешный GitHub Actions `Server checks` (`.github/workflows/server-check.yml`: компиляция + `test_roads`, `test_app`, `test_auth`) именно для этого SHA; если серверные файлы в коммите не менялись (workflow не запускался) — просто отмечает коммит текущим;
+3. скачивает `server/*.py` (без тестов) строго по SHA, проверяет синтаксис без выполнения кода;
+4. сохраняет бэкап текущих файлов (`/var/lib/lunexeconom-server-update/backups/`, 10 последних);
+5. обновляет файлы, перезапускает `lunexeconom-game.service`, ждёт `GET /health` = 200 и `ok:true`;
+6. при любой ошибке возвращает старые файлы, перезапускает службу и запоминает плохой SHA (`failed-sha`), чтобы не зацикливаться.
+
+Установка на VPS (один раз, root):
+```bash
+cd /home/gamedev/projects/LunexEconom && git pull origin main      # либо скачайте файлы из ops/
+install -m 755 ops/update_server.py /opt/lunexeconom-deploy/update_server.py
+install -m 644 ops/lunexeconom-server-update.service ops/lunexeconom-server-update.timer /etc/systemd/system/
+mkdir -p /var/lib/lunexeconom-server-update
+systemctl daemon-reload
+systemctl enable --now lunexeconom-server-update.timer
+systemctl start lunexeconom-server-update.service      # первый запуск вручную
+journalctl -u lunexeconom-server-update.service -n 30 --no-pager
+```
+Настройка через переменные окружения (`Environment=` в unit): `LUNEX_SERVER_DIR`, `LUNEX_SERVICES` (список через пробел), `LUNEX_HEALTH_URL`, `LUNEX_SERVER_USER`. Сам `update_server.py` обновляется вручную (копированием из `ops/`). Отключить: `systemctl disable --now lunexeconom-server-update.timer`.
+
+Ограничения: обновляется только Python-код; миграции схемы выполняются через `CREATE TABLE IF NOT EXISTS` при старте; деструктивные миграции требуют ручного шага. Проверено локально сухим прогоном на реальном GitHub (временные папки, без перезапуска) и юнит-тестами отката; на самом VPS ещё не запускалось.
+
+---
+
 ## PostgreSQL migration — 2026-11-14
 
 **Current active database: PostgreSQL 16, isolated Docker container `lunexeconom-postgres`.**
