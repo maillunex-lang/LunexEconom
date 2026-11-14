@@ -123,7 +123,14 @@ func _process(_delta: float) -> void:
         last_zoom = camera.zoom.x
         _update_visible_chunks()
 
-func _unhandled_input(event: InputEvent) -> void:
+func _input(event: InputEvent) -> void:
+    # Receive gestures even if a Control consumed GUI input; ignore the top HUD strip.
+    if event is InputEventScreenTouch and event.pressed:
+        var top = get_parent().get_node("HUD/Top")
+        if top.get_global_rect().has_point(event.position): return
+    if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
+        var top = get_parent().get_node("HUD/Top")
+        if top.get_global_rect().has_point(event.position): return
     if event is InputEventScreenTouch:
         if event.pressed:
             touch_points[event.index] = event.position
