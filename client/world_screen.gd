@@ -6,8 +6,6 @@ func _ready() -> void:
     add_to_group("world_hud")
     get_viewport().size_changed.connect(_update_safe_area)
     call_deferred("_update_safe_area")
-    $HUD/Top/ZoomIn.pressed.connect(func() -> void: world.set_zoom(world.camera.zoom.x * 1.25))
-    $HUD/Top/ZoomOut.pressed.connect(func() -> void: world.set_zoom(world.camera.zoom.x / 1.25))
     $HUD/Top/Expand.pressed.connect(_expand)
     $HUD/Top/Connect.pressed.connect(_connect)
     _connect_server()
