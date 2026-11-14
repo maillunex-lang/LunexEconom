@@ -293,8 +293,15 @@ def chunk(cx,cy):
 def health_details():
     """Additive diagnostics. Preserve legacy /health keys and status code."""
     details = {"ok": True, "service": "lunexeconom-game", "version": "0.2.0"}
-    commit = os.environ.get("LUNEX_COMMIT_SHA", "").strip()
-    details["commit"] = commit if len(commit) == 40 and all(c in "0123456789abcdef" for c in commit.lower()) else None
+    # The updater records the deployed revision independently of service environment.
+    # Never expose the file path or an invalid revision in the public health API.
+    sha_file = os.environ.get("LUNEX_DEPLOYED_SHA_FILE", "/var/lib/lunexeconom-server-update/deployed-sha")
+    try:
+        with open(sha_file, "r", encoding="ascii") as deployed:
+            commit = deployed.read(128).strip()
+    except (OSError, UnicodeError, ValueError):
+        commit = ""
+    details["commit"] = commit[:12] if len(commit) == 40 and all(c in "0123456789abcdefABCDEF" for c in commit) else None
     engine = os.environ.get("LUNEX_DB_ENGINE", "sqlite")
     try:
         if engine == "postgres":
