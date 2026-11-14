@@ -108,7 +108,7 @@ class AccountTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             secret = os.path.join(directory, "app-password")
             with open(secret, "w", encoding="utf-8") as handle:
-                handle.write("test-only-password\\n")
+                handle.write("test-only-password")
             settings = {
                 "LUNEX_SMTP_HOST": "smtp.mail.ru",
                 "LUNEX_SMTP_PORT": "465",
