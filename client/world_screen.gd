@@ -1,13 +1,19 @@
 extends Control
 @onready var world = $World
 @onready var hud: MarginContainer = $HUD
-@onready var info: Label = $HUD/Top/Info
+@onready var info: Label = $UIOverlay/HUD/Top/Info
 func _ready() -> void:
-    # Keep HUD in screen coordinates, independent of the World Camera2D.\n    # Otherwise camera panning/zooming moves all menus off-screen.\n    hud.top_level = true\n    add_to_group("world_hud")
+    var overlay := CanvasLayer.new()
+    overlay.name = "UIOverlay"
+    overlay.layer = 10
+    add_child(overlay)
+    hud.reparent(overlay)
+    hud.top_level = false
+    add_to_group("world_hud")
     get_viewport().size_changed.connect(_update_safe_area)
     call_deferred("_update_safe_area")
-    $HUD/Top/Expand.pressed.connect(_expand)
-    $HUD/Top/Connect.pressed.connect(_connect)
+    $UIOverlay/HUD/Top/Expand.pressed.connect(_expand)
+    $UIOverlay/HUD/Top/Connect.pressed.connect(_connect)
     _setup_build_toolbar()
     _setup_ui_v1()
     _setup_top_hud()
@@ -19,7 +25,7 @@ func _ready() -> void:
     updater.name = "Updater"
     add_child(updater)
     updater.state_changed.connect(_on_update_state)
-    $HUD/Top/Update.pressed.connect(func() -> void:
+    $UIOverlay/HUD/Top/Update.pressed.connect(func() -> void:
         if not updater.downloaded_apk.is_empty():
             updater.install_apk()
         elif not updater.manifest.is_empty() and int(updater.manifest["apk"]["version_code"]) > 11:
@@ -91,9 +97,9 @@ func _connect_server() -> void:
         req.queue_free()
 
 func _on_update_state(message: String, can_install: bool) -> void:
-    $HUD/Top/Update.text = "Установить" if can_install else "Обновить"
-    $HUD/Top/Update.tooltip_text = message
-    $HUD/Top/UpdateStatus.text = message
+    $UIOverlay/HUD/Top/Update.text = "Установить" if can_install else "Обновить"
+    $UIOverlay/HUD/Top/Update.tooltip_text = message
+    $UIOverlay/HUD/Top/UpdateStatus.text = message
 var section_panel: PanelContainer
 var section_title: Label
 var section_body: Label
@@ -142,7 +148,7 @@ func _setup_build_toolbar() -> void:
     build_toolbar.name = "BottomNavigation"
     build_toolbar.alignment = BoxContainer.ALIGNMENT_CENTER
     build_toolbar.add_theme_constant_override("separation", 8)
-    add_child(build_toolbar)
+    get_node("UIOverlay").add_child(build_toolbar)
     build_toolbar.set_anchors_preset(Control.PRESET_BOTTOM_WIDE)
     build_toolbar.offset_top = -94
     build_toolbar.offset_bottom = -20
@@ -159,7 +165,7 @@ func _setup_ui_v1() -> void:
     catalog_panel = PanelContainer.new()
     catalog_panel.name = "BuildCatalog"
     catalog_panel.add_theme_stylebox_override("panel", _style())
-    add_child(catalog_panel)\n    catalog_panel.top_level = true
+    get_node("UIOverlay").add_child(catalog_panel)
     var content := VBoxContainer.new()
     catalog_panel.add_child(content)
     content.add_child(_ui_button("Строительство  ×", func(): catalog_panel.hide(), 230))
@@ -172,7 +178,7 @@ func _setup_ui_v1() -> void:
     placement_panel = PanelContainer.new()
     placement_panel.name = "PlacementCard"
     placement_panel.add_theme_stylebox_override("panel", _style())
-    add_child(placement_panel)\n    placement_panel.top_level = true
+    get_node("UIOverlay").add_child(placement_panel)
     var place_content := VBoxContainer.new()
     placement_panel.add_child(place_content)
     build_hint = Label.new()
@@ -187,7 +193,7 @@ func _setup_ui_v1() -> void:
     details_panel = PanelContainer.new()
     details_panel.name = "EnterpriseDetails"
     details_panel.add_theme_stylebox_override("panel", _style())
-    add_child(details_panel)\n    details_panel.top_level = true
+    get_node("UIOverlay").add_child(details_panel)
     var details_content := VBoxContainer.new()
     details_panel.add_child(details_content)
     var title := Label.new()
@@ -198,7 +204,7 @@ func _setup_ui_v1() -> void:
     section_panel = PanelContainer.new()
     section_panel.name = "SectionPanel"
     section_panel.add_theme_stylebox_override("panel", _style())
-    add_child(section_panel)\n    section_panel.top_level = true
+    get_node("UIOverlay").add_child(section_panel)
     var section_content := VBoxContainer.new()
     section_panel.add_child(section_content)
     var header := HBoxContainer.new()
@@ -240,14 +246,14 @@ func _layout_ui_v1(override_size: Vector2 = Vector2.ZERO) -> void:
         section_panel.position = Vector2((size.x - section_panel.size.x) * 0.5, maxf(65, nav_top - section_panel.size.y - 12))
 
 func _setup_top_hud() -> void:
-    var top: HBoxContainer = $HUD/Top
+    var top: HBoxContainer = $UIOverlay/HUD/Top
     info.text = "Башкортостан · Моя компания"
     info.add_theme_font_size_override("font_size", 16)
-    $HUD/Top/Expand.hide()
-    $HUD/Top/Connect.hide()
-    $HUD/Top/UpdateStatus.hide()
-    $HUD/Top/Update.text = "Обновление"
-    $HUD/Top/Update.custom_minimum_size = Vector2(118, 48)
+    $UIOverlay/HUD/Top/Expand.hide()
+    $UIOverlay/HUD/Top/Connect.hide()
+    $UIOverlay/HUD/Top/UpdateStatus.hide()
+    $UIOverlay/HUD/Top/Update.text = "Обновление"
+    $UIOverlay/HUD/Top/Update.custom_minimum_size = Vector2(118, 48)
     var money := Label.new()
     money.name = "Balance"
     money.text = "₽ —"
