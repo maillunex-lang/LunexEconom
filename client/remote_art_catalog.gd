@@ -40,6 +40,7 @@ func _completed(result: int, status: int, _headers: PackedStringArray, body: Pac
             _busy = false
             return
         _items.clear()
+        var next_ids: Dictionary = {}
         for item in parsed["files"]:
             if not item is Dictionary:
                 continue
@@ -55,6 +56,11 @@ func _completed(result: int, status: int, _headers: PackedStringArray, body: Pac
             if not url.ends_with("/" + sha + ".png"):
                 continue
             _items.append({"id": art_id, "sha": sha, "url": url})
+            next_ids[art_id] = true
+        for old_id in _textures.keys():
+            if not next_ids.has(old_id):
+                _textures.erase(old_id)
+        updated.emit()
         _index = 0
         _next()
         return
