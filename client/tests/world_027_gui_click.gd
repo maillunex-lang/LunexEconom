@@ -22,6 +22,7 @@ func _run() -> void:
     press.position = p
     press.global_position = p
     press.pressed = true
+    root._input(press)
     viewport.push_input(press,true)
     await process_frame
     press = InputEventMouseButton.new()
@@ -32,6 +33,7 @@ func _run() -> void:
     viewport.push_input(press,true)
     await process_frame
     print("DEBUG hover=",viewport.gui_get_hovered_control())
+    assert(world.build_type == "farm", "real farm button click did not activate build mode")
     print("DEBUG after farm ",world.build_type, " selection=",world.selected," info=",root.info.text)
     p = confirm.get_global_rect().get_center()
     press = InputEventMouseButton.new()
@@ -48,6 +50,9 @@ func _run() -> void:
     press.pressed = false
     viewport.push_input(press,true)
     await process_frame
+    assert(world.building_at(Vector2i(1,1)) == "farm", "real build button click did not create visible building")
+    assert(world.cell_kind(1,1) == 6, "rendered tile kind must be building")
+    print("WORLD_027_GUI_CLICK_PASS mouse button press/release/visible building")
     print("DEBUG after build ",world.building_records," selection=",world.selected," info=",root.info.text)
     root.queue_free()
     quit()
