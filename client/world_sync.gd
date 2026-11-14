@@ -52,7 +52,13 @@ func poll() -> void:
         elif bool(data.get("has_more", false)): poll.call_deferred()
         sync_status.emit("Мир синхронизирован · событие %d" % cursor)
     )
-    if req.request(ROOT + "events?after=" + str(cursor)) != OK:
+    if not GameSession.is_authenticated():
+        busy = false
+        req.queue_free()
+        sync_status.emit("Для синхронизации требуется вход в аккаунт")
+        return
+    var headers := PackedStringArray(["Authorization: Bearer " + GameSession.access_token])
+    if req.request(ROOT + "events?after=" + str(cursor), headers) != OK:
         busy = false
         req.queue_free()
 
@@ -77,6 +83,11 @@ func _load_next_snapshot() -> void:
         pending.pop_front()
         if not pending.is_empty(): _load_next_snapshot.call_deferred()
     )
-    if req.request(ROOT + "chunk?cx=" + str(coord.x) + "&cy=" + str(coord.y)) != OK:
+    if not GameSession.is_authenticated():
+        syncing_chunk = false
+        req.queue_free()
+        return
+    var headers := PackedStringArray(["Authorization: Bearer " + GameSession.access_token])
+    if req.request(ROOT + "chunk?cx=" + str(coord.x) + "&cy=" + str(coord.y), headers) != OK:
         syncing_chunk = false
         req.queue_free()
