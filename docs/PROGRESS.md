@@ -6,7 +6,7 @@
 - **Клиент main:** `asset_downloader.gd`, `test_sprite_visuals.gd`, `chunk_renderer.gd` используют удалённый кэш изображений, проверку SHA-256 и скины по `object_id`. Исправление SHA-256: `0cb742f`; привязка визуального объекта к footprint: `e39f76a`.
 - **Проверено:** Godot 4.7.2 headless import без SCRIPT ERROR; Godot HTTPRequest скачал 5/5 файлов по HTTPS и загрузил все пять текстур; манифест доступен по HTTPS; nginx, студия и игровой сервер на VPS были active.
 - **Не проверено:** физическое Android-устройство и новый APK с удалённой графикой; полноценное строительство магазина 1×1; баланс новой экономики и визуальная сортировка высоких зданий. Не считать BE-100/101 закрытыми.
-- **Долг синхронизации:** на VPS `admin_studio/server.py`, `admin_studio/static/index.html`, `admin_studio/game_asset_upload.py`, `admin_studio/static/game-art.js` содержат работающее расширение админки загрузкой PNG, но на момент записи эти четыре файла **ещё не синхронизированы с GitHub main**. Сохранять изменения и не перезаписывать их при pull/deploy.
+- **Долг синхронизации:** на VPS `admin_studio/server.py`, `admin_studio/static/index.html`, `admin_studio/game_asset_upload.py`, `admin_studio/static/game-art.js` содержат работающее расширение админки загрузкой PNG, но четыре файла **синхронизированы с GitHub main** коммитами `45988eb`, `8a0a31a`, `c23bf0a`, `5b76fba`. Рабочая копия VPS может оставаться позади `main`; обновлять её только с сохранением незакоммиченных изменений и проверкой развёртывания.
 - **Следующий приоритет:** синхронизировать код World Studio в main; затем BE-101/102, полноценный BE-103, затем BE-104 и BE-106. Перед снятием блокировок провести SQLite/PostgreSQL тесты.
 
 ---
