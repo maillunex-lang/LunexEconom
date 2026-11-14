@@ -8,6 +8,8 @@ from pathlib import Path
 from urllib.parse import urlsplit
 from livepatch import Store
 from world_editor import WorldDrafts
+from world_preview import Preview
+from urllib.error import URLError
 
 ROOT = Path(__file__).resolve().parent
 STATIC = ROOT / "static"
@@ -15,6 +17,7 @@ MAX_BODY = 12 * 1024 * 1024
 
 def handler_factory(store, token):
     drafts = WorldDrafts(store)
+    preview = Preview(os.environ.get("LUNEX_WORLD_PREVIEW_UPSTREAM", "http://127.0.0.1:18767"))
     class Handler(BaseHTTPRequestHandler):
         def send(self, code, obj):
             raw = json.dumps(obj, ensure_ascii=False).encode()
@@ -66,6 +69,16 @@ def handler_factory(store, token):
                 return
             if not self.authorized():
                 return self.send(401, {"error": "unauthorized"})
+            if path == "/api/preview/chunk":
+                from urllib.parse import parse_qs
+                query = parse_qs(urlsplit(self.path).query)
+                try:
+                    cx = int(query["cx"][0]); cy = int(query["cy"][0])
+                    return self.send(200, preview.chunk(cx, cy))
+                except (ValueError, KeyError, IndexError):
+                    return self.send(400, {"error": "invalid_preview_request"})
+                except (URLError, TimeoutError, OSError):
+                    return self.send(503, {"error": "upstream_unavailable"})
             if path == "/api/cities":
                 return self.send(200, {"cities": drafts.cities()})
             if path.startswith("/api/cities/"):
@@ -89,6 +102,8 @@ def handler_factory(store, token):
                 return self.send(413, {"error": "body_limit"})
             try:
                 body = json.loads(self.rfile.read(int(length)))
+                if path == "/api/preview/check":
+                    return self.send(200, preview.collisions(drafts.city(body["city_id"]), body["cx"], body["cy"]))
                 if path == "/api/cities":
                     drafts.save_city(body["id"], body["title"], body["settings"])
                     return self.send(200, drafts.city(body["id"]))
@@ -109,6 +124,8 @@ def handler_factory(store, token):
                                              body.get("prompt", ""), body["extension"], payload)
                     return self.send(201, result)
                 return self.send(404, {"error": "not_found"})
+            except (URLError, TimeoutError, OSError):
+                return self.send(503, {"error": "upstream_unavailable"})
             except (ValueError, TypeError, KeyError, AttributeError) as exc:
                 return self.send(400, {"error": "invalid_request", "detail": str(exc)[:100]})
 

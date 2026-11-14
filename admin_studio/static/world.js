@@ -61,3 +61,9 @@ document.getElementById("panright").onclick=()=>{originX+=5;drawWorld()};
 document.getElementById("panup").onclick=()=>{originY-=5;drawWorld()};
 document.getElementById("pandown").onclick=()=>{originY+=5;drawWorld()};
 drawWorld();
+
+document.getElementById("previewcheck").onclick=async()=>{
+  try{const d=await worldApi("/api/preview/check",{city_id:activeCity,cx:Math.floor(originX/12),cy:Math.floor(originY/12)});
+    document.getElementById("previewresult").textContent="Чанк "+d.chunk.cx+","+d.chunk.cy+" · занятых клеток: "+d.chunk.cells.length+" · конфликтов черновика: "+d.conflicts.length+". Только предварительная проверка.";}
+  catch(err){document.getElementById("previewresult").textContent="Проверка недоступна: "+err.message}
+};

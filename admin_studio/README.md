@@ -21,3 +21,6 @@ Planned: game-server-owned economy and municipal building commands, authorizatio
 
 ### Draft world editor (iteration 2)
 Admin endpoints: GET/POST /api/cities, GET /api/cities/{id}, POST /api/buildings, POST /api/buildings/remove, POST /api/forecast and POST /api/export-city. Drafts persist in the studio's separate SQLite database. All modifications are inert until an explicitly designed authoritative game-server command flow is implemented. Only municipal school/hospital/park objects are supported; no player-owned plots can be changed. Forecast is illustrative population arithmetic only.
+
+### Read-only upstream preview (iteration 3)
+Set LUNEX_WORLD_PREVIEW_UPSTREAM to the trusted, operator-controlled game server origin (default http://127.0.0.1:18767). Authenticated GET /api/preview/chunk?cx=0&cy=0 and POST /api/preview/check with city_id,cx,cy fetch a live /chunk snapshot and flag draft conflicts. This is a best-effort preview, not a placement authorization. Never allow user-defined upstream URLs. In production, use an internal network with explicit network ACLs and no exposure of private game APIs.

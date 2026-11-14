@@ -21,3 +21,9 @@ Base: main a9bb74cffb532107d5932e09bb81fc5433e32c34. Isolated branch ChatGPTAdmi
 - Added simple web grid editor with click-to-place and panning, plus illustrative demographic preview. It is NOT the authoritative isometric game map or full economic simulation.
 - Added authenticated API routes and integration tests. No deployment or main merge.
 - Before real God Mode: introduce game-server RBAC, preview of real occupied cells, financial ledger integration, migrations, staged approval and idempotent authoritative commands.
+
+## Iteration 3 · Read-only world collision preview
+- Added fixed-upstream, authenticated chunk preview for the existing game-server /chunk contract; bounded coordinates, response sizes, request timeout and filtered cell records.
+- Added preview-only conflict checks against municipal draft footprints, with web button and two isolated stub-server tests.
+- Preview never writes to game world or financial ledgers; concurrent server changes can invalidate the result. Live placement requires a future server-authoritative transaction and RBAC.
+- No production deployment, nginx changes or Android patch rollout.
