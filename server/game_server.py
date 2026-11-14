@@ -16,6 +16,7 @@ import taxes
 import city
 import npc
 import clock
+import contracts
 if os.environ.get('LUNEX_DB_ENGINE') == 'postgres':
     import postgres_world
     import postgres_db
@@ -232,6 +233,42 @@ def wallet(owner):
         db.commit()
     return 200,result
 
+def _contract_command(owner, payload, fn):
+    request_id=payload.get("request_id")
+    try:uuid.UUID(request_id)
+    except (ValueError,TypeError,AttributeError):return 400,{"error":"invalid_request_id"}
+    with LOCK, connect() as db:
+        db.execute("BEGIN IMMEDIATE")
+        prev=db.execute("SELECT response FROM commands WHERE owner=? AND request_id=?",(owner,request_id)).fetchone()
+        if prev:return 200,json.loads(prev[0])
+        now=int(time.time())
+        clk=clock.state(db,"?",now)
+        production.advance(db,"?",clk,now)
+        status,result=fn(db,"?",owner,payload,clk["month_index"],now)
+        if status==201:
+            db.execute("INSERT INTO commands VALUES(?,?,?)",(owner,request_id,json.dumps(result)))
+        db.commit()
+        return status,result
+
+def contracts_state(owner):
+    with LOCK, connect() as db:
+        db.execute("BEGIN IMMEDIATE")
+        now=int(time.time())
+        clk=clock.state(db,"?",now)
+        production.advance(db,"?",clk,now)
+        result=contracts.view(db,"?",owner,clk["month_index"])
+        db.commit()
+    return 200,result
+
+def contracts_offer(owner,payload):
+    return _contract_command(owner,payload,contracts.offer)
+
+def contracts_accept(owner,payload):
+    return _contract_command(owner,payload,contracts.accept)
+
+def contracts_cancel(owner,payload):
+    return _contract_command(owner,payload,contracts.cancel)
+
 def events(after):
     if type(after) is not int or after<0:return 400,{"error":"invalid_cursor"}
     with connect() as db:
@@ -271,7 +308,7 @@ def health_details():
         details["database"] = {"engine": engine, "status": "unavailable"}
     return details
 
-ECONOMY_POST={"/sell":"sell","/loan":"loan","/city/taxes":"city_taxes","/city/build":"city_build","/city/candidacy":"city_candidacy","/city/vote":"city_vote"}
+ECONOMY_POST={"/sell":"sell","/loan":"loan","/city/taxes":"city_taxes","/city/build":"city_build","/city/candidacy":"city_candidacy","/city/vote":"city_vote","/contracts/offer":"contracts_offer","/contracts/accept":"contracts_accept","/contracts/cancel":"contracts_cancel"}
 
 class Handler(BaseHTTPRequestHandler):
     def _send(self,status,data):
@@ -308,7 +345,11 @@ class Handler(BaseHTTPRequestHandler):
         return True
     def do_GET(self):
         url=urlsplit(self.path)
-        if url.path in ("/market","/wallet","/world","/city"):npc_tick()
+        if url.path in ("/market","/wallet","/world","/city","/contracts"):npc_tick()
+        if url.path=="/contracts":
+            owner=self._identity()
+            if not owner:return self._send(401,{"error":"unauthorized"})
+            return self._send(*contracts_state(owner))
         if url.path=="/city":return self._send(*city_state(self._identity()))
         if url.path=="/health":return self._send(200,health_details())
         if url.path=="/world":
@@ -374,6 +415,10 @@ if os.environ.get("LUNEX_DB_ENGINE") == "postgres":
     city_candidacy = postgres_world.city_candidacy
     city_vote = postgres_world.city_vote
     loan = postgres_world.loan
+    contracts_state = postgres_world.contracts_state
+    contracts_offer = postgres_world.contracts_offer
+    contracts_accept = postgres_world.contracts_accept
+    contracts_cancel = postgres_world.contracts_cancel
     NPC_CONNECT,NPC_PH = postgres_db.connect,"%s"
 
 if __name__=="__main__":

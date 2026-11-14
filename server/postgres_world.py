@@ -10,6 +10,7 @@ import production
 import taxes
 import city
 import clock
+import contracts
 
 CHUNK = 12
 MAX_COORD = 10000
@@ -164,6 +165,39 @@ def wallet(owner):
         db.execute("SELECT pg_advisory_xact_lock(20261114)")
         now=int(time.time())
         return 200,production.wallet(db,"%s",owner,clock.state(db,"%s",now),now)
+
+def _contract_command(owner, payload, fn):
+    request_id=payload.get("request_id")
+    try:uuid.UUID(request_id)
+    except (ValueError,TypeError,AttributeError):return 400,{"error":"invalid_request_id"}
+    with postgres_db.connect() as db:
+        db.execute("SELECT pg_advisory_xact_lock(20261114)")
+        prev=db.execute("SELECT response FROM commands WHERE owner=%s AND request_id=%s",(owner,request_id)).fetchone()
+        if prev:return 200,json.loads(prev[0])
+        now=int(time.time())
+        clk=clock.state(db,"%s",now)
+        production.advance(db,"%s",clk,now)
+        status,result=fn(db,"%s",owner,payload,clk["month_index"],now)
+        if status==201:
+            db.execute("INSERT INTO commands(owner,request_id,response) VALUES(%s,%s,%s)",(owner,request_id,json.dumps(result)))
+        return status,result
+
+def contracts_state(owner):
+    with postgres_db.connect() as db:
+        db.execute("SELECT pg_advisory_xact_lock(20261114)")
+        now=int(time.time())
+        clk=clock.state(db,"%s",now)
+        production.advance(db,"%s",clk,now)
+        return 200,contracts.view(db,"%s",owner,clk["month_index"])
+
+def contracts_offer(owner,payload):
+    return _contract_command(owner,payload,contracts.offer)
+
+def contracts_accept(owner,payload):
+    return _contract_command(owner,payload,contracts.accept)
+
+def contracts_cancel(owner,payload):
+    return _contract_command(owner,payload,contracts.cancel)
 
 def events(after):
     if type(after) is not int or after<0:return 400,{"error":"invalid_cursor"}

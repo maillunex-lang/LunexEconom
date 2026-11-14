@@ -345,5 +345,27 @@ class PostgresEconomyTests(unittest.TestCase):
             self.assertEqual(postgres_world.clock_state()["month_index"], 5)
 
 
+    def test_player_contract_delivers_off_market_and_keeps_the_ledger_closed(self):
+        self.build("alice", "farm")
+        self.build("bob", "factory")
+        offer = game_server.contracts_offer("alice", {"product": "honey", "qty": 20, "price": 200, "term_months": 1, "penalty": 0, "request_id": rid()})
+        self.assertEqual(offer[0], 201, offer[1])
+        accepted = game_server.contracts_accept("bob", {"offer_id": offer[1]["offer"]["id"], "request_id": rid()})
+        self.assertEqual(accepted[0], 201, accepted[1])
+        self.month("alice")
+        row = self.sql("SELECT delivered,shortfall,paid,penalty_paid FROM trade_deliveries")[0]
+        self.assertEqual(row, (20, 0, 4000, 0))
+        supply, demand = self.sql("SELECT supply,demand FROM market_prices WHERE product='honey' AND month_index=0")[0]
+        self.assertEqual(supply, 80)
+        permille = self.sql("SELECT demand_permille FROM population WHERE month_index=0")[0][0]
+        import economy as economy_mod
+        self.assertEqual(demand, economy_mod.demand_for("honey", 0, permille / 1000.0))
+        paid = self.sql("SELECT COALESCE(SUM(e.amount),0) FROM ledger_entries e JOIN ledger_tx t ON t.id=e.tx_id WHERE t.kind='contract' AND e.account=%s",
+                        (economy_mod.player_account("bob"),))[0][0]
+        self.assertEqual(int(paid), -4000)
+        self.assertEqual(self.sql("SELECT status FROM trade_contracts")[0][0], "completed")
+        self.assert_ledger()
+
+
 if __name__ == "__main__":
     unittest.main()

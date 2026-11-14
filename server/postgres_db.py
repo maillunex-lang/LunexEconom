@@ -80,6 +80,26 @@ CREATE TABLE IF NOT EXISTS commands (
  owner TEXT NOT NULL, request_id TEXT NOT NULL, response TEXT NOT NULL,
  PRIMARY KEY(owner,request_id)
 );
+CREATE TABLE IF NOT EXISTS trade_offers (
+ id TEXT PRIMARY KEY, supplier TEXT NOT NULL, product TEXT NOT NULL, qty BIGINT NOT NULL,
+ price BIGINT NOT NULL, term_months INTEGER NOT NULL, penalty BIGINT NOT NULL, status TEXT NOT NULL,
+ created_month BIGINT NOT NULL, created BIGINT NOT NULL
+);
+CREATE TABLE IF NOT EXISTS trade_contracts (
+ id TEXT PRIMARY KEY, offer_id TEXT NOT NULL, supplier TEXT NOT NULL, buyer TEXT NOT NULL,
+ product TEXT NOT NULL, qty BIGINT NOT NULL, price BIGINT NOT NULL, penalty BIGINT NOT NULL,
+ start_month BIGINT NOT NULL, end_month BIGINT NOT NULL, status TEXT NOT NULL,
+ closed_reason TEXT NOT NULL DEFAULT '', created BIGINT NOT NULL
+);
+CREATE TABLE IF NOT EXISTS trade_deliveries (
+ contract_id TEXT NOT NULL, month_index BIGINT NOT NULL, delivered BIGINT NOT NULL,
+ shortfall BIGINT NOT NULL, paid BIGINT NOT NULL, penalty_paid BIGINT NOT NULL,
+ PRIMARY KEY(contract_id, month_index)
+);
+CREATE TABLE IF NOT EXISTS trade_debts (
+ debtor TEXT NOT NULL, creditor TEXT NOT NULL, amount BIGINT NOT NULL,
+ PRIMARY KEY(debtor, creditor)
+);
 """
 
 def init():

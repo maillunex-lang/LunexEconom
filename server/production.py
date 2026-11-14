@@ -146,6 +146,8 @@ def liquidate(db, ph, owner, month, now):
               last_bankruptcy_month=month, written_off=st["written_off"] + (owed - paid) + lost_to_bank)
     _save_status(db, ph, owner, st)
     taxes.save_state(db, ph, owner, st)
+    import contracts as trade_contracts
+    trade_contracts.on_bankruptcy(db, ph, owner, month, now)
 
 
 def sell_building(db, ph, owner, object_id, now):
@@ -249,11 +251,13 @@ def step_month(db, ph, month, now):
 
     consumed = input_products()
     prices = {}
+    import contracts as trade_contracts
+    contract_deliveries = []
     for product in product_order():
         ref = economy.MARKET[product]["reference_price"]
         previous = _price_row(db, ph, product, month - 1)
         hold = previous is not None and previous < ref * economy.HOLD_BELOW
-        offers = {}
+        produced_map = {}
         for owner, c in companies.items():
             produced = 0
             for kind, factor in c["buildings"]:
@@ -264,6 +268,11 @@ def step_month(db, ph, month, now):
                 out = int(out * staffing * (_input_fraction(c) if spec.get("inputs") else 1.0) * (economy.DISTRESS_OUTPUT if c["distress"] else 1.0)
                           * (1 + economy.SOCIAL_PRODUCTIVITY * quality))
                 produced += out
+            produced_map[owner] = produced
+        contract_deliveries.extend(trade_contracts.deliver(db, ph, product, month, companies, produced_map))
+        offers = {}
+        for owner, c in companies.items():
+            produced = produced_map.get(owner, 0)
             stock = c["stock"].get(product, 0)
             need = c["needs"].get(product, 0)
             if product in consumed and need:
@@ -381,6 +390,7 @@ def step_month(db, ph, month, now):
             economy.post(db, ph, "monthly", "Проценты по кредиту %d" % paid, [(economy.player_account(owner), -paid), (economy.BANK, paid)], now)
         bank.paid_interest(db, ph, owner, paid)
         bank.capitalize(db, ph, owner, due - paid)
+    trade_contracts.settle(db, ph, month, contract_deliveries, now, bankrupt)
     for owner in bankrupt:
         liquidate(db, ph, owner, month, now)
     city.monthly(db, ph, month, now)

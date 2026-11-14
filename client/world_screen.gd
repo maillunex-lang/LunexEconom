@@ -125,6 +125,8 @@ var catalog_buttons: Array[Button] = []
 var ui_pending := false
 var build_toolbar: HBoxContainer
 var build_hint: Label
+var contracts_panel: Control
+var contract_shortcut: Control
 var toolbar_touches: Dictionary = {}
 var toolbar_mouse_button: Button = null
 
@@ -266,6 +268,10 @@ func _setup_ui_v1() -> void:
     vote_actions = HBoxContainer.new()
     section_content.add_child(vote_actions)
     vote_actions.hide()
+    var contracts_ui = load("res://contracts_panel.gd").new()
+    contracts_ui.name = "ContractsUI"
+    add_child(contracts_ui)
+    contracts_ui.setup(self)
     section_panel.hide()
     get_viewport().size_changed.connect(_layout_ui_v1)
     call_deferred("_layout_ui_v1")
@@ -340,6 +346,8 @@ func _open_section(section: String) -> void:
     catalog_panel.hide()
     placement_panel.hide()
     details_panel.hide()
+    if contracts_panel != null:
+        contracts_panel.hide()
     section_title.text = section
     match section:
         "Город":
@@ -353,12 +361,16 @@ func _open_section(section: String) -> void:
         "Меню":
             section_body.text = "Башкирия: Мёд и Нефть\nВерсия интерфейса 1.0\nУправление: одним пальцем двигайте карту, двумя изменяйте масштаб. Дороги к зданиям прокладываются автоматически."
     section_actions.visible = section == "Экономика"
+    if contract_shortcut != null:
+        contract_shortcut.visible = section == "Экономика"
     _update_city_actions(section == "Город")
     _show_panel(section_panel)
     call_deferred("_layout_ui_v1")
 
 func _open_catalog() -> void:
     world.cancel_build()
+    if contracts_panel != null:
+        contracts_panel.hide()
     _show_panel(catalog_panel)
     placement_panel.hide()
     details_panel.hide()
@@ -480,7 +492,7 @@ func _new_build_request_id() -> String:
 
 func is_world_ui_point(point: Vector2) -> bool:
     if $UIOverlay/HUD/Top.get_global_rect().has_point(point): return true
-    for panel in [build_toolbar, catalog_panel, placement_panel, details_panel, section_panel]:
+    for panel in [build_toolbar, catalog_panel, placement_panel, details_panel, section_panel, contracts_panel]:
         if panel != null and panel.visible and panel.get_global_rect().has_point(point):
             return true
     return false
@@ -490,7 +502,7 @@ func is_world_ui_point(point: Vector2) -> bool:
 var ui_touch_buttons: Dictionary = {}
 var ui_mouse_button: Button = null
 func _hit_ui_button(point: Vector2) -> Button:
-    for panel in [catalog_panel, placement_panel, details_panel, section_panel, build_toolbar]:
+    for panel in [catalog_panel, placement_panel, details_panel, section_panel, build_toolbar, contracts_panel]:
         if panel == null or not panel.visible or not panel.get_global_rect().has_point(point):
             continue
         var stack: Array[Node] = [panel]

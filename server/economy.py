@@ -137,6 +137,18 @@ MARKET = {
 MIN_PRICE_K = 0.25
 MAX_PRICE_K = 2.5
 
+# ---- Direct contracts between players (see docs/CONTRACTS.md) ----
+# Price is checked against the reference (base) price, not the live quote, so the bound does not move under the player.
+CONTRACT_PRODUCTS = ("honey", "oil", "goods")
+CONTRACT_PRICE_MIN_K = 0.50
+CONTRACT_PRICE_MAX_K = 2.00
+CONTRACT_QTY_MIN = 1
+CONTRACT_QTY_MAX = 10_000
+CONTRACT_TERM_MIN = 1
+CONTRACT_TERM_MAX = 24
+CONTRACT_MAX_ACTIVE = 6
+CONTRACT_MAX_OPEN = 6
+
 SCHEMA = (
     "CREATE TABLE IF NOT EXISTS wallets(account TEXT PRIMARY KEY, balance BIGINT NOT NULL)",
     "CREATE TABLE IF NOT EXISTS ledger_tx(id TEXT PRIMARY KEY, kind TEXT NOT NULL, memo TEXT NOT NULL, created BIGINT NOT NULL)",
@@ -161,6 +173,10 @@ SCHEMA = (
     "CREATE TABLE IF NOT EXISTS company_state(owner TEXT PRIMARY KEY, settled_through BIGINT NOT NULL)",
     "CREATE TABLE IF NOT EXISTS monthly_reports(owner TEXT NOT NULL, month_index BIGINT NOT NULL, revenue BIGINT NOT NULL, upkeep BIGINT NOT NULL, profit BIGINT NOT NULL, buildings INTEGER NOT NULL, PRIMARY KEY(owner, month_index))",
     "CREATE TABLE IF NOT EXISTS ledger_entries(tx_id TEXT NOT NULL REFERENCES ledger_tx(id), account TEXT NOT NULL, amount BIGINT NOT NULL, PRIMARY KEY(tx_id, account))",
+    "CREATE TABLE IF NOT EXISTS trade_offers(id TEXT PRIMARY KEY, supplier TEXT NOT NULL, product TEXT NOT NULL, qty BIGINT NOT NULL, price BIGINT NOT NULL, term_months INTEGER NOT NULL, penalty BIGINT NOT NULL, status TEXT NOT NULL, created_month BIGINT NOT NULL, created BIGINT NOT NULL)",
+    "CREATE TABLE IF NOT EXISTS trade_contracts(id TEXT PRIMARY KEY, offer_id TEXT NOT NULL, supplier TEXT NOT NULL, buyer TEXT NOT NULL, product TEXT NOT NULL, qty BIGINT NOT NULL, price BIGINT NOT NULL, penalty BIGINT NOT NULL, start_month BIGINT NOT NULL, end_month BIGINT NOT NULL, status TEXT NOT NULL, closed_reason TEXT NOT NULL DEFAULT '', created BIGINT NOT NULL)",
+    "CREATE TABLE IF NOT EXISTS trade_deliveries(contract_id TEXT NOT NULL, month_index BIGINT NOT NULL, delivered BIGINT NOT NULL, shortfall BIGINT NOT NULL, paid BIGINT NOT NULL, penalty_paid BIGINT NOT NULL, PRIMARY KEY(contract_id, month_index))",
+    "CREATE TABLE IF NOT EXISTS trade_debts(debtor TEXT NOT NULL, creditor TEXT NOT NULL, amount BIGINT NOT NULL, PRIMARY KEY(debtor, creditor))",
 )
 
 
@@ -176,6 +192,9 @@ def terms():
     return {"currency": CURRENCY, "start_capital": START_CAPITAL,
             "building_costs": dict(BUILD_COST), "road_cell_cost": ROAD_CELL_COST,
             "hold_below": HOLD_BELOW,
+            "contracts": {"products": list(CONTRACT_PRODUCTS), "price_min_k": CONTRACT_PRICE_MIN_K, "price_max_k": CONTRACT_PRICE_MAX_K,
+                          "qty": [CONTRACT_QTY_MIN, CONTRACT_QTY_MAX], "term_months": [CONTRACT_TERM_MIN, CONTRACT_TERM_MAX],
+                          "max_active": CONTRACT_MAX_ACTIVE, "max_open": CONTRACT_MAX_OPEN},
             "city": {"social_cost": {k: BUILD_COST[k] for k in SOCIAL_KINDS}, "serves": {k: PRODUCTION[k]["serves"] for k in SOCIAL_KINDS},
                      "mayor_salary": MAYOR_SALARY, "election_period": ELECTION_PERIOD, "election_fee": ELECTION_FEE,
                      "bonus_share": MAYOR_BONUS_SHARE, "term_bonus": [[t, b] for t, b in TERM_BONUS], "max_terms": MAX_CONSECUTIVE_TERMS,
