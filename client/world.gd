@@ -8,6 +8,8 @@ const PLANNER_SCRIPT = preload("res://construction_planner.gd")
 var planner = PLANNER_SCRIPT.new()
 const PATCH_VISUALS_SCRIPT = preload("res://patch_visuals.gd")
 var patch_visuals: Node
+const REMOTE_ART_SCRIPT = preload("res://remote_art_catalog.gd")
+var remote_art: Node
 ## Every building kind a server snapshot or event may carry ("house" = a city-generated dwelling, never player-built).
 const BUILDING_KINDS := ["farm", "mine", "factory", "warehouse", "shop", "school", "hospital", "park", "house"]
 
@@ -51,6 +53,10 @@ func _ready() -> void:
     patch_visuals.name = "PatchVisuals"
     add_child(patch_visuals)
     patch_visuals.visuals_changed.connect(_redraw_all_chunks)
+    remote_art = REMOTE_ART_SCRIPT.new()
+    remote_art.name = "RemoteArtCatalog"
+    add_child(remote_art)
+    remote_art.updated.connect(_redraw_all_chunks)
     # No automatic activation until signed manifest and deployment review.
     camera = Camera2D.new()
     camera.name = "WorldCamera"
