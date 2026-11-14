@@ -195,8 +195,8 @@ func _setup_ui_v1() -> void:
     get_viewport().size_changed.connect(_layout_ui_v1)
     call_deferred("_layout_ui_v1")
 
-func _layout_ui_v1() -> void:
-    var size := get_viewport_rect().size
+func _layout_ui_v1(override_size: Vector2 = Vector2.ZERO) -> void:
+    var size := override_size if override_size != Vector2.ZERO else get_viewport_rect().size
     var usable_width := size.x - 40.0
     catalog_panel.size.x = minf(565.0, usable_width)
     placement_panel.size.x = minf(420.0, usable_width)
