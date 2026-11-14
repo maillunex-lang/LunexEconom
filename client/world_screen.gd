@@ -10,6 +10,7 @@ func _ready() -> void:
     $HUD/Top/Connect.pressed.connect(_connect)
     _setup_build_toolbar()
     _setup_ui_v1()
+    _setup_top_hud()
     _connect_server()
     var sync = load("res://world_sync.gd").new()
     sync.world = world
@@ -55,7 +56,8 @@ func _update_safe_area() -> void:
     hud.add_theme_constant_override("margin_bottom", bottom)
     if build_toolbar != null:
         build_toolbar.offset_bottom = -float(bottom)
-        build_toolbar.offset_top = -float(bottom) - 72.0
+        build_toolbar.offset_top = -float(bottom) - 68.0
+    if catalog_panel != null: _layout_ui_v1()
 
 func _expand() -> void:
     world.expand_city(2)
@@ -107,6 +109,8 @@ func _style() -> StyleBoxFlat:
     st.bg_color = Color(0.08, 0.17, 0.15, 0.94)
     st.set_corner_radius_all(16)
     st.set_content_margin_all(12)
+    st.border_color = Color("#315647")
+    st.set_border_width_all(1)
     return st
 
 func _ui_button(label: String, callback: Callable, width: float = 130) -> Button:
@@ -114,7 +118,19 @@ func _ui_button(label: String, callback: Callable, width: float = 130) -> Button
     b.text = label
     b.mouse_filter = Control.MOUSE_FILTER_IGNORE
     b.custom_minimum_size = Vector2(width, 58)
-    b.add_theme_font_size_override("font_size", 18)
+    b.add_theme_font_size_override("font_size", 16)
+    var normal := StyleBoxFlat.new()
+    normal.bg_color = Color("#315647")
+    normal.set_corner_radius_all(12)
+    normal.set_content_margin_all(7)
+    b.add_theme_stylebox_override("normal", normal)
+    var hover := normal.duplicate()
+    hover.bg_color = Color("#48725d")
+    b.add_theme_stylebox_override("hover", hover)
+    var pressed := normal.duplicate()
+    pressed.bg_color = Color("#e7b45d")
+    b.add_theme_stylebox_override("pressed", pressed)
+    b.add_theme_color_override("font_color", Color("#e8efe9"))
     b.pressed.connect(callback)
     return b
 
@@ -127,11 +143,14 @@ func _setup_build_toolbar() -> void:
     build_toolbar.set_anchors_preset(Control.PRESET_BOTTOM_WIDE)
     build_toolbar.offset_top = -94
     build_toolbar.offset_bottom = -20
-    build_toolbar.add_child(_ui_button("Строить", func(): catalog_panel.show(); placement_panel.hide(); details_panel.hide()))
+    build_toolbar.add_child(_ui_button("Строить", _open_catalog))
     build_toolbar.add_child(_ui_button("Дороги", func(): info.text = "Выберите участок для дороги"))
     build_toolbar.add_child(_ui_button("Экономика", func(): info.text = "Экономика: в разработке"))
     build_toolbar.add_child(_ui_button("Логистика", func(): info.text = "Логистика: в разработке"))
     build_toolbar.add_child(_ui_button("Меню", func(): info.text = "Меню: в разработке"))
+    for child in build_toolbar.get_children():
+        child.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+    build_toolbar.add_theme_constant_override("separation", 6)
 
 func _setup_ui_v1() -> void:
     catalog_panel = PanelContainer.new()
@@ -178,9 +197,37 @@ func _setup_ui_v1() -> void:
 
 func _layout_ui_v1() -> void:
     var size := get_viewport_rect().size
-    catalog_panel.position = Vector2(maxf(20, (size.x - catalog_panel.size.x) * 0.5), size.y - catalog_panel.size.y - 125)
-    placement_panel.position = Vector2(maxf(20, (size.x - placement_panel.size.x) * 0.5), size.y - placement_panel.size.y - 125)
+    var usable_width := size.x - 40.0
+    catalog_panel.size.x = minf(565.0, usable_width)
+    placement_panel.size.x = minf(420.0, usable_width)
+    details_panel.size.x = minf(275.0, usable_width * 0.46)
+    catalog_panel.position = Vector2((size.x - catalog_panel.size.x) * 0.5, size.y - catalog_panel.size.y - 115)
+    placement_panel.position = Vector2((size.x - placement_panel.size.x) * 0.5, size.y - placement_panel.size.y - 115)
     details_panel.position = Vector2(size.x - details_panel.size.x - 22, maxf(85, (size.y - details_panel.size.y) * 0.5))
+
+func _setup_top_hud() -> void:
+    var top: HBoxContainer = $HUD/Top
+    info.text = "Башкортостан · Моя компания"
+    info.add_theme_font_size_override("font_size", 16)
+    $HUD/Top/Expand.hide()
+    $HUD/Top/Connect.hide()
+    $HUD/Top/UpdateStatus.hide()
+    $HUD/Top/Update.text = "Обновление"
+    $HUD/Top/Update.custom_minimum_size = Vector2(118, 48)
+    var money := Label.new()
+    money.name = "Balance"
+    money.text = "₽ —"
+    money.tooltip_text = "Баланс появится после подключения экономики"
+    money.add_theme_font_size_override("font_size", 18)
+    top.add_child(money)
+    top.move_child(money, 1)
+
+func _open_catalog() -> void:
+    world.cancel_build()
+    catalog_panel.show()
+    placement_panel.hide()
+    details_panel.hide()
+    call_deferred("_layout_ui_v1")
 
 func _choose_ui_build(kind: String) -> void:
     world.choose_build(kind)
@@ -188,6 +235,7 @@ func _choose_ui_build(kind: String) -> void:
     placement_panel.show()
     details_panel.hide()
     build_hint.text = "Выберите участок на карте"
+    call_deferred("_layout_ui_v1")
 
 func _cancel_ui_build() -> void:
     world.cancel_build()
