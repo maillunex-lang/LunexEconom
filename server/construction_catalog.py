@@ -53,6 +53,7 @@ FUTURE_CATEGORIES = (
 def view():
     """Public metadata only: no fictional prices, sizes or build permissions."""
     import economy
+    import building_dimensions
     base = [
         {"kind": kind, "build_cost": price, "enabled": True}
         for kind, price in economy.BUILD_COST.items()
@@ -62,7 +63,7 @@ def view():
          "base_kind": "shop", "enabled": False}
         for slug, name, category, role in TRADE_SPECIALIZATIONS
     ]
-    return {"version": CATALOG_VERSION, "base_buildings": base,
+    return {"version": CATALOG_VERSION, "building_dimensions": building_dimensions.view(), "base_buildings": base,
             "trade_specializations": trade,
             "future_categories": list(FUTURE_CATEGORIES),
             "note": "Specializations are design-only and cannot yet be built."}
