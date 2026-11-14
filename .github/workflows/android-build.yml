@@ -1,17 +1,58 @@
-name: Android APK (manual beta build)
+name: Android APK build (manual)
 on:
   workflow_dispatch:
 permissions:
   contents: read
 jobs:
-  android:
+  build:
     runs-on: ubuntu-latest
     timeout-minutes: 45
     steps:
       - uses: actions/checkout@v4
-      - name: Prepare Godot and Android toolchain
+      - uses: android-actions/setup-android@v3
+      - name: Install Android SDK components
         run: |
-          echo "Android build remains gated until export presets, keystore handling and verified Android client are configured."
-          echo "No APK is published from this workflow."
-      - name: Check project exists
-        run: test -f client/project.godot
+          yes | sdkmanager --licenses >/dev/null || true
+          sdkmanager "platform-tools" "platforms;android-35" "build-tools;35.0.0"
+      - name: Install Godot 4.7.2 and Android export templates
+        run: |
+          set -euo pipefail
+          mkdir -p "$HOME/.local/share/godot/export_templates/4.7.2.stable" "$RUNNER_TEMP/godot"
+          curl -fL --retry 3 --max-time 180 "https://github.com/godotengine/godot-builds/releases/download/4.7.2-stable/Godot_v4.7.2-stable_linux.x86_64.zip" -o "$RUNNER_TEMP/godot/godot.zip"
+          unzip -q "$RUNNER_TEMP/godot/godot.zip" -d "$RUNNER_TEMP/godot"
+          GODOT=$(find "$RUNNER_TEMP/godot" -maxdepth 2 -type f -name 'Godot_v4.7.2-stable_linux.x86_64' -print -quit)
+          test -n "$GODOT"
+          chmod +x "$GODOT"
+          echo "GODOT=$GODOT" >> "$GITHUB_ENV"
+          curl -fL --retry 3 --max-time 240 "https://github.com/godotengine/godot-builds/releases/download/4.7.2-stable/Godot_v4.7.2-stable_export_templates.tpz" -o "$RUNNER_TEMP/godot/templates.tpz"
+          unzip -q "$RUNNER_TEMP/godot/templates.tpz" -d "$RUNNER_TEMP/godot/templates"
+          cp -a "$RUNNER_TEMP/godot/templates/templates/." "$HOME/.local/share/godot/export_templates/4.7.2.stable/"
+      - name: Validate Android export configuration
+        run: |
+          test -f client/project.godot
+          test -f client/export_presets.cfg || { echo "Android export preset not yet configured. Do not publish a fake APK."; exit 1; }
+      - name: Export Android debug APK
+        run: |
+          set -euo pipefail
+          mkdir -p build
+          "$GODOT" --headless --path client --editor --quit
+          "$GODOT" --headless --path client --export-debug "Android" "$GITHUB_WORKSPACE/build/Bashkiria-Honey-Oil-debug.apk"
+          python3 - <<'PY'
+          from pathlib import Path
+          import zipfile
+          p=Path("build/Bashkiria-Honey-Oil-debug.apk")
+          assert p.is_file() and p.stat().st_size>100_000
+          with zipfile.ZipFile(p) as z:
+              assert "AndroidManifest.xml" in z.namelist()
+              assert z.testzip() is None
+          print("APK ZIP integrity passed:",p.stat().st_size,"bytes")
+          PY
+          sha256sum build/*.apk | tee build/SHA256SUMS
+      - uses: actions/upload-artifact@v4
+        with:
+          name: android-debug-apk
+          path: |
+            build/*.apk
+            build/SHA256SUMS
+          if-no-files-found: error
+          retention-days: 14
