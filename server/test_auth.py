@@ -59,6 +59,49 @@ class AccountTests(unittest.TestCase):
         with patch.object(self.auth.time, "time", return_value=1_800_000_601):
             self.assertEqual(self.auth.login(payload, "window-client")[0], 401)
 
+    def test_rotate_and_logout_all(self):
+        status, data = self.auth.register({"username":"RotateUser","email":"rotate@example.test","password":"abcd"},"r")
+        self.assertEqual(status, 200)
+        old = data["token"]
+        other = self.auth.login({"identifier":"RotateUser","password":"abcd"},"r2")[1]["token"]
+        status, rotated = self.auth.rotate_token(old)
+        self.assertEqual(status, 200)
+        self.assertEqual(self.auth.profile(old)[0], 401)
+        self.assertEqual(self.auth.profile(rotated["token"])[0], 200)
+        self.assertEqual(self.auth.logout_all(rotated["token"])[0], 200)
+        self.assertEqual(self.auth.profile(other)[0], 401)
+        self.assertEqual(self.auth.profile(rotated["token"])[0], 401)
+
+    def test_email_verification_and_password_reset(self):
+        from unittest.mock import patch
+        status, data = self.auth.register({"username":"EmailUser","email":"email@example.test","password":"abcd"},"email-register")
+        self.assertEqual(status, 200)
+        old_token = data["token"]
+        delivered = []
+        def fake_email(_address, _subject, message):
+            delivered.append(message.split(": ")[-1])
+            return True
+        with patch.object(self.auth, "_send_account_email", side_effect=fake_email):
+            self.assertEqual(self.auth.request_verification({"email":"email@example.test"},"verify-client")[0], 200)
+            verify_token = delivered.pop()
+            self.assertEqual(self.auth.confirm_email({"token":verify_token},"confirm-client")[0], 200)
+            self.assertEqual(self.auth.confirm_email({"token":verify_token},"confirm-client")[0], 400)
+            self.assertEqual(self.auth.request_password_reset({"email":"email@example.test"},"reset-client")[0], 200)
+            reset_token = delivered.pop()
+        self.assertEqual(self.auth.reset_password({"token":reset_token,"password":"new4"},"reset-confirm")[0], 200)
+        self.assertEqual(self.auth.profile(old_token)[0], 401)
+        self.assertEqual(self.auth.login({"identifier":"EmailUser","password":"abcd"},"old")[0], 401)
+        self.assertEqual(self.auth.login({"identifier":"EmailUser","password":"new4"},"new")[0], 200)
+        self.assertEqual(self.auth.reset_password({"token":reset_token,"password":"abcd"},"replay")[0], 400)
+
+    def test_email_fails_closed_without_delivery(self):
+        from unittest.mock import patch
+        self.auth.register({"username":"NoMail","email":"nomail@example.test","password":"abcd"},"create")
+        with patch.object(self.auth, "_send_account_email", return_value=False):
+            self.assertEqual(self.auth.request_password_reset({"email":"nomail@example.test"},"mail-fail")[0], 503)
+        with self.auth._db() as db:
+            self.assertEqual(db.execute("SELECT COUNT(*) FROM auth_tokens").fetchone()[0], 0)
+
     def test_duplicate_and_validation(self):
         payload = {"username":"Farmer123","email":"farmer@example.test","password":"safe-test-password"}
         self.assertEqual(self.auth.register(payload,"client-a")[0],200)
