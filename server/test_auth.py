@@ -30,6 +30,13 @@ class AccountTests(unittest.TestCase):
         self.assertEqual(self.auth.logout(token)[0], 200)
         self.assertEqual(self.auth.profile(token)[0], 401)
 
+    def test_four_character_password(self):
+        payload = {"username":"ShortPass","email":"short@example.test","password":"abcd"}
+        status, result = self.auth.register(payload,"client-short")
+        self.assertEqual(status,200)
+        self.assertEqual(self.auth.login({"identifier":"ShortPass","password":"abcd"},"client-login")[0],200)
+        self.assertEqual(self.auth.register({"username":"TooShort","email":"short2@example.test","password":"abc"},"client-short2")[0],400)
+
     def test_duplicate_and_validation(self):
         payload = {"username":"Farmer123","email":"farmer@example.test","password":"safe-test-password"}
         self.assertEqual(self.auth.register(payload,"client-a")[0],200)
