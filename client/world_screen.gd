@@ -509,6 +509,7 @@ var competitors: Array = []
 var wallet_holdings: Dictionary = {}
 var labor: Dictionary = {}
 var company: Dictionary = {}
+var tax_view: Dictionary = {}
 var loan: Dictionary = {}
 var loan_pending := false
 var section_actions: HBoxContainer
@@ -554,6 +555,10 @@ func _month_profit(kind: String) -> int:
         for raw in inputs.keys():
             var raw_price := int(market_quotes[raw].get("price", 0)) if market_quotes.has(raw) else 0
             profit -= int(float(inputs[raw]) * staffing) * raw_price
+    # Profit tax and monthly property tax (rates come from the server; taxes are off when the view is empty)
+    if not tax_view.is_empty() and bool(tax_view.get("enabled", true)):
+        profit -= int(maxf(float(profit), 0.0) * float(tax_view.get("profit_tax", 0.0)))
+        profit -= int(float(building_costs.get(kind, 0)) * float(tax_view.get("property_tax", 0.0)) / 12.0)
     return profit
 
 func _supplier_warning(kind: String) -> String:
@@ -583,9 +588,10 @@ func _economy_text() -> String:
         return "Загрузка данных счёта..." if GameSession.is_authenticated() else "Войдите в аккаунт, чтобы увидеть баланс."
     var lines: PackedStringArray = ["Баланс: %s" % _fmt_money(wallet_balance)]
     if not wallet_forecast.is_empty():
-        lines.append("Прогноз в месяц: доход %s, сырьё %s, зарплаты и обслуживание %s, прибыль %s (зданий: %d)" % [
+        lines.append("Прогноз в месяц: доход %s, сырьё %s, зарплаты и обслуживание %s, налоги %s, прибыль после налогов %s (зданий: %d)" % [
             _fmt_money(int(wallet_forecast.get("revenue", 0))), _fmt_money(int(wallet_forecast.get("input_cost", 0))), _fmt_money(int(wallet_forecast.get("upkeep", 0))),
-            _fmt_money(int(wallet_forecast.get("profit", 0))), int(wallet_forecast.get("buildings", 0))])
+            _fmt_money(int(wallet_forecast.get("profit_tax", 0)) + int(wallet_forecast.get("property_tax", 0))),
+            _fmt_money(int(wallet_forecast.get("profit_after_tax", wallet_forecast.get("profit", 0)))), int(wallet_forecast.get("buildings", 0))])
     var capacity := int(wallet_inventory.get("capacity", 0))
     if capacity > 0:
         var parts: PackedStringArray = []
@@ -609,6 +615,7 @@ func _economy_text() -> String:
     var mine := _holdings_text(wallet_holdings)
     if mine != "": lines.append("Мои здания: " + mine)
     lines.append_array(_company_lines())
+    lines.append_array(_tax_lines())
     if not loan.is_empty() and (int(loan.get("balance", 0)) > 0 or int(loan.get("limit", 0)) > 0):
         lines.append("Кредит: %s из лимита %s (под залог зданий), проценты %s/мес (%.1f%%)%s" % [_fmt_money(int(loan.get("balance", 0))), _fmt_money(int(loan.get("limit", 0))), _fmt_money(int(loan.get("monthly_interest", 0))),
             float(loan.get("interest_rate", 0.015)) * 100.0, " — выдача закрыта: есть долги" if bool(loan.get("in_default", false)) else ""])
@@ -631,7 +638,7 @@ func _company_lines() -> PackedStringArray:
     if company.is_empty(): return lines
     var arrears := int(company.get("arrears", 0))
     if arrears > 0:
-        lines.append("Долги: %s (зарплаты %s, сырьё %s, обслуживание %s)" % [_fmt_money(arrears), _fmt_money(int(company.get("wages_owed", 0))), _fmt_money(int(company.get("input_owed", 0))), _fmt_money(int(company.get("maint_owed", 0)))])
+        lines.append("Долги: %s (зарплаты %s, налоги %s, сырьё %s, обслуживание %s)" % [_fmt_money(arrears), _fmt_money(int(company.get("wages_owed", 0))), _fmt_money(int(company.get("tax_owed", 0))), _fmt_money(int(company.get("input_owed", 0))), _fmt_money(int(company.get("maint_owed", 0)))])
     var missed := int(company.get("missed", 0))
     if missed > 0:
         lines.append("ВНИМАНИЕ: расходы не оплачены %d мес. подряд из %d, выпуск снижен, затем банкротство!" % [missed, int(company.get("bankrupt_after", 3))])
@@ -649,6 +656,21 @@ func _announce_company_status() -> void:
         info.text = "Расходы не оплачены (%d из %d мес.): пополните счёт, иначе банкротство" % [missed, int(company.get("bankrupt_after", 3))]
     seen_bankruptcy_month = last if last != null else -1
     seen_missed = missed
+
+func _tax_lines() -> PackedStringArray:
+    var lines: PackedStringArray = []
+    if tax_view.is_empty() or not bool(tax_view.get("enabled", true)): return lines
+    var vat = tax_view.get("vat", {})
+    var vat_parts: PackedStringArray = []
+    for pid in ["honey", "oil", "goods"]:
+        if vat is Dictionary and vat.has(pid):
+            vat_parts.append("%s %d%%" % [str(market_quotes[pid].get("name", pid)) if market_quotes.has(pid) else pid, int(round(float(vat[pid]) * 100.0))])
+    lines.append("Налоги: прибыль %s%%, имущество %s%% в год, НДС: %s" % [_pct(float(tax_view.get("profit_tax", 0.0))), _pct(float(tax_view.get("property_tax", 0.0))), ", ".join(vat_parts)])
+    return lines
+
+func _pct(rate: float) -> String:
+    var v := rate * 100.0
+    return str(int(v)) if absf(v - round(v)) < 0.05 else "%.1f" % v
 
 func _holdings_text(h) -> String:
     if not h is Dictionary or h.is_empty(): return ""
@@ -684,6 +706,7 @@ func _refresh_market() -> void:
         if data.get("products", null) is Dictionary: market_quotes = data["products"]
         if data.get("competitors", null) is Array: competitors = data["competitors"]
         if data.get("labor", null) is Dictionary: labor = data["labor"]
+        if data.get("taxes", null) is Dictionary: tax_view = data["taxes"]
     )
 
 func _refresh_terms() -> void:
@@ -711,6 +734,7 @@ func _refresh_wallet() -> void:
         wallet_holdings = data.get("holdings", {})
         if data.get("labor", null) is Dictionary: labor = data["labor"]
         if data.get("loan", null) is Dictionary: loan = data["loan"]
+        if data.get("taxes", null) is Dictionary: tax_view = data["taxes"]
         if data.get("company", null) is Dictionary:
             company = data["company"]
             _announce_company_status()

@@ -48,8 +48,8 @@ def _rand(owner, month, salt):
     return int.from_bytes(digest[:8], "big")
 
 
-def _profit(spec, quotes, wage=economy.BASE_WAGE):
-    """Expected monthly profit of one more building of this kind, or None when it cannot operate."""
+def _profit(spec, quotes, wage=economy.BASE_WAGE, profit_tax=0.0, property_tax=0.0, cost=0):
+    """Expected monthly profit after taxes of one more building of this kind, or None when it cannot operate."""
     profit = -(spec["upkeep"] + spec["jobs"] * wage)
     product = spec.get("product")
     if product:
@@ -58,10 +58,10 @@ def _profit(spec, quotes, wage=economy.BASE_WAGE):
         if quotes[raw]["supply"] <= 0:
             return None                      # nobody sells this raw material: the factory would idle
         profit -= amount * quotes[raw]["price"]
-    return profit
+    return profit - max(profit, 0) * profit_tax - cost * property_tax / 12
 
 
-def choose_kind(persona, wallet, quotes, wage=economy.BASE_WAGE):
+def choose_kind(persona, wallet, quotes, wage=economy.BASE_WAGE, tax_rates=None):
     """Best building kind to add now, or None."""
     holdings = wallet.get("holdings", {})
     total = sum(holdings.values())
@@ -79,7 +79,7 @@ def choose_kind(persona, wallet, quotes, wage=economy.BASE_WAGE):
                 continue
             score = weight * 0.05            # only when nothing clearly profitable is available
         else:
-            profit = _profit(spec, quotes, wage)
+            profit = _profit(spec, quotes, wage, (tax_rates or {}).get("profit", 0.0), (tax_rates or {}).get("property", 0.0), economy.BUILD_COST[kind])
             if profit is None or profit <= 0 or cost / profit > MAX_PAYBACK_MONTHS:
                 continue
             score = weight / (cost / profit)
@@ -110,7 +110,9 @@ def act(persona, month, wallet_fn, market_fn, build_fn):
         return None
     wallet = wallet_fn(owner)
     market = market_fn()
-    kind = choose_kind(persona, wallet, market["products"], market.get("labor", {}).get("wage", economy.BASE_WAGE))
+    t = market.get("taxes", {})
+    kind = choose_kind(persona, wallet, market["products"], market.get("labor", {}).get("wage", economy.BASE_WAGE),
+                       {"profit": t.get("profit_tax", 0.0), "property": t.get("property_tax", 0.0)})
     if kind is None:
         return None
     total = sum(wallet.get("holdings", {}).values())

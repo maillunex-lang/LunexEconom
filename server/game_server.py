@@ -12,6 +12,7 @@ import sqlite_util
 import roads as road_rules
 import economy
 import production
+import taxes
 import npc
 import clock
 if os.environ.get('LUNEX_DB_ENGINE') == 'postgres':
@@ -153,7 +154,7 @@ def market_state():
         now=int(time.time())
         clk=clock.state(db,"?",now)
         production.advance(db,"?",clk,now)
-        result={"ok":True,"month_index":clk["month_index"],"products":production.quote(db,"?",clk),"labor":production.labor_view(db,"?",clk),"competitors":production.competitors(db,"?")}
+        result={"ok":True,"month_index":clk["month_index"],"products":production.quote(db,"?",clk),"labor":production.labor_view(db,"?",clk),"taxes":taxes.view(db,"?"),"competitors":production.competitors(db,"?")}
         db.commit()
     return 200,result
 

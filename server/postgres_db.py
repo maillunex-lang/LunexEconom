@@ -61,6 +61,9 @@ CREATE TABLE IF NOT EXISTS company_reports (owner TEXT NOT NULL, month_index BIG
 CREATE TABLE IF NOT EXISTS population (month_index BIGINT PRIMARY KEY, population BIGINT NOT NULL, labor_force BIGINT NOT NULL, jobs BIGINT NOT NULL, wage BIGINT NOT NULL, staffing_permille INTEGER NOT NULL, demand_permille INTEGER NOT NULL, next_population BIGINT NOT NULL);
 CREATE TABLE IF NOT EXISTS loans (owner TEXT PRIMARY KEY, balance BIGINT NOT NULL, interest_paid BIGINT NOT NULL, taken_total BIGINT NOT NULL, repaid_total BIGINT NOT NULL);
 CREATE TABLE IF NOT EXISTS company_status (owner TEXT PRIMARY KEY, missed INTEGER NOT NULL, wages_owed BIGINT NOT NULL, input_owed BIGINT NOT NULL, maint_owed BIGINT NOT NULL, bankruptcies INTEGER NOT NULL, last_bankruptcy_month BIGINT, written_off BIGINT NOT NULL);
+CREATE TABLE IF NOT EXISTS city_policy (id INTEGER PRIMARY KEY, profit_tax_permille INTEGER NOT NULL, property_tax_permille INTEGER NOT NULL, social_share_permille INTEGER NOT NULL, changed_month BIGINT NOT NULL);
+CREATE TABLE IF NOT EXISTS company_tax_state (owner TEXT PRIMARY KEY, tax_owed BIGINT NOT NULL, vat_credit BIGINT NOT NULL);
+CREATE TABLE IF NOT EXISTS company_taxes (owner TEXT NOT NULL, month_index BIGINT NOT NULL, vat BIGINT NOT NULL, profit_tax BIGINT NOT NULL, property_tax BIGINT NOT NULL, paid BIGINT NOT NULL, PRIMARY KEY(owner, month_index));
 CREATE TABLE IF NOT EXISTS npc_state (owner TEXT PRIMARY KEY, acted_through BIGINT NOT NULL);
 CREATE TABLE IF NOT EXISTS company_state (owner TEXT PRIMARY KEY, settled_through BIGINT NOT NULL);
 CREATE TABLE IF NOT EXISTS monthly_reports (owner TEXT NOT NULL, month_index BIGINT NOT NULL, revenue BIGINT NOT NULL, upkeep BIGINT NOT NULL, profit BIGINT NOT NULL, buildings INTEGER NOT NULL, PRIMARY KEY(owner, month_index));

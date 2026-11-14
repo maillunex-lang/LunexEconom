@@ -64,6 +64,21 @@ SELL_RATE = 0.5                # voluntary sale of a building: better than a for
 INVENTORY_LIQUIDATION_RATE = 0.5
 NPC_RECAPITAL_MONTHS = 6
 
+# ---- Taxes (rates researched for Russia / Republic of Bashkortostan, see docs/TAXES.md) ----
+# Game defaults chosen by the owner: profit tax 13 %, VAT by product category up to 22 %, property tax at the Bashkortostan
+# general rate 2.2 % a year. All tax revenue goes to the city budget (account of the pseudo-owner CITY).
+# VAT is federal law (not regulated by the mayor); the mayor may change profit and property tax inside the legal limits.
+TAXES_ENABLED = True
+CITY = "city"                          # pseudo-owner whose wallet is the city budget (no start capital, never bankrupt)
+VAT_STANDARD = 0.22                    # general rate from 2026-01-01 (Federal Law 425-FZ)
+VAT_RATES = {"honey": 0.10,            # food: reduced rate 10 % (inclusion of honey in the list is not verified, rate is a setting)
+             "oil": 0.22,              # raw material: general rate
+             "goods": 0.22}            # manufactured goods: general rate
+DEFAULT_PROFIT_TAX = 0.13
+PROFIT_TAX_LIMITS = (0.05, 0.25)       # real total profit tax is 25 % (8 % federal + 17 % regional)
+DEFAULT_PROPERTY_TAX = 0.022           # per year of the book value of buildings; Bashkortostan general rate (cap 2.2 % by Tax Code art. 380)
+PROPERTY_TAX_LIMITS = (0.0, 0.022)
+
 # ---- Bank: one revolving loan per company, secured by its buildings ----
 # Limit = LOAN_LTV of the construction cost of the company's buildings (capped by LOAN_MAX). Interest is charged every game
 # month after operating costs; interest that cannot be paid is added to the loan and counts as an unpaid month. A company in
@@ -102,6 +117,9 @@ SCHEMA = (
     "CREATE TABLE IF NOT EXISTS population(month_index BIGINT PRIMARY KEY, population BIGINT NOT NULL, labor_force BIGINT NOT NULL, jobs BIGINT NOT NULL, wage BIGINT NOT NULL, staffing_permille INTEGER NOT NULL, demand_permille INTEGER NOT NULL, next_population BIGINT NOT NULL)",
     "CREATE TABLE IF NOT EXISTS company_status(owner TEXT PRIMARY KEY, missed INTEGER NOT NULL, wages_owed BIGINT NOT NULL, input_owed BIGINT NOT NULL, maint_owed BIGINT NOT NULL, bankruptcies INTEGER NOT NULL, last_bankruptcy_month BIGINT, written_off BIGINT NOT NULL)",
     "CREATE TABLE IF NOT EXISTS loans(owner TEXT PRIMARY KEY, balance BIGINT NOT NULL, interest_paid BIGINT NOT NULL, taken_total BIGINT NOT NULL, repaid_total BIGINT NOT NULL)",
+    "CREATE TABLE IF NOT EXISTS city_policy(id INTEGER PRIMARY KEY, profit_tax_permille INTEGER NOT NULL, property_tax_permille INTEGER NOT NULL, social_share_permille INTEGER NOT NULL, changed_month BIGINT NOT NULL)",
+    "CREATE TABLE IF NOT EXISTS company_tax_state(owner TEXT PRIMARY KEY, tax_owed BIGINT NOT NULL, vat_credit BIGINT NOT NULL)",
+    "CREATE TABLE IF NOT EXISTS company_taxes(owner TEXT NOT NULL, month_index BIGINT NOT NULL, vat BIGINT NOT NULL, profit_tax BIGINT NOT NULL, property_tax BIGINT NOT NULL, paid BIGINT NOT NULL, PRIMARY KEY(owner, month_index))",
     "CREATE TABLE IF NOT EXISTS npc_state(owner TEXT PRIMARY KEY, acted_through BIGINT NOT NULL)",
     "CREATE TABLE IF NOT EXISTS company_state(owner TEXT PRIMARY KEY, settled_through BIGINT NOT NULL)",
     "CREATE TABLE IF NOT EXISTS monthly_reports(owner TEXT NOT NULL, month_index BIGINT NOT NULL, revenue BIGINT NOT NULL, upkeep BIGINT NOT NULL, profit BIGINT NOT NULL, buildings INTEGER NOT NULL, PRIMARY KEY(owner, month_index))",
@@ -155,7 +173,7 @@ def ensure_wallet(db, ph, owner, now):
     """Create the wallet with the starting capital on first use (idempotent)."""
     account = player_account(owner)
     cur = db.execute("INSERT INTO wallets(account,balance) VALUES(%s,0) ON CONFLICT(account) DO NOTHING".replace("%s", ph), (account,))
-    if cur.rowcount == 1:
+    if cur.rowcount == 1 and owner != CITY:
         post(db, ph, "start_capital", "Стартовый капитал", [(account, START_CAPITAL), (TREASURY, -START_CAPITAL)], now)
     return balance(db, ph, owner)
 

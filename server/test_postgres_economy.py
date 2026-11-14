@@ -131,6 +131,23 @@ class PostgresEconomyTests(unittest.TestCase):
         self.assertEqual(w["inventory"]["capacity"], 400)
         self.assert_ledger()
 
+    def test_taxes_flow_into_the_city_budget(self):
+        self.build("alice", "farm")
+        w = self.month("alice", 2)
+        budget = self.sql("SELECT balance FROM wallets WHERE account=%s", (economy.player_account(economy.CITY),))[0][0]
+        self.assertGreater(budget, 0)
+        self.assertEqual(w["taxes"]["profit_tax"], 0.13)
+        self.assertEqual(w["taxes"]["vat"]["honey"], 0.10)
+        self.assertTrue(all(r["tax"] > 0 for r in w["reports"]))
+        paid = self.sql("SELECT SUM(paid) FROM company_taxes WHERE owner='alice'")[0][0]
+        self.assertEqual(paid, budget)
+        self.assert_ledger()
+
+    def test_tax_policy_row_changes_the_rates(self):
+        self.sql("INSERT INTO city_policy(id,profit_tax_permille,property_tax_permille,social_share_permille,changed_month) VALUES(1,50,0,300,0)")
+        self.assertEqual(postgres_world.market_state()[1]["taxes"]["profit_tax"], 0.05)
+        self.assertEqual(postgres_world.market_state()[1]["taxes"]["property_tax"], 0.0)
+
     def test_selling_a_building(self):
         res = self.build("alice", "farm")
         before = self.wallet("alice")["balance"]

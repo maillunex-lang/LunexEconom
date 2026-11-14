@@ -17,6 +17,7 @@ import json
 
 import bank
 import economy
+import taxes
 
 
 def _q(sql, ph):
@@ -70,8 +71,14 @@ _STATUS_COLS = "missed,wages_owed,input_owed,maint_owed,bankruptcies,last_bankru
 def _status(db, ph, owner):
     row = db.execute(_q("SELECT " + _STATUS_COLS + " FROM company_status WHERE owner=%s", ph), (owner,)).fetchone()
     keys = _STATUS_COLS.split(",")
-    return dict(zip(keys, row)) if row else {"missed": 0, "wages_owed": 0, "input_owed": 0, "maint_owed": 0, "bankruptcies": 0,
-                                             "last_bankruptcy_month": None, "written_off": 0}
+    st = dict(zip(keys, row)) if row else {"missed": 0, "wages_owed": 0, "input_owed": 0, "maint_owed": 0, "bankruptcies": 0,
+                                           "last_bankruptcy_month": None, "written_off": 0}
+    st.update(taxes.state(db, ph, owner))          # tax_owed, vat_credit
+    return st
+
+
+def _arrears(st):
+    return st["wages_owed"] + st["input_owed"] + st["maint_owed"] + st["tax_owed"]
 
 
 def _save_status(db, ph, owner, st):
@@ -120,21 +127,24 @@ def liquidate(db, ph, owner, month, now):
         economy.post(db, ph, "liquidation", "Банкротство: продажа запасов", [(economy.MARKET_ACCOUNT, -stock_value), (account, stock_value)], now)
     cash = economy.balance(db, ph, owner) or 0
     pay_w = min(st["wages_owed"], cash)
-    pay_i = min(st["input_owed"], cash - pay_w)
-    pay_m = min(st["maint_owed"], cash - pay_w - pay_i)
-    paid = pay_w + pay_i + pay_m
+    pay_t = min(st["tax_owed"], cash - pay_w)
+    pay_i = min(st["input_owed"], cash - pay_w - pay_t)
+    pay_m = min(st["maint_owed"], cash - pay_w - pay_t - pay_i)
+    paid = pay_w + pay_t + pay_i + pay_m
     if paid:
-        economy.post(db, ph, "liquidation", "Банкротство: расчёт с кредиторами", [(account, -paid), (economy.RESIDENTS, pay_w), (economy.MARKET_ACCOUNT, pay_i), (economy.UPKEEP, pay_m)], now)
-    owed = st["wages_owed"] + st["input_owed"] + st["maint_owed"]
+        economy.post(db, ph, "liquidation", "Банкротство: расчёт с кредиторами", [(account, -paid), (economy.RESIDENTS, pay_w), (economy.player_account(economy.CITY), pay_t),
+                                                                                (economy.MARKET_ACCOUNT, pay_i), (economy.UPKEEP, pay_m)], now)
+    owed = _arrears(st)
     loan = bank.balance(db, ph, owner)
     pay_bank = min(loan, cash - paid)
     if pay_bank:
         economy.post(db, ph, "liquidation", "Банкротство: погашение кредита", [(account, -pay_bank), (economy.BANK, pay_bank)], now)
         bank._change(db, ph, owner, d_balance=-pay_bank, d_repaid=pay_bank)
     lost_to_bank = bank.write_off(db, ph, owner)
-    st.update(missed=0, wages_owed=0, input_owed=0, maint_owed=0, bankruptcies=st["bankruptcies"] + 1,
+    st.update(missed=0, wages_owed=0, input_owed=0, maint_owed=0, tax_owed=0, bankruptcies=st["bankruptcies"] + 1,
               last_bankruptcy_month=month, written_off=st["written_off"] + (owed - paid) + lost_to_bank)
     _save_status(db, ph, owner, st)
+    taxes.save_state(db, ph, owner, st)
 
 
 def sell_building(db, ph, owner, object_id, now):
@@ -208,7 +218,7 @@ def step_month(db, ph, month, now):
         if spec is None:
             continue
         c = companies.setdefault(owner, {"buildings": [], "maint": 0, "jobs": 0, "capacity": 0, "stock": {}, "needs": {}, "got": {},
-                                         "need_ext": {}, "revenue": 0, "input_cost": 0})
+                                         "need_ext": {}, "revenue": 0, "input_cost": 0, "rev_by": {}, "in_by": {}})
         factor = _factor(start_month, permille, month)
         c["buildings"].append((kind, factor))
         c["maint"] += spec["upkeep"] * factor // 1000
@@ -275,57 +285,85 @@ def step_month(db, ph, month, now):
         fill = 1.0 if demand <= 0 else min(1.0, supply / demand)
         for owner, c in companies.items():
             c["revenue"] += offers[owner] * price
+            c["rev_by"][product] = c["rev_by"].get(product, 0) + offers[owner] * price
             ext = c["need_ext"].get(product, 0)
             if ext:
                 bought = int(ext * fill)
                 c["got"][product] = c["got"].get(product, 0) + bought
                 c["input_cost"] += bought * price
+                c["in_by"][product] = c["in_by"].get(product, 0) + bought * price
         db.execute(_q("INSERT INTO market_prices(product,month_index,price,supply,demand) VALUES(%s,%s,%s,%s,%s) ON CONFLICT(product,month_index) DO NOTHING", ph),
                    (product, month, price, supply, demand))
 
     loans = {o: int(b) for o, b in db.execute("SELECT owner,balance FROM loans WHERE balance>0").fetchall()}
+    rates = taxes.rates(db, ph)
+    budget = economy.player_account(economy.CITY)
     bankrupt = []
     for owner, c in sorted(companies.items()):
         st = _status(db, ph, owner)
+        is_city = owner == economy.CITY
         wages = int(c["jobs"] * staffing * lab["wage"])
-        cash = (economy.balance(db, ph, owner) or 0) + c["revenue"]
-        paid_input = min(c["input_cost"], max(cash, 0))
+        interest_due = bank.monthly_interest(loans.get(owner, 0))
+        # VAT: buyers pay price + VAT, the company pays VAT on its raw materials (gross flows through the cash cascade)
+        vat_out, vat_in = taxes.vat_amounts(c["rev_by"], c["in_by"]) if not is_city else (0, 0)
+        revenue_g, input_g = c["revenue"] + vat_out, c["input_cost"] + vat_in
+        cash = (economy.balance(db, ph, owner) or 0) + revenue_g
+        paid_input = min(input_g, max(cash, 0))
         cash -= paid_input
         paid_wages = min(wages, max(cash, 0))
         cash -= paid_wages
         paid_maint = min(c["maint"], max(cash, 0))
         cash -= paid_maint
-        interest_due = bank.monthly_interest(loans.get(owner, 0))
         paid_interest = min(interest_due, max(cash, 0))
         cash -= paid_interest
-        unpaid = {"input": c["input_cost"] - paid_input, "wages": wages - paid_wages, "maint": c["maint"] - paid_maint, "interest": interest_due - paid_interest}
+        # taxes (the city itself pays none)
+        net_vat = vat_out - vat_in - st["vat_credit"]
+        vat_due = max(net_vat, 0)
+        st["vat_credit"] = max(-net_vat, 0)
+        taxable = c["revenue"] - c["input_cost"] - wages - c["maint"] - interest_due
+        profit_tax = 0 if is_city else taxes.profit_tax_due(taxable, rates["profit"])
+        property_tax = 0 if is_city else taxes.property_tax_due(c["buildings"], rates["property"])
+        tax_due = vat_due + profit_tax + property_tax
+        paid_tax = min(tax_due, max(cash, 0))
+        cash -= paid_tax
+        unpaid = {"input": input_g - paid_input, "wages": wages - paid_wages, "maint": c["maint"] - paid_maint,
+                  "interest": interest_due - paid_interest, "tax": tax_due - paid_tax}
         bank.paid_interest(db, ph, owner, paid_interest)
         bank.capitalize(db, ph, owner, unpaid["interest"])
-        # leftover cash services old arrears: wages first, then raw materials, then maintenance
+        # leftover cash services old arrears: wages first, then taxes, raw materials, maintenance
         arr_w = min(st["wages_owed"], max(cash, 0))
         cash -= arr_w
+        arr_t = min(st["tax_owed"], max(cash, 0))
+        cash -= arr_t
         arr_i = min(st["input_owed"], max(cash, 0))
         cash -= arr_i
         arr_m = min(st["maint_owed"], max(cash, 0))
         cash -= arr_m
         st["wages_owed"] += unpaid["wages"] - arr_w
+        st["tax_owed"] += unpaid["tax"] - arr_t
         st["input_owed"] += unpaid["input"] - arr_i
         st["maint_owed"] += unpaid["maint"] - arr_m
-        st["missed"] = st["missed"] + 1 if sum(unpaid.values()) > 0 else 0
-        out_input, out_wages, out_maint = paid_input + arr_i, paid_wages + arr_w, paid_maint + arr_m
-        profit = c["revenue"] - paid_input - paid_wages - paid_maint
-        if c["revenue"] or out_input or out_wages or out_maint or paid_interest:
-            economy.post(db, ph, "monthly", "Итоги месяца: доход %d, сырьё %d, зарплаты %d, обслуживание %d%s%s" % (
-                             c["revenue"], out_input, out_wages, out_maint, (", проценты %d" % paid_interest) if paid_interest else "",
-                             (", долг %d" % (st["wages_owed"] + st["input_owed"] + st["maint_owed"])) if st["missed"] or st["wages_owed"] + st["input_owed"] + st["maint_owed"] else ""),
-                         [(economy.player_account(owner), c["revenue"] - out_input - out_wages - out_maint - paid_interest),
-                          (economy.MARKET_ACCOUNT, -c["revenue"] + out_input), (economy.RESIDENTS, out_wages), (economy.UPKEEP, out_maint),
+        st["missed"] = st["missed"] + 1 if sum(unpaid.values()) > 0 and not is_city else 0
+        out_input, out_wages, out_maint, out_tax = paid_input + arr_i, paid_wages + arr_w, paid_maint + arr_m, paid_tax + arr_t
+        profit = c["revenue"] - c["input_cost"] - paid_wages - paid_maint
+        if revenue_g or out_input or out_wages or out_maint or paid_interest or out_tax:
+            economy.post(db, ph, "monthly", "Итоги месяца: доход %d, сырьё %d, зарплаты %d, обслуживание %d%s%s%s" % (
+                             c["revenue"], out_input, out_wages, out_maint, (", налоги %d" % out_tax) if out_tax else "",
+                             (", проценты %d" % paid_interest) if paid_interest else "",
+                             (", долг %d" % _arrears(st)) if st["missed"] or _arrears(st) else ""),
+                         [(economy.player_account(owner), revenue_g - out_input - out_wages - out_maint - paid_interest - out_tax),
+                          (economy.MARKET_ACCOUNT, -revenue_g + out_input), (economy.RESIDENTS, out_wages), (economy.UPKEEP, out_maint),
+                          (economy.BANK, paid_interest), (budget, out_tax)] if owner != economy.CITY else
+                         [(budget, revenue_g - out_input - out_wages - out_maint - paid_interest - out_tax),
+                          (economy.MARKET_ACCOUNT, -revenue_g + out_input), (economy.RESIDENTS, out_wages), (economy.UPKEEP, out_maint),
                           (economy.BANK, paid_interest)], now)
         db.execute(_q("INSERT INTO company_reports(owner,month_index,revenue,input_cost,upkeep,profit,buildings) VALUES(%s,%s,%s,%s,%s,%s,%s) ON CONFLICT(owner,month_index) DO NOTHING", ph),
-                   (owner, month, c["revenue"], paid_input, paid_wages + paid_maint, profit, len(c["buildings"])))
+                   (owner, month, c["revenue"], min(c["input_cost"], paid_input), paid_wages + paid_maint, profit, len(c["buildings"])))
+        taxes.record(db, ph, owner, month, vat_due, profit_tax, property_tax, out_tax)
         _save_status(db, ph, owner, st)
+        taxes.save_state(db, ph, owner, st)
         _save_inventory(db, ph, owner, c["stock"])
-        if st["missed"] >= economy.BANKRUPT_AFTER_MISSED:
+        if st["missed"] >= economy.BANKRUPT_AFTER_MISSED and not is_city:
             bankrupt.append(owner)
     for owner, loan_balance in sorted(loans.items()):
         if owner in companies:
@@ -410,7 +448,9 @@ def forecast(db, ph, owner, quotes, labor):
     """Expected monthly result at current prices and wages (all production sold, all inputs bought)."""
     revenue = inputs = maint = wages = count = 0
     staffing = labor["staffing"]
+    kinds = []
     for kind, in db.execute(_q("SELECT kind FROM building_ops WHERE owner=%s", ph), (owner,)).fetchall():
+        kinds.append((kind, 1000))
         spec = _spec(kind)
         if not spec:
             continue
@@ -422,8 +462,12 @@ def forecast(db, ph, owner, quotes, labor):
         wages += economy.wage_cost(kind, labor["wage"], staffing)
         count += 1
     interest = bank.monthly_interest(bank.balance(db, ph, owner))
+    profit = revenue - inputs - maint - wages - interest
+    rates = taxes.rates(db, ph)
+    profit_tax = taxes.profit_tax_due(profit, rates["profit"]) if owner != economy.CITY else 0
+    property_tax = taxes.property_tax_due(kinds, rates["property"]) if owner != economy.CITY else 0
     return {"revenue": revenue, "input_cost": inputs, "upkeep": maint + wages, "wages": wages, "interest": interest,
-            "profit": revenue - inputs - maint - wages - interest, "buildings": count}
+            "profit": profit, "profit_tax": profit_tax, "property_tax": property_tax, "profit_after_tax": profit - profit_tax - property_tax, "buildings": count}
 
 
 def inventory_view(db, ph, owner):
@@ -437,19 +481,20 @@ def inventory_view(db, ph, owner):
 def reports(db, ph, owner, limit=6):
     rows = db.execute(_q("SELECT month_index,revenue,input_cost,upkeep,profit,buildings FROM company_reports WHERE owner=%s ORDER BY month_index DESC LIMIT %s", ph),
                       (owner, limit)).fetchall()
-    return [{"month_index": m, "revenue": r, "input_cost": i, "upkeep": u, "profit": p, "buildings": b} for m, r, i, u, p, b in rows]
+    paid = taxes.last_taxes(db, ph, owner, limit)
+    return [{"month_index": m, "revenue": r, "input_cost": i, "upkeep": u, "profit": p, "buildings": b, "tax": paid.get(int(m), {}).get("paid", 0)} for m, r, i, u, p, b in rows]
 
 
 def company_view(db, ph, owner):
     st = _status(db, ph, owner)
-    return {"missed": st["missed"], "arrears": st["wages_owed"] + st["input_owed"] + st["maint_owed"], "wages_owed": st["wages_owed"],
+    return {"missed": st["missed"], "arrears": _arrears(st), "wages_owed": st["wages_owed"], "tax_owed": st["tax_owed"], "vat_credit": st["vat_credit"],
             "input_owed": st["input_owed"], "maint_owed": st["maint_owed"], "bankruptcies": st["bankruptcies"],
             "last_bankruptcy_month": st["last_bankruptcy_month"], "written_off": st["written_off"], "bankrupt_after": economy.BANKRUPT_AFTER_MISSED}
 
 
 def loan_view(db, ph, owner):
     st = _status(db, ph, owner)
-    return bank.view(db, ph, owner, in_default=st["missed"] > 0 or st["wages_owed"] + st["input_owed"] + st["maint_owed"] > 0)
+    return bank.view(db, ph, owner, in_default=st["missed"] > 0 or _arrears(st) > 0)
 
 
 def loan_command(db, ph, owner, payload, now):
@@ -458,7 +503,7 @@ def loan_command(db, ph, owner, payload, now):
     amount = payload.get("amount")
     if action == "take":
         st = _status(db, ph, owner)
-        in_default = st["missed"] > 0 or st["wages_owed"] + st["input_owed"] + st["maint_owed"] > 0
+        in_default = st["missed"] > 0 or _arrears(st) > 0
         status, result = bank.take(db, ph, owner, amount, now, in_default)
     elif action == "repay":
         status, result = bank.repay(db, ph, owner, amount, now)
@@ -494,4 +539,4 @@ def wallet(db, ph, owner, clk, now):
     labor = labor_view(db, ph, clk)
     return {"ok": True, "balance": bal, "currency": economy.CURRENCY, "transactions": economy.history(db, ph, owner),
             "forecast": forecast(db, ph, owner, quotes, labor), "labor": labor, "reports": reports(db, ph, owner), "month_index": clk["month_index"],
-            "market": quotes, "inventory": inventory_view(db, ph, owner), "holdings": holdings(db, ph, owner), "company": company_view(db, ph, owner), "loan": loan_view(db, ph, owner)}
+            "market": quotes, "inventory": inventory_view(db, ph, owner), "holdings": holdings(db, ph, owner), "company": company_view(db, ph, owner), "loan": loan_view(db, ph, owner), "taxes": taxes.view(db, ph)}

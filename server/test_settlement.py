@@ -28,6 +28,10 @@ class SettlementTests(unittest.TestCase):
         pin = mock.patch.object(economy, "price_for", side_effect=lambda product, supply, demand: economy.MARKET[product]["reference_price"])
         pin.start()
         self.addCleanup(pin.stop)
+        # Taxes have their own suite (test_tax.py); here the exact income figures are the subject.
+        notax = mock.patch.object(economy, "TAXES_ENABLED", False)
+        notax.start()
+        self.addCleanup(notax.stop)
 
     def tearDown(self):
         game_server.DB = self.old
@@ -56,7 +60,7 @@ class SettlementTests(unittest.TestCase):
         self.assertEqual(w["balance"], res["balance"] + 12_000)   # 100*200 - 8000
         self.assertEqual(len(w["reports"]), 1)
         self.assertEqual(w["reports"][0]["profit"], 12_000)
-        self.assertEqual(w["forecast"], {"revenue": 20_000, "input_cost": 0, "upkeep": 8_000, "wages": 6_000, "interest": 0, "profit": 12_000, "buildings": 1})
+        self.assertEqual(w["forecast"], {"revenue": 20_000, "input_cost": 0, "upkeep": 8_000, "wages": 6_000, "interest": 0, "profit": 12_000, "profit_tax": 0, "property_tax": 0, "profit_after_tax": 12_000, "buildings": 1})
 
     def test_settlement_is_idempotent(self):
         _, res = self.build()
