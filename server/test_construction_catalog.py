@@ -1,7 +1,7 @@
 """Catalog must not silently make unbalanced/unpriced specializations buildable."""
 import unittest
 import sqlite3
-import postgres_db
+from pathlib import Path
 import construction_catalog
 import economy
 import game_server
@@ -35,8 +35,9 @@ class ConstructionCatalogTests(unittest.TestCase):
         db.close()
 
     def test_postgres_schema_declares_specializations(self):
-        self.assertIn("CREATE TABLE IF NOT EXISTS building_specializations", postgres_db.SCHEMA)
-        self.assertIn("ON DELETE CASCADE", postgres_db.SCHEMA)
+        schema_source = (Path(__file__).parent / "postgres_db.py").read_text(encoding="utf-8")
+        self.assertIn("CREATE TABLE IF NOT EXISTS building_specializations", schema_source)
+        self.assertIn("ON DELETE CASCADE", schema_source)
 
     def test_new_specializations_are_not_buildable_yet(self):
         items = construction_catalog.view()["trade_specializations"]
