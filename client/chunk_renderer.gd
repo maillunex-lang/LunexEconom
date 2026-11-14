@@ -128,7 +128,7 @@ func _draw_test_building_or_fallback(p: Vector2, cell: Vector2i, owner: String) 
         return
     var sprite_width: float = 170.0 if maxi(cells_x, cells_y) > 1 else 88.0
     var sprite_height: float = sprite_width * float(tex.get_height()) / maxf(float(tex.get_width()), 1.0)
-    var center := world.iso(float(min_x + max_x) * 0.5, float(min_y + max_y) * 0.5)
+    var center: Vector2 = world.iso(float(min_x + max_x) * 0.5, float(min_y + max_y) * 0.5)
     draw_texture_rect(tex, Rect2(center - Vector2(sprite_width * 0.5, sprite_height - 15.0), Vector2(sprite_width, sprite_height)), false)
 
 func _owner_color(owner: String) -> Color:
