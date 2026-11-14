@@ -98,6 +98,14 @@ def main():
     commit = json_api("https://api.github.com/repos/" + REPO + "/commits/main")["sha"]
     if not re.fullmatch(r"[0-9a-f]{40}", commit):
         raise ValueError("invalid commit SHA")
+    # Require a successful GitHub Actions validation for this exact commit.
+    runs = json_api("https://api.github.com/repos/" + REPO +
+                    "/actions/workflows/website-check.yml/runs?head_sha=" + commit + "&per_page=20")
+    approved = any(run.get("head_sha") == commit and run.get("event") == "push"
+                   and run.get("conclusion") == "success" for run in runs.get("workflow_runs", []))
+    if not approved:
+        print("CI gate pending or failed for", commit, "- keeping current site")
+        return
     with tempfile.TemporaryDirectory(prefix="lunex-stage-", dir=STATE) as stage_name:
         stage = Path(stage_name)
         for name in FILES:
