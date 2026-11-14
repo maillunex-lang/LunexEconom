@@ -19,8 +19,8 @@ func connect_site(site: Vector2i, max_distance: int = 128) -> Array[Vector2i]:
     # Candidate path, not committed until server-side validation exists.
     # Connect to closest grid spine with a Manhattan path, preserving existing roads.
     var target := site
-    var dx := min(posmod(site.x, 19), 19 - posmod(site.x, 19))
-    var dy := min(posmod(site.y, 23), 23 - posmod(site.y, 23))
+    var dx: int = mini(posmod(site.x, 19), 19 - posmod(site.x, 19))
+    var dy: int = mini(posmod(site.y, 23), 23 - posmod(site.y, 23))
     if dx <= dy:
         target.x = int(round(float(site.x) / 19.0)) * 19
     else:
