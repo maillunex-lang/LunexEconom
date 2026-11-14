@@ -725,7 +725,7 @@ func show_build_preview(result: Dictionary) -> void:
             match world.build_type:
                 "mine", "factory": legacy_area = 6
                 "warehouse": legacy_area = 9
-            var new_area := world.build_square_size * world.build_square_size
+            var new_area: int = int(world.build_square_size) * int(world.build_square_size)
             base_cost = int((base_cost * new_area + legacy_area - 1) / legacy_area)
         var total := base_cost + road_len * road_cell_cost
         if city_mode:
