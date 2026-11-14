@@ -1,64 +1,189 @@
 extends Control
-
-@onready var status_label: Label = $SafeArea/Centering/Center/Status
-@onready var retry_button: Button = $SafeArea/Centering/Center/Retry
-@onready var safe_area: MarginContainer = $SafeArea
-@onready var center: VBoxContainer = $SafeArea/Centering/Center
-@onready var title_label: Label = $SafeArea/Centering/Center/Title
+## Forest Glass entry screen for Android landscape. Authentication is server-backed.
+const API := "https://rikagro.ru/lunexeconom/api"
 var request: HTTPRequest
+var form: VBoxContainer
+var status_label: Label
+var username: LineEdit
+var email: LineEdit
+var password: LineEdit
+var login_id: LineEdit
+var token := ""
+var mode := "home"
+var busy := false
+var pending := ""
+var reduce_motion := false
+var music_enabled := true
 
 func _ready() -> void:
     if OS.has_feature("mobile"):
         DisplayServer.screen_set_orientation(DisplayServer.SCREEN_SENSOR_LANDSCAPE)
-    get_viewport().size_changed.connect(_update_layout)
-    call_deferred("_update_layout")
-    retry_button.pressed.connect(_check_server)
+    for child in get_children():
+        if child.name != "Background":
+            child.queue_free()
     request = HTTPRequest.new()
     add_child(request)
-    request.request_completed.connect(_on_request_completed)
-    _check_server()
+    request.request_completed.connect(_on_response)
+    get_viewport().size_changed.connect(_layout)
+    _show_home()
+    call_deferred("_layout")
 
-func _check_server() -> void:
-    status_label.text = "Подключение к тестовому серверу..."
-    # Development-only loopback. Android builds will use a separately configured HTTPS endpoint.
-    var err := request.request("http://127.0.0.1:18761/health")
-    if err != OK:
-        status_label.text = "Сервер недоступен (код %s)" % err
+func _panel() -> void:
+    if is_instance_valid(form):
+        form.queue_free()
+    var margin := MarginContainer.new()
+    margin.name = "MenuSafeArea"
+    margin.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+    margin.add_theme_constant_override("margin_left", 48)
+    margin.add_theme_constant_override("margin_right", 48)
+    margin.add_theme_constant_override("margin_top", 20)
+    margin.add_theme_constant_override("margin_bottom", 20)
+    add_child(margin)
+    var center := CenterContainer.new()
+    center.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+    center.size_flags_vertical = Control.SIZE_EXPAND_FILL
+    margin.add_child(center)
+    var glass := PanelContainer.new()
+    glass.custom_minimum_size = Vector2(440, 0)
+    var style := StyleBoxFlat.new()
+    style.bg_color = Color(0.07, 0.16, 0.14, 0.94)
+    style.border_color = Color(0.35, 0.67, 0.51, 0.7)
+    style.set_border_width_all(1)
+    style.set_corner_radius_all(20)
+    style.content_margin_left = 24
+    style.content_margin_right = 24
+    style.content_margin_top = 16
+    style.content_margin_bottom = 16
+    glass.add_theme_stylebox_override("panel", style)
+    center.add_child(glass)
+    form = VBoxContainer.new()
+    form.add_theme_constant_override("separation", 9)
+    glass.add_child(form)
+    _label("БАШКИРИЯ: МЁД И НЕФТЬ", 26)
+    _label("Экономическая онлайн-стратегия", 15)
+    status_label = _label("", 14)
 
-func _on_request_completed(_result: int, code: int, _headers: PackedStringArray, body: PackedByteArray) -> void:
-    if code != 200:
-        status_label.text = "Сервер не подключён. Код HTTP: %s" % code
-        return
-    var parsed = JSON.parse_string(body.get_string_from_utf8())
-    if parsed is Dictionary and parsed.get("ok", false):
-        status_label.text = "Сервер Foundation доступен"
-    else:
-        status_label.text = "Некорректный ответ сервера"
-func _update_layout() -> void:
-    # Godot's safe rect is in physical display pixels; Control sizes are in
-    # viewport coordinates. Convert before applying margins.
+func _layout() -> void:
+    var margin := get_node_or_null("MenuSafeArea") as MarginContainer
+    if margin == null: return
     var view := get_viewport_rect().size
     var screen := DisplayServer.screen_get_size()
     var safe := DisplayServer.get_display_safe_area()
     var left := 24.0
-    var top := 18.0
     var right := 24.0
-    var bottom := 18.0
+    var top := 12.0
+    var bottom := 12.0
     if OS.has_feature("mobile") and screen.x > 0 and screen.y > 0 and safe.size.x > 0 and safe.size.y > 0:
         var sx := view.x / float(screen.x)
         var sy := view.y / float(screen.y)
         left = maxf(left, float(safe.position.x) * sx + 12.0)
-        top = maxf(top, float(safe.position.y) * sy + 12.0)
         right = maxf(right, float(screen.x - safe.end.x) * sx + 12.0)
-        bottom = maxf(bottom, float(screen.y - safe.end.y) * sy + 12.0)
-    safe_area.add_theme_constant_override("margin_left", int(left))
-    safe_area.add_theme_constant_override("margin_top", int(top))
-    safe_area.add_theme_constant_override("margin_right", int(right))
-    safe_area.add_theme_constant_override("margin_bottom", int(bottom))
-    var usable_width := maxf(240.0, view.x - left - right)
-    center.custom_minimum_size.x = minf(720.0, usable_width * 0.9)
-    # Keep touch controls and text legible even on compact landscape phones.
-    var compact := view.y < 520.0
-    center.add_theme_constant_override("separation", 12 if compact else 20)
-    title_label.add_theme_font_size_override("font_size", 30 if compact else 38)
-    retry_button.custom_minimum_size.y = 64.0 if compact else 76.0
+        top = maxf(top, float(safe.position.y) * sy + 8.0)
+        bottom = maxf(bottom, float(screen.y - safe.end.y) * sy + 8.0)
+    margin.add_theme_constant_override("margin_left", int(left))
+    margin.add_theme_constant_override("margin_right", int(right))
+    margin.add_theme_constant_override("margin_top", int(top))
+    margin.add_theme_constant_override("margin_bottom", int(bottom))
+
+func _label(value: String, font_size: int) -> Label:
+    var item := Label.new()
+    item.text = value
+    item.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+    item.add_theme_font_size_override("font_size", font_size)
+    form.add_child(item)
+    return item
+
+func _button(value: String, action: Callable) -> void:
+    var button := Button.new()
+    button.text = value
+    button.custom_minimum_size.y = 48
+    button.pressed.connect(action)
+    form.add_child(button)
+
+func _field(hint: String, secret: bool = false) -> LineEdit:
+    var item := LineEdit.new()
+    item.placeholder_text = hint
+    item.secret = secret
+    item.custom_minimum_size.y = 43
+    form.add_child(item)
+    return item
+
+func _show_home() -> void:
+    mode = "home"
+    _panel()
+    _button("ВОЙТИ В ИГРУ", func(): _show_login())
+    _button("СОЗДАТЬ АККАУНТ", func(): _show_register())
+    _button("НАСТРОЙКИ", func(): _show_settings())
+    _button("ВЫХОД", func(): get_tree().quit())
+    _layout()
+
+func _show_login() -> void:
+    mode = "login"
+    _panel()
+    login_id = _field("Логин или электронная почта")
+    password = _field("Пароль", true)
+    _button("ВОЙТИ", func(): _submit_login())
+    _button("НАЗАД", func(): _show_home())
+    _layout()
+
+func _show_register() -> void:
+    mode = "register"
+    _panel()
+    username = _field("Имя игрока (3–24 символа)")
+    email = _field("Электронная почта")
+    password = _field("Пароль (минимум 10 символов)", true)
+    _button("ЗАРЕГИСТРИРОВАТЬСЯ", func(): _submit_register())
+    _button("НАЗАД", func(): _show_home())
+    _layout()
+
+func _show_settings() -> void:
+    mode = "settings"
+    _panel()
+    _button("Музыка: " + ("ВКЛ" if music_enabled else "ВЫКЛ"), func():
+        music_enabled = not music_enabled
+        _show_settings()
+    )
+    _button("Уменьшить анимации: " + ("ДА" if reduce_motion else "НЕТ"), func():
+        reduce_motion = not reduce_motion
+        _show_settings()
+    )
+    _label("Горизонтальный экран · безопасные поля", 13)
+    _button("НАЗАД", func(): _show_home())
+    _layout()
+
+func _submit_login() -> void:
+    _send("/auth/login", {"identifier":login_id.text.strip_edges(), "password":password.text})
+
+func _submit_register() -> void:
+    _send("/auth/register", {"username":username.text.strip_edges(), "email":email.text.strip_edges(), "password":password.text})
+
+func _send(route: String, payload: Dictionary) -> void:
+    if busy: return
+    busy = true
+    pending = route
+    status_label.text = "Подключение к серверу..."
+    var headers := PackedStringArray(["Content-Type: application/json"])
+    var err := request.request(API + route, headers, HTTPClient.METHOD_POST, JSON.stringify(payload))
+    if err != OK:
+        busy = false
+        status_label.text = "Ошибка сети: %d" % err
+
+func _on_response(result: int, code: int, _headers: PackedStringArray, body: PackedByteArray) -> void:
+    busy = false
+    if result != HTTPRequest.RESULT_SUCCESS:
+        status_label.text = "Не удалось подключиться к серверу"
+        return
+    var data = JSON.parse_string(body.get_string_from_utf8())
+    if not data is Dictionary:
+        status_label.text = "Некорректный ответ сервера"
+        return
+    if code == 200 and data.has("token"):
+        token = str(data.token)
+        _enter_world()
+    else:
+        var errors := {"invalid_username":"Проверьте имя игрока", "invalid_email":"Некорректная почта", "invalid_password":"Пароль должен содержать 10–128 символов", "account_exists":"Аккаунт уже существует", "invalid_credentials":"Неверный логин или пароль", "rate_limited":"Слишком много попыток, попробуйте позже"}
+        status_label.text = errors.get(str(data.get("error","")), "Сервер ответил: %d" % code)
+
+func _enter_world() -> void:
+    # The token stays in RAM only; persistence and refresh require separate security review.
+    get_tree().change_scene_to_file("res://world.tscn")
