@@ -24,6 +24,7 @@ def _db():
     db.execute("PRAGMA journal_mode=WAL")
     db.execute("CREATE TABLE IF NOT EXISTS users (id INTEGER PRIMARY KEY, username TEXT UNIQUE NOT NULL, email TEXT UNIQUE NOT NULL, salt BLOB NOT NULL, password_hash BLOB NOT NULL, created_at INTEGER NOT NULL)")
     db.execute("CREATE TABLE IF NOT EXISTS sessions (token_hash TEXT PRIMARY KEY, user_id INTEGER NOT NULL REFERENCES users(id), expires_at INTEGER NOT NULL)")
+    db.execute("CREATE TABLE IF NOT EXISTS auth_attempts (attempt_key TEXT PRIMARY KEY, window_start BIGINT NOT NULL, attempts INTEGER NOT NULL)")
     db.commit()
     return db
 
@@ -31,17 +32,35 @@ def _hash_password(password, salt):
     return hashlib.pbkdf2_hmac("sha256", password.encode("utf-8"), salt, ITERATIONS)
 
 def _rate_limit(key):
-    now = time.monotonic()
-    with _lock:
-        entries = [t for t in _attempts.get(key, []) if now-t < 600]
-        if len(entries) >= 12:
-            _attempts[key] = entries
-            return False
-        entries.append(now)
-        _attempts[key] = entries
-        if len(_attempts) > 10000:
-            _attempts.clear()
-        return True
+    """Persistent fixed-window throttle shared by workers and surviving restarts."""
+    now = int(time.time())
+    window = now // 600
+    with _lock, _db() as db:
+        ph = "%s" if USE_POSTGRES else "?"
+        if USE_POSTGRES:
+            # Serialize competing workers for this key using an atomic UPSERT.
+            row = db.execute(
+                "INSERT INTO auth_attempts(attempt_key,window_start,attempts) "
+                "VALUES(%s,%s,1) ON CONFLICT(attempt_key) DO UPDATE SET "
+                "window_start=EXCLUDED.window_start, "
+                "attempts=CASE WHEN auth_attempts.window_start=EXCLUDED.window_start "
+                "THEN auth_attempts.attempts+1 ELSE 1 END RETURNING attempts",
+                (key, window),
+            ).fetchone()
+            count = row[0]
+        else:
+            db.execute(
+                "INSERT INTO auth_attempts(attempt_key,window_start,attempts) "
+                "VALUES(?,?,1) ON CONFLICT(attempt_key) DO UPDATE SET "
+                "window_start=excluded.window_start, "
+                "attempts=CASE WHEN auth_attempts.window_start=excluded.window_start "
+                "THEN auth_attempts.attempts+1 ELSE 1 END",
+                (key, window),
+            )
+            count = db.execute("SELECT attempts FROM auth_attempts WHERE attempt_key=?", (key,)).fetchone()[0]
+        db.commit()
+        return count <= 12
+
 
 def _session(db, user_id, username):
     token = secrets.token_urlsafe(32)
