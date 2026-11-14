@@ -45,6 +45,9 @@ func _update_safe_area() -> void:
     hud.add_theme_constant_override("margin_top", top)
     hud.add_theme_constant_override("margin_right", right)
     hud.add_theme_constant_override("margin_bottom", bottom)
+    if build_toolbar != null:
+        build_toolbar.offset_bottom = -float(bottom)
+        build_toolbar.offset_top = -float(bottom) - 72.0
 
 func _expand() -> void:
     world.expand_city(2)
@@ -87,16 +90,17 @@ var build_hint: Label
 func _setup_build_toolbar() -> void:
     build_toolbar = HBoxContainer.new()
     build_toolbar.name = "ConstructionToolbar"
-    build_toolbar.set_anchors_preset(Control.PRESET_CENTER_BOTTOM)
-    build_toolbar.anchor_left = 0.0
-    build_toolbar.anchor_right = 1.0
-    build_toolbar.anchor_top = 1.0
-    build_toolbar.anchor_bottom = 1.0
-    build_toolbar.offset_top = -84.0
-    build_toolbar.offset_bottom = -12.0
     build_toolbar.alignment = BoxContainer.ALIGNMENT_CENTER
+    build_toolbar.mouse_filter = Control.MOUSE_FILTER_PASS
     build_toolbar.add_theme_constant_override("separation", 10)
     add_child(build_toolbar)
+    # Set anchors AFTER adding to parent. Preset CENTER_BOTTOM caused
+    # mid-screen placement on landscape Android viewports.
+    build_toolbar.set_anchors_preset(Control.PRESET_BOTTOM_WIDE)
+    build_toolbar.offset_left = 0.0
+    build_toolbar.offset_right = 0.0
+    build_toolbar.offset_top = -92.0
+    build_toolbar.offset_bottom = -20.0
     for entry in [["farm", "Ферма 2×2"], ["mine", "Шахта 2×3"], ["factory", "Завод 3×2"]]:
         var button := Button.new()
         button.text = str(entry[1])
@@ -140,3 +144,11 @@ func _place_building() -> void:
         info.text = "Здание размещено (локальный прототип)"
     else:
         show_build_preview(result)
+
+func is_world_ui_point(point: Vector2) -> bool:
+    var top: Control = $HUD/Top
+    if top.get_global_rect().has_point(point):
+        return true
+    if build_toolbar != null and build_toolbar.get_global_rect().has_point(point):
+        return true
+    return false
