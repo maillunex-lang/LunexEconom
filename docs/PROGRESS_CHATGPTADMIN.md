@@ -14,3 +14,10 @@ Base: main a9bb74cffb532107d5932e09bb81fc5433e32c34. Isolated branch ChatGPTAdmi
 - No real God Mode city placement or economy/time editing yet: needs authoritative game-server API, permissions and audit.
 - No signed manifests, automatic background startup, resource hot-swapping in running world or device tests.
 - No release to main, no PR. Claude must review and merge only on owner request.
+
+## Iteration 2 · Draft world editor
+- Added isolated city draft catalog with editable population, tax rates, simulated month duration and growth rate. Values have explicit validation, never reach live game DB.
+- Added municipal-only building placement (school, hospital, park), footprint collision checks, ownership 'city', removal, audit and export as review-only JSON.
+- Added simple web grid editor with click-to-place and panning, plus illustrative demographic preview. It is NOT the authoritative isometric game map or full economic simulation.
+- Added authenticated API routes and integration tests. No deployment or main merge.
+- Before real God Mode: introduce game-server RBAC, preview of real occupied cells, financial ledger integration, migrations, staged approval and idempotent authoritative commands.

@@ -18,3 +18,6 @@ Public GET /patch/manifest.json and /patch/blobs/<sha256>.<png|webp>; admin-only
 Release publication snapshots a catalog of image hashes. No arbitrary scripts, PCK, GDScript or executable mods. A patch changes image data only, not gameplay rules. UI prompt field is metadata, not an automatic paid image generator.
 
 Planned: game-server-owned economy and municipal building commands, authorization/RBAC, world editor, preview/staging, signed manifests, automatic rollback, Android physical device test, background download limits, content delivery CDN and release channel separation.
+
+### Draft world editor (iteration 2)
+Admin endpoints: GET/POST /api/cities, GET /api/cities/{id}, POST /api/buildings, POST /api/buildings/remove, POST /api/forecast and POST /api/export-city. Drafts persist in the studio's separate SQLite database. All modifications are inert until an explicitly designed authoritative game-server command flow is implemented. Only municipal school/hospital/park objects are supported; no player-owned plots can be changed. Forecast is illustrative population arithmetic only.

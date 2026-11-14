@@ -61,6 +61,24 @@ class PatchTests(unittest.TestCase):
             self.store.add_asset("valid", "agriculture", "Test", "", "png", b"not an image")
         self.assertEqual(self.request("/patch/blobs/../../etc/passwd")[0], 404)
 
+    def test_world_http_auth_and_draft(self):
+        from world_editor import DEFAULTS
+        city = {"id":"ufa", "title":"Уфа", "settings":dict(DEFAULTS)}
+        self.assertEqual(self.request("/api/cities")[0], 401)
+        self.assertEqual(self.request("/api/cities", "POST", city)[0], 401)
+        self.assertEqual(self.request("/api/cities", "POST", city, True)[0], 200)
+        self.assertEqual(self.request("/api/cities/ufa", auth=True)[0], 200)
+        building = {"city_id":"ufa", "kind":"school", "x":2, "y":4}
+        code, data = self.request("/api/buildings", "POST", building, True)
+        self.assertEqual(code, 201)
+        self.assertEqual(json.loads(data)["owner"], "city")
+        self.assertEqual(self.request("/api/buildings", "POST", building, True)[0], 400)
+        self.assertEqual(self.request("/api/forecast", "POST", {"city_id":"ufa", "months":12}, True)[0], 200)
+        code, exported = self.request("/api/export-city", "POST", {"city_id":"ufa"}, True)
+        self.assertEqual(code, 200)
+        self.assertEqual(json.loads(exported)["mode"], "review_only")
+        self.assertEqual(self.request("/api/buildings/remove", "POST", {"city_id":"ufa", "building_id":json.loads(data)["id"]}, True)[0], 200)
+
     def test_revision_snapshot(self):
         self.store.add_asset("farm_1", "agriculture", "A", "", "png", PNG)
         one = self.store.publish()

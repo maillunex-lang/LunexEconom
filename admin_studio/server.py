@@ -7,12 +7,14 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import urlsplit
 from livepatch import Store
+from world_editor import WorldDrafts
 
 ROOT = Path(__file__).resolve().parent
 STATIC = ROOT / "static"
 MAX_BODY = 12 * 1024 * 1024
 
 def handler_factory(store, token):
+    drafts = WorldDrafts(store)
     class Handler(BaseHTTPRequestHandler):
         def send(self, code, obj):
             raw = json.dumps(obj, ensure_ascii=False).encode()
@@ -50,11 +52,11 @@ def handler_factory(store, token):
                 self.end_headers()
                 self.wfile.write(data)
                 return
-            if path in ("/", "/index.html", "/app.js", "/style.css"):
+            if path in ("/", "/index.html", "/app.js", "/world.js", "/style.css"):
                 filename = "index.html" if path == "/" else path.lstrip("/")
                 data = (STATIC / filename).read_bytes()
                 self.send_response(200)
-                self.send_header("Content-Type", {"index.html":"text/html","app.js":"text/javascript","style.css":"text/css"}[filename] + "; charset=utf-8")
+                self.send_header("Content-Type", {"index.html":"text/html","app.js":"text/javascript","world.js":"text/javascript","style.css":"text/css"}[filename] + "; charset=utf-8")
                 self.send_header("Cache-Control", "no-store")
                 self.send_header("Content-Security-Policy", "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'self'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'")
                 self.send_header("X-Content-Type-Options", "nosniff")
@@ -64,6 +66,14 @@ def handler_factory(store, token):
                 return
             if not self.authorized():
                 return self.send(401, {"error": "unauthorized"})
+            if path == "/api/cities":
+                return self.send(200, {"cities": drafts.cities()})
+            if path.startswith("/api/cities/"):
+                city_id = path.removeprefix("/api/cities/")
+                try:
+                    return self.send(200, drafts.city(city_id))
+                except ValueError:
+                    return self.send(404, {"error": "city_not_found"})
             if path == "/api/assets":
                 return self.send(200, {"assets": store.list_assets()})
             if path == "/api/audit":
@@ -79,6 +89,18 @@ def handler_factory(store, token):
                 return self.send(413, {"error": "body_limit"})
             try:
                 body = json.loads(self.rfile.read(int(length)))
+                if path == "/api/cities":
+                    drafts.save_city(body["id"], body["title"], body["settings"])
+                    return self.send(200, drafts.city(body["id"]))
+                if path == "/api/buildings":
+                    return self.send(201, drafts.place(body["city_id"], body["kind"], body["x"], body["y"]))
+                if path == "/api/buildings/remove":
+                    drafts.remove(body["city_id"], body["building_id"])
+                    return self.send(200, {"removed": True})
+                if path == "/api/forecast":
+                    return self.send(200, drafts.forecast(body["city_id"], body["months"]))
+                if path == "/api/export-city":
+                    return self.send(200, drafts.export(body["city_id"]))
                 if path == "/api/publish":
                     return self.send(200, store.publish())
                 if path == "/api/assets":
