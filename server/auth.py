@@ -92,6 +92,6 @@ def profile(token):
 def logout(token):
     if token:
         with _lock, _db() as db:
-            db.execute("DELETE FROM sessions WHERE token_hash="+("%s" if USE_POSTGRES else "?")",(hashlib.sha256(token.encode()).hexdigest(),))
+            db.execute("DELETE FROM sessions WHERE token_hash="+("%s" if USE_POSTGRES else "?"),(hashlib.sha256(token.encode()).hexdigest(),))
             db.commit()
     return 200, {"ok":True}
