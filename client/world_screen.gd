@@ -317,7 +317,10 @@ func show_build_preview(result: Dictionary) -> void:
             "occupied": "Участок занят",
             "no_road_access": "Нужен подъезд к дороге",
             "outside_explored_area": "Территория ещё не открыта",
-            "invalid_size": "Неверный размер участка"
+            "invalid_size": "Неверный размер участка",
+            "no_selection": "Сначала выберите участок",
+            "server_occupied": "Участок занят серверным объектом",
+            "water": "На воде строить нельзя"
         }
         info.text = str(messages.get(str(result.get("reason", "")), "Участок не подходит"))
         if build_hint != null: build_hint.text = info.text
@@ -329,7 +332,7 @@ func _place_building() -> void:
     if result.get("ok", false):
         world.cancel_build()
         placement_panel.hide()
-        info.text = "Здание размещено (локальный прототип)"
+        info.text = "Построено: %s · участок %s" % [str(result.get("object_id", "")), str(world.selected)]
     else:
         show_build_preview(result)
     ui_pending = false
