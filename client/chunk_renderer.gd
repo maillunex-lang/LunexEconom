@@ -75,6 +75,11 @@ func _draw_road(p: Vector2, cell: Vector2i) -> void:
         p + Vector2(0, TILE_H * 0.5),
         p + Vector2(-TILE_W * 0.5, 0)
     ])
+    if world.remote_art != null:
+        var road_tex: Texture2D = world.remote_art.texture_for("roads.straight")
+        if road_tex != null:
+            draw_texture_rect(road_tex, Rect2(p - Vector2(TILE_W * 0.5, TILE_H * 0.5), Vector2(TILE_W, TILE_H)), false)
+            return
     draw_colored_polygon(diamond, Color("#454b50"))
     # Restrained, non-repeating grain; no lane markings on road tiles.
     if mask >= 0:
@@ -108,6 +113,25 @@ func _draw_house(p: Vector2) -> void:
     draw_rect(Rect2(p + Vector2(-7, -6), Vector2(3, 3)), Color("#a8c5d6"))
 
 func _draw_building(p: Vector2, kind: String, owner: String = "") -> void:
+    var art_id := ""
+    match kind:
+        "house": art_id = "housing.small"
+        "shop": art_id = "retail.grocery"
+        "farm": art_id = "industry.farm"
+        "mine": art_id = "industry.mine"
+        "factory": art_id = "industry.factory"
+        "warehouse": art_id = "industry.warehouse"
+        "school": art_id = "municipal.school"
+        "hospital": art_id = "municipal.hospital"
+        "park": art_id = "municipal.park"
+    if world.remote_art != null and not art_id.is_empty():
+        var remote_tex: Texture2D = world.remote_art.texture_for(art_id)
+        if remote_tex != null:
+            var art_size: Vector2 = remote_tex.get_size()
+            var factor: float = minf(1.0, 88.0 / maxf(art_size.x, 1.0))
+            var display_size: Vector2 = art_size * factor
+            draw_texture_rect(remote_tex, Rect2(p - Vector2(display_size.x * 0.5, display_size.y), display_size), false)
+            return
     if kind == "house":
         _draw_house(p)
         return
