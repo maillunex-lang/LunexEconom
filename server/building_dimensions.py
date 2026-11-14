@@ -46,6 +46,6 @@ def view():
         "legacy_footprints": {k: list(v) for k, v in LEGACY_FOOTPRINTS.items()},
         "size_choices": {k: list(v) for k, v in SIZE_CHOICES.items()},
         "max_equipment_level": MAX_EQUIPMENT_LEVEL,
-        "enabled": False,
-        "note": "Server rules staged; existing construction uses legacy footprints.",
+        "enabled": True,
+        "note": "Square sizes supported for new construction; expansion and equipment upgrade commands pending.",
     }
