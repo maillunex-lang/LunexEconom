@@ -24,6 +24,10 @@ class SettlementTests(unittest.TestCase):
         patcher = mock.patch.object(game_server.time, "time", side_effect=lambda: self.now)
         patcher.start()
         self.addCleanup(patcher.stop)
+        # Pin market prices to the reference price: this file tests settlement, test_market.py tests pricing.
+        pin = mock.patch.object(economy, "price_for", side_effect=lambda product, supply, demand: economy.MARKET[product]["reference_price"])
+        pin.start()
+        self.addCleanup(pin.stop)
 
     def tearDown(self):
         game_server.DB = self.old
@@ -93,7 +97,7 @@ class SettlementTests(unittest.TestCase):
         self.assertEqual((bad, total, negative), ([], 0, []))
 
     def test_upkeep_never_creates_debt(self):
-        broken = {"farm": {"product": "x", "output": 1, "unit_price": 100, "upkeep": 500_000}}
+        broken = {"farm": {"product": "honey", "output": 1, "upkeep": 500_000}}
         self.build()
         with mock.patch.dict(economy.PRODUCTION, broken, clear=False):
             with game_server.connect() as db:

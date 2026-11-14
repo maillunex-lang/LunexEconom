@@ -72,6 +72,12 @@ def clock_state():
         db.execute("SELECT pg_advisory_xact_lock(20261114)")
         return clock.state(db,"%s",int(time.time()))
 
+def market_state():
+    with postgres_db.connect() as db:
+        db.execute("SELECT pg_advisory_xact_lock(20261114)")
+        clk=clock.state(db,"%s",int(time.time()))
+        return 200,{"ok":True,"month_index":clk["month_index"],"products":economy.quote(db,"%s",clk)}
+
 def wallet(owner):
     with postgres_db.connect() as db:
         db.execute("SELECT pg_advisory_xact_lock(20261114)")

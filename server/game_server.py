@@ -102,6 +102,15 @@ def clock_state():
         db.commit()
     return result
 
+def market_state():
+    with LOCK, connect() as db:
+        db.execute("BEGIN IMMEDIATE")
+        now=int(time.time())
+        clk=clock.state(db,"?",now)
+        result={"ok":True,"month_index":clk["month_index"],"products":economy.quote(db,"?",clk)}
+        db.commit()
+    return 200,result
+
 def wallet(owner):
     with LOCK, connect() as db:
         db.execute("BEGIN IMMEDIATE")
@@ -156,6 +165,7 @@ class Handler(BaseHTTPRequestHandler):
         if url.path=="/auth/me":
             status,data=auth.profile(self.headers.get("Authorization","")[7:] if self.headers.get("Authorization","").startswith("Bearer ") else "")
             return self._send(status,data)
+        if url.path=="/market":return self._send(*market_state())
         if url.path=="/wallet":
             owner=self._identity()
             if not owner:return self._send(401,{"error":"unauthorized"})
@@ -194,6 +204,7 @@ if os.environ.get("LUNEX_DB_ENGINE") == "postgres":
     chunk = postgres_world.chunk
     wallet = postgres_world.wallet
     clock_state = postgres_world.clock_state
+    market_state = postgres_world.market_state
 
 if __name__=="__main__":
     if os.environ.get("LUNEX_DB_ENGINE") == "postgres":

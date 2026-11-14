@@ -480,6 +480,7 @@ var wallet_balance := -1
 var wallet_transactions: Array = []
 var wallet_reports: Array = []
 var wallet_forecast: Dictionary = {}
+var market_quotes: Dictionary = {}
 var production := {"farm": {"output": 100, "unit_price": 200, "upkeep": 8000}, "mine": {"output": 40, "unit_price": 1500, "upkeep": 30000}, "factory": {"output": 60, "unit_price": 2000, "upkeep": 75000}}
 
 func _fmt_money(value: int) -> String:
@@ -504,7 +505,24 @@ func _set_balance(value: int) -> void:
 func _month_profit(kind: String) -> int:
     var p = production.get(kind, null)
     if not p is Dictionary: return 0
-    return int(p.get("output", 0)) * int(p.get("unit_price", 0)) - int(p.get("upkeep", 0))
+    var price := int(p.get("unit_price", 0))
+    var pid := str(p.get("product_id", ""))
+    # Server quote: the price the market would settle at if this building were added.
+    if market_quotes.has(pid): price = int(market_quotes[pid].get("price_if_added", price))
+    return int(p.get("output", 0)) * price - int(p.get("upkeep", 0))
+
+func _market_lines() -> PackedStringArray:
+    var lines: PackedStringArray = []
+    for pid in market_quotes.keys():
+        var q: Dictionary = market_quotes[pid]
+        var ref := maxi(int(q.get("reference_price", 1)), 1)
+        var price := int(q.get("price", 0))
+        var arrow := ""
+        if q.get("previous_price", null) != null:
+            var prev := int(q["previous_price"])
+            arrow = " ▲" if price > prev else (" ▼" if price < prev else " ＝")
+        lines.append("%s: %s (%+d%% к базе)%s · предложение %d / спрос %d" % [str(q.get("name", pid)), _fmt_money(price), (price - ref) * 100 / ref, arrow, int(q.get("supply", 0)), int(q.get("demand", 0))])
+    return lines
 
 func _economy_text() -> String:
     if wallet_balance < 0:
@@ -525,6 +543,11 @@ func _economy_text() -> String:
         for tx in wallet_transactions.slice(0, 3):
             if tx is Dictionary:
                 lines.append("%s%s  %s" % ["+" if int(tx.get("amount", 0)) >= 0 else "", _fmt_money(int(tx.get("amount", 0))), str(tx.get("memo", ""))])
+    var market := _market_lines()
+    if not market.is_empty():
+        lines.append("")
+        lines.append("Рынок:")
+        lines.append_array(market)
     return "\n".join(lines)
 
 func _month_label(index: int) -> String:
@@ -549,7 +572,13 @@ func _api_get(path: String, auth: bool, callback: Callable) -> void:
     if req.request(API_ROOT + path, headers) != OK:
         req.queue_free()
 
+func _refresh_market() -> void:
+    _api_get("market", false, func(data: Dictionary) -> void:
+        if data.get("products", null) is Dictionary: market_quotes = data["products"]
+    )
+
 func _refresh_terms() -> void:
+    _refresh_market()
     _api_get("world", false, func(data: Dictionary) -> void:
         var eco = data.get("economy", null)
         if not eco is Dictionary: return
@@ -568,6 +597,7 @@ func _refresh_wallet() -> void:
         wallet_transactions = data.get("transactions", [])
         wallet_reports = data.get("reports", [])
         wallet_forecast = data.get("forecast", {})
+        if data.get("market", null) is Dictionary: market_quotes = data["market"]
         if section_panel != null and section_panel.visible and section_title.text == "Экономика":
             section_body.text = _economy_text()
     )

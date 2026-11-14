@@ -14,23 +14,39 @@ BUILD_COST = {"farm": 120_000, "mine": 300_000, "factory": 450_000}
 ROAD_CELL_COST = 5_000
 TREASURY = "system:treasury"
 CONSTRUCTION = "system:construction"
-MARKET = "system:market"      # buys all production at the fixed price (demand model comes later)
+MARKET_ACCOUNT = "system:market"      # buys all production at the clearing price
 UPKEEP = "system:upkeep"      # sink for salaries and maintenance
 MAX_SETTLE_MONTHS = 600
 
-# ---- Tunable balance table: change numbers here, nothing else depends on them ----
-# output: units per full game month; unit_price: roubles per unit; upkeep: roubles per month.
-# Targets: farm pays back in ~10 months, mine ~10, factory ~10 (net = output*price - upkeep).
+# ---- Tunable balance tables: change numbers here, nothing else depends on them ----
+# output: units per full game month; upkeep: roubles per month.
 PRODUCTION = {
-    "farm":    {"product": "Мёд",    "output": 100, "unit_price": 200,  "upkeep": 8_000},
-    "mine":    {"product": "Нефть",  "output": 40,  "unit_price": 1500, "upkeep": 30_000},
-    "factory": {"product": "Товары", "output": 60,  "unit_price": 2000, "upkeep": 75_000},
+    "farm":    {"product": "honey", "output": 100, "upkeep": 8_000},
+    "mine":    {"product": "oil",   "output": 40,  "upkeep": 30_000},
+    "factory": {"product": "goods", "output": 60,  "upkeep": 75_000},
 }
+# Market: one world-wide market per product (regions/cities come later).
+#   price = reference_price * (demand / supply) ** (1 / elasticity), clamped to [MIN_PRICE_K, MAX_PRICE_K] x reference.
+#   demand = base_demand * season[calendar month] * (1 + DEMAND_GROWTH) ** month_index
+# base_demand = 2 buildings' output: the world absorbs two buildings of a kind at the reference price;
+# a lone first building enjoys a premium, a crowded market pushes prices (and profit) down.
+MARKET = {
+    "honey": {"name": "Мёд",    "reference_price": 200,  "base_demand": 200, "elasticity": 1.5,
+              "season": [1.15, 1.10, 1.00, 0.95, 0.90, 0.90, 0.90, 0.95, 1.00, 1.05, 1.10, 1.15]},
+    "oil":   {"name": "Нефть",  "reference_price": 1500, "base_demand": 80,  "elasticity": 1.5,
+              "season": [1.15, 1.10, 1.05, 0.95, 0.90, 0.85, 0.85, 0.90, 0.95, 1.05, 1.10, 1.15]},
+    "goods": {"name": "Товары", "reference_price": 2000, "base_demand": 120, "elasticity": 1.5,
+              "season": [0.95, 0.90, 0.95, 1.00, 1.00, 1.00, 1.00, 1.05, 1.05, 1.05, 1.10, 1.25]},
+}
+DEMAND_GROWTH = 0.005     # population/demand growth per game month
+MIN_PRICE_K = 0.25
+MAX_PRICE_K = 2.5
 
 SCHEMA = (
     "CREATE TABLE IF NOT EXISTS wallets(account TEXT PRIMARY KEY, balance BIGINT NOT NULL)",
     "CREATE TABLE IF NOT EXISTS ledger_tx(id TEXT PRIMARY KEY, kind TEXT NOT NULL, memo TEXT NOT NULL, created BIGINT NOT NULL)",
     "CREATE TABLE IF NOT EXISTS building_ops(object_id TEXT PRIMARY KEY, owner TEXT NOT NULL, kind TEXT NOT NULL, start_month BIGINT NOT NULL, start_permille INTEGER NOT NULL)",
+    "CREATE TABLE IF NOT EXISTS market_prices(product TEXT NOT NULL, month_index BIGINT NOT NULL, price BIGINT NOT NULL, supply BIGINT NOT NULL, demand BIGINT NOT NULL, PRIMARY KEY(product, month_index))",
     "CREATE TABLE IF NOT EXISTS company_state(owner TEXT PRIMARY KEY, settled_through BIGINT NOT NULL)",
     "CREATE TABLE IF NOT EXISTS monthly_reports(owner TEXT NOT NULL, month_index BIGINT NOT NULL, revenue BIGINT NOT NULL, upkeep BIGINT NOT NULL, profit BIGINT NOT NULL, buildings INTEGER NOT NULL, PRIMARY KEY(owner, month_index))",
     "CREATE TABLE IF NOT EXISTS ledger_entries(tx_id TEXT NOT NULL REFERENCES ledger_tx(id), account TEXT NOT NULL, amount BIGINT NOT NULL, PRIMARY KEY(tx_id, account))",
@@ -48,7 +64,9 @@ def build_cost(kind, road_cells):
 def terms():
     return {"currency": CURRENCY, "start_capital": START_CAPITAL,
             "building_costs": dict(BUILD_COST), "road_cell_cost": ROAD_CELL_COST,
-            "production": {k: dict(v) for k, v in PRODUCTION.items()}}
+            "production": {k: {"product_id": v["product"], "product": MARKET[v["product"]]["name"], "output": v["output"],
+                               "unit_price": MARKET[v["product"]]["reference_price"], "upkeep": v["upkeep"]}
+                           for k, v in PRODUCTION.items()}}
 
 
 def _add_balance(db, ph, account, delta):
@@ -104,9 +122,68 @@ def history(db, ph, owner, limit=20):
     return [{"kind": k, "memo": m, "time": c, "amount": a} for k, m, c, a in rows]
 
 
-def _monthly(kind, factor=1000):
-    p = PRODUCTION[kind]
-    return p["output"] * p["unit_price"] * factor // 1000, p["upkeep"] * factor // 1000
+def _factor(start_month, permille, month):
+    return 1000 - permille if start_month == month else 1000
+
+
+def demand_for(product, month):
+    m = MARKET[product]
+    return int(round(m["base_demand"] * m["season"][month % 12] * (1 + DEMAND_GROWTH) ** month))
+
+
+def price_for(product, supply, demand):
+    """Clearing price for the given supply/demand (integer roubles)."""
+    m = MARKET[product]
+    ref = m["reference_price"]
+    if supply <= 0:
+        return int(round(ref * MAX_PRICE_K))
+    target = ref * (max(demand, 0) / supply) ** (1.0 / m["elasticity"])
+    return int(round(min(max(target, ref * MIN_PRICE_K), ref * MAX_PRICE_K)))
+
+
+def _all_ops(db, ph):
+    return db.execute("SELECT kind,start_month,start_permille FROM building_ops").fetchall()
+
+
+def supply_for(ops, product, month, full=False):
+    """Units of `product` produced in `month` by all buildings in the world."""
+    total = 0
+    for kind, start_month, permille in ops:
+        spec = PRODUCTION.get(kind)
+        if spec is None or spec["product"] != product or start_month > month:
+            continue
+        total += spec["output"] * (1000 if full else _factor(start_month, permille, month)) // 1000
+    return total
+
+
+def month_price(db, ph, product, month):
+    """Price of a completed month. Computed once from that month's supply and stored, so every
+    player settles at the same price regardless of when they log in."""
+    row = db.execute("SELECT price FROM market_prices WHERE product=%s AND month_index=%s".replace("%s", ph), (product, month)).fetchone()
+    if row is None:
+        supply = supply_for(_all_ops(db, ph), product, month)
+        demand = demand_for(product, month)
+        db.execute("INSERT INTO market_prices(product,month_index,price,supply,demand) VALUES(%s,%s,%s,%s,%s) ON CONFLICT(product,month_index) DO NOTHING".replace("%s", ph),
+                   (product, month, price_for(product, supply, demand), supply, demand))
+        row = db.execute("SELECT price FROM market_prices WHERE product=%s AND month_index=%s".replace("%s", ph), (product, month)).fetchone()
+    return int(row[0])
+
+
+def quote(db, ph, clk):
+    """Current (provisional) market state per product, including the price if one more building were added."""
+    month = clk["month_index"]
+    ops = _all_ops(db, ph)
+    out = {}
+    for kind, spec in PRODUCTION.items():
+        product = spec["product"]
+        supply = supply_for(ops, product, month, full=True)
+        demand = demand_for(product, month)
+        previous = db.execute("SELECT price FROM market_prices WHERE product=%s AND month_index=%s".replace("%s", ph), (product, month - 1)).fetchone()
+        m = MARKET[product]
+        out[product] = {"kind": kind, "name": m["name"], "reference_price": m["reference_price"], "supply": supply, "demand": demand,
+                        "price": price_for(product, supply, demand), "price_if_added": price_for(product, supply + spec["output"], demand),
+                        "previous_price": int(previous[0]) if previous else None}
+    return out
 
 
 def register_building(db, ph, owner, object_id, kind, clk):
@@ -137,32 +214,33 @@ def settle(db, ph, owner, clk, now):
     for month in range(first, last + 1):
         revenue = upkeep = count = 0
         for kind, start_month, permille in ops:
-            if start_month > month or kind not in PRODUCTION:
+            spec = PRODUCTION.get(kind)
+            if spec is None or start_month > month:
                 continue
-            factor = 1000 - permille if start_month == month else 1000
-            rev, upk = _monthly(kind, factor)
-            revenue += rev
-            upkeep += upk
+            factor = _factor(start_month, permille, month)
+            revenue += spec["output"] * factor * month_price(db, ph, spec["product"], month) // 1000
+            upkeep += spec["upkeep"] * factor // 1000
             count += 1
         if count:
             available = (balance(db, ph, owner) or 0) + revenue
             paid_upkeep = min(upkeep, available)   # unpaid upkeep is not turned into debt (bankruptcy rules come later)
             profit = revenue - paid_upkeep
             post(db, ph, "monthly", "Итоги месяца: доход %d, расходы %d" % (revenue, paid_upkeep),
-                 [(account, profit), (MARKET, -revenue), (UPKEEP, paid_upkeep)], now)
+                 [(account, profit), (MARKET_ACCOUNT, -revenue), (UPKEEP, paid_upkeep)], now)
             db.execute("INSERT INTO monthly_reports(owner,month_index,revenue,upkeep,profit,buildings) VALUES(%s,%s,%s,%s,%s,%s)".replace("%s", ph),
                        (owner, month, revenue, paid_upkeep, profit, count))
     db.execute("UPDATE company_state SET settled_through=%s WHERE owner=%s".replace("%s", ph), (last, owner))
     return last - first + 1
 
 
-def forecast(db, ph, owner):
+def forecast(db, ph, owner, quotes):
+    """Expected monthly result at current market prices."""
     revenue = upkeep = count = 0
     for (kind,) in db.execute("SELECT kind FROM building_ops WHERE owner=%s".replace("%s", ph), (owner,)).fetchall():
-        if kind in PRODUCTION:
-            rev, upk = _monthly(kind)
-            revenue += rev
-            upkeep += upk
+        spec = PRODUCTION.get(kind)
+        if spec:
+            revenue += spec["output"] * quotes[spec["product"]]["price"]
+            upkeep += spec["upkeep"]
             count += 1
     return {"revenue": revenue, "upkeep": upkeep, "profit": revenue - upkeep, "buildings": count}
 
@@ -176,5 +254,6 @@ def reports(db, ph, owner, limit=6):
 def wallet(db, ph, owner, clk, now):
     settle(db, ph, owner, clk, now)
     bal = ensure_wallet(db, ph, owner, now)
+    quotes = quote(db, ph, clk)
     return {"ok": True, "balance": bal, "currency": CURRENCY, "transactions": history(db, ph, owner),
-            "forecast": forecast(db, ph, owner), "reports": reports(db, ph, owner), "month_index": clk["month_index"]}
+            "forecast": forecast(db, ph, owner, quotes), "reports": reports(db, ph, owner), "month_index": clk["month_index"], "market": quotes}
