@@ -137,6 +137,9 @@ def accept(db, ph, owner, payload, month, now):
         return 403, {"error": "self_contract"}
     if not _human(supplier):
         return 403, {"error": "npc_forbidden"}
+    import regions
+    if regions.home_region(db, ph, owner) != regions.home_region(db, ph, supplier):
+        return 409, {"error": "different_city"}      # a contract has no delivery time; goods between cities go through the market (docs/CITY_ECONOMY.md)
     if _active_count(db, ph, owner) >= economy.CONTRACT_MAX_ACTIVE or _active_count(db, ph, supplier) >= economy.CONTRACT_MAX_ACTIVE:
         return 409, {"error": "too_many_contracts"}
     cid = uuid.uuid4().hex

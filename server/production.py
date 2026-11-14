@@ -59,9 +59,18 @@ def _price_row(db, ph, product, month):
     return int(row[0]) if row else None
 
 
-def _hold_share(db, ph, product, month, ref):
+def _regional_price(db, ph, region, product, month):
+    """Price of a city's market in `month`. The game city falls back to the national row (older databases have no regional rows)."""
+    import regions
+    price = regions.previous_price(db, ph, region, product, month + 1)
+    if price is None and region == regions.HOME:
+        price = _price_row(db, ph, product, month)
+    return price
+
+
+def _hold_share(db, ph, product, month, ref, region="ufa"):
     """Share (0..1) of the output a warehouse holds back, from the average price of the last months (smoothed against whipsaw)."""
-    rows = [_price_row(db, ph, product, month - 1 - i) for i in range(economy.HOLD_SMOOTH_MONTHS)]
+    rows = [_regional_price(db, ph, region, product, month - 1 - i) for i in range(economy.HOLD_SMOOTH_MONTHS)]
     rows = [r for r in rows if r is not None]
     if not rows:
         return 0.0
@@ -229,114 +238,222 @@ def _population_at(db, ph, month):
 
 def step_month(db, ph, month, now):
     """Run the market step for one completed month."""
-    ops = db.execute(_q("SELECT owner,kind,start_month,start_permille FROM building_ops WHERE start_month<=%s", ph), (month,)).fetchall()
+    import regions
+    active = regions.active_regions(db, ph)                      # the game city, cities with company buildings, generated cities
+    where = regions.building_regions(db, ph)
+    ops = db.execute(_q("SELECT owner,kind,start_month,start_permille,object_id FROM building_ops WHERE start_month<=%s", ph), (month,)).fetchall()
     companies = {}
-    for owner, kind, start_month, permille in sorted(ops):
+    for owner, kind, start_month, permille, object_id in sorted(ops):
         spec = _spec(kind)
         if spec is None:
             continue
         c = companies.setdefault(owner, {"buildings": [], "maint": 0, "jobs": 0, "capacity": 0, "stock": {}, "needs": {}, "got": {},
-                                         "need_ext": {}, "revenue": 0, "input_cost": 0, "rev_by": {}, "in_by": {}})
+                                         "need_ext": {}, "revenue": 0, "input_cost": 0, "rev_by": {}, "in_by": {}, "regional": {}})
         factor = _factor(start_month, permille, month)
+        region = where.get(object_id, regions.HOME)
+        reg = c["regional"].setdefault(region, {"buildings": [], "jobs": 0, "needs": {}, "got": {}, "need_ext": {}})
         c["buildings"].append((kind, factor))
+        reg["buildings"].append((kind, factor))
         c["maint"] += spec["upkeep"] * factor // 1000
         c["jobs"] += spec["jobs"] * factor // 1000
+        reg["jobs"] += spec["jobs"] * factor // 1000
         c["capacity"] += spec.get("capacity", 0)
         for product, amount in spec.get("inputs", {}).items():
             c["needs"][product] = c["needs"].get(product, 0) + amount * factor // 1000
+            reg["needs"][product] = reg["needs"].get(product, 0) + amount * factor // 1000
     for owner, product, qty in db.execute("SELECT owner,product,qty FROM inventory").fetchall():
         if owner in companies:
             companies[owner]["stock"][product] = int(qty)
     for owner, c in companies.items():
         c["cash"] = economy.balance(db, ph, owner) or 0
         c["distress"] = _status(db, ph, owner)["missed"] >= 1      # unpaid last month: workers walk away
+        # the city where the company keeps its stock (warehouses are notional): most jobs, ties by the order of the cities
+        c["home"] = sorted(c["regional"], key=lambda r: (-(c["regional"][r]["jobs"] + len(c["regional"][r]["buildings"])), regions.region_ids().index(r)))[0] \
+            if c["regional"] else regions.HOME
 
-    population = _population_at(db, ph, month)
-    total_jobs = sum(c["jobs"] for c in companies.values())
-    lab = labor_market(population, total_jobs)
-    staffing = lab["staffing"]
+    # every active city has its own residents, labour market, wage and staffing
+    pop_r, jobs_r, lab_r, staffing_r = {}, {}, {}, {}
+    for region in active:
+        pop_r[region] = _population_at(db, ph, month) if region == regions.HOME else regions.population_at(db, ph, region, month)
+        jobs_r[region] = sum(c["regional"][region]["jobs"] for c in companies.values() if region in c["regional"])
+        lab_r[region] = labor_market(pop_r[region], jobs_r[region])
+        staffing_r[region] = lab_r[region]["staffing"]
+    population, total_jobs, lab, staffing = pop_r[regions.HOME], jobs_r[regions.HOME], lab_r[regions.HOME], staffing_r[regions.HOME]
     city.ensure(db, ph, month)
     soc = city.social(db, ph, month, population, funded=_arrears(_status(db, ph, economy.CITY)) == 0)
     quality = soc["quality"]
+    quality_r = {region: (quality if region == regions.HOME else 0.0) for region in active}    # social services exist in the game city only
     for c in companies.values():
-        for product in list(c["needs"]):
-            c["needs"][product] = int(c["needs"][product] * staffing)   # understaffed factories also use less input
+        for region, reg in c["regional"].items():
+            for product in list(reg["needs"]):
+                reg["needs"][product] = int(reg["needs"][product] * staffing_r[region])   # understaffed factories also use less input
+        c["needs"] = {}
+        for reg in c["regional"].values():
+            for product, amount in reg["needs"].items():
+                c["needs"][product] = c["needs"].get(product, 0) + amount
+        c["wage_bill"] = sum(reg["jobs"] * lab_r[region]["wage"] for region, reg in c["regional"].items())
 
     consumed = input_products()
     prices = {}
     import contracts as trade_contracts
     contract_deliveries = []
-    consumer_spend = 0           # value of what residents bought this month (consumer demand x fill x price)
-    consumer_units = 0           # units of consumer goods behind that value (shops serve these)
+    spend_r = {region: 0 for region in active}       # value of what each city's residents bought (consumer demand x fill x price)
+    units_r = {region: 0 for region in active}       # units of consumer goods behind that value (shops serve these)
+    consumer_spend = 0
     for product in product_order():
         ref = economy.MARKET[product]["reference_price"]
-        previous = _price_row(db, ph, product, month - 1)
         hold_share = _hold_share(db, ph, product, month, ref)
+        previous = _price_row(db, ph, product, month - 1)
         release_all = previous is not None and previous >= ref       # price above the reference: the warehouse sells everything
+        produced_by = {}
         produced_map = {}
         for owner, c in companies.items():
-            produced = 0
-            for kind, factor in c["buildings"]:
-                spec = _spec(kind)
-                if spec["product"] != product:
-                    continue
-                out = spec["output"] * factor // 1000
-                out = int(out * staffing * (_input_fraction(c) if spec.get("inputs") else 1.0) * (economy.DISTRESS_OUTPUT if c["distress"] else 1.0)
-                          * (1 + economy.SOCIAL_PRODUCTIVITY * quality))
-                produced += out
-            produced_map[owner] = produced
+            by_region = {}
+            for region, reg in c["regional"].items():
+                produced = 0
+                for kind, factor in reg["buildings"]:
+                    spec = _spec(kind)
+                    if spec["product"] != product:
+                        continue
+                    out = spec["output"] * factor // 1000
+                    out = int(out * staffing_r[region] * (_input_fraction(reg) if spec.get("inputs") else 1.0) * (economy.DISTRESS_OUTPUT if c["distress"] else 1.0)
+                              * (1 + economy.SOCIAL_PRODUCTIVITY * quality_r[region]))
+                    produced += out
+                by_region[region] = produced
+            produced_by[owner] = by_region
+            produced_map[owner] = sum(by_region.values())
+        before = dict(produced_map)
         contract_deliveries.extend(trade_contracts.deliver(db, ph, product, month, companies, produced_map))
-        offers = {}
+        for owner, c in companies.items():                    # a buyer without buildings is a shell company in the game city
+            c.setdefault("regional", {})
+            c.setdefault("home", regions.HOME)
+            by_region = produced_by.setdefault(owner, {})
+            total = before.get(owner, 0)
+            now_total = produced_map.get(owner, 0)
+            if now_total != total:                            # contracts took goods before the market: every branch gives its proportional share
+                left = now_total
+                keys = sorted(by_region, key=regions.region_ids().index)
+                for i, region in enumerate(keys):
+                    by_region[region] = left if i == len(keys) - 1 else int(by_region[region] * now_total / total) if total else 0
+                    left -= by_region[region]
+                if not keys and now_total:
+                    by_region[c["home"]] = now_total
+        offers_r = {region: {} for region in active}
+        need_ext_r = {region: 0 for region in active}
         for owner, c in companies.items():
-            produced = produced_map.get(owner, 0)
-            stock = c["stock"].get(product, 0)
-            need = c["needs"].get(product, 0)
-            if product in consumed and need:
-                internal = min(need, produced + stock)          # own supply first, no market purchase
-                from_prod = min(internal, produced)
-                produced -= from_prod
-                stock -= internal - from_prod
-                c["got"][product] = internal
-                c["need_ext"][product] = need - internal
-            # A warehouse never starves the company of cash: it holds stock only while two months of costs are covered.
-            runway = c["cash"] >= 2 * (c["maint"] + int(c["jobs"] * lab["wage"]))
-            if c["capacity"] > 0 and hold_share > 0 and runway:
-                free = max(0, c["capacity"] - sum(v for k, v in c["stock"].items() if k != product) - stock)
-                held = min(int(produced * hold_share), free)
-                released = int(stock * economy.RELEASE_SHARE * (1 - hold_share))     # a falling market releases less
-                stock += held - released
-                offers[owner] = produced - held + released
-            elif c["capacity"] > 0 and not release_all and stock > 0:
-                released = int(stock * economy.RELEASE_SHARE) or stock                # gradual release, never an all-at-once dump
-                stock -= released
-                offers[owner] = produced + released
-            else:
-                offers[owner] = produced + stock
-                stock = 0
-            c["stock"][product] = stock
-        supply = sum(offers.values())
-        demand_ext = sum(c["need_ext"].get(product, 0) for c in companies.values())
-        demand = economy.demand_for(product, month, lab["scale"]) + demand_ext
-        price = economy.price_for(product, supply, demand)
+            home = c["home"] if c["home"] in offers_r else regions.HOME
+            stock = c["stock"].get(product, 0)                   # the warehouse stands in the company's home city
+            c_regions = set(c["regional"]) | {home}
+            for region in sorted(c_regions, key=regions.region_ids().index):
+                if region not in offers_r:
+                    continue
+                reg = c["regional"].get(region)
+                produced = produced_by.get(owner, {}).get(region, 0)
+                local_stock = stock if region == home else 0
+                need = reg["needs"].get(product, 0) if reg else 0
+                if product in consumed and need:
+                    internal = min(need, produced + local_stock)          # own supply first, no market purchase
+                    from_prod = min(internal, produced)
+                    produced -= from_prod
+                    local_stock -= internal - from_prod
+                    reg["got"][product] = internal
+                    reg["need_ext"][product] = need - internal
+                    c["got"][product] = c["got"].get(product, 0) + internal
+                    c["need_ext"][product] = c["need_ext"].get(product, 0) + need - internal
+                    need_ext_r[region] += need - internal
+                if region == home:
+                    # A warehouse never starves the company of cash: it holds stock only while two months of costs are covered.
+                    runway = c["cash"] >= 2 * (c["maint"] + int(c.get("wage_bill", 0)))
+                    if c["capacity"] > 0 and hold_share > 0 and runway:
+                        free = max(0, c["capacity"] - sum(v for k, v in c["stock"].items() if k != product) - local_stock)
+                        held = min(int(produced * hold_share), free)
+                        released = int(local_stock * economy.RELEASE_SHARE * (1 - hold_share))     # a falling market releases less
+                        local_stock += held - released
+                        offers_r[region][owner] = produced - held + released
+                    elif c["capacity"] > 0 and not release_all and local_stock > 0:
+                        released = int(local_stock * economy.RELEASE_SHARE) or local_stock                # gradual release, never an all-at-once dump
+                        local_stock -= released
+                        offers_r[region][owner] = produced + released
+                    else:
+                        offers_r[region][owner] = produced + local_stock
+                        local_stock = 0
+                    c["stock"][product] = local_stock
+                else:
+                    offers_r[region][owner] = produced + local_stock
+        # ---- every city clears its own market; surplus travels to dearer cities and arrives after the transit time ----
+        arriving = regions.arrivals(db, ph, product, month) if len(active) > 1 else {}
+        offered = {region: sum(offers_r[region].values()) for region in active}
+        demand_local = {region: economy.demand_for(product, month, lab_r[region]["scale"]) + need_ext_r[region] for region in active}
+        sent = {region: 0 for region in active}
+        received = {region: arriving.get(region, 0) for region in active}
+        transport_by, freight_by = {}, {}
+        if len(active) > 1:
+            prev_r = {}
+            for region in active:
+                prev = _regional_price(db, ph, region, product, month - 1)
+                prev_r[region] = prev if prev is not None else ref
+            plan = regions.plan_exports(product, active, offered, demand_local, arriving, prev_r, regions.pipeline(db, ph, product))
+            for origin, destination, qty in plan:
+                total_offer = sum(offers_r[origin].values())
+                qty = min(qty, total_offer)
+                if qty <= 0:
+                    continue
+                shares = _split_units(offers_r[origin], qty)
+                for owner, taken in shares.items():
+                    offers_r[origin][owner] -= taken
+                    transport_by[(owner, origin)] = transport_by.get((owner, origin), 0) + taken
+                    freight_by[(owner, origin)] = freight_by.get((owner, origin), 0) + taken * regions.unit_cost(product, origin, destination)
+                regions.dispatch(db, ph, product, origin, destination, qty, month, "ship:%d:%s:%s:%s" % (month, product, origin, destination))
+                sent[origin] += qty
+        price_r, fill_r, supply_r = {}, {}, {}
+        for region in active:
+            supply = sum(offers_r[region].values()) + received[region]
+            demand = demand_local[region]
+            price = economy.price_for(product, supply, demand)
+            price_r[region], supply_r[region] = price, supply
+            fill = 1.0 if demand <= 0 else min(1.0, supply / demand)
+            fill_r[region] = fill
+            consumer_part = demand - need_ext_r[region]
+            spend_r[region] += int(consumer_part * fill * price)
+            consumer_spend += int(consumer_part * fill * price)
+            if economy.MARKET[product].get("consumer"):
+                units_r[region] += int(consumer_part * fill)
+            for owner, c in companies.items():
+                sold = offers_r[region].get(owner, 0) + transport_by.get((owner, region), 0)       # shipped goods are paid at the home price
+                if owner in offers_r[region]:
+                    revenue = sold * price - freight_by.get((owner, region), 0)       # the exporter pays the carriage
+                    c["revenue"] += revenue
+                    c["rev_by"][product] = c["rev_by"].get(product, 0) + revenue
+                reg = c["regional"].get(region)
+                ext = reg["need_ext"].get(product, 0) if reg else 0
+                if ext:
+                    bought = int(ext * fill)
+                    reg["got"][product] = reg["got"].get(product, 0) + bought
+                    c["got"][product] = c["got"].get(product, 0) + bought
+                    c["input_cost"] += bought * price
+                    c["in_by"][product] = c["in_by"].get(product, 0) + bought * price
+            db.execute(_q("INSERT INTO market_prices_region(region,product,month_index,price,supply,demand,imports,exports) VALUES(%s,%s,%s,%s,%s,%s,%s,%s) "
+                          "ON CONFLICT(region,product,month_index) DO NOTHING", ph), (region, product, month, price, supply, demand, received[region], sent[region]))
+        total_supply = sum(supply_r.values())
+        total_demand = sum(demand_local.values())
+        if len(active) == 1:
+            price = price_r[active[0]]
+        else:
+            weight = sum(demand_local[r] for r in active) or 1
+            price = int(round(sum(price_r[r] * demand_local[r] for r in active) / weight)) if weight > 1 else price_r[regions.HOME]
         prices[product] = price
-        fill = 1.0 if demand <= 0 else min(1.0, supply / demand)
-        consumer_spend += int((demand - demand_ext) * fill * price)
-        if economy.MARKET[product].get("consumer"):
-            consumer_units += int((demand - demand_ext) * fill)
-        for owner, c in companies.items():
-            c["revenue"] += offers[owner] * price
-            c["rev_by"][product] = c["rev_by"].get(product, 0) + offers[owner] * price
-            ext = c["need_ext"].get(product, 0)
-            if ext:
-                bought = int(ext * fill)
-                c["got"][product] = c["got"].get(product, 0) + bought
-                c["input_cost"] += bought * price
-                c["in_by"][product] = c["in_by"].get(product, 0) + bought * price
         db.execute(_q("INSERT INTO market_prices(product,month_index,price,supply,demand) VALUES(%s,%s,%s,%s,%s) ON CONFLICT(product,month_index) DO NOTHING", ph),
-                   (product, month, price, supply, demand))
+                   (product, month, price, total_supply, total_demand))
 
     import retail
-    retail.apply(companies, consumer_spend, consumer_units, staffing)
+    for region in active:                                      # shops serve the residents of their own city
+        shims = {owner: {"buildings": c["regional"][region]["buildings"], "revenue": 0, "rev_by": {}}
+                 for owner, c in companies.items() if region in c["regional"]}
+        if retail.apply(shims, spend_r[region], units_r[region], staffing_r[region]):
+            for owner, shim in shims.items():
+                companies[owner]["revenue"] += shim["revenue"]
+                for key, value in shim["rev_by"].items():
+                    companies[owner]["rev_by"][key] = companies[owner]["rev_by"].get(key, 0) + value
 
     loans = {o: int(b) for o, b in db.execute("SELECT owner,balance FROM loans WHERE balance>0").fetchall()}
     rates = taxes.rates(db, ph)
@@ -345,7 +462,7 @@ def step_month(db, ph, month, now):
     for owner, c in sorted(companies.items()):
         st = _status(db, ph, owner)
         is_city = owner == economy.CITY
-        wages = int(c["jobs"] * staffing * lab["wage"])
+        wages = int(sum(reg["jobs"] * staffing_r[region] * lab_r[region]["wage"] for region, reg in c.get("regional", {}).items()))
         interest_due = bank.monthly_interest(loans.get(owner, 0))
         # VAT: buyers pay price + VAT, the company pays VAT on its raw materials (gross flows through the cash cascade)
         vat_out, vat_in = taxes.vat_amounts(c["rev_by"], c["in_by"]) if not is_city else (0, 0)
@@ -442,6 +559,25 @@ def step_month(db, ph, month, now):
     # Once the game city has been generated (docs/CITYGEN.md) its houses follow the population; a no-op before that.
     import citygen
     citygen.grow(db, ph, next_pop, now)
+    # the other active cities: their own residents, jobs and wage (no social services there yet, docs/CITY_ECONOMY.md)
+    for region in active:
+        if region != regions.HOME:
+            nxt = next_population(pop_r[region], jobs_r[region], lab_r[region]["labor_force"], 0.0)
+            regions.save_population(db, ph, region, month, lab_r[region], staffing_r[region], nxt)
+
+
+def _split_units(offers, qty):
+    """Take `qty` units from the sellers' offers in proportion (largest remainder; deterministic by owner name)."""
+    total = sum(offers.values())
+    out = {o: int(qty * v // total) if total else 0 for o, v in offers.items()}
+    left = qty - sum(out.values())
+    for o in sorted(offers, key=lambda k: (-(qty * offers[k] % total if total else 0), k)):
+        if left <= 0:
+            break
+        if out[o] < offers[o]:
+            out[o] += 1
+            left -= 1
+    return {o: v for o, v in out.items() if v > 0}
 
 
 def _input_fraction(c):

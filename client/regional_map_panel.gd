@@ -20,6 +20,7 @@ var map_canvas: Control
 var body_scroll: ScrollContainer
 var details: Label
 var visit_button: Button
+var economy_view: Dictionary = {}     # GET /economy/regions: city economies, prices and shipments
 const CACHE_FILE := "user://lunexeconom_geo_regions_v1.json"
 
 func setup(parent: Control) -> void:
@@ -85,6 +86,7 @@ func open_panel() -> void:
             panel.hide()
     show()
     _place()
+    _load_economy()
     if loaded:
         details.text = "Нажмите на город. Один палец: двигайте карту, два: изменяйте масштаб."
         if not current_city.is_empty():
@@ -112,6 +114,52 @@ func open_panel() -> void:
             )
         )
     )
+
+func _load_economy() -> void:
+    if host == null or not host.has_method("_api_get"):
+        return
+    host._api_get("economy/regions", false, func(data: Dictionary) -> void:
+        if data.get("cities", null) is Array:
+            economy_view = data
+            if loaded and not current_city.is_empty() and visible:
+                _show_details()
+    )
+
+## Economy lines of one city: residents, wage, local prices and goods on the road (delivery time grows with the road distance).
+func economy_lines(city_id: String) -> PackedStringArray:
+    var lines := PackedStringArray()
+    var entry: Dictionary = {}
+    for item in economy_view.get("cities", []):
+        if item is Dictionary and str(item.get("id", "")) == city_id:
+            entry = item
+    if entry.is_empty():
+        if not economy_view.is_empty():
+            lines.append("Экономика города пока не запущена: она включается, когда в городе появляется ваше здание.")
+        return lines
+    lines.append("Экономика: жителей %d, рабочих мест %d, зарплата %d ₽, укомплектованность %d%%." % [
+        int(entry.get("population", 0)), int(entry.get("jobs", 0)), int(entry.get("wage", 0)), roundi(float(entry.get("staffing", 1.0)) * 100.0)])
+    var prices: Dictionary = entry.get("prices", {})
+    var parts := PackedStringArray()
+    for product in ["honey", "oil", "goods"]:
+        var row = prices.get(product, null)
+        if row is Dictionary:
+            parts.append("%s %d ₽" % [{"honey": "мёд", "oil": "нефть", "goods": "товары"}[product], int(row.get("price", 0))])
+    if not parts.is_empty():
+        lines.append("Цены здесь: " + ", ".join(parts))
+    for lane in economy_view.get("lanes", []):
+        if lane is Dictionary and str(lane.get("from", "")) == city_id and str(lane.get("to", "")) == "ufa":
+            lines.append("До Уфы: %d км по дорогам, доставка %d мес." % [int(lane.get("road_km", 0)), int(lane.get("months", 0))])
+    var incoming := 0
+    var outgoing := 0
+    for shipment in economy_view.get("shipments", []):
+        if shipment is Dictionary:
+            if str(shipment.get("destination", "")) == city_id:
+                incoming += int(shipment.get("qty", 0))
+            elif str(shipment.get("origin", "")) == city_id:
+                outgoing += int(shipment.get("qty", 0))
+    if incoming or outgoing:
+        lines.append("В пути: едет сюда %d ед., отправлено отсюда %d ед." % [incoming, outgoing])
+    return lines
 
 func _fail() -> void:
     loading = false
@@ -205,6 +253,7 @@ func _show_details() -> void:
             estimated_population, str(source.get("specialization", ""))],
         "От Уфы: около %d км по прямой. Ваши здания в загруженной области: %d." % [roundi(approximate_km), buildings]
     ])
+    lines.append_array(economy_lines(city_id))
     details.text = "\n".join(lines)
     visit_button.show()
     city_selected.emit(source)

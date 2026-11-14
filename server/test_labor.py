@@ -82,7 +82,7 @@ class LabourWorldTests(unittest.TestCase):
     def build(self, who, kind):
         for _ in range(400):
             self.cursor += 1
-            status, res = game_server.build(who, {"kind": kind, "x": 8, "y": 10 + 7 * self.cursor, "request_id": str(uuid.uuid4())})
+            status, res = game_server.build(who, {"kind": kind, "x": 8 + 9 * (self.cursor % 12), "y": 10 + 7 * (self.cursor // 12), "request_id": str(uuid.uuid4())})
             if status == 201:
                 return res
         self.fail("no site")

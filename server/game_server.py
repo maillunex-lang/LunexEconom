@@ -54,6 +54,8 @@ def _prepare(db):
         db.execute(statement)
     admin_api.ensure(db, "?")
     citygen.ensure(db, "?")
+    import regions
+    regions.ensure(db, "?")
     db.commit()
 
 
@@ -512,6 +514,10 @@ class Handler(BaseHTTPRequestHandler):
             return self._admin("GET")
         if url.path == "/announcement":
             return self._send(*announcement_state())
+        if url.path == "/economy/regions":
+            import regions
+            with connect() as db:
+                return self._send(200, regions.overview(db, "?"))
         if url.path in ("/geo/regions", "/geo/cities", "/geo/routes"):
             import geo
             if url.path == "/geo/regions":

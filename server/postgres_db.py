@@ -117,4 +117,6 @@ def init():
         admin_api.ensure(db, "%s", postgres=True)
         import citygen
         citygen.ensure(db, "%s")
+        import regions
+        regions.ensure(db, "%s")
         db.commit()
