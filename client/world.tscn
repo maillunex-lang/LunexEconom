@@ -37,3 +37,15 @@ custom_minimum_size = Vector2(70, 64)
 mouse_filter = 0
 theme_override_font_sizes/font_size = 30
 text = "+"
+
+[node name="Expand" type="Button" parent="HUD/Top"]
+layout_mode = 2
+custom_minimum_size = Vector2(138, 64)
+theme_override_font_sizes/font_size = 20
+text = "+ Территория"
+
+[node name="Connect" type="Button" parent="HUD/Top"]
+layout_mode = 2
+custom_minimum_size = Vector2(154, 64)
+theme_override_font_sizes/font_size = 20
+text = "Проложить путь"
