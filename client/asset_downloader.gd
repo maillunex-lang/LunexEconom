@@ -48,7 +48,10 @@ func _completed(result: int, code: int, _headers: PackedStringArray, body: Packe
         _next()
         return
     var item: Dictionary = _files[_index]
-    var actual := body.sha256_text()
+    var context := HashingContext.new()
+    context.start(HashingContext.HASH_SHA256)
+    context.update(body)
+    var actual: String = context.finish().hex_encode()
     if actual != item["sha256"]:
         _failed = true
     else:
