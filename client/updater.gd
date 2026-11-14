@@ -3,7 +3,7 @@ extends Node
 signal state_changed(message: String, can_install: bool)
 const MANIFEST_URL := "https://rikagro.ru/lunexeconom/updates/manifest.json"
 const BASE_URL := "https://rikagro.ru/lunexeconom/versions/"
-const LOCAL_VERSION := 7
+const LOCAL_VERSION := 8
 const MAX_APK_BYTES := 160 * 1024 * 1024
 const MAX_CONTENT_BYTES := 2 * 1024 * 1024
 var manifest: Dictionary = {}
