@@ -238,7 +238,9 @@ def rotate_token(token):
                          (_digest(token),)).fetchone()
         if not row or row[2] < int(time.time()):
             return 401, {"error": "unauthorized"}
-        db.execute("DELETE FROM sessions WHERE token_hash=" + ph, (_digest(token),))
+        deleted = db.execute("DELETE FROM sessions WHERE token_hash=" + ph, (_digest(token),))
+        if deleted.rowcount != 1:
+            return 401, {"error": "unauthorized"}
         return _session(db, row[0], row[1])
 
 
