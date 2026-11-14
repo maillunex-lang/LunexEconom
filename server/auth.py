@@ -140,7 +140,10 @@ def _ph():
 
 
 def _active_ban(db, username):
-    row = db.execute("SELECT reason,until FROM adm_bans WHERE username=" + _ph(), (username,)).fetchone()
+    try:
+        row = db.execute("SELECT reason,until FROM adm_bans WHERE username=" + _ph(), (username,)).fetchone()
+    except (sqlite3.OperationalError, psycopg.errors.UndefinedTable):
+        return None          # the table does not exist yet (database not initialised by this version): nobody can be banned
     if row is None:
         return None
     if row[1] is not None and int(row[1]) <= time.time():
