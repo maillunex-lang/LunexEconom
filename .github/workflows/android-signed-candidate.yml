@@ -136,6 +136,7 @@ jobs:
             build/SHA256SUMS
             build/apk-badging.txt
             build/signature-report.txt
+            client/build_info.json
           if-no-files-found: error
           retention-days: 7
       - name: Erase temporary signing material
