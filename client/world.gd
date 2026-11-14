@@ -10,6 +10,7 @@ var active_chunks: Dictionary = {}
 var last_camera_position := Vector2.INF
 var last_zoom := -1.0
 var roads = ROAD_SCRIPT.new()
+var server_cells: Dictionary = {}
 var expansion_radius := 48
 const SEED := 18273
 const COLORS := [
@@ -34,6 +35,11 @@ func _ready() -> void:
     _update_visible_chunks()
 
 func cell_kind(x: int, y: int) -> int:
+    var coord := Vector2i(x, y)
+    if server_cells.has(coord):
+        var kind := str(server_cells[coord].get("kind", ""))
+        if kind == "road_changed": return 3
+        if kind == "building_created": return 6
     # Integer-only hash: independent of call order and frame rate.
     var h := (x * 73856093) ^ (y * 19349663) ^ SEED
     h = (h ^ (h >> 13)) * 1274126177
@@ -45,6 +51,24 @@ func cell_kind(x: int, y: int) -> int:
     if n < 24:
         return 5 # trees
     return n % 3
+
+func apply_server_event(event: Dictionary) -> void:
+    var kind := str(event.get("kind", ""))
+    if not kind in ["building_created", "building_removed", "road_changed"]: return
+    for cell in event.get("cells", []):
+        if not cell is Array or cell.size() != 2: continue
+        var coord := Vector2i(int(cell[0]), int(cell[1]))
+        if kind == "building_removed": server_cells.erase(coord)
+        else: server_cells[coord] = {"kind":kind,"object_id":str(event.get("object_id", ""))}
+        _redraw_chunk_at(coord)
+
+func apply_chunk_snapshot(coord: Vector2i, cells: Array) -> void:
+    for x in range(coord.x * CHUNK, (coord.x + 1) * CHUNK):
+        for y in range(coord.y * CHUNK, (coord.y + 1) * CHUNK): server_cells.erase(Vector2i(x,y))
+    for cell in cells:
+        if cell is Dictionary:
+            server_cells[Vector2i(int(cell.get("x", 0)), int(cell.get("y", 0)))] = {"kind":cell.get("kind", ""), "object_id":cell.get("object_id", "")}
+    if active_chunks.has(coord): active_chunks[coord].queue_redraw()
 
 func iso(x: float, y: float) -> Vector2:
     return Vector2((x - y) * TILE_W * 0.5, (x + y) * TILE_H * 0.5)
