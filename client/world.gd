@@ -6,6 +6,9 @@ const CHUNK := 12
 const ROAD_SCRIPT = preload("res://road_network.gd")
 const PLANNER_SCRIPT = preload("res://construction_planner.gd")
 var planner = PLANNER_SCRIPT.new()
+const PATCH_VISUALS_SCRIPT = preload("res://patch_visuals.gd")
+var patch_visuals: Node
+
 var build_type := ""
 var building_records: Dictionary = {}
 var build_counter := 0
@@ -41,6 +44,11 @@ var target_zoom := 1.0
 var last_pinch_midpoint := Vector2.ZERO
 
 func _ready() -> void:
+    patch_visuals = PATCH_VISUALS_SCRIPT.new()
+    patch_visuals.name = "PatchVisuals"
+    add_child(patch_visuals)
+    patch_visuals.visuals_changed.connect(_redraw_all_chunks)
+    # No automatic activation until signed manifest and deployment review.
     camera = Camera2D.new()
     camera.name = "WorldCamera"
     camera.enabled = true
@@ -50,6 +58,11 @@ func _ready() -> void:
     target_zoom = camera.zoom.x
     add_child(camera)
     _update_visible_chunks()
+
+func _redraw_all_chunks() -> void:
+    for chunk in active_chunks.values():
+        if is_instance_valid(chunk):
+            chunk.queue_redraw()
 
 func cell_kind(x: int, y: int) -> int:
     var coord := Vector2i(x, y)
