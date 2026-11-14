@@ -16,6 +16,7 @@ Shared by SQLite and PostgreSQL; all functions run inside the caller's transacti
 import json
 
 import bank
+import city
 import economy
 import taxes
 
@@ -195,9 +196,11 @@ def labor_market(population, total_jobs):
             "employed": int(employed), "unemployment": max(0.0, (labor - employed) / max(labor, 1)), "scale": scale}
 
 
-def next_population(population, total_jobs, labor):
+def next_population(population, total_jobs, labor, quality=0.0):
+    """Population next month; social services (quality 0..1) raise growth and immigration and soften emigration."""
     shortage = max(-1.0, min(1.0, (total_jobs - labor) / max(labor, 1)))
-    rate = economy.NATURAL_GROWTH + (economy.MIGRATION_IN * shortage if shortage > 0 else economy.MIGRATION_OUT * shortage)
+    rate = economy.NATURAL_GROWTH + economy.SOCIAL_GROWTH * quality + (
+        economy.MIGRATION_IN * (1 + quality) * shortage if shortage > 0 else economy.MIGRATION_OUT * (1 - 0.5 * quality) * shortage)
     return max(economy.MIN_POPULATION, int(round(population * (1 + rate))))
 
 
@@ -237,6 +240,9 @@ def step_month(db, ph, month, now):
     total_jobs = sum(c["jobs"] for c in companies.values())
     lab = labor_market(population, total_jobs)
     staffing = lab["staffing"]
+    city.ensure(db, ph, month)
+    soc = city.social(db, ph, month, population, funded=_arrears(_status(db, ph, economy.CITY)) == 0)
+    quality = soc["quality"]
     for c in companies.values():
         for product in list(c["needs"]):
             c["needs"][product] = int(c["needs"][product] * staffing)   # understaffed factories also use less input
@@ -255,7 +261,8 @@ def step_month(db, ph, month, now):
                 if spec["product"] != product:
                     continue
                 out = spec["output"] * factor // 1000
-                out = int(out * staffing * (_input_fraction(c) if spec.get("inputs") else 1.0) * (economy.DISTRESS_OUTPUT if c["distress"] else 1.0))
+                out = int(out * staffing * (_input_fraction(c) if spec.get("inputs") else 1.0) * (economy.DISTRESS_OUTPUT if c["distress"] else 1.0)
+                          * (1 + economy.SOCIAL_PRODUCTIVITY * quality))
                 produced += out
             stock = c["stock"].get(product, 0)
             need = c["needs"].get(product, 0)
@@ -376,9 +383,10 @@ def step_month(db, ph, month, now):
         bank.capitalize(db, ph, owner, due - paid)
     for owner in bankrupt:
         liquidate(db, ph, owner, month, now)
+    city.monthly(db, ph, month, now)
     db.execute(_q("INSERT INTO population(month_index,population,labor_force,jobs,wage,staffing_permille,demand_permille,next_population) VALUES(%s,%s,%s,%s,%s,%s,%s,%s) ON CONFLICT(month_index) DO NOTHING", ph),
                (month, lab["population"], lab["labor_force"], lab["jobs"], lab["wage"], int(staffing * 1000), int(lab["scale"] * 1000),
-                next_population(population, total_jobs, lab["labor_force"])))
+                next_population(population, total_jobs, lab["labor_force"], quality)))
 
 
 def _input_fraction(c):
@@ -416,13 +424,18 @@ def _ops(db, ph):
 def _current_labor(db, ph, month, ops):
     """Provisional labour market of the running month (all buildings at full capacity)."""
     jobs = sum(economy.PRODUCTION[k]["jobs"] for _o, k, sm, _p in ops if k in economy.PRODUCTION and sm <= month)
-    return labor_market(_population_at(db, ph, month), jobs)
+    population = _population_at(db, ph, month)
+    lab = labor_market(population, jobs)
+    lab["social"] = city.social(db, ph, month, population, funded=_arrears(_status(db, ph, economy.CITY)) == 0)
+    lab["quality"] = lab["social"]["quality"]
+    return lab
 
 
 def labor_view(db, ph, clk):
     lab = _current_labor(db, ph, clk["month_index"], _ops(db, ph))
     return {"population": lab["population"], "labor_force": lab["labor_force"], "jobs": lab["jobs"], "employed": lab["employed"],
-            "wage": lab["wage"], "base_wage": economy.BASE_WAGE, "staffing": round(lab["staffing"], 3), "unemployment": round(lab["unemployment"], 3)}
+            "wage": lab["wage"], "base_wage": economy.BASE_WAGE, "staffing": round(lab["staffing"], 3), "unemployment": round(lab["unemployment"], 3),
+            "quality": round(lab["quality"], 3)}
 
 
 def quote(db, ph, clk):
@@ -434,7 +447,8 @@ def quote(db, ph, clk):
     for product in product_order():
         producing_kind = next(k for k, s in economy.PRODUCTION.items() if s.get("product") == product)
         output = economy.PRODUCTION[producing_kind]["output"]
-        supply = int(sum(economy.PRODUCTION[k]["output"] for _, k, sm, _p in ops if k in economy.PRODUCTION and economy.PRODUCTION[k].get("product") == product and sm <= month) * lab["staffing"])
+        supply = int(sum(economy.PRODUCTION[k]["output"] for _, k, sm, _p in ops if k in economy.PRODUCTION and economy.PRODUCTION[k].get("product") == product and sm <= month)
+                     * lab["staffing"] * (1 + economy.SOCIAL_PRODUCTIVITY * lab["quality"]))
         need = int(sum(n for _, k, sm, _p in ops if sm <= month for p, n in economy.PRODUCTION.get(k, {}).get("inputs", {}).items() if p == product) * lab["staffing"])
         demand = economy.demand_for(product, month, lab["scale"]) + need
         m = economy.MARKET[product]
@@ -512,6 +526,25 @@ def loan_command(db, ph, owner, payload, now):
     if status in (200, 201):
         result = dict(result, balance=economy.balance(db, ph, owner), loan=loan_view(db, ph, owner))
     return status, result
+
+
+def city_view(db, ph, clk):
+    """Public state of the city: mayor, budget, taxes, social services and what the budget collected last month."""
+    month = clk["month_index"]
+    m = city.mayor(db, ph, month)
+    lab = _current_labor(db, ph, month, _ops(db, ph))
+    soc = lab["social"]
+    collected = db.execute(_q("SELECT COALESCE(SUM(paid),0) FROM company_taxes WHERE month_index=%s", ph), (month - 1,)).fetchone()[0]
+    policy = db.execute("SELECT social_share_permille,changed_month FROM city_policy WHERE id=1").fetchone()
+    buildings = [{"object_id": oid, "kind": kind, "x": x, "y": y} for oid, kind, x, y in
+                 db.execute(_q("SELECT id,kind,x,y FROM buildings WHERE owner=%s ORDER BY created", ph), (economy.CITY,)).fetchall()]
+    upkeep = sum(economy.monthly_cost(k, lab["wage"]) for k in [b["kind"] for b in buildings])
+    return {"ok": True, "month_index": month, "mayor": m, "budget": economy.balance(db, ph, economy.CITY) or 0,
+            "taxes": taxes.view(db, ph), "collected_last_month": int(collected), "services_upkeep": upkeep,
+            "social": {"counts": soc["counts"], "coverage": {k: round(v, 3) for k, v in soc["coverage"].items()}, "quality": round(soc["quality"], 3), "funded": soc["funded"]},
+            "costs": {k: economy.BUILD_COST[k] for k in economy.SOCIAL_KINDS}, "serves": {k: economy.PRODUCTION[k]["serves"] for k in economy.SOCIAL_KINDS},
+            "salary": economy.MAYOR_SALARY, "social_share": policy[1] and policy[0] / 1000.0, "tax_changed_month": int(policy[1]), "buildings": buildings,
+            "arrears": _arrears(_status(db, ph, economy.CITY))}
 
 
 def holdings(db, ph, owner):

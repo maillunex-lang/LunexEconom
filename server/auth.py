@@ -22,6 +22,7 @@ USE_POSTGRES = os.environ.get("LUNEX_DB_ENGINE") == "postgres"
 _lock = threading.RLock()
 _attempts = {}
 ITERATIONS = 310_000
+RESERVED_NAMES = ("city",)   # pseudo-owners of the game (city budget); keep in sync with economy.RESERVED_OWNERS
 
 def _db():
     if USE_POSTGRES:
@@ -90,7 +91,7 @@ def register(payload, client):
     username = str(payload.get("username","")).strip()
     email = str(payload.get("email","")).strip().lower()
     password = payload.get("password","")
-    if not re.fullmatch(r"[A-Za-zА-Яа-яЁё0-9_]{3,24}", username): return 400, {"error":"invalid_username"}
+    if not re.fullmatch(r"[A-Za-zА-Яа-яЁё0-9_]{3,24}", username) or username.lower() in RESERVED_NAMES: return 400, {"error":"invalid_username"}
     if len(email)>254 or not re.fullmatch(r"[^\s@]+@[^\s@]+\.[^\s@]+",email): return 400, {"error":"invalid_email"}
     if not isinstance(password,str) or len(password)<4 or len(password)>128: return 400, {"error":"invalid_password"}
     salt = secrets.token_bytes(16)

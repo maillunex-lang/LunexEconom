@@ -10,7 +10,8 @@ import uuid
 
 CURRENCY = "RUB"
 START_CAPITAL = 1_000_000
-BUILD_COST = {"farm": 120_000, "mine": 300_000, "factory": 450_000, "warehouse": 80_000}
+BUILD_COST = {"farm": 120_000, "mine": 300_000, "factory": 450_000, "warehouse": 80_000,
+              "school": 400_000, "hospital": 800_000, "park": 150_000}   # social buildings are paid from the city budget
 ROAD_CELL_COST = 5_000
 TREASURY = "system:treasury"
 CONSTRUCTION = "system:construction"
@@ -29,7 +30,12 @@ PRODUCTION = {
     "mine":      {"product": "oil",   "output": 40,  "jobs": 10, "upkeep": 15_000},
     "factory":   {"product": "goods", "output": 60,  "jobs": 20, "upkeep": 26_000, "inputs": {"oil": 10, "honey": 20}},
     "warehouse": {"product": None,    "output": 0,   "jobs": 2,  "upkeep": 2_000,  "capacity": 400},
+    # Social buildings belong to the city (built by the mayor from the budget); `serves` = residents covered per building.
+    "school":    {"product": None,    "output": 0,   "jobs": 6,  "upkeep": 3_000,  "serves": 120},
+    "hospital":  {"product": None,    "output": 0,   "jobs": 8,  "upkeep": 5_000,  "serves": 200},
+    "park":      {"product": None,    "output": 0,   "jobs": 2,  "upkeep": 1_000,  "serves": 250},
 }
+SOCIAL_KINDS = ("school", "hospital", "park")
 # `upkeep` is maintenance only; wages are jobs * wage. At BASE_WAGE the total equals the old lump-sum upkeep
 # (farm 8 000, mine 30 000, factory 56 000, warehouse 5 000), so building economics are unchanged at base wage.
 #
@@ -79,6 +85,16 @@ PROFIT_TAX_LIMITS = (0.05, 0.25)       # real total profit tax is 25 % (8 % fede
 DEFAULT_PROPERTY_TAX = 0.022           # per year of the book value of buildings; Bashkortostan general rate (cap 2.2 % by Tax Code art. 380)
 PROPERTY_TAX_LIMITS = (0.0, 0.022)
 
+# ---- City government and social services ----
+# quality of life = average coverage of schools, hospitals and parks (0..1); an underfunded city (budget arrears) works at half.
+# It raises output (educated, healthy workers), natural growth and immigration, and reduces emigration.
+SOCIAL_PRODUCTIVITY = 0.10
+SOCIAL_GROWTH = 0.002
+MAYOR_SALARY = 40_000          # per game month from the budget, only for a human mayor
+ROAD_MAINTENANCE = 30          # per built road cell per month from the budget
+ELECTION_PERIOD = 12           # game months between elections
+RESERVED_OWNERS = ("city",)    # nobody may register under these names
+
 # ---- Bank: one revolving loan per company, secured by its buildings ----
 # Limit = LOAN_LTV of the construction cost of the company's buildings (capped by LOAN_MAX). Interest is charged every game
 # month after operating costs; interest that cannot be paid is added to the loan and counts as an unpaid month. A company in
@@ -120,6 +136,7 @@ SCHEMA = (
     "CREATE TABLE IF NOT EXISTS city_policy(id INTEGER PRIMARY KEY, profit_tax_permille INTEGER NOT NULL, property_tax_permille INTEGER NOT NULL, social_share_permille INTEGER NOT NULL, changed_month BIGINT NOT NULL)",
     "CREATE TABLE IF NOT EXISTS company_tax_state(owner TEXT PRIMARY KEY, tax_owed BIGINT NOT NULL, vat_credit BIGINT NOT NULL)",
     "CREATE TABLE IF NOT EXISTS company_taxes(owner TEXT NOT NULL, month_index BIGINT NOT NULL, vat BIGINT NOT NULL, profit_tax BIGINT NOT NULL, property_tax BIGINT NOT NULL, paid BIGINT NOT NULL, PRIMARY KEY(owner, month_index))",
+    "CREATE TABLE IF NOT EXISTS city_state(id INTEGER PRIMARY KEY, mayor TEXT NOT NULL, mayor_name TEXT NOT NULL, since_month BIGINT NOT NULL, term_end_month BIGINT NOT NULL)",
     "CREATE TABLE IF NOT EXISTS npc_state(owner TEXT PRIMARY KEY, acted_through BIGINT NOT NULL)",
     "CREATE TABLE IF NOT EXISTS company_state(owner TEXT PRIMARY KEY, settled_through BIGINT NOT NULL)",
     "CREATE TABLE IF NOT EXISTS monthly_reports(owner TEXT NOT NULL, month_index BIGINT NOT NULL, revenue BIGINT NOT NULL, upkeep BIGINT NOT NULL, profit BIGINT NOT NULL, buildings INTEGER NOT NULL, PRIMARY KEY(owner, month_index))",
@@ -139,6 +156,8 @@ def terms():
     return {"currency": CURRENCY, "start_capital": START_CAPITAL,
             "building_costs": dict(BUILD_COST), "road_cell_cost": ROAD_CELL_COST,
             "hold_below": HOLD_BELOW,
+            "city": {"social_cost": {k: BUILD_COST[k] for k in SOCIAL_KINDS}, "serves": {k: PRODUCTION[k]["serves"] for k in SOCIAL_KINDS},
+                     "mayor_salary": MAYOR_SALARY, "election_period": ELECTION_PERIOD, "productivity": SOCIAL_PRODUCTIVITY},
             "insolvency": {"bankrupt_after_missed": BANKRUPT_AFTER_MISSED, "loan": {"interest": LOAN_INTEREST, "ltv": LOAN_LTV, "max": LOAN_MAX, "min": LOAN_MIN}, "liquidation_rate": LIQUIDATION_RATE, "sell_rate": SELL_RATE, "distress_output": DISTRESS_OUTPUT},
             "labor": {"base_wage": BASE_WAGE, "participation": PARTICIPATION, "base_population": BASE_POPULATION},
             "production": {k: {"product_id": v["product"], "product": MARKET[v["product"]]["name"] if v["product"] else "",

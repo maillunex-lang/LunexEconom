@@ -13,6 +13,7 @@ import roads as road_rules
 import economy
 import production
 import taxes
+import city
 import npc
 import clock
 if os.environ.get('LUNEX_DB_ENGINE') == 'postgres':
@@ -22,7 +23,7 @@ if os.environ.get('LUNEX_DB_ENGINE') == 'postgres':
 DB = os.environ.get("LUNEX_WORLD_DB", "/home/gamedev/projects/LunexEconom-server/world.sqlite3")
 CHUNK = 12
 MAX_COORD = 10000
-KINDS = {"farm":(2,2), "mine":(2,3), "factory":(3,2), "warehouse":(3,3)}
+KINDS = {"farm":(2,2), "mine":(2,3), "factory":(3,2), "warehouse":(3,3), "school":(3,2), "hospital":(3,3), "park":(2,2)}
 LOCK = threading.RLock()
 
 def connect():
@@ -56,6 +57,8 @@ def build(owner, payload):
     request_id=payload.get("request_id")
     if kind not in KINDS or type(x) is not int or type(y) is not int or abs(x)>MAX_COORD or abs(y)>MAX_COORD:
         return 400,{"error":"invalid_build"}
+    if (kind in economy.SOCIAL_KINDS)!=(owner==economy.CITY):
+        return 403,{"error":"social_only_for_city" if kind in economy.SOCIAL_KINDS else "city_builds_social_only"}
     try:
         uuid.UUID(request_id)
     except (ValueError, TypeError, AttributeError):
@@ -148,6 +151,38 @@ def loan(owner,payload):
         db.commit()
         return status,result
 
+def city_state():
+    with LOCK, connect() as db:
+        db.execute("BEGIN IMMEDIATE")
+        now=int(time.time())
+        clk=clock.state(db,"?",now)
+        production.advance(db,"?",clk,now)
+        result=production.city_view(db,"?",clk)
+        db.commit()
+    return 200,result
+
+def city_taxes(owner,payload):
+    with LOCK, connect() as db:
+        db.execute("BEGIN IMMEDIATE")
+        now=int(time.time())
+        clk=clock.state(db,"?",now)
+        production.advance(db,"?",clk,now)
+        status,result=city.set_taxes(db,"?",owner,payload.get("profit_tax"),payload.get("property_tax"),clk["month_index"])
+        db.commit()
+    return status,result
+
+def city_build(owner,payload):
+    """The mayor orders a social building; it is paid from the city budget through the normal build path."""
+    with LOCK, connect() as db:
+        db.execute("BEGIN IMMEDIATE")
+        now=int(time.time())
+        clk=clock.state(db,"?",now)
+        allowed=city.is_mayor(db,"?",owner,clk["month_index"])
+        db.commit()
+    if not allowed:return 403,{"error":"not_mayor"}
+    if payload.get("kind") not in economy.SOCIAL_KINDS:return 400,{"error":"invalid_build"}
+    return build(economy.CITY,payload)
+
 def market_state():
     with LOCK, connect() as db:
         db.execute("BEGIN IMMEDIATE")
@@ -163,7 +198,7 @@ NPC_CONNECT,NPC_PH=connect,"?"
 def npc_tick():
     """Let NPC competitors act for completed months (cheap no-op when nothing is pending)."""
     try:
-        return npc.tick(NPC_CONNECT,NPC_PH,clock_state,lambda:market_state()[1],lambda owner:wallet(owner)[1],build)
+        return npc.tick(NPC_CONNECT,NPC_PH,clock_state,lambda:market_state()[1],lambda owner:wallet(owner)[1],build,lambda:city_state()[1])
     except Exception as exc:   # NPC trouble must never break player requests
         print("npc tick failed:",repr(exc))
         return 0
@@ -196,7 +231,7 @@ def chunk(cx,cy):
     items+=[{"x":x,"y":y,"kind":"road_changed","object_id":"","owner":owner} for x,y,owner in rds]
     return 200,{"cx":cx,"cy":cy,"version":row[0] if row else 0,"cells":items}
 
-ECONOMY_POST={"/sell":"sell","/loan":"loan"}
+ECONOMY_POST={"/sell":"sell","/loan":"loan","/city/taxes":"city_taxes","/city/build":"city_build"}
 
 class Handler(BaseHTTPRequestHandler):
     def _send(self,status,data):
@@ -212,7 +247,7 @@ class Handler(BaseHTTPRequestHandler):
         bearer=self.headers.get("Authorization","")
         if not bearer.startswith("Bearer "):return None
         status,profile=auth.profile(bearer[7:])
-        return profile["username"] if status==200 else None
+        return profile["username"] if status==200 and profile["username"].lower() not in economy.RESERVED_OWNERS else None
     def _client(self):
         return self.headers.get("X-Real-IP",self.client_address[0])[:64] if self.client_address[0] in ("127.0.0.1","::1") else self.client_address[0]
     def _economy_post(self):
@@ -233,7 +268,8 @@ class Handler(BaseHTTPRequestHandler):
         return True
     def do_GET(self):
         url=urlsplit(self.path)
-        if url.path in ("/market","/wallet","/world"):npc_tick()
+        if url.path in ("/market","/wallet","/world","/city"):npc_tick()
+        if url.path=="/city":return self._send(*city_state())
         if url.path=="/health":return self._send(200,{"ok":True,"service":"lunexeconom-game","version":"0.2.0"})
         if url.path=="/world":
             now_clock=clock_state()
@@ -292,6 +328,9 @@ if os.environ.get("LUNEX_DB_ENGINE") == "postgres":
     clock_state = postgres_world.clock_state
     market_state = postgres_world.market_state
     sell = postgres_world.sell
+    city_state = postgres_world.city_state
+    city_taxes = postgres_world.city_taxes
+    city_build = postgres_world.city_build
     loan = postgres_world.loan
     NPC_CONNECT,NPC_PH = postgres_db.connect,"%s"
 

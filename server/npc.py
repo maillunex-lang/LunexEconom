@@ -132,7 +132,30 @@ def needs_investor(wallet, month):
             and month - last >= economy.NPC_RECAPITAL_MONTHS)
 
 
-def tick(connect, ph, clock_fn, market_fn, wallet_fn, build_fn):
+CITY_MANAGER = "npc:city-manager"
+
+
+def choose_social(view):
+    """The administration (an NPC mayor) builds the least covered service when the budget can carry it for three months."""
+    if not view["mayor"]["is_npc"] or not view.get("social"):
+        return None
+    coverage = view["social"]["coverage"]
+    kind = min(sorted(coverage), key=lambda k: coverage[k])
+    if coverage[kind] >= 0.95:
+        return None
+    reserve = 3 * (view.get("services_upkeep", 0) + economy.monthly_cost(kind, economy.BASE_WAGE))
+    return kind if view["budget"] - economy.BUILD_COST[kind] >= reserve else None
+
+
+def city_act(month, city_fn, build_fn):
+    view = city_fn()
+    kind = choose_social(view)
+    if kind is None:
+        return None
+    return kind if _place(economy.CITY, month, kind, len(view.get("buildings", [])), build_fn) else None
+
+
+def tick(connect, ph, clock_fn, market_fn, wallet_fn, build_fn, city_fn=None):
     """Let every NPC act for the months that have completed since it last acted. Cheap when nothing is pending."""
     if not _LOCK.acquire(blocking=False):
         return 0
@@ -159,6 +182,19 @@ def tick(connect, ph, clock_fn, market_fn, wallet_fn, build_fn):
                     built += 1
             with connect() as db:
                 db.execute("UPDATE npc_state SET acted_through=%s WHERE owner=%s".replace("%s", ph), (month - 1, persona["owner"]))
+        if city_fn is not None:
+            with connect() as db:
+                row = db.execute("SELECT acted_through FROM npc_state WHERE owner=%s".replace("%s", ph), (CITY_MANAGER,)).fetchone()
+                if row is None:
+                    db.execute("INSERT INTO npc_state(owner,acted_through) VALUES(%s,%s)".replace("%s", ph), (CITY_MANAGER, month - 2))
+            acted = int(row[0]) if row else month - 2
+            pending = month - 1 - acted
+            if pending > 0:
+                for k in range(min(pending, MAX_CATCH_UP)):
+                    if city_act(acted + 1 + k, city_fn, build_fn):
+                        built += 1
+                with connect() as db:
+                    db.execute("UPDATE npc_state SET acted_through=%s WHERE owner=%s".replace("%s", ph), (month - 1, CITY_MANAGER))
         return built
     finally:
         _LOCK.release()

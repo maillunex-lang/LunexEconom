@@ -132,6 +132,9 @@ class PostgresEconomyTests(unittest.TestCase):
         self.assert_ledger()
 
     def test_taxes_flow_into_the_city_budget(self):
+        no_roads = mock.patch.object(economy, "ROAD_MAINTENANCE", 0)       # road upkeep is tested separately
+        no_roads.start()
+        self.addCleanup(no_roads.stop)
         self.build("alice", "farm")
         w = self.month("alice", 2)
         budget = self.sql("SELECT balance FROM wallets WHERE account=%s", (economy.player_account(economy.CITY),))[0][0]
@@ -147,6 +150,53 @@ class PostgresEconomyTests(unittest.TestCase):
         self.sql("INSERT INTO city_policy(id,profit_tax_permille,property_tax_permille,social_share_permille,changed_month) VALUES(1,50,0,300,0)")
         self.assertEqual(postgres_world.market_state()[1]["taxes"]["profit_tax"], 0.05)
         self.assertEqual(postgres_world.market_state()[1]["taxes"]["property_tax"], 0.0)
+
+    def fund_budget(self, amount):
+        postgres_world.city_state()
+        with postgres_db.connect() as db:
+            economy.ensure_wallet(db, "%s", economy.CITY, self.now)
+            economy.post(db, "%s", "test", "funding", [(economy.TREASURY, -amount), (economy.player_account(economy.CITY), amount)], self.now)
+
+    def test_city_government_taxes_and_social_buildings(self):
+        v = postgres_world.city_state()[1]
+        self.assertEqual(v["mayor"]["owner"], "npc:administration")
+        self.assertEqual(postgres_world.city_taxes("alice", {"profit_tax": 0.10, "property_tax": 0.01})[1]["error"], "not_mayor")
+        self.wallet("alice")
+        with postgres_db.connect() as db:
+            db.execute("UPDATE city_state SET mayor='alice',mayor_name='alice' WHERE id=1")
+        status, res = postgres_world.city_taxes("alice", {"profit_tax": 0.10, "property_tax": 0.01})
+        self.assertEqual(status, 200, res)
+        self.assertEqual(postgres_world.city_taxes("alice", {"profit_tax": 0.12, "property_tax": 0.01})[1]["error"], "cooldown")
+        self.assertEqual(postgres_world.city_taxes("alice", {"profit_tax": 0.40, "property_tax": 0.01})[1]["error"], "out_of_limits")
+        self.now += DAY + 5
+        self.assertEqual(postgres_world.city_taxes("alice", {"profit_tax": 0.12, "property_tax": 0.01})[0], 200)
+        # social building: only the mayor, only the city, paid from the budget
+        self.assertEqual(postgres_world.build("alice", {"kind": "school", "x": 8, "y": 10, "request_id": rid()})[1]["error"], "social_only_for_city")
+        self.assertEqual(postgres_world.city_build("alice", {"kind": "school", "x": 8, "y": 10, "request_id": rid()})[1]["error"], "insufficient_funds")
+        self.fund_budget(1_000_000)
+        self.cursor = 0
+        for _ in range(60):
+            self.cursor += 1
+            status, res = postgres_world.city_build("alice", {"kind": "school", "x": 8, "y": 10 + 7 * self.cursor, "request_id": rid()})
+            if status == 201:
+                break
+        self.assertEqual(status, 201, res)
+        v = postgres_world.city_state()[1]
+        self.assertEqual(v["social"]["counts"]["school"], 1)
+        self.assertLess(v["budget"], 1_000_000)
+        self.month("alice", 3)
+        v = postgres_world.city_state()[1]
+        self.assertGreaterEqual(v["budget"], 0)
+        self.assert_ledger()
+
+    def test_administration_builds_social_buildings_on_postgres(self):
+        game_server.npc_tick()
+        self.fund_budget(3_000_000)
+        for _ in range(4):
+            self.now += DAY + 5
+            game_server.npc_tick()
+        self.assertGreater(len(postgres_world.city_state()[1]["buildings"]), 0)
+        self.assert_ledger()
 
     def test_selling_a_building(self):
         res = self.build("alice", "farm")

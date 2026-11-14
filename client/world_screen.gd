@@ -168,7 +168,7 @@ func _setup_build_toolbar() -> void:
     build_toolbar.offset_top = -94
     build_toolbar.offset_bottom = -20
     build_toolbar.add_child(_ui_button("Строить", _open_catalog))
-    build_toolbar.add_child(_ui_button("Дороги", func(): _open_section("Дороги")))
+    build_toolbar.add_child(_ui_button("Город", func(): _open_section("Город")))
     build_toolbar.add_child(_ui_button("Экономика", func(): _open_section("Экономика")))
     build_toolbar.add_child(_ui_button("Логистика", func(): _open_section("Логистика")))
     build_toolbar.add_child(_ui_button("Меню", func(): _open_section("Меню")))
@@ -243,6 +243,20 @@ func _setup_ui_v1() -> void:
     section_actions.add_child(_ui_button("Погасить кредит", _repay_loan, 200))
     section_content.add_child(section_actions)
     section_actions.hide()
+    city_actions = VBoxContainer.new()
+    var tax_row := HBoxContainer.new()
+    tax_row.add_child(_ui_button("Прибыль −1%", func(): _city_tax_step(-0.01, 0.0), 150))
+    tax_row.add_child(_ui_button("Прибыль +1%", func(): _city_tax_step(0.01, 0.0), 150))
+    tax_row.add_child(_ui_button("Имущество −0.2%", func(): _city_tax_step(0.0, -0.002), 170))
+    tax_row.add_child(_ui_button("Имущество +0.2%", func(): _city_tax_step(0.0, 0.002), 170))
+    city_actions.add_child(tax_row)
+    var build_row := HBoxContainer.new()
+    build_row.add_child(_ui_button("Школа", func(): _start_city_build("school"), 150))
+    build_row.add_child(_ui_button("Больница", func(): _start_city_build("hospital"), 150))
+    build_row.add_child(_ui_button("Парк", func(): _start_city_build("park"), 150))
+    city_actions.add_child(build_row)
+    section_content.add_child(city_actions)
+    city_actions.hide()
     section_panel.hide()
     get_viewport().size_changed.connect(_layout_ui_v1)
     call_deferred("_layout_ui_v1")
@@ -319,16 +333,18 @@ func _open_section(section: String) -> void:
     details_panel.hide()
     section_title.text = section
     match section:
-        "Дороги":
-            section_body.text = "Выберите клетку на карте и нажмите «Проложить дорогу». Подключение проверяется по дорожной сети."
+        "Город":
+            section_body.text = _city_text()
+            _refresh_city()
         "Экономика":
             section_body.text = _economy_text()
             _refresh_wallet()
         "Логистика":
             section_body.text = "Маршруты поставок и транспортные задания находятся в разработке. Дорожная сеть доступна на карте."
         "Меню":
-            section_body.text = "Башкирия: Мёд и Нефть\nВерсия интерфейса 1.0\nУправление: одним пальцем двигайте карту, двумя изменяйте масштаб."
+            section_body.text = "Башкирия: Мёд и Нефть\nВерсия интерфейса 1.0\nУправление: одним пальцем двигайте карту, двумя изменяйте масштаб. Дороги к зданиям прокладываются автоматически."
     section_actions.visible = section == "Экономика"
+    city_actions.visible = section == "Город" and _is_mayor()
     _show_panel(section_panel)
     call_deferred("_layout_ui_v1")
 
@@ -341,6 +357,7 @@ func _open_catalog() -> void:
     call_deferred("_layout_ui_v1")
 
 func _choose_ui_build(kind: String) -> void:
+    city_mode = false
     world.choose_build(kind)
     catalog_panel.hide()
     _show_panel(placement_panel)
@@ -349,6 +366,7 @@ func _choose_ui_build(kind: String) -> void:
     call_deferred("_layout_ui_v1")
 
 func _cancel_ui_build() -> void:
+    city_mode = false
     world.cancel_build()
     placement_panel.hide()
     info.text = "Строительство отменено"
@@ -357,6 +375,10 @@ func show_build_preview(result: Dictionary) -> void:
     if result.get("ok", false):
         var road_len: int = (result.get("access", []) as Array).size()
         var total := int(building_costs.get(world.build_type, 0)) + road_len * road_cell_cost
+        if city_mode:
+            info.text = "Из бюджета: %s (в казне %s)" % [_fmt_money(total), _fmt_money(int(city.get("budget", 0)))]
+            if build_hint != null: build_hint.text = info.text
+            return
         var text := "Цена %s" % _fmt_money(total)
         if road_len > 0: text += " (с дорогой %d кл.)" % road_len
         var per_month := _month_profit(world.build_type)
@@ -417,9 +439,12 @@ func _place_building() -> void:
                     world.apply_server_event(event)
             world.cancel_build()
             placement_panel.hide()
+            var from_budget := city_mode
+            city_mode = false
+            if from_budget: _refresh_city()
             var road_cells := int(data.get("road_cells", 0))
-            if data.has("balance"): _set_balance(int(data["balance"]))
-            info.text = "Построено за %s" % _fmt_money(int(data.get("cost", 0))) + ((" · дорога +%d кл." % road_cells) if road_cells > 0 else "")
+            if data.has("balance") and not from_budget: _set_balance(int(data["balance"]))
+            info.text = ("Построено за счёт бюджета: %s" if from_budget else "Построено за %s") % _fmt_money(int(data.get("cost", 0))) + ((" · дорога +%d кл." % road_cells) if road_cells > 0 else "")
         else:
             var errors := {"occupied":"Участок уже занят", "invalid_build":"Неверное место или тип здания", "outside_world":"За пределами карты", "unauthorized":"Сессия завершена, войдите снова", "invalid_request_id":"Ошибка команды строительства", "water":"Нельзя строить на воде", "road_overlap":"Нельзя строить на дороге", "no_road_access":"Дорогу к участку проложить нельзя"}
             if str(data.get("error", "")) == "insufficient_funds":
@@ -430,7 +455,7 @@ func _place_building() -> void:
             if build_hint != null: build_hint.text = info.text
     )
     var headers := PackedStringArray(["Content-Type: application/json", "Authorization: Bearer " + GameSession.access_token])
-    var err := req.request("https://rikagro.ru/lunexeconom/api/build", headers, HTTPClient.METHOD_POST, JSON.stringify(payload))
+    var err := req.request(API_ROOT + ("city/build" if city_mode else "build"), headers, HTTPClient.METHOD_POST, JSON.stringify(payload))
     if err != OK:
         ui_pending = false
         req.queue_free()
@@ -497,7 +522,7 @@ func _input(event: InputEvent) -> void:
 
 # ---- Economy (server-authoritative; the client only displays) ----
 const API_ROOT := "https://rikagro.ru/lunexeconom/api/"
-var building_costs := {"farm": 120000, "mine": 300000, "factory": 450000, "warehouse": 80000}
+var building_costs := {"farm": 120000, "mine": 300000, "factory": 450000, "warehouse": 80000, "school": 400000, "hospital": 800000, "park": 150000}
 var road_cell_cost := 5000
 var wallet_balance := -1
 var wallet_transactions: Array = []
@@ -513,10 +538,13 @@ var tax_view: Dictionary = {}
 var loan: Dictionary = {}
 var loan_pending := false
 var section_actions: HBoxContainer
+var city_actions: VBoxContainer
+var city: Dictionary = {}
+var city_mode := false
 const LOAN_STEP := 100000
 var seen_bankruptcy_month = null
 var seen_missed := 0
-const KIND_NAMES := {"farm": "Ферма", "mine": "Шахта", "factory": "Завод", "warehouse": "Склад"}
+const KIND_NAMES := {"farm": "Ферма", "mine": "Шахта", "factory": "Завод", "warehouse": "Склад", "school": "Школа", "hospital": "Больница", "park": "Парк"}
 var production := {"farm": {"product_id": "honey", "output": 100, "unit_price": 200, "upkeep": 2000, "jobs": 4}, "mine": {"product_id": "oil", "output": 40, "unit_price": 1500, "upkeep": 15000, "jobs": 10}, "factory": {"product_id": "goods", "output": 60, "unit_price": 2000, "upkeep": 26000, "jobs": 20, "inputs": {"oil": 10, "honey": 20}}, "warehouse": {"product_id": "", "output": 0, "unit_price": 0, "upkeep": 2000, "jobs": 2, "capacity": 400}}
 
 func _fmt_money(value: int) -> String:
@@ -711,6 +739,7 @@ func _refresh_market() -> void:
 
 func _refresh_terms() -> void:
     _refresh_market()
+    _refresh_city()
     _api_get("world", false, func(data: Dictionary) -> void:
         var eco = data.get("economy", null)
         if not eco is Dictionary: return
@@ -765,6 +794,7 @@ func _tick_game_date() -> void:
 func _owner_name(owner: String) -> String:
     for c in competitors:
         if c is Dictionary and str(c.get("owner", "")) == owner: return str(c.get("name", owner))
+    if owner == "city": return "Город"
     return owner.trim_prefix("npc:") if owner.begins_with("npc:") else owner
 
 func _api_post(path: String, payload: Dictionary, callback: Callable) -> void:
@@ -837,3 +867,63 @@ func _loan_request(action: String, amount: int) -> void:
                 "no_loan": "Кредита нет", "invalid_amount": "Недопустимая сумма", "unauthorized": "Сессия завершена, войдите снова"}
             info.text = str(errors.get(str(data.get("error", "")), "Операция не выполнена (HTTP %d)" % code))
     )
+
+# ---- City government (the mayor, budget, taxes and social services) ----
+func _is_mayor() -> bool:
+    var m = city.get("mayor", null)
+    return m is Dictionary and GameSession.username != "" and str(m.get("owner", "")) == GameSession.username
+
+func _refresh_city() -> void:
+    _api_get("city", false, func(data: Dictionary) -> void:
+        city = data
+        if section_panel != null and section_panel.visible and section_title.text == "Город":
+            section_body.text = _city_text()
+            city_actions.visible = _is_mayor()
+    )
+
+func _city_text() -> String:
+    if city.is_empty(): return "Загрузка данных города..."
+    var lines: PackedStringArray = []
+    var m: Dictionary = city.get("mayor", {})
+    var who := "вы" if _is_mayor() else str(m.get("name", "—"))
+    lines.append("Мэр: %s (срок до %s)" % [who, _month_label(int(m.get("term_end_month", 0)))])
+    lines.append("Бюджет: %s · налоги за прошлый месяц %s · содержание служб %s/мес" % [_fmt_money(int(city.get("budget", 0))), _fmt_money(int(city.get("collected_last_month", 0))), _fmt_money(int(city.get("services_upkeep", 0)))])
+    var t: Dictionary = city.get("taxes", {})
+    if not t.is_empty() and bool(t.get("enabled", true)):
+        var lim: Dictionary = t.get("limits", {})
+        lines.append("Налоги: прибыль %s%% (допустимо %s–%s%%), имущество %s%% в год (до %s%%). НДС задаёт закон." % [_pct(float(t.get("profit_tax", 0.0))), _pct(float(lim.get("profit_tax", [0.05, 0.25])[0])), _pct(float(lim.get("profit_tax", [0.05, 0.25])[1])), _pct(float(t.get("property_tax", 0.0))), _pct(float(lim.get("property_tax", [0.0, 0.022])[1]))])
+    var soc: Dictionary = city.get("social", {})
+    if not soc.is_empty():
+        var counts: Dictionary = soc.get("counts", {})
+        var cov: Dictionary = soc.get("coverage", {})
+        lines.append("Качество жизни: %d%% (больше выпуск и приток жителей)%s" % [int(round(float(soc.get("quality", 0.0)) * 100.0)), "" if bool(soc.get("funded", true)) else " — службы недофинансированы!"])
+        for k in ["school", "hospital", "park"]:
+            lines.append("%s: %d шт., охват %d%%, цена %s" % [KIND_NAMES[k], int(counts.get(k, 0)), int(round(float(cov.get(k, 0.0)) * 100.0)), _fmt_money(int(float(city.get("costs", {}).get(k, 0))))])
+    if _is_mayor():
+        lines.append("Вы мэр: налоги можно менять раз в игровой месяц, зарплата %s/мес из бюджета." % _fmt_money(int(city.get("salary", 0))))
+    return "\n".join(lines)
+
+func _city_tax_step(d_profit: float, d_property: float) -> void:
+    var t: Dictionary = city.get("taxes", {})
+    if t.is_empty(): return
+    var lim: Dictionary = t.get("limits", {})
+    var profit := clampf(snappedf(float(t.get("profit_tax", 0.13)) + d_profit, 0.001), float(lim.get("profit_tax", [0.05, 0.25])[0]), float(lim.get("profit_tax", [0.05, 0.25])[1]))
+    var prop := clampf(snappedf(float(t.get("property_tax", 0.022)) + d_property, 0.001), float(lim.get("property_tax", [0.0, 0.022])[0]), float(lim.get("property_tax", [0.0, 0.022])[1]))
+    _api_post("city/taxes", {"profit_tax": profit, "property_tax": prop}, func(code: int, data: Dictionary) -> void:
+        if code == 200:
+            info.text = "Налоги изменены: прибыль %s%%, имущество %s%%" % [_pct(profit), _pct(prop)]
+            _refresh_city()
+            _refresh_terms()
+        else:
+            var errors := {"cooldown": "Налоги можно менять раз в игровой месяц", "out_of_limits": "Ставка вне допустимых пределов", "not_mayor": "Вы не мэр", "unauthorized": "Сессия завершена, войдите снова"}
+            info.text = str(errors.get(str(data.get("error", "")), "Не удалось изменить налоги (HTTP %d)" % code))
+    )
+
+func _start_city_build(kind: String) -> void:
+    if not _is_mayor(): return
+    city_mode = true
+    world.choose_build(kind)
+    section_panel.hide()
+    _show_panel(placement_panel)
+    build_hint.text = "Выберите участок для: %s (оплата из бюджета)" % KIND_NAMES[kind]
+    call_deferred("_layout_ui_v1")

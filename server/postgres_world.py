@@ -8,11 +8,12 @@ import roads as road_rules
 import economy
 import production
 import taxes
+import city
 import clock
 
 CHUNK = 12
 MAX_COORD = 10000
-KINDS = {"farm":(2,2),"mine":(2,3),"factory":(3,2),"warehouse":(3,3)}
+KINDS = {"farm":(2,2),"mine":(2,3),"factory":(3,2),"warehouse":(3,3),"school":(3,2),"hospital":(3,3),"park":(2,2)}
 
 def build(owner,payload):
     kind=payload.get("kind")
@@ -21,6 +22,8 @@ def build(owner,payload):
     request_id=payload.get("request_id")
     if kind not in KINDS or type(x) is not int or type(y) is not int or abs(x)>MAX_COORD or abs(y)>MAX_COORD:
         return 400,{"error":"invalid_build"}
+    if (kind in economy.SOCIAL_KINDS)!=(owner==economy.CITY):
+        return 403,{"error":"social_only_for_city" if kind in economy.SOCIAL_KINDS else "city_builds_social_only"}
     try:uuid.UUID(request_id)
     except (ValueError,TypeError,AttributeError):return 400,{"error":"invalid_request_id"}
     w,h=KINDS[kind]
@@ -105,6 +108,31 @@ def loan(owner,payload):
         if status==201:
             db.execute("INSERT INTO commands(owner,request_id,response) VALUES(%s,%s,%s)",(owner,request_id,json.dumps(result)))
         return status,result
+
+def city_state():
+    with postgres_db.connect() as db:
+        db.execute("SELECT pg_advisory_xact_lock(20261114)")
+        now=int(time.time())
+        clk=clock.state(db,"%s",now)
+        production.advance(db,"%s",clk,now)
+        return 200,production.city_view(db,"%s",clk)
+
+def city_taxes(owner,payload):
+    with postgres_db.connect() as db:
+        db.execute("SELECT pg_advisory_xact_lock(20261114)")
+        now=int(time.time())
+        clk=clock.state(db,"%s",now)
+        production.advance(db,"%s",clk,now)
+        return city.set_taxes(db,"%s",owner,payload.get("profit_tax"),payload.get("property_tax"),clk["month_index"])
+
+def city_build(owner,payload):
+    with postgres_db.connect() as db:
+        db.execute("SELECT pg_advisory_xact_lock(20261114)")
+        clk=clock.state(db,"%s",int(time.time()))
+        allowed=city.is_mayor(db,"%s",owner,clk["month_index"])
+    if not allowed:return 403,{"error":"not_mayor"}
+    if payload.get("kind") not in economy.SOCIAL_KINDS:return 400,{"error":"invalid_build"}
+    return build(economy.CITY,payload)
 
 def market_state():
     with postgres_db.connect() as db:

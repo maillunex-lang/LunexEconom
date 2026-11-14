@@ -56,7 +56,7 @@ func cell_kind(x: int, y: int) -> int:
     if server_cells.has(coord):
         var kind := str(server_cells[coord].get("kind", ""))
         if kind == "road_changed": return 3
-        if kind == "building_created" or kind in ["farm", "mine", "factory", "warehouse"]: return 6
+        if kind == "building_created" or kind in ["farm", "mine", "factory", "warehouse", "school", "hospital", "park"]: return 6
         if kind == "building_removed": return 0
     # Integer-only hash: independent of call order and frame rate.
     var h := (x * 73856093) ^ (y * 19349663) ^ SEED
@@ -72,7 +72,7 @@ func cell_kind(x: int, y: int) -> int:
     return n % 3
 
 func _is_building_event(kind: String) -> bool:
-    return kind == "building_created" or kind in ["farm", "mine", "factory", "warehouse"]
+    return kind == "building_created" or kind in ["farm", "mine", "factory", "warehouse", "school", "hospital", "park"]
 
 func _set_server_road(coord: Vector2i, present: bool) -> void:
     if present: roads.segments[coord] = true
@@ -84,7 +84,7 @@ func _set_server_road(coord: Vector2i, present: bool) -> void:
 func apply_server_event(event: Dictionary) -> void:
     var kind := str(event.get("kind", ""))
     if not (_is_building_event(kind) or kind in ["building_removed", "road_changed"]): return
-    var building_kind := str(event.get("building_kind", kind if kind in ["farm", "mine", "factory", "warehouse"] else ""))
+    var building_kind := str(event.get("building_kind", kind if kind in ["farm", "mine", "factory", "warehouse", "school", "hospital", "park"] else ""))
     for cell in event.get("cells", []):
         if not cell is Array or cell.size() != 2: continue
         var coord := Vector2i(int(cell[0]), int(cell[1]))
@@ -107,7 +107,7 @@ func apply_chunk_snapshot(coord: Vector2i, cells: Array) -> void:
         if kind == "road_changed":
             roads.segments[c] = true
         else:
-            var bk := str(cell.get("building_kind", kind if kind in ["farm", "mine", "factory", "warehouse"] else ""))
+            var bk := str(cell.get("building_kind", kind if kind in ["farm", "mine", "factory", "warehouse", "school", "hospital", "park"] else ""))
             server_cells[c] = {"kind":"building_created","building_kind":bk,"object_id":cell.get("object_id", ""),"owner":str(cell.get("owner", ""))}
     # Roads on the chunk border change the shape of roads in neighbouring chunks.
     for dx in range(-1, 2):
@@ -296,6 +296,9 @@ func build_size(kind: String) -> Vector2i:
         "mine": return Vector2i(2, 3)
         "factory": return Vector2i(3, 2)
         "warehouse": return Vector2i(3, 3)
+        "school": return Vector2i(3, 2)
+        "hospital": return Vector2i(3, 3)
+        "park": return Vector2i(2, 2)
     return Vector2i.ZERO
 
 func preview_build(cell: Vector2i) -> Dictionary:

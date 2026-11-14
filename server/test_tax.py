@@ -26,6 +26,9 @@ class TaxBase(unittest.TestCase):
         pin = mock.patch.object(economy, "price_for", side_effect=lambda product, supply, demand: economy.MARKET[product]["reference_price"])
         pin.start()
         self.addCleanup(pin.stop)
+        roads = mock.patch.object(economy, "ROAD_MAINTENANCE", 0)      # city road upkeep is tested in test_city.py
+        roads.start()
+        self.addCleanup(roads.stop)
         self.cursor = 0
 
     def tearDown(self):

@@ -64,6 +64,7 @@ CREATE TABLE IF NOT EXISTS company_status (owner TEXT PRIMARY KEY, missed INTEGE
 CREATE TABLE IF NOT EXISTS city_policy (id INTEGER PRIMARY KEY, profit_tax_permille INTEGER NOT NULL, property_tax_permille INTEGER NOT NULL, social_share_permille INTEGER NOT NULL, changed_month BIGINT NOT NULL);
 CREATE TABLE IF NOT EXISTS company_tax_state (owner TEXT PRIMARY KEY, tax_owed BIGINT NOT NULL, vat_credit BIGINT NOT NULL);
 CREATE TABLE IF NOT EXISTS company_taxes (owner TEXT NOT NULL, month_index BIGINT NOT NULL, vat BIGINT NOT NULL, profit_tax BIGINT NOT NULL, property_tax BIGINT NOT NULL, paid BIGINT NOT NULL, PRIMARY KEY(owner, month_index));
+CREATE TABLE IF NOT EXISTS city_state (id INTEGER PRIMARY KEY, mayor TEXT NOT NULL, mayor_name TEXT NOT NULL, since_month BIGINT NOT NULL, term_end_month BIGINT NOT NULL);
 CREATE TABLE IF NOT EXISTS npc_state (owner TEXT PRIMARY KEY, acted_through BIGINT NOT NULL);
 CREATE TABLE IF NOT EXISTS company_state (owner TEXT PRIMARY KEY, settled_through BIGINT NOT NULL);
 CREATE TABLE IF NOT EXISTS monthly_reports (owner TEXT NOT NULL, month_index BIGINT NOT NULL, revenue BIGINT NOT NULL, upkeep BIGINT NOT NULL, profit BIGINT NOT NULL, buildings INTEGER NOT NULL, PRIMARY KEY(owner, month_index));
