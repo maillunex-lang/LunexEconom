@@ -57,7 +57,7 @@ jobs:
           set -euo pipefail
           python3 - <<'PY'
           from pathlib import Path
-          import hashlib, zipfile, os, re
+          import hashlib, zipfile, os, re, json
           apks=list(Path("dist").glob("*.apk"))
           assert len(apks)==1, "Expected one APK"
           apk=apks[0]
@@ -66,6 +66,9 @@ jobs:
               assert "AndroidManifest.xml" in z.namelist()
               assert z.testzip() is None
           report=Path(os.environ["REPORT"]).read_text()
+          build=json.loads(Path("dist/build_info.json").read_text())
+          assert isinstance(build.get("version_code"), int) and build["version_code"] > 0
+          assert re.search(r"^Version code: "+str(build["version_code"])+r"$",report,re.M), "Device report version mismatch"
           m=re.search(r"^APK SHA256: ([a-f0-9]{64})$",report,re.M)
           assert m, "Missing SHA256 in device test report"
           actual=hashlib.sha256(apk.read_bytes()).hexdigest()
@@ -86,4 +89,4 @@ jobs:
           REPORT: ${{ inputs.device_test_report }}
         run: |
           set -euo pipefail
-          gh release create "$TAG" dist/*.apk dist/SHA256SUMS --prerelease --target "$GITHUB_SHA" --title "Башкирия: Мёд и Нефть $TAG" --notes-file "$REPORT"
+          gh release create "$TAG" dist/*.apk dist/SHA256SUMS dist/build_info.json --prerelease --target "$GITHUB_SHA" --title "Башкирия: Мёд и Нефть $TAG" --notes-file "$REPORT"
