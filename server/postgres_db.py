@@ -47,6 +47,9 @@ CREATE TABLE IF NOT EXISTS ledger_entries (
  PRIMARY KEY(tx_id, account)
 );
 CREATE TABLE IF NOT EXISTS world_clock (id INTEGER PRIMARY KEY, epoch BIGINT NOT NULL, month_seconds BIGINT NOT NULL, base_index BIGINT NOT NULL);
+CREATE TABLE IF NOT EXISTS building_ops (object_id TEXT PRIMARY KEY, owner TEXT NOT NULL, kind TEXT NOT NULL, start_month BIGINT NOT NULL, start_permille INTEGER NOT NULL);
+CREATE TABLE IF NOT EXISTS company_state (owner TEXT PRIMARY KEY, settled_through BIGINT NOT NULL);
+CREATE TABLE IF NOT EXISTS monthly_reports (owner TEXT NOT NULL, month_index BIGINT NOT NULL, revenue BIGINT NOT NULL, upkeep BIGINT NOT NULL, profit BIGINT NOT NULL, buildings INTEGER NOT NULL, PRIMARY KEY(owner, month_index));
 CREATE TABLE IF NOT EXISTS commands (
  owner TEXT NOT NULL, request_id TEXT NOT NULL, response TEXT NOT NULL,
  PRIMARY KEY(owner,request_id)

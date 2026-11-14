@@ -41,9 +41,12 @@ def build(owner,payload):
         new_roads=[c for c in path if not road_rules.is_base_road(*c) and c not in dynamic]
         oid=uuid.uuid4().hex
         now=int(time.time())
+        clk=clock.state(db,"%s",now)
+        economy.settle(db,"%s",owner,clk,now)
         paid,cost,balance=economy.charge_build(db,"%s",owner,kind,len(new_roads),now)
         if not paid:return 402,{"error":"insufficient_funds","cost":cost,"balance":balance}
         db.execute("INSERT INTO buildings(id,owner,kind,x,y,created) VALUES(%s,%s,%s,%s,%s,%s)",(oid,owner,kind,x,y,now))
+        economy.register_building(db,"%s",owner,oid,kind,clk)
         with db.cursor() as cursor:
             cursor.executemany("INSERT INTO cells(x,y,object_id) VALUES(%s,%s,%s)",[(xx,yy,oid) for xx,yy in footprint])
             if new_roads:
@@ -72,7 +75,8 @@ def clock_state():
 def wallet(owner):
     with postgres_db.connect() as db:
         db.execute("SELECT pg_advisory_xact_lock(20261114)")
-        return 200,economy.wallet(db,"%s",owner,int(time.time()))
+        now=int(time.time())
+        return 200,economy.wallet(db,"%s",owner,clock.state(db,"%s",now),now)
 
 def events(after):
     if type(after) is not int or after<0:return 400,{"error":"invalid_cursor"}

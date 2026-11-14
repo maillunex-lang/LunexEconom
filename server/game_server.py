@@ -68,10 +68,13 @@ def build(owner, payload):
         new_roads=[c for c in path if not road_rules.is_base_road(*c) and c not in dynamic]
         object_id=uuid.uuid4().hex
         now=int(time.time())
+        clk=clock.state(db,"?",now)
+        economy.settle(db,"?",owner,clk,now)
         paid,cost,balance=economy.charge_build(db,"?",owner,kind,len(new_roads),now)
         if not paid:
             return 402,{"error":"insufficient_funds","cost":cost,"balance":balance}
         db.execute("INSERT INTO buildings VALUES(?,?,?,?,?,?)",(object_id,owner,kind,x,y,now))
+        economy.register_building(db,"?",owner,object_id,kind,clk)
         db.executemany("INSERT INTO cells VALUES(?,?,?)",[(xx,yy,object_id) for xx,yy in footprint])
         db.executemany("INSERT INTO roads VALUES(?,?,?,?)",[(rx,ry,owner,now) for rx,ry in new_roads])
         events=[]
@@ -102,7 +105,8 @@ def clock_state():
 def wallet(owner):
     with LOCK, connect() as db:
         db.execute("BEGIN IMMEDIATE")
-        result=economy.wallet(db,"?",owner,int(time.time()))
+        now=int(time.time())
+        result=economy.wallet(db,"?",owner,clock.state(db,"?",now),now)
         db.commit()
     return 200,result
 

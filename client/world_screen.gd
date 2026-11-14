@@ -281,7 +281,10 @@ func _setup_top_hud() -> void:
     var resync := Timer.new()
     resync.wait_time = 60.0
     resync.autostart = true
-    resync.timeout.connect(_refresh_terms)
+    resync.timeout.connect(func() -> void:
+        _refresh_terms()
+        _refresh_wallet()
+    )
     add_child(resync)
 
 func _show_panel(panel: Control) -> void:
@@ -336,6 +339,7 @@ func show_build_preview(result: Dictionary) -> void:
         var total := int(building_costs.get(world.build_type, 0)) + road_len * road_cell_cost
         var text := "Цена %s" % _fmt_money(total)
         if road_len > 0: text += " (с дорогой %d кл.)" % road_len
+        text += " · +%s/мес" % _fmt_money(_month_profit(world.build_type))
         if wallet_balance >= 0 and total > wallet_balance:
             text += " · не хватает %s" % _fmt_money(total - wallet_balance)
         info.text = text
@@ -474,6 +478,9 @@ var building_costs := {"farm": 120000, "mine": 300000, "factory": 450000}
 var road_cell_cost := 5000
 var wallet_balance := -1
 var wallet_transactions: Array = []
+var wallet_reports: Array = []
+var wallet_forecast: Dictionary = {}
+var production := {"farm": {"output": 100, "unit_price": 200, "upkeep": 8000}, "mine": {"output": 40, "unit_price": 1500, "upkeep": 30000}, "factory": {"output": 60, "unit_price": 2000, "upkeep": 75000}}
 
 func _fmt_money(value: int) -> String:
     var digits := str(absi(value))
@@ -494,15 +501,34 @@ func _set_balance(value: int) -> void:
         label.text = _fmt_money(value)
         label.tooltip_text = "Баланс компании"
 
+func _month_profit(kind: String) -> int:
+    var p = production.get(kind, null)
+    if not p is Dictionary: return 0
+    return int(p.get("output", 0)) * int(p.get("unit_price", 0)) - int(p.get("upkeep", 0))
+
 func _economy_text() -> String:
     if wallet_balance < 0:
         return "Загрузка данных счёта..." if GameSession.is_authenticated() else "Войдите в аккаунт, чтобы увидеть баланс."
-    var lines: PackedStringArray = ["Баланс: %s" % _fmt_money(wallet_balance), ""]
-    for tx in wallet_transactions.slice(0, 5):
-        if tx is Dictionary:
-            lines.append("%s%s  %s" % ["+" if int(tx.get("amount", 0)) >= 0 else "", _fmt_money(int(tx.get("amount", 0))), str(tx.get("memo", ""))])
-    if wallet_transactions.is_empty(): lines.append("Операций пока нет.")
+    var lines: PackedStringArray = ["Баланс: %s" % _fmt_money(wallet_balance)]
+    if not wallet_forecast.is_empty():
+        lines.append("Прогноз в месяц: доход %s, расходы %s, прибыль %s (зданий: %d)" % [
+            _fmt_money(int(wallet_forecast.get("revenue", 0))), _fmt_money(int(wallet_forecast.get("upkeep", 0))),
+            _fmt_money(int(wallet_forecast.get("profit", 0))), int(wallet_forecast.get("buildings", 0))])
+    if not wallet_reports.is_empty():
+        lines.append("")
+        lines.append("Итоги месяцев:")
+        for r in wallet_reports.slice(0, 3):
+            if r is Dictionary:
+                lines.append("%s: +%s − %s = %s" % [_month_label(int(r.get("month_index", 0))), _fmt_money(int(r.get("revenue", 0))), _fmt_money(int(r.get("upkeep", 0))), _fmt_money(int(r.get("profit", 0)))])
+    elif not wallet_transactions.is_empty():
+        lines.append("")
+        for tx in wallet_transactions.slice(0, 3):
+            if tx is Dictionary:
+                lines.append("%s%s  %s" % ["+" if int(tx.get("amount", 0)) >= 0 else "", _fmt_money(int(tx.get("amount", 0))), str(tx.get("memo", ""))])
     return "\n".join(lines)
+
+func _month_label(index: int) -> String:
+    return "%s %d" % [MONTH_NAMES[index % 12], 2027 + index / 12]
 
 func _api_get(path: String, auth: bool, callback: Callable) -> void:
     var req := HTTPRequest.new()
@@ -529,6 +555,7 @@ func _refresh_terms() -> void:
         if not eco is Dictionary: return
         if eco.get("building_costs", null) is Dictionary: building_costs = eco["building_costs"]
         road_cell_cost = int(eco.get("road_cell_cost", road_cell_cost))
+        if eco.get("production", null) is Dictionary: production = eco["production"]
         if data.get("clock", null) is Dictionary:
             game_clock = data["clock"]
             clock_offset = float(game_clock.get("server_time", 0)) - Time.get_unix_time_from_system()
@@ -539,6 +566,8 @@ func _refresh_wallet() -> void:
     _api_get("wallet", true, func(data: Dictionary) -> void:
         _set_balance(int(data.get("balance", 0)))
         wallet_transactions = data.get("transactions", [])
+        wallet_reports = data.get("reports", [])
+        wallet_forecast = data.get("forecast", {})
         if section_panel != null and section_panel.visible and section_title.text == "Экономика":
             section_body.text = _economy_text()
     )
