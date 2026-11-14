@@ -53,7 +53,7 @@ def release_metadata():
         if e.code == 404:
             return {"status": "unavailable", "version": None, "url": None, "sha256": None}
         raise
-    releases.sort(key=lambda r: r.get("tag_name") != "android-test-latest")
+    releases.sort(key=lambda r: r.get("tag_name") == "android-test-latest")
     for release in releases:
         if release.get("draft"):
             continue
@@ -171,7 +171,7 @@ def publish_update_manifest(metadata):
                                      encoding="utf-8", delete=False) as staged:
         staged_name = Path(staged.name)
         json.dump(payload, staged, ensure_ascii=False)
-        staged.write("\\n")
+        staged.write("\n")
     try:
         os.chmod(staged_name, 0o644)
         os.replace(staged_name, target)
@@ -214,8 +214,9 @@ def main():
             tmp = BASE / "release.json.new"
             tmp.write_text(json.dumps(metadata, ensure_ascii=False), encoding="utf-8")
             os.chmod(tmp, 0o644)
+            if metadata.get("channel") == "release":
+                publish_update_manifest(metadata)
             os.replace(tmp, BASE / "release.json")
-            publish_update_manifest(metadata)
         elif not (BASE / "release.json").exists():
             (BASE / "release.json").write_text(json.dumps(metadata), encoding="utf-8")
     except Exception as e:
