@@ -1,6 +1,11 @@
-name: Android APK build (manual)
+name: Android APK build and emulator smoke
 on:
   workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'client/**'
+      - '.github/workflows/android-build.yml'
 permissions:
   contents: read
 jobs:
@@ -48,6 +53,14 @@ jobs:
           print("APK ZIP integrity passed:",p.stat().st_size,"bytes")
           PY
           sha256sum build/*.apk | tee build/SHA256SUMS
+      - name: Verify both native architectures and APK signature
+        run: |
+          set -euo pipefail
+          AAPT="$ANDROID_HOME/build-tools/35.0.0/aapt"
+          "$AAPT" dump badging build/*.apk | tee build/apk-badging.txt
+          grep -q 'arm64-v8a' build/apk-badging.txt
+          grep -q 'x86_64' build/apk-badging.txt
+          "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --verbose build/*.apk
       - uses: actions/upload-artifact@v4
         with:
           name: android-debug-apk
@@ -55,4 +68,37 @@ jobs:
             build/*.apk
             build/SHA256SUMS
           if-no-files-found: error
+          retention-days: 14
+
+  emulator-smoke:
+    name: Install, launch, capture diagnostics
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      actions: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: android-debug-apk
+          path: emulator-input
+      - name: Run Android emulator smoke test
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 35
+          arch: x86_64
+          profile: pixel_6
+          target: google_apis
+          emulator-options: -no-window -no-audio -no-boot-anim -gpu swiftshader_indirect
+          disable-animations: true
+          script: bash ops/emulator-smoke.sh
+      - name: Upload emulator screenshots and logs even on failure
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-emulator-diagnostics
+          path: emulator-results/
+          if-no-files-found: warn
           retention-days: 14
