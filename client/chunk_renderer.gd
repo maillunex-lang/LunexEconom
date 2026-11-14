@@ -51,7 +51,8 @@ func _draw() -> void:
                 var owner := ""
                 if world.server_cells.has(cell):
                     owner = str(world.server_cells[cell].get("owner", ""))
-                _draw_building(p, world.building_at(cell), owner)
+                if _is_primary_building_cell(cell):
+                    _draw_building(p, world.building_at(cell), owner, cell)
             if not footprint.is_empty() and Vector2i(x, y) in footprint:
                 var tint := Color(0.22, 0.95, 0.50, 0.45) if preview_ok else Color(0.98, 0.22, 0.22, 0.45)
                 draw_colored_polygon(pts, tint)
@@ -86,6 +87,41 @@ func _draw_road(p: Vector2, cell: Vector2i) -> void:
         var grain := float(posmod(cell.x * 37 + cell.y * 53, 9)) / 255.0
         draw_circle(p + Vector2(-8, 1), 1.2, Color(0.36 + grain, 0.38 + grain, 0.40 + grain, 0.20))
 
+## Draw one sprite per server object, not one per occupied tile.
+## Missing object IDs retain legacy cell-by-cell behavior.
+func _is_primary_building_cell(cell: Vector2i) -> bool:
+    if not world.server_cells.has(cell):
+        return true
+    var object_id := str(world.server_cells[cell].get("object_id", ""))
+    if object_id.is_empty():
+        return true
+    for dx in range(-4, 5):
+        for dy in range(-4, 5):
+            var other := cell + Vector2i(dx, dy)
+            if other == cell or not world.server_cells.has(other):
+                continue
+            if str(world.server_cells[other].get("object_id", "")) != object_id:
+                continue
+            if other.x < cell.x or (other.x == cell.x and other.y < cell.y):
+                return false
+    return true
+
+func _object_center(cell: Vector2i) -> Vector2:
+    if not world.server_cells.has(cell):
+        return world.iso(float(cell.x), float(cell.y))
+    var object_id := str(world.server_cells[cell].get("object_id", ""))
+    if object_id.is_empty():
+        return world.iso(float(cell.x), float(cell.y))
+    var sum := Vector2.ZERO
+    var count := 0
+    for dx in range(-4, 5):
+        for dy in range(-4, 5):
+            var other := cell + Vector2i(dx, dy)
+            if world.server_cells.has(other) and str(world.server_cells[other].get("object_id", "")) == object_id:
+                sum += world.iso(float(other.x), float(other.y))
+                count += 1
+    return sum / float(maxi(count, 1))
+
 func _owner_color(owner: String) -> Color:
     if owner.is_empty(): return Color("#9ca3a8")
     # Stable across clients; never use randomized String.hash() for owner colors.
@@ -112,10 +148,13 @@ func _draw_house(p: Vector2) -> void:
     draw_rect(Rect2(p + Vector2(3, -6), Vector2(3, 5)), Color("#5b4636"))
     draw_rect(Rect2(p + Vector2(-7, -6), Vector2(3, 3)), Color("#a8c5d6"))
 
-func _draw_building(p: Vector2, kind: String, owner: String = "") -> void:
+func _draw_building(p: Vector2, kind: String, owner: String = "", cell: Vector2i = Vector2i.ZERO) -> void:
+    p = _object_center(cell)
     var art_id := ""
     match kind:
-        "house": art_id = "housing.small"
+        "house":
+            var variant := posmod(cell.x * 17 + cell.y * 31, 4)
+            art_id = ["housing.small", "housing.panel_a", "housing.panel_b", "housing.apartment"][variant]
         "shop": art_id = "retail.grocery"
         "farm": art_id = "industry.farm"
         "mine": art_id = "industry.mine"
