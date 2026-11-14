@@ -9,6 +9,9 @@ func _ready() -> void:
     $HUD/Top/Expand.pressed.connect(_expand)
     $HUD/Top/Connect.pressed.connect(_connect)
     _connect_server()
+    var sync = load("res://world_sync.gd").new()
+    sync.world = world
+    add_child(sync)
     var updater = load("res://updater.gd").new()
     updater.name = "Updater"
     add_child(updater)
@@ -16,7 +19,7 @@ func _ready() -> void:
     $HUD/Top/Update.pressed.connect(func() -> void:
         if not updater.downloaded_apk.is_empty():
             updater.install_apk()
-        elif not updater.manifest.is_empty() and int(updater.manifest["apk"]["version_code"]) > 3:
+        elif not updater.manifest.is_empty() and int(updater.manifest["apk"]["version_code"]) > 5:
             updater.download_apk()
         else:
             updater.check()
