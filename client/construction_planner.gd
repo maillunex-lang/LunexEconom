@@ -22,8 +22,12 @@ func preview(origin: Vector2i, size: Vector2i, roads: Object, world: Object) -> 
             return {"ok": false, "reason": "outside_explored_area"}
         if occupied.has(cell):
             return {"ok": false, "reason": "occupied"}
+        if world.server_cells.has(cell):
+            return {"ok": false, "reason": "server_occupied"}
         if roads.is_road(cell):
             return {"ok": false, "reason": "road_overlap"}
+        if world.cell_kind(cell.x, cell.y) == 4:
+            return {"ok": false, "reason": "water"}
         for delta in [Vector2i(0, -1), Vector2i(1, 0), Vector2i(0, 1), Vector2i(-1, 0)]:
             if roads.is_road(cell + delta):
                 adjacent_road = true
