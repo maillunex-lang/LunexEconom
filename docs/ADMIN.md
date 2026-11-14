@@ -64,14 +64,18 @@
 6. Автообновление игры (`ops/update_server.py`) обновляет только `server/*.py`; **студия обновляется вручную** (она не часть игрового сервера).
 
 ## Подпись выпусков (LivePatch)
-Один раз, на своём компьютере:
+Политика проекта: **постоянный закрытый ключ хранится только на VPS**, в GitHub его не выгружать. Создавать ключ один раз в закрытом каталоге root (права `0700` на каталог и `0600` на файл):
 ```bash
-openssl genrsa -out lunex-patch-private.pem 3072        # ПРИВАТНЫЙ КЛЮЧ: хранить офлайн, не в репозитории
-openssl rsa -in lunex-patch-private.pem -pubout -out livepatch_public.pem
+sudo install -d -m 700 /etc/lunexeconom/livepatch-private
+sudo openssl genrsa -out /etc/lunexeconom/livepatch-private/signing-private.pem 3072
+sudo chmod 600 /etc/lunexeconom/livepatch-private/signing-private.pem
+sudo openssl rsa -in /etc/lunexeconom/livepatch-private/signing-private.pem -pubout -out /tmp/livepatch_public.pem
 ```
+Не перезаписывать существующий ключ. Публичную часть разместить в `client/livepatch_public.pem` и в доступном для чтения студией файле `/var/lib/lunexeconom-studio/livepatch_public.pem`; в `LUNEX_STUDIO_PUBLIC_KEY` указать второй путь. **Подпись выполняет только доверенный оператор на VPS с root-доступом** через `admin_studio/sign_release.py`, закрытый ключ не должен быть доступен веб-процессу World Studio. Не записывать приватный ключ в логи, переменные окружения, APK, резервные копии Git или CI. Резервное копирование приватного ключа должно быть отдельно защищено и согласовано с владельцем.
+
 - `livepatch_public.pem` положить в `client/livepatch_public.pem` и пересобрать APK (**без этого файла клиент не примет ни одного патча**) и на сервер студии (`LUNEX_STUDIO_PUBLIC_KEY`).
-- Опубликовать ревизию в студии, затем подписать:
-  `LUNEX_ADMIN_TOKEN=… python3 sign_release.py --studio http://127.0.0.1:18991 --key lunex-patch-private.pem --revision N`
+- Опубликовать ревизию в студии, затем подписать **локально на VPS** (из доверенной root-сессии):
+  `LUNEX_ADMIN_TOKEN=… python3 sign_release.py --studio http://127.0.0.1:18991 --key /etc/lunexeconom/livepatch-private/signing-private.pem --revision N`
 - Потеря ключа: выпустить новый APK с новым открытым ключом (старые установки патчей больше не примут). Компрометация: то же + сменить ключ немедленно.
 - Автозапуск проверки обновлений в клиенте **не включён**: перед включением нужен тест на реальном устройстве, политика каналов и откат.
 
