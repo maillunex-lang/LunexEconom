@@ -36,7 +36,7 @@ func set_selection(cell: Vector2i) -> void:
             details_panel.hide()
         else:
             details_panel.get_node("VBoxContainer/Title").text = "Предприятие: " + kind
-            details_panel.show()
+            _show_panel(details_panel)
 func _update_safe_area() -> void:
     var v := get_viewport_rect().size
     var s := DisplayServer.screen_get_size()
@@ -201,8 +201,14 @@ func _layout_ui_v1() -> void:
     catalog_panel.size.x = minf(565.0, usable_width)
     placement_panel.size.x = minf(420.0, usable_width)
     details_panel.size.x = minf(275.0, usable_width * 0.46)
-    catalog_panel.position = Vector2((size.x - catalog_panel.size.x) * 0.5, size.y - catalog_panel.size.y - 115)
-    placement_panel.position = Vector2((size.x - placement_panel.size.x) * 0.5, size.y - placement_panel.size.y - 115)
+    var bottom_safe := 20.0
+    var screen := DisplayServer.screen_get_size()
+    var safe := DisplayServer.get_display_safe_area()
+    if OS.has_feature("mobile") and screen.y > 0 and safe.size.y > 0:
+        bottom_safe = maxf(20.0, (screen.y - safe.end.y) * size.y / screen.y + 12.0)
+    var nav_top := size.y - bottom_safe - 68.0
+    catalog_panel.position = Vector2((size.x - catalog_panel.size.x) * 0.5, maxf(65, nav_top - catalog_panel.size.y - 12))
+    placement_panel.position = Vector2((size.x - placement_panel.size.x) * 0.5, maxf(65, nav_top - placement_panel.size.y - 12))
     details_panel.position = Vector2(size.x - details_panel.size.x - 22, maxf(85, (size.y - details_panel.size.y) * 0.5))
 
 func _setup_top_hud() -> void:
@@ -222,9 +228,15 @@ func _setup_top_hud() -> void:
     top.add_child(money)
     top.move_child(money, 1)
 
+func _show_panel(panel: Control) -> void:
+    panel.show()
+    panel.modulate.a = 0.0
+    var tween := create_tween()
+    tween.tween_property(panel, "modulate:a", 1.0, 0.2).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
+
 func _open_catalog() -> void:
     world.cancel_build()
-    catalog_panel.show()
+    _show_panel(catalog_panel)
     placement_panel.hide()
     details_panel.hide()
     call_deferred("_layout_ui_v1")
@@ -232,7 +244,7 @@ func _open_catalog() -> void:
 func _choose_ui_build(kind: String) -> void:
     world.choose_build(kind)
     catalog_panel.hide()
-    placement_panel.show()
+    _show_panel(placement_panel)
     details_panel.hide()
     build_hint.text = "Выберите участок на карте"
     call_deferred("_layout_ui_v1")
