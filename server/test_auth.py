@@ -102,6 +102,39 @@ class AccountTests(unittest.TestCase):
         with self.auth._db() as db:
             self.assertEqual(db.execute("SELECT COUNT(*) FROM auth_tokens").fetchone()[0], 0)
 
+    def test_mailru_tls465_uses_secret_file_and_authentication(self):
+        import tempfile
+        from unittest.mock import patch, MagicMock
+        with tempfile.TemporaryDirectory() as directory:
+            secret = os.path.join(directory, "app-password")
+            with open(secret, "w", encoding="utf-8") as handle:
+                handle.write("test-only-password\\n")
+            settings = {
+                "LUNEX_SMTP_HOST": "smtp.mail.ru",
+                "LUNEX_SMTP_PORT": "465",
+                "LUNEX_SMTP_FROM": "lunexeconomy@mail.ru",
+                "LUNEX_SMTP_USER": "lunexeconomy@mail.ru",
+                "LUNEX_SMTP_PASSWORD_FILE": secret,
+            }
+            smtp = MagicMock()
+            with patch.dict(os.environ, settings), patch.object(self.auth.smtplib, "SMTP_SSL") as connect:
+                connect.return_value.__enter__.return_value = smtp
+                self.assertTrue(self.auth._send_account_email("recipient@example.test", "Verification", "test code"))
+                connect.assert_called_once()
+                self.assertEqual(connect.call_args.args[:2], ("smtp.mail.ru", 465))
+                smtp.login.assert_called_once_with("lunexeconomy@mail.ru", "test-only-password")
+                smtp.send_message.assert_called_once()
+
+    def test_mailru_missing_secret_fails_closed(self):
+        from unittest.mock import patch
+        with patch.dict(os.environ, {
+            "LUNEX_SMTP_HOST": "smtp.mail.ru",
+            "LUNEX_SMTP_FROM": "lunexeconomy@mail.ru",
+            "LUNEX_SMTP_USER": "lunexeconomy@mail.ru",
+            "LUNEX_SMTP_PASSWORD_FILE": "/nonexistent/lunexeconom/mail-password",
+        }):
+            self.assertFalse(self.auth._send_account_email("recipient@example.test", "Test", "Code"))
+
     def test_duplicate_and_validation(self):
         payload = {"username":"Farmer123","email":"farmer@example.test","password":"safe-test-password"}
         self.assertEqual(self.auth.register(payload,"client-a")[0],200)
