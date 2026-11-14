@@ -197,8 +197,12 @@ func _input(event: InputEvent) -> void:
         clamp_camera()
 
 func select_screen(pos: Vector2) -> void:
-    var local := camera.get_screen_transform().affine_inverse() * pos
-    var cell := cell_at(local)
+    # Convert viewport touch using the actual rendered canvas transform.
+    var world_pos: Vector2 = get_canvas_transform().affine_inverse() * pos
+    # Isometric cells are diamonds centred on iso(x, y), not floor-based squares.
+    var fractional_x: float = world_pos.x / TILE_W + world_pos.y / TILE_H
+    var fractional_y: float = world_pos.y / TILE_H - world_pos.x / TILE_W
+    var cell := Vector2i(roundi(fractional_x), roundi(fractional_y))
     if absi(cell.x) <= expansion_radius and absi(cell.y) <= expansion_radius:
         var previous := selected
         selected = cell
