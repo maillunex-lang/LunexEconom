@@ -41,6 +41,12 @@ class Handler(BaseHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(payload)
 
+    def _client_key(self):
+        # Trust the proxy-provided address only for requests from loopback nginx.
+        if self.client_address[0] in ("127.0.0.1", "::1"):
+            return self.headers.get("X-Real-IP", self.client_address[0])[:64]
+        return self.client_address[0]
+
     def _bearer(self):
         value = self.headers.get('Authorization', '')
         return value[7:] if value.startswith('Bearer ') else ''
@@ -76,9 +82,9 @@ class Handler(BaseHTTPRequestHandler):
             if not isinstance(data, dict):
                 return self._send(400, {"error": "invalid_body"})
             if route == '/auth/register':
-                status, payload = auth.register(data, self.client_address[0])
+                status, payload = auth.register(data, self._client_key())
             elif route == '/auth/login':
-                status, payload = auth.login(data, self.client_address[0])
+                status, payload = auth.login(data, self._client_key())
             else:
                 status, payload = join(data.get("nickname"))
             return self._send(status, payload)
