@@ -12,6 +12,7 @@ var security_code: LineEdit
 var new_password: LineEdit
 var login_id: LineEdit
 var token := ""
+var api_base := API          # tests only
 var mode := "home"
 var busy := false
 var pending := ""
@@ -25,11 +26,15 @@ func _ready() -> void:
         if child.name != "Background":
             child.queue_free()
     request = HTTPRequest.new()
+    request.timeout = 15.0        # never hang on a bad connection
     add_child(request)
     request.request_completed.connect(_on_response)
     get_viewport().size_changed.connect(_layout)
     _show_home()
     call_deferred("_layout")
+    # Remembered account: check it with the server (this also renews it) and go straight into the game.
+    if GameSession.load_saved():
+        call_deferred("_resume")
 
 func _panel() -> void:
     var old_panel := get_node_or_null("MenuSafeArea")
@@ -113,9 +118,16 @@ func _field(hint: String, secret: bool = false) -> LineEdit:
     form.add_child(item)
     return item
 
+func _resume() -> void:
+    if GameSession.is_authenticated():
+        _send("/auth/rotate", {})
+        status_label.text = "Входим в аккаунт " + GameSession.username + "..."
+
 func _show_home() -> void:
     mode = "home"
     _panel()
+    if GameSession.is_authenticated():
+        _button("ПРОДОЛЖИТЬ: " + GameSession.username, func(): _resume())
     _button("ВОЙТИ В ИГРУ", func(): _show_login())
     _button("СОЗДАТЬ АККАУНТ", func(): _show_register())
     _button("НАСТРОЙКИ", func(): _show_settings())
@@ -177,6 +189,7 @@ func _show_settings() -> void:
     )
     _label("Горизонтальный экран · безопасные поля", 13)
     if GameSession.is_authenticated():
+        _button("ВЫЙТИ ИЗ АККАУНТА", func(): _send("/auth/logout", {}))
         _button("ВЫЙТИ СО ВСЕХ УСТРОЙСТВ", func(): _send("/auth/logout-all", {}))
     _button("НАЗАД", func(): _show_home())
     _layout()
@@ -195,15 +208,25 @@ func _send(route: String, payload: Dictionary) -> void:
     var headers := PackedStringArray(["Content-Type: application/json"])
     if GameSession.is_authenticated():
         headers.append("Authorization: Bearer " + GameSession.access_token)
-    var err := request.request(API + route, headers, HTTPClient.METHOD_POST, JSON.stringify(payload))
+    var err := request.request(api_base + route, headers, HTTPClient.METHOD_POST, JSON.stringify(payload))
     if err != OK:
         busy = false
         status_label.text = "Ошибка сети: %d" % err
 
 func _on_response(result: int, code: int, _headers: PackedStringArray, body: PackedByteArray) -> void:
     busy = false
+    if pending == "/auth/logout":
+        # Leave this device: forget the session locally whatever the network says (the server session simply expires otherwise).
+        GameSession.sign_out()
+        _show_home()
+        return
     if result != HTTPRequest.RESULT_SUCCESS:
-        status_label.text = "Не удалось подключиться к серверу"
+        # A remembered session stays on the device: the player may just be offline.
+        if pending == "/auth/rotate":
+            _show_home()          # rebuilds the panel: set the message afterwards
+            status_label.text = "Нет связи с сервером. Проверьте интернет и нажмите «Продолжить»."
+        else:
+            status_label.text = "Не удалось подключиться к серверу"
         return
     var data = JSON.parse_string(body.get_string_from_utf8())
     if not data is Dictionary:
@@ -221,9 +244,13 @@ func _on_response(result: int, code: int, _headers: PackedStringArray, body: Pac
         GameSession.sign_in(token, str(data.get("username", "")))
         _enter_world()
     else:
+        if pending == "/auth/rotate" and (code == 401 or code == 403):
+            GameSession.sign_out()          # expired, revoked or banned: the remembered session is useless
+            _show_home()
+            status_label.text = "Сессия истекла. Войдите снова."
+            return
         var errors := {"invalid_username":"Проверьте имя игрока", "invalid_email":"Некорректная почта", "invalid_password":"Пароль должен содержать 4–128 символов", "account_exists":"Аккаунт уже существует", "invalid_credentials":"Неверный логин или пароль", "rate_limited":"Слишком много попыток, попробуйте позже", "email_unavailable":"Почтовый сервис пока недоступен", "invalid_or_expired_token":"Неверный или просроченный код", "unauthorized":"Необходимо войти в аккаунт"}
         status_label.text = errors.get(str(data.get("error","")), "Сервер ответил: %d" % code)
 
 func _enter_world() -> void:
-    # The token stays in RAM only; persistence and refresh require separate security review.
     get_tree().change_scene_to_file("res://world.tscn")

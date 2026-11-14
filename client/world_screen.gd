@@ -150,6 +150,7 @@ var tutorial_panel: Control
 var regional_map_panel: Control
 var perf_overlay: Control
 var geo_actions: HBoxContainer
+var account_actions: HBoxContainer
 var seasons_enabled := true
 var rendered_season := -1
 var alliance_panel: Control
@@ -327,6 +328,10 @@ func _setup_ui_v1() -> void:
     geo_actions.add_child(_ui_button("FPS", _toggle_fps, 115))
     body_box.add_child(geo_actions)
     geo_actions.hide()
+    account_actions = HBoxContainer.new()
+    account_actions.add_child(_ui_button("Выйти из аккаунта", _sign_out_account, 220))
+    body_box.add_child(account_actions)
+    account_actions.hide()
     social_actions = HBoxContainer.new()
     social_actions.add_theme_constant_override("separation", 8)
     social_actions.add_child(_ui_button("Альянс", func(): _open_social_panel("alliance"), 140))
@@ -604,6 +609,7 @@ func _open_section(section: String) -> void:
         if section == "Город": tutorial_panel.notify("city_opened")
         elif section == "Экономика": tutorial_panel.notify("economy_opened")
     if geo_actions != null: geo_actions.visible = section == "Меню"
+    if account_actions != null: account_actions.visible = section == "Меню"
     stats_actions.visible = section == "Меню"
     if social_actions != null:
         social_actions.visible = section == "Меню"
@@ -1424,6 +1430,20 @@ func _toggle_seasons() -> void:
     (geo_actions.get_child(1) as Button).text = "Сезоны: вкл" if seasons_enabled else "Сезоны: выкл"
     for chunk in world.active_chunks.values():
         chunk.queue_redraw()
+
+## Leave this account on this device: end the server session (best effort), forget the remembered login, back to the entry screen.
+func _sign_out_account() -> void:
+    var token := GameSession.access_token
+    if token != "":
+        var req := HTTPRequest.new()
+        req.timeout = 4.0
+        add_child(req)
+        var headers := PackedStringArray(["Authorization: Bearer " + token, "Content-Type: application/json"])
+        if req.request(API_ROOT + "auth/logout", headers, HTTPClient.METHOD_POST, "{}") == OK:
+            await req.request_completed
+        req.queue_free()
+    GameSession.sign_out()
+    get_tree().change_scene_to_file("res://main.tscn")
 
 func _toggle_fps() -> void:
     if perf_overlay != null:
