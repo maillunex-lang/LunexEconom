@@ -6,7 +6,7 @@ import psycopg
 def connect():
     password_file = Path(os.environ.get("LUNEX_PG_PASSWORD_FILE", "/home/gamedev/projects/LunexEconom-server/secrets/postgres-password"))
     password = password_file.read_text().strip()
-    return psycopg.connect(host="127.0.0.1", port=15439, dbname="lunexeconom",
+    return psycopg.connect(host="127.0.0.1", port=15439, dbname=os.environ.get("LUNEX_PG_DB", "lunexeconom"),
                            user="lunexeconom", password=password, connect_timeout=5)
 
 SCHEMA = """
