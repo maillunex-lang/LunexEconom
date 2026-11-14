@@ -4,6 +4,11 @@ const TILE_W := 96.0
 const TILE_H := 48.0
 const CHUNK := 12
 const ROAD_SCRIPT = preload("res://road_network.gd")
+const PLANNER_SCRIPT = preload("res://construction_planner.gd")
+var planner = PLANNER_SCRIPT.new()
+var build_type := ""
+var building_records: Dictionary = {}
+var build_counter := 0
 const MAX_VISIBLE_CELLS := 4500
 const CHUNK_SCRIPT = preload("res://chunk_renderer.gd")
 var active_chunks: Dictionary = {}
@@ -50,10 +55,12 @@ func cell_kind(x: int, y: int) -> int:
         var kind := str(server_cells[coord].get("kind", ""))
         if kind == "road_changed": return 3
         if kind == "building_created": return 6
+        if kind == "building_removed": return 0
     # Integer-only hash: independent of call order and frame rate.
     var h := (x * 73856093) ^ (y * 19349663) ^ SEED
     h = (h ^ (h >> 13)) * 1274126177
     var n := posmod(h ^ (h >> 16), 100)
+    if planner.occupied.has(coord): return 6
     if roads.is_road(Vector2i(x, y)):
         return 3 # roads
     if n < 8:
@@ -209,6 +216,8 @@ func select_screen(pos: Vector2) -> void:
         _redraw_chunk_at(previous)
         _redraw_chunk_at(cell)
         get_tree().call_group("world_hud", "set_selection", cell)
+        if not build_type.is_empty():
+            get_tree().call_group("world_hud", "show_build_preview", preview_build(cell))
 
 func set_zoom(z: float) -> void:
     var v := clampf(z, 0.45, 2.3)
@@ -235,3 +244,48 @@ func commit_access_road(site: Vector2i) -> bool:
     if accepted:
         for cell in path: _redraw_chunk_at(cell)
     return accepted
+func build_size(kind: String) -> Vector2i:
+    match kind:
+        "farm": return Vector2i(2, 2)
+        "mine": return Vector2i(2, 3)
+        "factory": return Vector2i(3, 2)
+    return Vector2i.ZERO
+
+func preview_build(cell: Vector2i) -> Dictionary:
+    if build_type.is_empty(): return {"ok": false, "reason": "no_build_mode"}
+    return planner.preview(cell, build_size(build_type), roads, self)
+
+func choose_build(kind: String) -> void:
+    build_type = kind
+    if selected != Vector2i(-1, -1):
+        get_tree().call_group("world_hud", "show_build_preview", preview_build(selected))
+        _redraw_build_area(selected, build_size(build_type))
+
+func cancel_build() -> void:
+    var old_size := build_size(build_type)
+    build_type = ""
+    _redraw_build_area(selected, old_size)
+
+func place_building() -> Dictionary:
+    if build_type.is_empty() or selected == Vector2i(-1, -1):
+        return {"ok": false, "reason": "no_selection"}
+    var result := preview_build(selected)
+    if not result.get("ok", false): return result
+    build_counter += 1
+    var object_id := "sandbox_%d" % build_counter
+    var cells: Array[Vector2i] = result["cells"]
+    if not planner.reserve_preview(cells, object_id):
+        return {"ok": false, "reason": "occupied"}
+    building_records[object_id] = {"kind": build_type, "origin": selected, "cells": cells}
+    for cell in cells: _redraw_chunk_at(cell)
+    return {"ok": true, "reason": "sandbox_only", "object_id": object_id}
+
+func _redraw_build_area(origin: Vector2i, size: Vector2i) -> void:
+    for cell in planner.footprint(origin, size):
+        _redraw_chunk_at(cell)
+
+func building_at(cell: Vector2i) -> String:
+    var object_id: String = str(planner.occupied.get(cell, ""))
+    if building_records.has(object_id):
+        return str(building_records[object_id].get("kind", ""))
+    return ""
