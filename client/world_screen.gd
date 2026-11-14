@@ -7,8 +7,11 @@ func _ready() -> void:
     overlay.name = "UIOverlay"
     overlay.layer = 10
     add_child(overlay)
-    hud.reparent(overlay)
-    hud.top_level = false
+    # Plain remove/add instead of reparent(): reparent keeps the global
+    # transform and rewrites the Control offsets, which broke HUD layout.
+    remove_child(hud)
+    overlay.add_child(hud)
+    hud.set_anchors_and_offsets_preset(Control.PRESET_TOP_WIDE)
     add_to_group("world_hud")
     get_viewport().size_changed.connect(_update_safe_area)
     call_deferred("_update_safe_area")
@@ -338,7 +341,7 @@ func _place_building() -> void:
     ui_pending = false
 
 func is_world_ui_point(point: Vector2) -> bool:
-    if $HUD/Top.get_global_rect().has_point(point): return true
+    if $UIOverlay/HUD/Top.get_global_rect().has_point(point): return true
     for panel in [build_toolbar, catalog_panel, placement_panel, details_panel, section_panel]:
         if panel != null and panel.visible and panel.get_global_rect().has_point(point):
             return true
