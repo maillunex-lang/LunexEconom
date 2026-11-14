@@ -10,6 +10,7 @@ import uuid
 import auth
 import roads as road_rules
 import economy
+import clock
 if os.environ.get('LUNEX_DB_ENGINE') == 'postgres':
     import postgres_world
     import postgres_db
@@ -31,7 +32,7 @@ def connect():
     db.execute("CREATE TABLE IF NOT EXISTS events(seq INTEGER PRIMARY KEY AUTOINCREMENT,cx INTEGER NOT NULL,cy INTEGER NOT NULL,version INTEGER NOT NULL,kind TEXT NOT NULL,payload TEXT NOT NULL)")
     db.execute("CREATE TABLE IF NOT EXISTS roads(x INTEGER NOT NULL,y INTEGER NOT NULL,owner TEXT NOT NULL,created INTEGER NOT NULL,PRIMARY KEY(x,y))")
     db.execute("CREATE TABLE IF NOT EXISTS commands(owner TEXT NOT NULL,request_id TEXT NOT NULL,response TEXT NOT NULL,PRIMARY KEY(owner,request_id))")
-    for statement in economy.SCHEMA:
+    for statement in economy.SCHEMA + clock.SCHEMA:
         db.execute(statement)
     db.commit()
     return db
@@ -91,6 +92,13 @@ def build(owner, payload):
         db.commit()
         return 201,result
 
+def clock_state():
+    with LOCK, connect() as db:
+        db.execute("BEGIN IMMEDIATE")
+        result=clock.state(db,"?",int(time.time()))
+        db.commit()
+    return result
+
 def wallet(owner):
     with LOCK, connect() as db:
         db.execute("BEGIN IMMEDIATE")
@@ -138,7 +146,9 @@ class Handler(BaseHTTPRequestHandler):
     def do_GET(self):
         url=urlsplit(self.path)
         if url.path=="/health":return self._send(200,{"ok":True,"service":"lunexeconom-game","version":"0.2.0"})
-        if url.path=="/world":return self._send(200,{"world_id":"bashkiria-main","month_seconds":86400,"building_types":KINDS,"economy":economy.terms()})
+        if url.path=="/world":
+            now_clock=clock_state()
+            return self._send(200,{"world_id":"bashkiria-main","month_seconds":now_clock["month_seconds"],"building_types":KINDS,"economy":economy.terms(),"clock":now_clock})
         if url.path=="/auth/me":
             status,data=auth.profile(self.headers.get("Authorization","")[7:] if self.headers.get("Authorization","").startswith("Bearer ") else "")
             return self._send(status,data)
@@ -179,6 +189,7 @@ if os.environ.get("LUNEX_DB_ENGINE") == "postgres":
     events = postgres_world.events
     chunk = postgres_world.chunk
     wallet = postgres_world.wallet
+    clock_state = postgres_world.clock_state
 
 if __name__=="__main__":
     if os.environ.get("LUNEX_DB_ENGINE") == "postgres":

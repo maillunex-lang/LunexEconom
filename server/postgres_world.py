@@ -6,6 +6,7 @@ import psycopg
 import postgres_db
 import roads as road_rules
 import economy
+import clock
 
 CHUNK = 12
 MAX_COORD = 10000
@@ -62,6 +63,11 @@ def build(owner,payload):
         result={"ok":True,"object_id":oid,"road_cells":len(new_roads),"cost":cost,"balance":balance,"events":events}
         db.execute("INSERT INTO commands(owner,request_id,response) VALUES(%s,%s,%s)",(owner,request_id,json.dumps(result)))
         return 201,result
+
+def clock_state():
+    with postgres_db.connect() as db:
+        db.execute("SELECT pg_advisory_xact_lock(20261114)")
+        return clock.state(db,"%s",int(time.time()))
 
 def wallet(owner):
     with postgres_db.connect() as db:

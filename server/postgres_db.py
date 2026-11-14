@@ -46,6 +46,7 @@ CREATE TABLE IF NOT EXISTS ledger_entries (
  tx_id TEXT NOT NULL REFERENCES ledger_tx(id), account TEXT NOT NULL, amount BIGINT NOT NULL,
  PRIMARY KEY(tx_id, account)
 );
+CREATE TABLE IF NOT EXISTS world_clock (id INTEGER PRIMARY KEY, epoch BIGINT NOT NULL, month_seconds BIGINT NOT NULL, base_index BIGINT NOT NULL);
 CREATE TABLE IF NOT EXISTS commands (
  owner TEXT NOT NULL, request_id TEXT NOT NULL, response TEXT NOT NULL,
  PRIMARY KEY(owner,request_id)

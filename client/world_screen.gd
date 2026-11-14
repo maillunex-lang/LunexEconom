@@ -266,6 +266,23 @@ func _setup_top_hud() -> void:
     money.add_theme_font_size_override("font_size", 18)
     top.add_child(money)
     top.move_child(money, 1)
+    var date_label := Label.new()
+    date_label.name = "GameDate"
+    date_label.text = "— —"
+    date_label.tooltip_text = "Игровая дата (1 игровой месяц идёт по серверным часам)"
+    date_label.add_theme_font_size_override("font_size", 16)
+    top.add_child(date_label)
+    top.move_child(date_label, 1)
+    var date_timer := Timer.new()
+    date_timer.wait_time = 1.0
+    date_timer.autostart = true
+    date_timer.timeout.connect(_tick_game_date)
+    add_child(date_timer)
+    var resync := Timer.new()
+    resync.wait_time = 60.0
+    resync.autostart = true
+    resync.timeout.connect(_refresh_terms)
+    add_child(resync)
 
 func _show_panel(panel: Control) -> void:
     panel.show()
@@ -512,6 +529,10 @@ func _refresh_terms() -> void:
         if not eco is Dictionary: return
         if eco.get("building_costs", null) is Dictionary: building_costs = eco["building_costs"]
         road_cell_cost = int(eco.get("road_cell_cost", road_cell_cost))
+        if data.get("clock", null) is Dictionary:
+            game_clock = data["clock"]
+            clock_offset = float(game_clock.get("server_time", 0)) - Time.get_unix_time_from_system()
+            _tick_game_date()
     )
 
 func _refresh_wallet() -> void:
@@ -521,3 +542,22 @@ func _refresh_wallet() -> void:
         if section_panel != null and section_panel.visible and section_title.text == "Экономика":
             section_body.text = _economy_text()
     )
+
+# ---- Game calendar (server time is authoritative; the client only displays) ----
+const MONTH_NAMES := ["янв", "фев", "мар", "апр", "мая", "июн", "июл", "авг", "сен", "окт", "ноя", "дек"]
+var game_clock: Dictionary = {}
+var clock_offset := 0.0
+
+func _game_date_text(clock: Dictionary, server_now: float) -> String:
+    var month_seconds := maxi(int(clock.get("month_seconds", 86400)), 1)
+    var elapsed := maxf(server_now - float(clock.get("epoch", 0)), 0.0)
+    var index := int(clock.get("base_index", 0)) + int(elapsed / month_seconds)
+    var into_month := fmod(elapsed, float(month_seconds))
+    var day := mini(int(into_month * 30.0 / month_seconds) + 1, 30)
+    return "%d %s %d" % [day, MONTH_NAMES[index % 12], 2027 + index / 12]
+
+func _tick_game_date() -> void:
+    if game_clock.is_empty(): return
+    var label := get_node_or_null("UIOverlay/HUD/Top/GameDate") as Label
+    if label != null:
+        label.text = _game_date_text(game_clock, Time.get_unix_time_from_system() + clock_offset)
