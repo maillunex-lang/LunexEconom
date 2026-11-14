@@ -20,3 +20,11 @@ Independent project. Do not modify existing BASHECO, NEXUS, other games or produ
 - [Foundation: технические ограничения и тесты](docs/FOUNDATION.md)
 
 **For developers and AI agents:** read passport → roadmap → progress before changing code; update progress only after real tests.
+
+## Website and development dashboard
+
+Public landing: https://rikagro.ru/lunexeconom/
+
+Source: [web/](web/). Static, dependency-free HTML/CSS/JS. The roadmap is loaded from public `docs/ROADMAP.md` and commits from GitHub's public API; a built-in roadmap is used when the API is unavailable. APK download is **disabled** until a verified release is recorded in `web/release.json` with `status: published`, `version`, a real HTTPS APK `url`, and ideally `sha256`. Do not publish an unbuilt or unverified APK.
+
+Deployment path: `/var/www/rikagro-game/lunexeconom/`, isolated from existing root landing and services. Updating GitHub files does **not** automatically deploy the website; deploy reviewed changes separately.
