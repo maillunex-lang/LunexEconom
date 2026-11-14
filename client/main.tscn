@@ -16,39 +16,49 @@ layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
+mouse_filter = 2
 color = Color(0.065, 0.13, 0.12, 1)
 
-[node name="Center" type="VBoxContainer" parent="."]
+[node name="SafeArea" type="MarginContainer" parent="."]
 layout_mode = 1
-anchors_preset = 8
-anchor_left = 0.5
-anchor_top = 0.5
-anchor_right = 0.5
-anchor_bottom = 0.5
-offset_left = -350.0
-offset_top = -120.0
-offset_right = 350.0
-offset_bottom = 120.0
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
+
+[node name="Centering" type="CenterContainer" parent="SafeArea"]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+
+[node name="Center" type="VBoxContainer" parent="SafeArea/Centering"]
+layout_mode = 2
+custom_minimum_size = Vector2(580, 0)
 theme_override_constants/separation = 20
 
-[node name="Title" type="Label" parent="Center"]
+[node name="Title" type="Label" parent="SafeArea/Centering/Center"]
 layout_mode = 2
-theme_override_font_sizes/font_size = 36
+theme_override_font_sizes/font_size = 38
 text = "Башкирия: Мёд и Нефть"
 horizontal_alignment = 1
+autowrap_mode = 3
 
-[node name="Subtitle" type="Label" parent="Center"]
+[node name="Subtitle" type="Label" parent="SafeArea/Centering/Center"]
 layout_mode = 2
+theme_override_font_sizes/font_size = 21
 text = "0.1 Foundation · Android MMO"
 horizontal_alignment = 1
 
-[node name="Status" type="Label" parent="Center"]
+[node name="Status" type="Label" parent="SafeArea/Centering/Center"]
 layout_mode = 2
+theme_override_font_sizes/font_size = 22
 text = "Проверка подключения..."
 horizontal_alignment = 1
+autowrap_mode = 3
 
-[node name="Retry" type="Button" parent="Center"]
+[node name="Retry" type="Button" parent="SafeArea/Centering/Center"]
 layout_mode = 2
+custom_minimum_size = Vector2(0, 72)
+theme_override_font_sizes/font_size = 23
 text = "Проверить сервер ещё раз"
