@@ -29,8 +29,10 @@ func _ready() -> void:
     call_deferred("_layout")
 
 func _panel() -> void:
-    if is_instance_valid(form):
-        form.queue_free()
+    var old_panel := get_node_or_null("MenuSafeArea")
+    if old_panel != null:
+        old_panel.name = "RetiredMenu"
+        old_panel.queue_free()
     var margin := MarginContainer.new()
     margin.name = "MenuSafeArea"
     margin.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
