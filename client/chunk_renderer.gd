@@ -65,22 +65,21 @@ func _draw() -> void:
     last_draw_usec = Time.get_ticks_usec() - start_usec
 
 func _draw_road(p: Vector2, cell: Vector2i) -> void:
+    # Asphalt occupies the entire 2:1 diamond, so adjacent road cells join
+    # edge-to-edge without floating strips or yellow lines at intersections.
+    # Topology is still used by construction/pathfinding, not painted as rails.
     var mask: int = TOPOLOGY.mask_at(world.roads, cell)
-    var center := Color("#59636a")
-    var asphalt := Color("#495159")
-    var line := Color("#e2c985")
-    draw_circle(p, 7.0, center)
-    var directions := [
-        [TOPOLOGY.NORTH, Vector2(0, -TILE_H * 0.5)],
-        [TOPOLOGY.EAST, Vector2(TILE_W * 0.5, 0)],
-        [TOPOLOGY.SOUTH, Vector2(0, TILE_H * 0.5)],
-        [TOPOLOGY.WEST, Vector2(-TILE_W * 0.5, 0)]
-    ]
-    for item in directions:
-        if mask & int(item[0]):
-            draw_line(p, p + item[1], asphalt, 13.0, true)
-            draw_line(p, p + item[1] * 0.9, line, 1.5, true)
-    draw_circle(p, 4.5, center)
+    var diamond := PackedVector2Array([
+        p + Vector2(0, -TILE_H * 0.5),
+        p + Vector2(TILE_W * 0.5, 0),
+        p + Vector2(0, TILE_H * 0.5),
+        p + Vector2(-TILE_W * 0.5, 0)
+    ])
+    draw_colored_polygon(diamond, Color("#454b50"))
+    # Restrained, non-repeating grain; no lane markings on road tiles.
+    if mask >= 0:
+        var grain := float(posmod(cell.x * 37 + cell.y * 53, 9)) / 255.0
+        draw_circle(p + Vector2(-8, 1), 1.2, Color(0.36 + grain, 0.38 + grain, 0.40 + grain, 0.20))
 
 func _owner_color(owner: String) -> Color:
     if owner.is_empty(): return Color("#9ca3a8")
