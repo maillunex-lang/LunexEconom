@@ -29,8 +29,16 @@ def run_drill(backup, admin_dsn, target, *, runner=subprocess.run):
     check = runner(["psql", admin_dsn, "-X", "-v", "ON_ERROR_STOP=1",
                     "-Atc", "SELECT current_database(), inet_server_port()"],
                    env=env, capture_output=True, text=True, check=True, timeout=15)
-    if check.stdout.strip() != "lunex_restore_admin|" + str(parsed.port):
+    # The port the server reports can differ from the one we connect to (a Docker/CI service maps 5432 -> 15551),
+    # so only the database name is compared; the production port is rejected on both sides.
+    try:
+        database, server_port = check.stdout.strip().split("|")
+    except ValueError:
+        raise ValueError("unexpected answer from the admin database")
+    if database != "lunex_restore_admin":
         raise ValueError("admin DSN must connect to lunex_restore_admin database")
+    if server_port == "15439":
+        raise ValueError("production PostgreSQL port refused")
     # Restore only to the explicit disposable target, never via embedded backup ownership.
     runner(["pg_restore", "--exit-on-error", "--no-owner", "--no-acl",
             "--dbname=" + admin_dsn.rsplit("/", 1)[0] + "/" + target, backup],
