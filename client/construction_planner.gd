@@ -43,6 +43,8 @@ func _touches_road(cells: Array[Vector2i], roads: Object) -> bool:
 func _is_free(cell: Vector2i, footprint_set: Dictionary, roads: Object, world: Object) -> bool:
     if footprint_set.has(cell) or occupied.has(cell) or world.server_cells.has(cell):
         return false
+    if roads.is_road(cell):
+        return absi(cell.x) <= world.expansion_radius and absi(cell.y) <= world.expansion_radius
     if absi(cell.x) > world.expansion_radius or absi(cell.y) > world.expansion_radius:
         return false
     return roads.is_road(cell) or world.cell_kind(cell.x, cell.y) != 4

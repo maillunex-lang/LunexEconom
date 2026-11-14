@@ -364,9 +364,10 @@ func _place_building() -> void:
                     world.apply_server_event(event)
             world.cancel_build()
             placement_panel.hide()
-            info.text = "Построено на сервере: " + str(data.get("object_id", ""))
+            var road_cells := int(data.get("road_cells", 0))
+            info.text = "Построено на сервере" + ((" · дорога +%d кл." % road_cells) if road_cells > 0 else "")
         else:
-            var errors := {"occupied":"Участок уже занят", "invalid_build":"Неверное место или тип здания", "outside_world":"За пределами карты", "unauthorized":"Сессия завершена, войдите снова", "invalid_request_id":"Ошибка команды строительства"}
+            var errors := {"occupied":"Участок уже занят", "invalid_build":"Неверное место или тип здания", "outside_world":"За пределами карты", "unauthorized":"Сессия завершена, войдите снова", "invalid_request_id":"Ошибка команды строительства", "water":"Нельзя строить на воде", "road_overlap":"Нельзя строить на дороге", "no_road_access":"Дорогу к участку проложить нельзя"}
             info.text = str(errors.get(str(data.get("error", "")), "Сервер отклонил строительство (HTTP %d)" % code))
     )
     var headers := PackedStringArray(["Content-Type: application/json", "Authorization: Bearer " + GameSession.access_token])

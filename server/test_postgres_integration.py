@@ -14,7 +14,7 @@ import postgres_world
 class PostgreSQLTests(unittest.TestCase):
     def test_schema_and_read_api(self):
         with postgres_db.connect() as db:
-            for table in ("users","sessions","buildings","cells","chunks","events","commands"):
+            for table in ("users","sessions","buildings","cells","chunks","events","commands","roads"):
                 db.execute("SELECT 1 FROM "+table+" LIMIT 1")
         self.assertEqual(postgres_world.events(0)[0],200)
         self.assertEqual(postgres_world.chunk(0,0)[0],200)

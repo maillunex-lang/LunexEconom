@@ -4,6 +4,7 @@ import time
 import uuid
 import psycopg
 import postgres_db
+import roads as road_rules
 
 CHUNK = 12
 MAX_COORD = 10000
@@ -30,22 +31,32 @@ def build(owner,payload):
         if db.execute("SELECT 1 FROM cells WHERE (x,y) IN ("+",".join(["(%s,%s)"]*len(footprint))+") LIMIT 1",
                       [v for cell in footprint for v in cell]).fetchone():
             return 409,{"error":"occupied"}
+        x0,x1,y0,y1=road_rules.search_box(footprint)
+        dynamic={(rx,ry) for rx,ry in db.execute("SELECT x,y FROM roads WHERE x BETWEEN %s AND %s AND y BETWEEN %s AND %s",(x0,x1,y0,y1)).fetchall()}
+        occupied={(a_,b_) for a_,b_ in db.execute("SELECT x,y FROM cells WHERE x BETWEEN %s AND %s AND y BETWEEN %s AND %s",(x0,x1,y0,y1)).fetchall()}
+        error,path=road_rules.plan_access(footprint,dynamic,occupied,MAX_COORD)
+        if error:return 409,{"error":error}
+        new_roads=[c for c in path if not road_rules.is_base_road(*c) and c not in dynamic]
         oid=uuid.uuid4().hex
-        db.execute("INSERT INTO buildings(id,owner,kind,x,y,created) VALUES(%s,%s,%s,%s,%s,%s)",
-                   (oid,owner,kind,x,y,int(time.time())))
+        now=int(time.time())
+        db.execute("INSERT INTO buildings(id,owner,kind,x,y,created) VALUES(%s,%s,%s,%s,%s,%s)",(oid,owner,kind,x,y,now))
         with db.cursor() as cursor:
             cursor.executemany("INSERT INTO cells(x,y,object_id) VALUES(%s,%s,%s)",[(xx,yy,oid) for xx,yy in footprint])
-        grouped={}
-        for xx,yy in footprint:grouped.setdefault((xx//CHUNK,yy//CHUNK),[]).append([xx,yy])
+            if new_roads:
+                cursor.executemany("INSERT INTO roads(x,y,owner,created) VALUES(%s,%s,%s,%s)",[(rx,ry,owner,now) for rx,ry in new_roads])
         events=[]
-        for (cx,cy),coords in sorted(grouped.items()):
-            version=db.execute("""INSERT INTO chunks(cx,cy,version) VALUES(%s,%s,1)
-               ON CONFLICT(cx,cy) DO UPDATE SET version=chunks.version+1 RETURNING version""",(cx,cy)).fetchone()[0]
-            data={"object_id":oid,"kind":kind,"owner":owner,"cells":coords}
-            seq=db.execute("""INSERT INTO events(cx,cy,version,kind,payload)
-                VALUES(%s,%s,%s,%s,%s) RETURNING seq""",(cx,cy,version,"building_created",json.dumps(data))).fetchone()[0]
-            events.append({"seq":seq,"cx":cx,"cy":cy,"version":version,"kind":"building_created",**data})
-        result={"ok":True,"object_id":oid,"events":events}
+        for kind_name,cells in (("building_created",footprint),("road_changed",new_roads)):
+            grouped={}
+            for xx,yy in cells:grouped.setdefault((xx//CHUNK,yy//CHUNK),[]).append([xx,yy])
+            for (cx,cy),coords in sorted(grouped.items()):
+                version=db.execute("""INSERT INTO chunks(cx,cy,version) VALUES(%s,%s,1)
+                   ON CONFLICT(cx,cy) DO UPDATE SET version=chunks.version+1 RETURNING version""",(cx,cy)).fetchone()[0]
+                data={"object_id":oid,"owner":owner,"cells":coords}
+                if kind_name=="building_created":data["building_kind"]=kind
+                seq=db.execute("""INSERT INTO events(cx,cy,version,kind,payload)
+                    VALUES(%s,%s,%s,%s,%s) RETURNING seq""",(cx,cy,version,kind_name,json.dumps(data))).fetchone()[0]
+                events.append({"seq":seq,"cx":cx,"cy":cy,"version":version,"kind":kind_name,**data})
+        result={"ok":True,"object_id":oid,"road_cells":len(new_roads),"events":events}
         db.execute("INSERT INTO commands(owner,request_id,response) VALUES(%s,%s,%s)",(owner,request_id,json.dumps(result)))
         return 201,result
 
@@ -54,7 +65,7 @@ def events(after):
     with postgres_db.connect() as db:
         rows=db.execute("SELECT seq,cx,cy,version,kind,payload FROM events WHERE seq>%s ORDER BY seq LIMIT 100",(after,)).fetchall()
         latest=db.execute("SELECT COALESCE(MAX(seq),0) FROM events").fetchone()[0]
-    items=[{"seq":s,"cx":cx,"cy":cy,"version":v,"kind":kind,**json.loads(payload)} for s,cx,cy,v,kind,payload in rows]
+    items=[road_rules.event_item(s,cx,cy,v,kind,payload) for s,cx,cy,v,kind,payload in rows]
     return 200,{"events":items,"cursor":items[-1]["seq"] if items else after,"latest":latest,"has_more":bool(items and items[-1]["seq"]<latest)}
 
 def chunk(cx,cy):
@@ -65,4 +76,7 @@ def chunk(cx,cy):
         cells=db.execute("""SELECT c.x,c.y,b.kind,b.id,b.owner FROM cells c JOIN buildings b ON c.object_id=b.id
           WHERE c.x>=%s AND c.x<%s AND c.y>=%s AND c.y<%s ORDER BY c.x,c.y""",
           (cx*CHUNK,(cx+1)*CHUNK,cy*CHUNK,(cy+1)*CHUNK)).fetchall()
-    return 200,{"cx":cx,"cy":cy,"version":row[0] if row else 0,"cells":[{"x":x,"y":y,"kind":kind,"object_id":oid,"owner":owner} for x,y,kind,oid,owner in cells]}
+        rds=db.execute("SELECT x,y,owner FROM roads WHERE x>=%s AND x<%s AND y>=%s AND y<%s ORDER BY x,y",(cx*CHUNK,(cx+1)*CHUNK,cy*CHUNK,(cy+1)*CHUNK)).fetchall()
+    items=[{"x":x,"y":y,"kind":"building_created","building_kind":kind,"object_id":oid,"owner":owner} for x,y,kind,oid,owner in cells]
+    items+=[{"x":x,"y":y,"kind":"road_changed","object_id":"","owner":owner} for x,y,owner in rds]
+    return 200,{"cx":cx,"cy":cy,"version":row[0] if row else 0,"cells":items}

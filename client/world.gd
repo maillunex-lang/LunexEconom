@@ -71,23 +71,49 @@ func cell_kind(x: int, y: int) -> int:
         return 5 # trees
     return n % 3
 
+func _is_building_event(kind: String) -> bool:
+    return kind == "building_created" or kind in ["farm", "mine", "factory"]
+
+func _set_server_road(coord: Vector2i, present: bool) -> void:
+    if present: roads.segments[coord] = true
+    else: roads.segments.erase(coord)
+    # A road edit changes the topology (junction shape) of the four neighbours too.
+    for affected in preload("res://road_topology.gd").affected_cells(coord):
+        _redraw_chunk_at(affected)
+
 func apply_server_event(event: Dictionary) -> void:
     var kind := str(event.get("kind", ""))
-    if not kind in ["building_created", "building_removed", "road_changed"]: return
+    if not (_is_building_event(kind) or kind in ["building_removed", "road_changed"]): return
+    var building_kind := str(event.get("building_kind", kind if kind in ["farm", "mine", "factory"] else ""))
     for cell in event.get("cells", []):
         if not cell is Array or cell.size() != 2: continue
         var coord := Vector2i(int(cell[0]), int(cell[1]))
+        if kind == "road_changed":
+            _set_server_road(coord, true)
+            continue
         if kind == "building_removed": server_cells.erase(coord)
-        else: server_cells[coord] = {"kind":kind,"object_id":str(event.get("object_id", ""))}
+        else: server_cells[coord] = {"kind":"building_created","building_kind":building_kind,"object_id":str(event.get("object_id", ""))}
         _redraw_chunk_at(coord)
 
 func apply_chunk_snapshot(coord: Vector2i, cells: Array) -> void:
     for x in range(coord.x * CHUNK, (coord.x + 1) * CHUNK):
-        for y in range(coord.y * CHUNK, (coord.y + 1) * CHUNK): server_cells.erase(Vector2i(x,y))
+        for y in range(coord.y * CHUNK, (coord.y + 1) * CHUNK):
+            server_cells.erase(Vector2i(x,y))
+            roads.segments.erase(Vector2i(x,y))
     for cell in cells:
-        if cell is Dictionary:
-            server_cells[Vector2i(int(cell.get("x", 0)), int(cell.get("y", 0)))] = {"kind":cell.get("kind", ""), "object_id":cell.get("object_id", "")}
-    if active_chunks.has(coord): active_chunks[coord].queue_redraw()
+        if not cell is Dictionary: continue
+        var c := Vector2i(int(cell.get("x", 0)), int(cell.get("y", 0)))
+        var kind := str(cell.get("kind", ""))
+        if kind == "road_changed":
+            roads.segments[c] = true
+        else:
+            var bk := str(cell.get("building_kind", kind if kind in ["farm", "mine", "factory"] else ""))
+            server_cells[c] = {"kind":"building_created","building_kind":bk,"object_id":cell.get("object_id", "")}
+    # Roads on the chunk border change the shape of roads in neighbouring chunks.
+    for dx in range(-1, 2):
+        for dy in range(-1, 2):
+            var n := coord + Vector2i(dx, dy)
+            if active_chunks.has(n): active_chunks[n].queue_redraw()
 
 func iso(x: float, y: float) -> Vector2:
     return Vector2((x - y) * TILE_W * 0.5, (x + y) * TILE_H * 0.5)
@@ -311,6 +337,8 @@ func _redraw_build_area(origin: Vector2i, size: Vector2i) -> void:
         _redraw_chunk_at(cell)
 
 func building_at(cell: Vector2i) -> String:
+    if server_cells.has(cell):
+        return str(server_cells[cell].get("building_kind", ""))
     var object_id: String = str(planner.occupied.get(cell, ""))
     if building_records.has(object_id):
         return str(building_records[object_id].get("kind", ""))

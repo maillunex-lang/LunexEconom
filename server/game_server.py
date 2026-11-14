@@ -8,6 +8,7 @@ import threading
 import time
 import uuid
 import auth
+import roads as road_rules
 if os.environ.get('LUNEX_DB_ENGINE') == 'postgres':
     import postgres_world
     import postgres_db
@@ -27,6 +28,7 @@ def connect():
     db.execute("CREATE TABLE IF NOT EXISTS cells(x INTEGER NOT NULL,y INTEGER NOT NULL,object_id TEXT NOT NULL REFERENCES buildings(id),PRIMARY KEY(x,y))")
     db.execute("CREATE TABLE IF NOT EXISTS chunks(cx INTEGER NOT NULL,cy INTEGER NOT NULL,version INTEGER NOT NULL,PRIMARY KEY(cx,cy))")
     db.execute("CREATE TABLE IF NOT EXISTS events(seq INTEGER PRIMARY KEY AUTOINCREMENT,cx INTEGER NOT NULL,cy INTEGER NOT NULL,version INTEGER NOT NULL,kind TEXT NOT NULL,payload TEXT NOT NULL)")
+    db.execute("CREATE TABLE IF NOT EXISTS roads(x INTEGER NOT NULL,y INTEGER NOT NULL,owner TEXT NOT NULL,created INTEGER NOT NULL,PRIMARY KEY(x,y))")
     db.execute("CREATE TABLE IF NOT EXISTS commands(owner TEXT NOT NULL,request_id TEXT NOT NULL,response TEXT NOT NULL,PRIMARY KEY(owner,request_id))")
     db.commit()
     return db
@@ -53,20 +55,32 @@ def build(owner, payload):
             return 200,json.loads(prev[0])
         if any(db.execute("SELECT 1 FROM cells WHERE x=? AND y=?",(xx,yy)).fetchone() for xx,yy in footprint):
             return 409,{"error":"occupied"}
+        x0,x1,y0,y1=road_rules.search_box(footprint)
+        dynamic={(rx,ry) for rx,ry in db.execute("SELECT x,y FROM roads WHERE x BETWEEN ? AND ? AND y BETWEEN ? AND ?",(x0,x1,y0,y1))}
+        occupied={(cx_,cy_) for cx_,cy_ in db.execute("SELECT x,y FROM cells WHERE x BETWEEN ? AND ? AND y BETWEEN ? AND ?",(x0,x1,y0,y1))}
+        error,path=road_rules.plan_access(footprint,dynamic,occupied,MAX_COORD)
+        if error:
+            return 409,{"error":error}
+        new_roads=[c for c in path if not road_rules.is_base_road(*c) and c not in dynamic]
         object_id=uuid.uuid4().hex
-        db.execute("INSERT INTO buildings VALUES(?,?,?,?,?,?)",(object_id,owner,kind,x,y,int(time.time())))
+        now=int(time.time())
+        db.execute("INSERT INTO buildings VALUES(?,?,?,?,?,?)",(object_id,owner,kind,x,y,now))
         db.executemany("INSERT INTO cells VALUES(?,?,?)",[(xx,yy,object_id) for xx,yy in footprint])
-        grouped={}
-        for xx,yy in footprint:
-            grouped.setdefault((xx//CHUNK,yy//CHUNK),[]).append([xx,yy])
+        db.executemany("INSERT INTO roads VALUES(?,?,?,?)",[(rx,ry,owner,now) for rx,ry in new_roads])
         events=[]
-        for (cx,cy),coords in sorted(grouped.items()):
-            db.execute("INSERT INTO chunks VALUES(?,?,1) ON CONFLICT(cx,cy) DO UPDATE SET version=version+1",(cx,cy))
-            version=db.execute("SELECT version FROM chunks WHERE cx=? AND cy=?",(cx,cy)).fetchone()[0]
-            data={"object_id":object_id,"kind":kind,"owner":owner,"cells":coords}
-            seq=db.execute("INSERT INTO events(cx,cy,version,kind,payload) VALUES(?,?,?,?,?)",(cx,cy,version,"building_created",json.dumps(data))).lastrowid
-            events.append({"seq":seq,"cx":cx,"cy":cy,"version":version,"kind":"building_created",**data})
-        result={"ok":True,"object_id":object_id,"events":events}
+        for kind_name,cells in (("building_created",footprint),("road_changed",new_roads)):
+            grouped={}
+            for xx,yy in cells:
+                grouped.setdefault((xx//CHUNK,yy//CHUNK),[]).append([xx,yy])
+            for (cx,cy),coords in sorted(grouped.items()):
+                db.execute("INSERT INTO chunks VALUES(?,?,1) ON CONFLICT(cx,cy) DO UPDATE SET version=version+1",(cx,cy))
+                version=db.execute("SELECT version FROM chunks WHERE cx=? AND cy=?",(cx,cy)).fetchone()[0]
+                data={"object_id":object_id,"owner":owner,"cells":coords}
+                if kind_name=="building_created":data["building_kind"]=kind
+                payload=json.dumps(data)
+                seq=db.execute("INSERT INTO events(cx,cy,version,kind,payload) VALUES(?,?,?,?,?)",(cx,cy,version,kind_name,payload)).lastrowid
+                events.append({"seq":seq,"cx":cx,"cy":cy,"version":version,"kind":kind_name,**data})
+        result={"ok":True,"object_id":object_id,"road_cells":len(new_roads),"events":events}
         db.execute("INSERT INTO commands VALUES(?,?,?)",(owner,request_id,json.dumps(result)))
         db.commit()
         return 201,result
@@ -76,7 +90,7 @@ def events(after):
     with connect() as db:
         rows=db.execute("SELECT seq,cx,cy,version,kind,payload FROM events WHERE seq>? ORDER BY seq LIMIT 100",(after,)).fetchall()
         latest=db.execute("SELECT COALESCE(MAX(seq),0) FROM events").fetchone()[0]
-    items=[{"seq":s,"cx":cx,"cy":cy,"version":v,"kind":kind,**json.loads(payload)} for s,cx,cy,v,kind,payload in rows]
+    items=[road_rules.event_item(s,cx,cy,v,kind,payload) for s,cx,cy,v,kind,payload in rows]
     return 200,{"events":items,"cursor":items[-1]["seq"] if items else after,"latest":latest,"has_more":bool(items and items[-1]["seq"]<latest)}
 
 def chunk(cx,cy):
@@ -86,7 +100,10 @@ def chunk(cx,cy):
         row=db.execute("SELECT version FROM chunks WHERE cx=? AND cy=?",(cx,cy)).fetchone()
         cells=db.execute("""SELECT c.x,c.y,b.kind,b.id,b.owner FROM cells c JOIN buildings b ON c.object_id=b.id
             WHERE c.x>=? AND c.x<? AND c.y>=? AND c.y<? ORDER BY c.x,c.y""",(cx*CHUNK,(cx+1)*CHUNK,cy*CHUNK,(cy+1)*CHUNK)).fetchall()
-    return 200,{"cx":cx,"cy":cy,"version":row[0] if row else 0,"cells":[{"x":x,"y":y,"kind":kind,"object_id":oid,"owner":owner} for x,y,kind,oid,owner in cells]}
+        rds=db.execute("SELECT x,y,owner FROM roads WHERE x>=? AND x<? AND y>=? AND y<? ORDER BY x,y",(cx*CHUNK,(cx+1)*CHUNK,cy*CHUNK,(cy+1)*CHUNK)).fetchall()
+    items=[{"x":x,"y":y,"kind":"building_created","building_kind":kind,"object_id":oid,"owner":owner} for x,y,kind,oid,owner in cells]
+    items+=[{"x":x,"y":y,"kind":"road_changed","object_id":"","owner":owner} for x,y,owner in rds]
+    return 200,{"cx":cx,"cy":cy,"version":row[0] if row else 0,"cells":items}
 
 class Handler(BaseHTTPRequestHandler):
     def _send(self,status,data):
