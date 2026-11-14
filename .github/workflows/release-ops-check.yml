@@ -4,6 +4,8 @@ on:
     branches: [chatgpt/release-ops]
     paths:
       - 'ops/**'
+      - 'server/game_server.py'
+      - 'server/test_health_ops.py'
       - '.github/workflows/release-ops-check.yml'
   pull_request:
     paths:
@@ -22,3 +24,8 @@ jobs:
           python3 -m compileall -q ops
           cd ops
           python3 -m unittest -v test_deploy test_postgres_restore_drill test_api_load_test
+      - name: Test additive health response
+        run: |
+          python3 -m pip install -q psycopg[binary]
+          cd server
+          python3 -m unittest -v test_health_ops
