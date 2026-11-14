@@ -28,6 +28,8 @@ def build(owner,payload):
         return 403,{"error":"social_only_for_city" if kind in economy.SOCIAL_KINDS else "city_builds_social_only"}
     try:uuid.UUID(request_id)
     except (ValueError,TypeError,AttributeError):return 400,{"error":"invalid_request_id"}
+    if payload.get("size") is not None:
+        return 409,{"error":"building_size_economy_pending"}
     try:
         w,h=building_dimensions.footprint(kind,payload.get("size"))
     except ValueError:
