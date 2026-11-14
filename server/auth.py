@@ -85,7 +85,7 @@ def profile(token):
     if not token: return 401, {"error":"unauthorized"}
     digest=hashlib.sha256(token.encode()).hexdigest()
     with _lock, _db() as db:
-        row=db.execute("SELECT u.username,s.expires_at FROM sessions s JOIN users u ON u.id=s.user_id WHERE s.token_hash="+("%s" if USE_POSTGRES else "?")",(digest,)).fetchone()
+        row=db.execute("SELECT u.username,s.expires_at FROM sessions s JOIN users u ON u.id=s.user_id WHERE s.token_hash="+("%s" if USE_POSTGRES else "?"),(digest,)).fetchone()
         if row is None or row[1] < time.time(): return 401, {"error":"unauthorized"}
         return 200, {"username":row[0]}
 
