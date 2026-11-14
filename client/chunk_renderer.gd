@@ -8,6 +8,13 @@ const CITY_LAYOUT = preload("res://city_layout.gd")
 const SEASONS = preload("res://season_visual.gd")
 const TEST_SPRITES = preload("res://test_sprite_visuals.gd")
 var test_sprites = TEST_SPRITES.new()
+
+func _ready() -> void:
+    AssetDownloader.finished.connect(_on_assets_ready)
+
+func _on_assets_ready(_ok: bool) -> void:
+    test_sprites.refresh()
+    queue_redraw()
 const COLORS := [Color("#63865b"), Color("#72915e"), Color("#8ca66a"), Color("#b6a36d"), Color("#527f8d"), Color("#547c54"), Color("#b46f49")]
 var world: Node2D
 var chunk_coord: Vector2i
