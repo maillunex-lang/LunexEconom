@@ -213,6 +213,8 @@ func select_screen(pos: Vector2) -> void:
     if absi(cell.x) <= expansion_radius and absi(cell.y) <= expansion_radius:
         var previous := selected
         selected = cell
+        _redraw_build_area(previous, build_size(build_type))
+        _redraw_build_area(cell, build_size(build_type))
         _redraw_chunk_at(previous)
         _redraw_chunk_at(cell)
         get_tree().call_group("world_hud", "set_selection", cell)
@@ -242,7 +244,9 @@ func commit_access_road(site: Vector2i) -> bool:
     var path: Array[Vector2i] = preview_access_road(site)
     var accepted: bool = roads.add_path(path)
     if accepted:
-        for cell in path: _redraw_chunk_at(cell)
+        for cell in path:
+            for affected in preload("res://road_topology.gd").affected_cells(cell):
+                _redraw_chunk_at(affected)
     return accepted
 func build_size(kind: String) -> Vector2i:
     match kind:
