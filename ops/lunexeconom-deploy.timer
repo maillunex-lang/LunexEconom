@@ -1,0 +1,12 @@
+[Unit]
+Description=Check LunexEconom public GitHub for validated website updates
+
+[Timer]
+OnBootSec=2min
+OnUnitActiveSec=5min
+RandomizedDelaySec=20s
+Persistent=true
+Unit=lunexeconom-deploy.service
+
+[Install]
+WantedBy=timers.target
