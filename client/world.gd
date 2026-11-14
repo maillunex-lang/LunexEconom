@@ -12,6 +12,7 @@ var patch_visuals: Node
 const BUILDING_KINDS := ["farm", "mine", "factory", "warehouse", "shop", "school", "hospital", "park", "house"]
 
 var build_type := ""
+var build_square_size := 0
 var building_records: Dictionary = {}
 var build_counter := 0
 const MAX_VISIBLE_CELLS := 4500
@@ -306,6 +307,8 @@ func commit_access_road(site: Vector2i) -> bool:
                 _redraw_chunk_at(affected)
     return accepted
 func build_size(kind: String) -> Vector2i:
+    if kind == build_type and build_square_size > 0:
+        return Vector2i(build_square_size, build_square_size)
     match kind:
         "farm": return Vector2i(2, 2)
         "mine": return Vector2i(2, 3)
@@ -321,8 +324,9 @@ func preview_build(cell: Vector2i) -> Dictionary:
     if build_type.is_empty(): return {"ok": false, "reason": "no_build_mode"}
     return planner.preview(cell, build_size(build_type), roads, self)
 
-func choose_build(kind: String) -> void:
+func choose_build(kind: String, square_size: int = 0) -> void:
     build_type = kind
+    build_square_size = square_size
     if selected != Vector2i(-1, -1):
         get_tree().call_group("world_hud", "show_build_preview", preview_build(selected))
         _redraw_build_area(selected, build_size(build_type))
@@ -330,6 +334,7 @@ func choose_build(kind: String) -> void:
 func cancel_build() -> void:
     var old_size := build_size(build_type)
     build_type = ""
+    build_square_size = 0
     _redraw_build_area(selected, old_size)
 
 func place_building() -> Dictionary:
