@@ -53,7 +53,7 @@ def build(owner,payload):
         now=int(time.time())
         clk=clock.state(db,"%s",now)
         production.advance(db,"%s",clk,now)
-        paid,cost,balance=economy.charge_build(db,"%s",owner,kind,len(new_roads),now)
+        paid,cost,balance=economy.charge_build(db,"%s",owner,kind,len(new_roads),now,payload.get("size"))
         if not paid:return 402,{"error":"insufficient_funds","cost":cost,"balance":balance}
         db.execute("INSERT INTO buildings(id,owner,kind,x,y,created) VALUES(%s,%s,%s,%s,%s,%s)",(oid,owner,kind,x,y,now))
         production.register_building(db,"%s",owner,oid,kind,clk)
