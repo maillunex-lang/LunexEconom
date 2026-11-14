@@ -1,30 +1,50 @@
 # Башкирия: Мёд и Нефть
 
-Android-only, landscape, 2D-isometric economic MMO set in a procedurally generated Bashkortostan-inspired world.
+Многопользовательская экономическая стратегия для **Android** (горизонтальная ориентация, касания) в духе *Capitalism Lab*: вы управляете компанией в процедурно созданном мире по мотивам Республики Башкортостан. 2D-изометрия, единый мир 24/7, **1 реальный день = 1 игровой месяц** (настраивается). Сервер — единственный источник истины, клиент только показывает.
 
-**Status:** 0.1 Foundation in progress. This is not yet a playable game.
+**Статус: ранняя играбельная альфа (0.1–0.7 в работе).** Есть работающий вертикальный срез экономики и города на боевом сервере; закрытое тестирование и релизный APK ещё впереди. Подробная и честная картина — в [дорожной карте](docs/ROADMAP.md) и [журнале прогресса](docs/PROGRESS.md).
 
-## Architecture
-- Godot 4 Android client, landscape and touch-first.
-- Authoritative server with modular economic subsystems.
-- PostgreSQL ledger and persistent world planned; no production database deployed yet.
-- One real day corresponds to one in-game month.
+## Что уже работает
+- **Карта и клиент:** процедурная изометрическая карта, чанки, жесты, выбор участка, меню, вход, регистрация, восстановление пароля; панели «Строить», «Город», «Экономика»; отрисовка зданий и цветов владельцев.
+- **Строительство:** ферма, шахта, завод, склад; сервер сам прокладывает дорогу к ближайшей дороге; продажа здания; синхронизация событий между клиентами.
+- **Экономика:** общий рынок с ценой из спроса и предложения и сезонностью; цепочка «мёд + нефть → завод → товары»; склады с удержанием при низкой цене; жители, рабочие места, зарплаты, миграция; NPC-конкуренты; месячный расчёт всего мира; банкротство и долги; банк и кредиты под залог зданий.
+- **Налоги и город:** налог на прибыль 13 %, НДС 10/22 % по категориям товаров, налог на имущество 2,2 % ([`docs/TAXES.md`](docs/TAXES.md)); бюджет города, социальные здания (школа, больница, парк), **выборы мэра**, рейтинг, зарплата и награды ([`docs/CITY_GOVERNMENT.md`](docs/CITY_GOVERNMENT.md)).
+- **Инфраструктура:** PostgreSQL 16 на боевом сервере (в CI проверяется на настоящей БД), двойная запись денег, автообновление сервера из `main` с проверкой и откатом, сборка и проверка APK в CI, проверка восстановления из резервной копии.
 
-## Safety
-Independent project. Do not modify existing BASHECO, NEXUS, other games or production services.
+## Чего ещё нет
+Контракты между игроками, замкнутый денежный круг (жители тратят зарплату), несколько городов и логистика, розница и магазины, качество продукции и НИИ, биржа, альянсы, обучение, боевая подпись релизного APK и отчёт об испытании на устройстве. Порядок работ — [ROADMAP.md](docs/ROADMAP.md).
 
-## Project control center
-- [Полный паспорт проекта: 94 решения](docs/PROJECT_PASSPORT.md)
-- [Дорожная карта 0.1–1.0 с чеклистом](docs/ROADMAP.md)
+## Архитектура
+- **Клиент:** Godot 4.7.2 (GDScript), `client/`. Главная сцена `main.tscn` (вход), мир — `world.tscn`.
+- **Сервер:** Python (стандартная библиотека), `server/`. Одна логика на **двух бэкендах**: SQLite (разработка и тесты) и PostgreSQL 16 (боевой). Основное: `production.py` (общий месячный шаг мира), `economy.py` (баланс, журнал проводок), `city.py`, `bank.py`, `taxes.py`, `npc.py`, `auth.py`.
+- **Деньги:** целые рубли, двойная запись, суммы проводок всегда сходятся в ноль.
+- **Эксплуатация:** `ops/` (автообновление сервера, публикация сайта и APK, проверка восстановления PostgreSQL), `.github/workflows/` (CI).
+
+## Запуск и проверки
+```bash
+# серверные тесты (SQLite)
+cd server && pip install "psycopg[binary]" && python -W ignore -m unittest discover -p 'test_*.py'
+# операционные тесты
+cd ops && python -m unittest discover -p 'test_*.py'
+# локальный сервер (порт задаётся LUNEX_PORT, месяц в секундах — LUNEX_MONTH_SECONDS, минимум 60)
+cd server && LUNEX_WORLD_DB=/tmp/world.sqlite3 LUNEX_AUTH_DB=/tmp/accounts.sqlite3 LUNEX_PORT=18767 python game_server.py
+# клиент: открыть client/ в Godot 4.7.2 или проверить без окна
+godot --headless --path client --import
+```
+Тесты на PostgreSQL (`test_postgres_*`) запускаются только в одноразовой базе `lunex_ci` (см. [`.github/workflows/postgres-check.yml`](.github/workflows/postgres-check.yml)); **никогда не по боевой базе**. Сейчас в репозитории около 290 серверных и 28 операционных тестов.
+
+## Центр управления проектом
+- [Паспорт проекта: 94 решения](docs/PROJECT_PASSPORT.md)
+- [Дорожная карта 0.1–1.0 и фактический статус систем](docs/ROADMAP.md)
 - [Журнал фактического прогресса](docs/PROGRESS.md)
-- [Foundation: технические ограничения и тесты](docs/FOUNDATION.md)
+- Правила игры: [налоги](docs/TAXES.md), [городское управление](docs/CITY_GOVERNMENT.md)
+- Эксплуатация: [сервер](docs/SERVER_DEPLOYMENT.md), [публикация и APK](docs/DEPLOYMENT.md), [подпись Android](docs/ANDROID_SIGNING.md)
+- Для разработчиков и ИИ-агентов: [правила параллельной работы](docs/PARALLEL_WORK.md), [бриф для ИИ-разработчика](docs/GROK_BRIEF.md)
 
-**For developers and AI agents:** read passport → roadmap → progress before changing code; update progress only after real tests.
+**Перед изменением кода:** паспорт → дорожная карта → журнал прогресса; статус «готово» — только после реально запущенных тестов.
 
-## Website and development dashboard
+## Сайт и панель разработки
+Лендинг: https://rikagro.ru/lunexeconom/ · исходники [`web/`](web/) (статический HTML/CSS/JS без зависимостей). Дорожная карта на сайте читается из `docs/ROADMAP.md` (**формат таблиц с версиями и задачами `BE-xxx` менять нельзя**, его разбирает скрипт сайта), коммиты — из публичного GitHub API. Кнопка скачивания APK включается только после записи проверенного релиза в `web/release.json`. Сайт публикуется на VPS автоматически (проверенные файлы из `main`), без изменения других сервисов.
 
-Public landing: https://rikagro.ru/lunexeconom/
-
-Source: [web/](web/). Static, dependency-free HTML/CSS/JS. The roadmap is loaded from public `docs/ROADMAP.md` and commits from GitHub's public API; a built-in roadmap is used when the API is unavailable. APK download is **disabled** until a verified release is recorded in `web/release.json` with `status: published`, `version`, a real HTTPS APK `url`, and ideally `sha256`. Do not publish an unbuilt or unverified APK.
-
-Deployment path: `/var/www/rikagro-game/lunexeconom/`, isolated from existing root landing and services. Updating GitHub files does **not** automatically deploy the website; deploy reviewed changes separately.
+## Безопасность
+Независимый проект: не менять BASHECO, NEXUS и другие сервисы и игры. Секреты (ключ подписи APK, пароли БД, ключи почты) только в защищённом окружении и секретах GitHub, никогда в репозитории.

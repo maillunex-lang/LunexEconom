@@ -1,31 +1,28 @@
-# Foundation 0.1
+# Foundation 0.1 (исторический документ)
 
-Game: **Башкирия: Мёд и Нефть**. Repository: `maillunex-lang/LunexEconom`.
+Игра: **Башкирия: Мёд и Нефть**. Репозиторий: `maillunex-lang/LunexEconom`. Актуальный статус — [ROADMAP.md](ROADMAP.md) и [PROGRESS.md](PROGRESS.md).
 
-## Confirmed product constraints
-- Android only; landscape, touch and safe-area aware.
-- 2D isometric 45°; 20 economic regions in final game, one region for first playable alpha.
-- Authoritative 24/7 MMO economy, 1 real day = 1 game month.
-- NPC economy without LLM; financial transactions must be server-side.
-- PostgreSQL with transaction journal is the approved target persistence layer.
+## Принятые ограничения продукта
+- Только Android; горизонтальная ориентация, касания, safe area.
+- 2D-изометрия 45°; в финале 20 регионов, в первой альфе один регион.
+- Авторитетная экономика 24/7, 1 реальный день = 1 игровой месяц.
+- NPC-экономика без LLM; все финансовые операции только на сервере.
+- Постоянное хранилище — PostgreSQL с журналом проводок.
 
-## Current implementation
-- Godot foundation scene with title and a development server health check.
-- Python standard-library HTTP server on **loopback only**.
-- Session creation is a temporary development stub: it is **not authentication**.
-- /world exposes metadata only, with 0 active regions.
-- Unit tests for API behavior and input validation.
+## Что реализовано сейчас
+- Godot-клиент: вход и регистрация, изометрический мир, строительство, панели экономики и города.
+- Python-сервер (`server/game_server.py`, стандартная библиотека) на двух бэкендах: SQLite (разработка, тесты) и PostgreSQL 16 (боевой); работает за nginx по HTTPS, привязан к loopback.
+- Настоящие аккаунты: регистрация, вход, сессии, коды подтверждения и восстановления (`server/auth.py`).
+- Финансовый журнал с двойной записью, игровые часы, рынок, производство, труд, NPC, банкротство, банк, налоги, город и выборы.
+- CI (8 workflow), автообновление сервера, сборка и проверка APK.
 
-## Not yet implemented
-- PostgreSQL schema/migrations, financial ledger, auth, world generator, multiplayer synchronization, real NPC, gameplay, APK signing, production deployment.
-- Do not expose the development server publicly or use session IDs for real accounts.
+## Ещё не реализовано
+Версионные миграции PostgreSQL, доставка писем, боевая подпись APK, контракты между игроками, регионы и логистика, розница, социальные системы. Полный список — в [ROADMAP.md](ROADMAP.md).
 
-## Run tests
-`cd server && python3 -m unittest -v test_app.py`
+## Запуск
+Тесты: `cd server && python -W ignore -m unittest discover -p 'test_*.py'`.
+Сервер локально: `cd server && LUNEX_WORLD_DB=/tmp/w.sqlite3 LUNEX_AUTH_DB=/tmp/a.sqlite3 LUNEX_PORT=18767 python game_server.py`.
+Клиент: проект Godot в `client/`.
 
-## Run locally
-`cd server && python3 app.py`
-Godot project is in `client/`. Server defaults to `127.0.0.1:18761`.
-
-## Safety
-Do not reuse production DB credentials, modify running services, or deploy on the existing HTTPS host without a separate review. No other project is a dependency.
+## Безопасность
+Не использовать боевые учётные данные БД в тестах, не менять чужие сервисы на VPS, не публиковать секреты.

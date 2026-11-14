@@ -2,7 +2,7 @@
 
 Скрипт `ops/update_server.py` + `lunexeconom-server-update.timer` (каждые ~5 минут):
 1. берёт SHA последнего коммита `main`; если он уже развёрнут или ранее падал — ничего не делает;
-2. требует успешный GitHub Actions `Server checks` (`.github/workflows/server-check.yml`: компиляция + `test_roads`, `test_app`, `test_auth`) именно для этого SHA; если серверные файлы в коммите не менялись (workflow не запускался) — просто отмечает коммит текущим;
+2. требует успешный GitHub Actions `Server checks` (`.github/workflows/server-check.yml`: компиляция + полный набор серверных тестов) именно для этого SHA; если серверные файлы в коммите не менялись (workflow не запускался) — просто отмечает коммит текущим;
 3. скачивает `server/*.py` (без тестов) строго по SHA, проверяет синтаксис без выполнения кода;
 4. сохраняет бэкап текущих файлов (`/var/lib/lunexeconom-server-update/backups/`, 10 последних);
 5. обновляет файлы, перезапускает `lunexeconom-game.service`, ждёт `GET /health` = 200 и `ok:true`;
@@ -58,22 +58,19 @@ journalctl -u lunexeconom-server-update.service -n 30 --no-pager
 - Previous SQLite world DB (retained for rollback): /home/gamedev/projects/LunexEconom-server/world.sqlite3`.
 - Nightly backup timer: `lunexeconom-backup.timer`, keeps latest 14 backups per database in `/home/gamedev/backups/lunexeconom/server/`.
 
-## API
-- `GET /health`, `GET /world`
-- `POST /auth/register`, `POST /auth/login`, `GET /auth/me`, `POST /auth/logout`
-- `GET /events?after=N`, `GET /chunk?cx=X&cy=Y` (require Bearer token)
-- `POST /build` (requires Bearer token), JSON `{"kind":"farm","x":10,"y":10,"request_id":"<UUID>"}`.
-- Building types and footprints: farm 2×2, mine 2×3, factory 3×2.
-- Atomic collision check and commit, per-chunk versions, durable event log, idempotent requests per account.
+## API (актуально на 14.11.2026)
+Публичные: `GET /health` (с деталями состояния), `GET /world`, `GET /clock`.
+Аккаунты: `POST /auth/register`, `/auth/login`, `/auth/logout`, `GET /auth/me`, коды подтверждения и восстановления пароля.
+Требуют `Authorization: Bearer`: `GET /events`, `/chunk`, `/wallet`, `/market`, `/city`; `POST /build`, `/sell`, `/loan`, `/city/taxes`, `/city/build`, `/city/candidacy`, `/city/vote`. Все изменяющие запросы идемпотентны по `request_id` (UUID).
+Постройки: ферма, шахта, завод, склад; дороги прокладываются сервером. Подробности правил — [TAXES.md](TAXES.md), [CITY_GOVERNMENT.md](CITY_GOVERNMENT.md).
 
-## Tests / known limitations
-- Headless Godot startup verified; Python isolated tests passed for atomic build, collision, idempotency, events and chunk snapshots.
-- HTTPS health returned 200 and unauthenticated events/build returned 401.
-- **Not production-complete:** SQLite alpha persistence, no server-side road/path, terrain, land ownership or costs validation, no economy simulation, no password recovery/email verification, no multi-device load testing. Client world build requests are not yet wired to `POST /build`; only sync uses authenticated endpoints.
-- Future work: PostgreSQL migration, durable per-account rate limits, session rotation, server-side construction rules, user-specific companies and finances, deployment/rollback automation, load and security tests.
+## Тесты / известные ограничения
+- Серверные тесты (около 290) и операционные (28) проходят в CI; PostgreSQL-тесты выполняются на одноразовой БД `lunex_ci`; проверка восстановления из backup — в workflow «Release operations safety checks».
+- **Не завершено:** версионные миграции схемы и откат данных (схема создаётся при запуске), доставка писем, нагрузочные испытания реального мира, боевая подпись APK.
+- Резервные копии: ежедневно, 14 последних; восстановление проверяется автоматически на одноразовой БД.
 
 ## Safety
 - All code changes on GitHub `main` only.
 - VPS service binds to loopback, no additional publicly listening port.
 - Existing nginx and other projects preserved; backup of nginx config is stored outside `sites-enabled`.
-- No new branch created.
+- Разработка идёт в `main`; параллельные ИИ-агенты — в своих ветках через PR (см. [PARALLEL_WORK.md](PARALLEL_WORK.md)).
