@@ -3,6 +3,7 @@
 import json
 import os
 import re
+import stat
 import shutil
 import subprocess
 import sys
@@ -18,6 +19,8 @@ SERVICES = os.getenv('LUNEX_SERVICES', 'lunexeconom-v2.service').split()
 HEALTH_URL = os.getenv('LUNEX_HEALTH_URL','http://127.0.0.1:18777/health')
 OWNER = os.getenv('LUNEX_SERVER_USER','gamedev')
 WORKFLOW = 'server-check.yml'
+ENV_FILE = Path(os.getenv('LUNEX_ENV_FILE', '/etc/lunexeconom-v2/v2.env'))
+VENV = Path(os.getenv('LUNEX_VENV', '/opt/lunexeconom-v2/venv'))
 UA = {'User-Agent':'LunexEconom-V2-Updater/1', 'Accept':'application/vnd.github+json'}
 MAX_FILE = 2_000_000
 KEEP_BACKUPS = 5
@@ -76,14 +79,53 @@ def restart():
         if result.returncode: raise RuntimeError('Restart failed: '+service+' '+result.stderr.strip())
 
 
-def healthy(timeout=30):
-    deadline=time.monotonic()+timeout
-    while time.monotonic()<deadline:
+def health_sha(sha, timeout=30):
+    deadline = time.monotonic() + timeout
+    while True:
         try:
-            if json.loads(fetch(HEALTH_URL,20000)).get('ok') is True: return True
-        except Exception: pass
+            d = json.loads(fetch(HEALTH_URL, 20000))
+            actual = d.get('sha', '')
+            if (d.get('ok') is True and d.get('database') == 'ok'
+                    and isinstance(actual, str) and re.fullmatch(r'[0-9a-f]{7,40}', actual)
+                    and sha.startswith(actual)):
+                return True
+        except (ValueError, OSError, KeyError):
+            pass
+        if time.monotonic() >= deadline: return False
         time.sleep(1)
-    return False
+
+
+def atomic_sha(sha):
+    if not re.fullmatch(r'[0-9a-f]{40}', sha):
+        raise RuntimeError('Invalid deployment SHA')
+    original = ENV_FILE.read_bytes()
+    matches = list(re.finditer(rb'(?m)^LUNEX_SHA=([^\r\n]*)(?=\r?$|\n)', original))
+    if len(matches) != 1:
+        raise RuntimeError('Expected exactly one LUNEX_SHA in V2 environment')
+    old = matches[0].group(1).decode('ascii', errors='ignore')
+    updated = original[:matches[0].start()] + b'LUNEX_SHA=' + sha.encode('ascii') + original[matches[0].end():]
+    metadata = ENV_FILE.stat()
+    fd, tmp = tempfile.mkstemp(prefix='.v2-sha-', dir=ENV_FILE.parent)
+    try:
+        with os.fdopen(fd, 'wb') as out:
+            os.fchmod(out.fileno(), stat.S_IMODE(metadata.st_mode))
+            os.fchown(out.fileno(), metadata.st_uid, metadata.st_gid)
+            out.write(updated)
+            out.flush()
+            os.fsync(out.fileno())
+        os.replace(tmp, ENV_FILE)
+    finally:
+        if os.path.exists(tmp): os.unlink(tmp)
+    return old
+
+
+def install_requirements():
+    command = ['runuser', '-u', OWNER, '--', str(VENV / 'bin' / 'python'),
+               '-m', 'pip', 'install', '-r', str(SERVER_DIR / 'requirements.txt')]
+    result = run(command)
+    if result.returncode:
+        raise RuntimeError('V2 dependency installation failed; output withheld')
+
 
 
 def copy_tree(source,destination,names):
@@ -107,22 +149,55 @@ def deploy(commit,names):
             dest=backup_dir/name
             dest.parent.mkdir(parents=True,exist_ok=True)
             shutil.copy2(SERVER_DIR/name,dest)
+        previous_sha = None
+        changed_sha = False
+        restarted = False
+        requirements_changed = ('requirements.txt' in names and
+            (not (SERVER_DIR / 'requirements.txt').exists() or
+             (SERVER_DIR / 'requirements.txt').read_bytes() != (stage / 'requirements.txt').read_bytes()))
         try:
             SERVER_DIR.mkdir(parents=True,exist_ok=True)
             copy_tree(stage,SERVER_DIR,names)
             for name in prior:
                 if name not in names and (name.endswith(('.py','.json','.sql','.html')) or name=='requirements.txt'):
                     (SERVER_DIR/name).unlink(missing_ok=True)
+            if requirements_changed:
+                print('Installing verified V2 requirements for', commit)
+                install_requirements()
+            previous_sha = atomic_sha(commit)
+            changed_sha = True
+            restarted = True
             restart()
-            if not healthy(): raise RuntimeError('V2 health check failed')
+            if not health_sha(commit):
+                raise RuntimeError('V2 health or commit SHA mismatch after restart')
         except Exception:
+            rollback_errors = []
             for name in names:
-                if name not in prior: (SERVER_DIR/name).unlink(missing_ok=True)
+                if name not in prior:
+                    try: (SERVER_DIR/name).unlink(missing_ok=True)
+                    except OSError: rollback_errors.append('remove new file')
             for name in prior:
-                dest=SERVER_DIR/name
-                dest.parent.mkdir(parents=True,exist_ok=True)
-                shutil.copy2(backup_dir/name,dest)
-            restart()
+                try:
+                    dest=SERVER_DIR/name
+                    dest.parent.mkdir(parents=True,exist_ok=True)
+                    shutil.copy2(backup_dir/name,dest)
+                except OSError:
+                    rollback_errors.append('restore server file')
+            if changed_sha:
+                try: atomic_sha(previous_sha)
+                except (OSError, RuntimeError, ValueError):
+                    rollback_errors.append('restore environment SHA')
+            if restarted:
+                try:
+                    restart()
+                    if not previous_sha or not health_sha(previous_sha):
+                        rollback_errors.append('rollback health or SHA mismatch')
+                except Exception:
+                    rollback_errors.append('restart rolled-back service')
+            if rollback_errors:
+                print('V2 rollback incomplete for', commit, ':', ', '.join(sorted(set(rollback_errors))), file=sys.stderr)
+                raise RuntimeError('V2 rollback incomplete; inspect V2 service and state')
+            print('V2 rollback restored files and SHA for', commit, file=sys.stderr)
             raise
         backups=sorted((STATE/'backups').iterdir())
         for old in backups[:-KEEP_BACKUPS]: shutil.rmtree(old)
@@ -134,7 +209,13 @@ def main():
     STATE.mkdir(parents=True,exist_ok=True)
     done=STATE/'deployed-sha'
     failed=STATE/'failed-sha'
-    if done.exists() and done.read_text().strip()==sha: return 0
+    if done.exists():
+        deployed = done.read_text().strip()
+        if not re.fullmatch(r'[0-9a-f]{40}', deployed) or not health_sha(deployed, timeout=2):
+            raise RuntimeError('Stale V2 deployed-sha: running server SHA/health differs; no deployment')
+        if deployed == sha:
+            print('V2 already running', sha)
+            return 0
     if failed.exists() and failed.read_text().strip()==sha: return 0
     runs=api(f'/actions/workflows/{WORKFLOW}/runs?head_sha={sha}&per_page=100')
     matching=[r for r in runs.get('workflow_runs',[]) if r.get('head_sha')==sha and r.get('event') in ('push','workflow_dispatch')]
@@ -145,7 +226,7 @@ def main():
     try: deploy(sha,names)
     except Exception as exc:
         failed.write_text(sha+'\n')
-        print('Rollback completed after error:',exc,file=sys.stderr)
+        print('V2 deployment failed; rollback attempted for', sha, ':', type(exc).__name__, file=sys.stderr)
         return 1
     done.write_text(sha+'\n')
     print('V2 deployed',sha)
