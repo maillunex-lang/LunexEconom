@@ -106,7 +106,9 @@ python3 tools/build_packs.py --source client/content --output build/packs \
 | --- | --- |
 | Стандартный Godot Android release template со всеми ABI | 104 803 333 байта (измерено на VPS; не APK проекта) |
 | APK V2 до оптимизации (debug, main CI 43715238203) | 56 955 696 байт, SHA256 8c5e73e2c0ed7adf74dfc21a6166c9d5acce595fcef8a3d0da20bb7a83972668 |
-| APK проекта после arm64/внешних пакетов | ожидается измерение CI |
+| Подписанный APK V2-01c, `fea7c3c`, owner-signing test (run 43724160997) | **74 631 872 байта (71.17 MiB)**; SHA-256 `ac0eb7feb5d5e7217711dd411843c27c64b2bc62339d0eaf2236c1b7466b057e` |
+| AAB V2-01c, `fea7c3c` (тот же run) | **26 622 055 байт (25.39 MiB)**; SHA-256 `f3b3c7b75eaf03b7d7a4f7a8f6c1a82cda169f4252c4050ea63568279b4d2edb` |
+| Производственные PCK V2-01c | **0 пакетов**: в `client/content/` нет каталогов с игровыми ресурсами; размер PCK неприменим, тестовые fixture PCK не являются игровыми пакетами |
 | Целевой максимум | 103 809 024 байта (99 MiB) |
 
 ## 7. Проверки, отмена и ограничения
@@ -138,3 +140,9 @@ python3 tools/make_manifest_keypair.py --output-dir "$HOME/lunex-manifest-offlin
 Скрипт запрещает размещать приватный ключ внутри репозитория, не перезаписывает ключи, сохраняет приватный PEM с правами `0600`, выводит только публичный PEM. Владелец переносит **только** `lunex-manifest-public.pem` в `client/config/update_public.pem`, коммитит публичную часть и делает две защищённые резервные копии приватного ключа вне GitHub, CI и VPS. Приватный PEM не пересылать через чат. До появления публичного PEM проверки манифестов намеренно отклоняются без падения клиента.
 
 Тест реального Android пока **не выполнен**. Ручная приёмка: установить APK с релизной подписью на чистое Android-устройство, войти по email и проверить штаб-квартиру/кошелёк/время; нажать «Проверить обновление» и убедиться, что неподписанный или неверно подписанный `update.json` отклонён без падения; после публикации настоящих подписанных `update.json` и `.sig` проверить предложение новой версии, докачку, SHA-256 и системное подтверждение установки; проверить сохранение данных после установки поверх с тем же сертификатом; проверить отдельно PCK и режим Wi-Fi. Провал: принятие неподписанного манифеста, установка чужого APK, падение, потеря токенов или некорректная обработка отсутствующей сети.
+
+## V2-01c: итог CI и границы приёмки
+
+Проверен SHA `fea7c3c` ветки `v2/release`: Server checks [43724153755](https://github.com/maillunex-lang/LunexEconom/actions/runs/43724153755), Client checks [43724151309](https://github.com/maillunex-lang/LunexEconom/actions/runs/43724151309), Website checks [43724156099](https://github.com/maillunex-lang/LunexEconom/actions/runs/43724156099), Android debug [43724158378](https://github.com/maillunex-lang/LunexEconom/actions/runs/43724158378), Android owner-signed release candidate [43724160997](https://github.com/maillunex-lang/LunexEconom/actions/runs/43724160997): все SUCCESS. Измерения APK/AAB выше взяты из скачанного артефакта owner-signing test.
+
+Релизный кандидат помечен `OWNER-SIGNING-TEST-NOT-FOR-RELEASE`, **не опубликован**. Физическая установка и UI/обновления на Android не проверены; офлайн RSA-ключ подписи манифестов владелец ещё должен создать на доверенном устройстве и добавить только публичную часть. Деплой и публикация в production не входят в V2-01c.
