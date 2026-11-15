@@ -443,7 +443,37 @@ def soc_get(owner, path, query):
         return status, result
 
 
-ECONOMY_POST={"/sell":"sell","/loan":"loan","/city/taxes":"city_taxes","/city/build":"city_build","/city/candidacy":"city_candidacy","/city/vote":"city_vote","/contracts/offer":"contracts_offer","/contracts/accept":"contracts_accept","/contracts/cancel":"contracts_cancel"}
+def _player_command(owner, payload, fn):
+    """Authenticated economy command on the active engine. Advances the month, then runs fn(db, ph, ...)."""
+    if os.environ.get("LUNEX_DB_ENGINE") == "postgres":
+        import postgres_db
+        with postgres_db.connect() as db:
+            db.execute("SELECT pg_advisory_xact_lock(20261114)")
+            now = int(time.time())
+            clk = clock.state(db, "%s", now)
+            production.advance(db, "%s", clk, now)
+            return fn(db, "%s", owner, payload, now, clk["month_index"])
+    with LOCK, connect() as db:
+        db.execute("BEGIN IMMEDIATE")
+        now = int(time.time())
+        clk = clock.state(db, "?", now)
+        production.advance(db, "?", clk, now)
+        status, result = fn(db, "?", owner, payload, now, clk["month_index"])
+        db.commit()
+        return status, result
+
+
+def trucks_buy(owner, payload):
+    import trucks
+    return _player_command(owner, payload, trucks.buy)
+
+
+def research_start(owner, payload):
+    import research
+    return _player_command(owner, payload, research.start)
+
+
+ECONOMY_POST={"/sell":"sell","/loan":"loan","/city/taxes":"city_taxes","/city/build":"city_build","/city/candidacy":"city_candidacy","/city/vote":"city_vote","/contracts/offer":"contracts_offer","/contracts/accept":"contracts_accept","/contracts/cancel":"contracts_cancel","/trucks/buy":"trucks_buy","/research/start":"research_start"}
 
 class Handler(BaseHTTPRequestHandler):
     def _send_geo(self, data):
@@ -581,6 +611,20 @@ class Handler(BaseHTTPRequestHandler):
             import city_catalog
             return self._send(200,city_catalog.view())
         if url.path=="/catalog/goods":return self._send_cached(goods_catalog.public_view(), 86400)
+        if url.path in ("/trucks", "/research"):
+            owner = self._identity()
+            if not owner:
+                return self._send(401, {"error": "unauthorized"})
+            import trucks
+            import research
+            if os.environ.get("LUNEX_DB_ENGINE") == "postgres":
+                import postgres_db
+                with postgres_db.connect() as db:
+                    payload = trucks.view(db, "%s", owner) if url.path == "/trucks" else research.view(db, "%s", owner)
+            else:
+                with connect() as db:
+                    payload = trucks.view(db, "?", owner) if url.path == "/trucks" else research.view(db, "?", owner)
+            return self._send(200, payload)
         if url.path=="/deposits":
             import deposits
             box = deposits.parse_bbox(parse_qs(url.query))

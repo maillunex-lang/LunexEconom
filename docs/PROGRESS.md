@@ -1,3 +1,15 @@
+## 2026-11-15 — стройматериалы, перевозки, качество, исследования (ветка Grok6)
+
+- **Не в main.** EX-02 (реестр `server/balance.py`), товары под `city_catalog` (камень, цемент, сталь; лес уже был), цепочки кирпича, пиломатериалов, станков, ткани, одежды, электроники. Месторождения руды, угля, камня и льна добавлены к старым: координаты нефти, газа, песка и леса не сдвигались.
+- **Перевозки:** без парка тариф `regions.unit_cost` как раньше (`regions.py` не менялся). С парком — лимит машин и плата за рейс. `POST /trucks/buy`, `GET /trucks`.
+- **Качество 1–5:** тройка не двигает цену. Сырьё с оценкой сдвигает выпуск. Исследования `quality` и `thrift`, `POST /research/start`, `GET /research`.
+- **NPC** строят новые виды только при `NPC_NEW_KINDS=1`. По умолчанию 0, чтобы старые сценарии не поехали. Добыча — только на свободный участок.
+- **Зоны (Claude):** в `zoning.ALLOWED` и `client/zones.gd` добавить вместе. Промзона: `cement_plant`, `steel_plant`, `brick_yard`, `sawmill`, `refinery`, `machine_plant`, `metalworks`, `textile_mill`, `garment_plant`, `electronics_plant`. Промзона и свободная земля: `stone_pit`, `iron_mine`, `coal_mine`, `flax_camp`. Пока вида нет в `ALLOWED`, `zoning.check` его не запрещает.
+- Проверено локально: `server` 543 теста (56 PostgreSQL пропущены — нет базы `lunex_ci`), `tools` 16 тестов. `balance_sim.py --suite`: 12 сценариев, инварианты 0, флагов 0. Четыре новых сценария на зёрнах 1…5 — тоже.
+- Подробности: [INDUSTRIES.md](INDUSTRIES.md), [BALANCE_REGISTRY.md](BALANCE_REGISTRY.md), [BALANCE_REPORT.md](BALANCE_REPORT.md).
+
+---
+
 ## 2026-11-15 — слита ветка Grok5; зоны и клиент для новых видов зданий (Claude, main)
 
 - **Слияние `Grok5`** (каталог товаров, агроцепочка, месторождения): конфликты только в `game_server.py` (два маршрута рядом), `PROGRESS.md` и списке тестов CI — объединены. После слияния: сервер 529 тестов, PostgreSQL 55 (включая `test_postgres_industries`), студия 38, tools 15, симулятор баланса 36 мес.: инварианты 0, флагов 0.

@@ -7,7 +7,7 @@ building exists (see ``production``). All money and quantities are integers.
 """
 from dataclasses import dataclass
 
-CATALOG_VERSION = 1
+CATALOG_VERSION = 2
 
 # Same seasonal curves the live market has used for honey, oil and goods.
 _HONEY_SEASON = (1.15, 1.10, 1.00, 0.95, 0.90, 0.90, 0.90, 0.95, 1.00, 1.05, 1.10, 1.15)
@@ -68,6 +68,20 @@ GOODS = (
     _g("gas", "Газ", "м³", 400, 0.22, "raw", False, 160),
     _g("sand", "Песок", "м³", 90, 0.22, "raw", False, 300),
     _g("timber", "Лес", "м³", 220, 0.22, "raw", False, 140),
+    _g("stone", "Камень", "м³", 80, 0.22, "raw", False, 200),
+    _g("iron_ore", "Железная руда", "т", 500, 0.22, "raw", False, 80),
+    _g("coal", "Уголь", "т", 180, 0.22, "raw", False, 120),
+    _g("flax", "Лён", "кг", 140, 0.10, "raw", False, 140),
+    _g("cement", "Цемент", "т", 700, 0.22, "manufactured", False, 80),
+    _g("steel", "Сталь", "т", 2200, 0.22, "manufactured", False, 60),
+    _g("brick", "Кирпич", "шт", 160, 0.22, "manufactured", False, 160),
+    _g("lumber", "Пиломатериалы", "м³", 480, 0.22, "manufactured", False, 80),
+    _g("petrochem", "Нефтехимия", "т", 1800, 0.22, "manufactured", False, 40),
+    _g("fabric", "Ткань", "м", 350, 0.22, "manufactured", False, 100),
+    _g("machines", "Станки", "шт", 8000, 0.22, "manufactured", False, 20),
+    _g("hardware", "Металлоизделия", "шт", 900, 0.22, "manufactured", True, 80),
+    _g("clothing", "Одежда", "шт", 1200, 0.22, "manufactured", True, 90),
+    _g("electronics", "Электроника", "шт", 4500, 0.22, "manufactured", True, 40),
 )
 
 # legacy=True recipes are already wired through economy.PRODUCTION (same numbers).
@@ -85,6 +99,20 @@ RECIPES = (
     Recipe("gas_well", "Газовая скважина", "gas", 80, {}, 6, 8_000, 240_000, 2, 2, "extractor", deposit="gas"),
     Recipe("sand_pit", "Песчаный карьер", "sand", 150, {}, 5, 3_000, 90_000, 2, 2, "extractor", deposit="sand"),
     Recipe("logging_camp", "Лесосека", "timber", 70, {}, 6, 4_000, 110_000, 2, 3, "extractor", deposit="forest"),
+    Recipe("stone_pit", "Карьер камня", "stone", 200, {}, 5, 3_000, 40_000, 2, 2, "extractor", deposit="stone"),
+    Recipe("iron_mine", "Рудник", "iron_ore", 40, {}, 6, 4_000, 60_000, 2, 2, "extractor", deposit="iron"),
+    Recipe("coal_mine", "Угольная шахта", "coal", 140, {}, 6, 4_000, 90_000, 2, 2, "extractor", deposit="coal"),
+    Recipe("flax_camp", "Льняное поле", "flax", 100, {}, 4, 2_000, 45_000, 2, 2, "extractor", deposit="flax"),
+    Recipe("cement_plant", "Цементный завод", "cement", 60, {"stone": 80, "gas": 20}, 8, 5_000, 100_000, 3, 2, "producer"),
+    Recipe("steel_plant", "Сталеплавильный завод", "steel", 30, {"iron_ore": 40, "coal": 50}, 12, 8_000, 110_000, 3, 3, "producer"),
+    Recipe("brick_yard", "Кирпичный завод", "brick", 200, {"stone": 40, "sand": 30}, 5, 2_500, 120_000, 3, 2, "producer"),
+    Recipe("sawmill", "Лесопилка", "lumber", 80, {"timber": 40}, 6, 3_500, 150_000, 3, 2, "producer"),
+    Recipe("refinery", "Нефтехимия", "petrochem", 20, {"oil": 8}, 8, 6_000, 45_000, 3, 2, "producer"),
+    Recipe("machine_plant", "Завод станков", "machines", 8, {"steel": 6, "oil": 4}, 14, 9_000, 150_000, 3, 3, "producer"),
+    Recipe("metalworks", "Метизный завод", "hardware", 80, {"steel": 8}, 8, 4_000, 200_000, 3, 2, "producer"),
+    Recipe("textile_mill", "Ткацкая фабрика", "fabric", 80, {"flax": 60}, 7, 3_500, 40_000, 3, 2, "producer"),
+    Recipe("garment_plant", "Швейная фабрика", "clothing", 50, {"fabric": 40}, 10, 5_000, 240_000, 3, 2, "producer"),
+    Recipe("electronics_plant", "Завод электроники", "electronics", 20, {"steel": 4, "petrochem": 6}, 16, 10_000, 400_000, 3, 3, "producer"),
 )
 
 _GOOD_BY_ID = {g.id: g for g in GOODS}
