@@ -36,3 +36,5 @@ jobs:
           python -m compileall -q server ops
           python -m unittest discover -s server/tests -v
           python -m unittest discover -s ops -p 'test_*.py' -v
+      - name: Waitress 100 concurrent HTTP health and login
+        run: python -m server.tests.load_test

@@ -40,6 +40,10 @@ class TestPostgres(unittest.TestCase):
         cls.dsn = os.environ['LUNEX_TEST_DATABASE_URL']
         cls.app = create_app(cls.dsn)
 
+    @classmethod
+    def tearDownClass(cls):
+        cls.app.close()
+
     def test_health_accounts_sessions(self):
         from uuid import uuid4
         user = 'test_' + uuid4().hex[:12]
@@ -48,10 +52,10 @@ class TestPostgres(unittest.TestCase):
         self.assertTrue(health['ok'])
         self.assertEqual(health['database'],'ok')
         self.assertIn('sha', health)
-        self.assertEqual(request(type(self).app,'POST','/auth/register',{'username':user,'password':'1234'})[0],201)
-        self.assertEqual(request(type(self).app,'POST','/auth/register',{'username':user,'password':'1234'})[0],409)
+        self.assertEqual(request(type(self).app,'POST','/auth/register',{'username':user,'email':user+'@example.com','password':'StrongPassword123!'})[0],201)
+        self.assertEqual(request(type(self).app,'POST','/auth/register',{'username':user,'email':user+'@example.com','password':'StrongPassword123!'})[0],409)
         self.assertEqual(request(type(self).app,'POST','/auth/login',{'username':user,'password':'wrong'})[0],401)
-        status, login = request(type(self).app,'POST','/auth/login',{'username':user,'password':'1234'})
+        status, login = request(type(self).app,'POST','/auth/login',{'username':user,'email':user+'@example.com','password':'StrongPassword123!'})
         self.assertEqual(status,200)
         self.assertEqual(login['role'],'player')
         status, me = request(type(self).app,'GET','/auth/me',auth='Bearer '+login['token'])
@@ -64,10 +68,12 @@ class TestPostgres(unittest.TestCase):
     def test_ledger_idempotent(self):
         from uuid import uuid4
         tag = uuid4().hex
+        from server.ledger.api import account
         with db.connect(self.dsn) as conn:
-            with conn.transaction():
-                a = conn.execute("INSERT INTO ledger_accounts(kind,balance) VALUES(%s,%s) RETURNING id", ('test-source',500)).fetchone()[0]
-                b = conn.execute("INSERT INTO ledger_accounts(kind,balance) VALUES(%s,%s) RETURNING id", ('test-dest',0)).fetchone()[0]
+            a = account(conn, 'player:' + tag, 'player')
+            b = account(conn, 'city:' + tag, 'city')
+            treasury = account(conn, 'system:treasury')
+            transfer(conn,'seed:'+tag,treasury,a,500)
             first = transfer(conn,tag,a,b,120)
             self.assertEqual(transfer(conn,tag,a,b,120),first)
             with self.assertRaises(ValueError):
