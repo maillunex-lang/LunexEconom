@@ -106,12 +106,27 @@ def undo(db, ph, owner, payload, ip):
     recent = db.execute("SELECT COUNT(*) FROM dev_actions WHERE actor=" + ph + " AND created>=" + ph, (owner, action_time - 60_000_000_000)).fetchone()[0]
     if recent >= 30:
         return 429, {"error": "rate_limited"}
-    row = db.execute("SELECT id,action,inverse_json,payload_json FROM dev_actions WHERE actor=" + ph + " AND action IN ('terrain','roads') AND undone=0 ORDER BY created DESC,id DESC LIMIT 1", (owner,)).fetchone()
+    row = db.execute("SELECT id,action,inverse_json,payload_json FROM dev_actions WHERE actor=" + ph + " AND action IN ('terrain','roads','move') AND undone=0 ORDER BY created DESC,id DESC LIMIT 1", (owner,)).fetchone()
     if not row:
         return 409, {"error": "nothing_to_undo"}
     action_id, action_kind, inverse, original_payload = row
     original = json.loads(original_payload)
     snapshot = json.loads(inverse)
+    if action_kind == "move":
+        oid = snapshot.get("object_id")
+        current = db.execute("SELECT x,y FROM buildings WHERE id=" + ph, (oid,)).fetchone()
+        if current != (original["x"], original["y"]):
+            return 409, {"error": "undo_conflict"}
+        inverse_payload = {"request_id": request_id, "object_id": oid, "x": snapshot["x"], "y": snapshot["y"]}
+        # Reuse the same validated move path, but record the reversal as an
+        # undo and mark the original action undone atomically.
+        result = building_move(db, ph, owner, inverse_payload, ip)
+        if result[0] != 200:
+            return result
+        db.execute("UPDATE dev_actions SET action='undo' WHERE id=" + ph, (request_id,))
+        db.execute("UPDATE dev_actions SET undone=1 WHERE id=" + ph, (action_id,))
+        db.commit()
+        return 200, {"request_id": request_id, "undone": action_id, "changed": result[1]["moved"]}
     if len(snapshot) > 25:
         return 409, {"error": "invalid_history"}
     # Reject stale undo: another operator may have modified the same cells.
