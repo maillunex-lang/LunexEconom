@@ -10,10 +10,18 @@ func _initialize() -> void:
     call_deferred("_run")
 
 func _run() -> void:
-    assert(PublicBase.base_url() == "https://rikagro.ru/lunexeconom")
-    assert(PublicBase.url("update.json") == "https://rikagro.ru/lunexeconom/update.json")
+    assert(PublicBase.base_url() == "https://rikagro.ru/lunexeconom/v2")
+    assert(PublicBase.url("update.json") == "https://rikagro.ru/lunexeconom/v2/update.json")
     assert(not PublicBase.allows_file_url("https://rikagro.ru.evil.io/lunexeconom/x"))
-    assert(not PublicBase.allows_file_url("https://rikagro.ru/lunexeconom/../secret"))
+    assert(not PublicBase.allows_file_url("https://rikagro.ru/lunexeconom/v2/../secret"))
+    assert(not PublicBase.allows_file_url("https://rikagro.ru/lunexeconom/update.json"))
+    assert(PublicBase.url("update.json.sig") == "https://rikagro.ru/lunexeconom/v2/update.json.sig")
+    assert(PublicBase.url("content.json") == "https://rikagro.ru/lunexeconom/v2/content.json")
+    assert(PublicBase.url("content.json.sig") == "https://rikagro.ru/lunexeconom/v2/content.json.sig")
+    assert(PublicBase.url("packs/core-1.pck") == "https://rikagro.ru/lunexeconom/v2/packs/core-1.pck")
+    assert(PublicBase.url("download/lunex-0.1.1.apk") == "https://rikagro.ru/lunexeconom/v2/download/lunex-0.1.1.apk")
+    for unsafe in ["../secret", "/secret", "download/../evil.apk", "download/evil.apk?next=x", "download/evil.apk#foo", "download/%2e.apk", "download//a.apk", "https://bad.example/file.apk"]:
+        assert(PublicBase.url(unsafe).is_empty(), "Unsafe relative update URL: " + unsafe)
     assert(not Verifier.valid_update({}))
     assert(FileAccess.file_exists(Verifier.PUBLIC_KEY))
     assert(not Verifier.verify("test".to_utf8_buffer(), "invalid", "res://config/__missing_test_key__.pem"))

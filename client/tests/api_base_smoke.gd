@@ -7,8 +7,11 @@ func _initialize() -> void:
 
 func _run() -> void:
     assert(PublicBase.api_url() == "https://rikagro.ru/lunexeconom/v2/api")
+    assert(PublicBase.base_url() == "https://rikagro.ru/lunexeconom/v2")
+    ProjectSettings.set_setting("lunex/api_path", "v2/api")
+    assert(PublicBase.api_url() == "https://rikagro.ru/lunexeconom/v2/v2/api")
     ProjectSettings.set_setting("lunex/api_path", "api")
-    assert(PublicBase.api_url() == "https://rikagro.ru/lunexeconom/api")
+    assert(PublicBase.api_url() == "https://rikagro.ru/lunexeconom/v2/api")
     for unsafe in ["", "/api", "api/", "../api", "v2/../api", "http://evil", "https://evil", "api@evil", "api?x", "api#x", "api\\x", "api//x", "api%2fsecret"]:
         ProjectSettings.set_setting("lunex/api_path", unsafe)
         assert(PublicBase.api_url().is_empty(), "Unsafe API path accepted: " + unsafe)
