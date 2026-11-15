@@ -18,7 +18,7 @@ DSN = os.getenv('LUNEX_TEST_DATABASE_URL')
 def request(app, method, path, payload=None, token='', admin_token='', ip='10.77.0.1', query='', host='localhost:18777', forwarded=''):
     raw = json.dumps(payload or {}, ensure_ascii=False).encode()
     result = {}
-    def start(status, headers):
+    def start_response(status, headers):
         result['status'] = int(status.split()[0])
         result['headers'] = dict(headers)
     env = {
@@ -34,7 +34,7 @@ def request(app, method, path, payload=None, token='', admin_token='', ip='10.77
     }
     if forwarded:
         env['HTTP_X_FORWARDED_FOR'] = forwarded
-    result['body'] = json.loads(b''.join(app(env, start)) or b'{}')
+    result['body'] = json.loads(b''.join(app(env, start_response)) or b'{}')
     return result
 
 
