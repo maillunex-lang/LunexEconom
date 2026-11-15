@@ -95,18 +95,23 @@ def adjust(conn,eid,product,delta,quality=50):
     conn.execute('INSERT INTO enterprise_inventory(enterprise_id,product_id,quantity,quality) VALUES(%s,%s,0,%s) ON CONFLICT DO NOTHING',(eid,product,quality))
     qty,prior=conn.execute('SELECT quantity,quality FROM enterprise_inventory WHERE enterprise_id=%s AND product_id=%s FOR UPDATE',(eid,product)).fetchone()
     result=integer(qty+delta)
-    weighted=(qty*prior+delta*quality)//result if delta>0 else prior
+    weighted=(qty*prior+delta*quality)//result if delta>0 and result>0 else (quality if delta>0 else prior)
     conn.execute('UPDATE enterprise_inventory SET quantity=%s,quality=%s WHERE enterprise_id=%s AND product_id=%s',(result,weighted,eid,product))
 
 def load_bp(items,recipe,capacity,staff_bp):
     integer(staff_bp,0,BP)
-    free=max(0,capacity-sum(v['quantity'] for v in items.values()))
+    occupied=sum(v['quantity'] for v in items.values())
+    free=max(0,capacity-occupied)
     ratio=staff_bp
     for product,volume in recipe['inputs'].items():
         ratio=min(ratio,items.get(product,{}).get('quantity',0)*BP//volume)
     total_output=sum(recipe['outputs'].values())
     if total_output:
-        ratio=min(ratio,free*BP//total_output)
+        # Inputs consumed during this tick release space before outputs arrive.
+        consumed=sum(recipe['inputs'].values())
+        required_net=max(0,total_output-consumed)
+        if required_net:
+            ratio=min(ratio,free*BP//required_net)
     return max(0,min(BP,ratio))
 
 def production(conn,eid,day,default_staffing_bp=10000):
