@@ -23,6 +23,8 @@ jobs:
       - name: Import and run client smoke
         run: |
           ./godot --headless --path client --editor --quit
-          for test in smoke release_smoke pack_smoke network_smoke; do
+          for test in smoke release_smoke network_smoke; do
             ./godot --headless --path client -s "tests/${test}.gd"
           done
+          # pack_smoke needs a generated PCK path; tools/tests/test_packs.py builds
+          # the fixture and invokes that Godot smoke with the required argument.
