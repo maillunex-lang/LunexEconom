@@ -228,7 +228,18 @@ def _buy(conn, day, row, product, quantity, kind, supplier, price,
         if seller is None:
             return 0
         seller_account = seller[0]
-        if seller_account == buyer_account:
+        if seller_account != buyer_account:
+            seller_policy = conn.execute(
+                'SELECT allow_direct_sales,allow_city_market '
+                'FROM supply_seller_policy WHERE enterprise_id=%s',
+                (supplier,)).fetchone()
+            approved = bool(seller_policy and seller_policy[
+                1 if via_market else 0])
+            if not approved:
+                # Sellers may decline both unsolicited direct links and
+                # implicit city-market liquidation of their inventories.
+                return 0
+        else:
             # No internal sales revenue is booked for the same owner.
             price = 0
     elif kind == 'port':
@@ -375,6 +386,9 @@ def market_day(conn, day, flags):
         raise ValueError('links_phase_missing')
 
     rows = {row[0]: row for row in _enterprises(conn)}
+    public_sellers = {eid for (eid,) in conn.execute(
+        'SELECT enterprise_id FROM supply_seller_policy WHERE allow_city_market'
+    ).fetchall()}
     bids, offers = defaultdict(list), defaultdict(list)
     for eid, product, missing in conn.execute(
             """SELECT enterprise_id,product_id,unfilled
@@ -383,7 +397,7 @@ def market_day(conn, day, flags):
         bids[(rows[eid][3], product)].append((eid, missing))
     for eid, owner, recipe_id, city, stage, running, _ in rows.values():
         recipe = _recipe(recipe_id)
-        if stage != 4 or not running or not recipe:
+        if stage != 4 or not running or not recipe or eid not in public_sellers:
             continue
         for product in recipe['outputs']:
             item = enterprise.stock(conn, eid).get(product)
