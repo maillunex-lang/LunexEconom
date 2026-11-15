@@ -130,7 +130,7 @@ class TestUpdater(unittest.TestCase):
     def test_stale_state_refuses_deploy(self):
         with tempfile.TemporaryDirectory() as t:
             state=Path(t); (state/'deployed-sha').write_text('a'*40)
-            with patch.object(updater,'STATE',state),patch.object(updater,'api',return_value={'sha':'b'*40}),patch.object(updater,'health_sha',return_value=False),patch.object(updater,'deploy') as deploy:
+            with patch.object(updater,'STATE',state),patch.object(updater,'api_budget_ok',return_value=True),patch.object(updater,'api',return_value={'sha':'b'*40}),patch.object(updater,'health_sha',return_value=False),patch.object(updater,'deploy') as deploy:
                 with self.assertRaisesRegex(RuntimeError,'Stale'):
                     updater.main()
                 deploy.assert_not_called()
