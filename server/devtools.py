@@ -129,6 +129,14 @@ def undo(db, ph, owner, payload, ip):
         return 200, {"request_id": request_id, "undone": action_id, "changed": result[1]["moved"]}
     if len(snapshot) > 25:
         return 409, {"error": "invalid_history"}
+    # A later operation on any affected cell makes an older undo unsafe,
+    # even when the visible kind and editor happen to match.
+    affected = set(snapshot)
+    later = db.execute("SELECT action,payload_json FROM dev_actions WHERE created>" + ph + " AND action IN ('terrain','roads') AND undone=0", (db.execute("SELECT created FROM dev_actions WHERE id=" + ph, (action_id,)).fetchone()[0],)).fetchall()
+    for later_kind, later_json in later:
+        other = json.loads(later_json)
+        if any(f"{x},{y}" in affected for x,y in other.get("cells", [])):
+            return 409, {"error": "undo_conflict_newer_action"}
     # Reject stale undo: another operator may have modified the same cells.
     # A failed undo must not erase their newer work.
     for coordinate in snapshot:
