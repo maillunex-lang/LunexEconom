@@ -7,3 +7,5 @@ Supports PackageInstaller session, user confirmation when Android requires it; F
 Unknown-apps permission is user-controlled; on Android 12+ USER_ACTION_NOT_REQUIRED is only
 honored under Android eligibility and installer-of-record conditions.
 Not verified on a physical Android device yet.
+
+Uses the Godot Android template existing FileProvider (authority applicationId.fileprovider) to avoid Android manifest merger conflicts.

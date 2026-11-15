@@ -165,7 +165,7 @@ public final class LunexInstaller extends GodotPlugin {
         } catch (Exception e) {
             Log.e(TAG, "PackageInstaller failure; trying user-confirmed FileProvider", e);
             try {
-                Uri uri = FileProvider.getUriForFile(activity, activity.getPackageName() + ".lunexupdates", apk);
+                Uri uri = FileProvider.getUriForFile(activity, activity.getPackageName() + ".fileprovider", apk);
                 Intent view = new Intent(Intent.ACTION_VIEW);
                 view.setDataAndType(uri, "application/vnd.android.package-archive");
                 view.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_ACTIVITY_NEW_TASK);

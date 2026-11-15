@@ -5,12 +5,6 @@
   <application>
     <meta-data android:name="org.godotengine.plugin.v2.LunexInstaller" android:value="org.lunex.update.LunexInstaller" />
     <receiver android:name="org.lunex.update.InstallStatusReceiver" android:exported="false" />
-    <provider
-      android:name="androidx.core.content.FileProvider"
-      android:authorities="${applicationId}.lunexupdates"
-      android:exported="false"
-      android:grantUriPermissions="true">
-      <meta-data android:name="android.support.FILE_PROVIDER_PATHS" android:resource="@xml/lunex_filepaths" />
-    </provider>
+
   </application>
 </manifest>
