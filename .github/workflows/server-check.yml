@@ -2,9 +2,7 @@ name: Server checks
 on:
   push:
     branches: [main]
-    paths: ['server/**', 'ops/**', '.github/workflows/server-check.yml', 'docs/ARCHITECTURE.md']
   pull_request:
-    paths: ['server/**', 'ops/**', '.github/workflows/server-check.yml', 'docs/ARCHITECTURE.md']
   workflow_dispatch:
 permissions:
   contents: read

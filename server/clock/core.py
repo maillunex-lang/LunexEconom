@@ -27,6 +27,8 @@ def indices(epoch, now):
 
 def apply_ticks(conn, registry, epoch, now):
     day, month = indices(epoch, now)
+    if now < epoch:
+        return
     for kind, latest in (('daily', day), ('monthly', month)):
         # Running while holding the transaction ensures receipt and side effects commit together.
         with conn.transaction():
