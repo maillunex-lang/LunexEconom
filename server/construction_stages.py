@@ -3,18 +3,30 @@ import json
 import os
 import time
 
-# 7 real days = 1 game year, 14 real hours = 1 game month.
-# Each visual stage lasts one sixth of a game month by default.
-DEFAULT_STEP_SECONDS = 14 * 3600 // 6
+import clock
+
+# Each visual stage lasts one sixth of a game month, whatever the month length is (LUNEX_MONTH_SECONDS, default 86400 = 4 hours per stage), so the
+# construction time keeps its share of the month and the economy does not depend on the month length. LUNEX_CONSTRUCTION_STEP_SECONDS overrides it.
+STAGES_PER_MONTH = 6
+
+
+def default_step_seconds():
+    return max(1, clock.configured_month_seconds() // STAGES_PER_MONTH)
+
+
+DEFAULT_STEP_SECONDS = default_step_seconds()           # kept for callers that import the constant
 
 
 def step_seconds():
-    raw = os.environ.get('LUNEX_CONSTRUCTION_STEP_SECONDS', str(DEFAULT_STEP_SECONDS))
+    default = default_step_seconds()
+    raw = os.environ.get('LUNEX_CONSTRUCTION_STEP_SECONDS')
+    if raw is None:
+        return default
     try:
         value = int(raw)
     except (TypeError, ValueError):
-        return DEFAULT_STEP_SECONDS
-    return value if 1 <= value <= 86400 else DEFAULT_STEP_SECONDS
+        return default
+    return value if 1 <= value <= 86400 else default
 
 
 def ensure(db, marker):
