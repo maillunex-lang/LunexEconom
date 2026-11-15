@@ -34,6 +34,10 @@ func _ready() -> void:
     move_button.text = "Переместить здание в выбранную клетку"
     move_button.pressed.connect(_move_building)
     column.add_child(move_button)
+    var demolish_button := Button.new()
+    demolish_button.text = "Удалить здание по ID"
+    demolish_button.pressed.connect(_demolish_building)
+    column.add_child(demolish_button)
     status = Label.new()
     status.text = "Выберите клетку на карте"
     column.add_child(status)
@@ -68,6 +72,13 @@ func _apply() -> void:
         _send("dev/roads", {"request_id": _uuid(), "operation": mode.trim_prefix("road_"), "cells": cells})
     else:
         _send("dev/terrain", {"request_id": _uuid(), "kind": mode, "cells": cells})
+
+func _demolish_building() -> void:
+    var oid := object_id_input.text.strip_edges()
+    if oid.is_empty():
+        status.text = "Укажите ID здания"
+        return
+    _send("dev/demolish", {"request_id": _uuid(), "object_id": oid})
 
 func _move_building() -> void:
     var oid := object_id_input.text.strip_edges()
