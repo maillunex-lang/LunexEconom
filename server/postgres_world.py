@@ -53,6 +53,14 @@ def build(owner,payload):
         wrong=zoning.check(db,"%s",kind,footprint)
         if wrong:
             return 409,zoning.error_body(wrong,kind)
+        # BEGIN ChatGPT12 land gate
+        import land
+        if land.enabled():
+            land.migrate_existing(db, "%s")
+            denied = land.allowed_to_build(db, "%s", owner, footprint, int(time.time()))
+            if denied:
+                return 409, denied
+        # END ChatGPT12 land gate
         x0,x1,y0,y1=road_rules.search_box(footprint)
         dynamic={(rx,ry) for rx,ry in db.execute("SELECT x,y FROM roads WHERE x BETWEEN %s AND %s AND y BETWEEN %s AND %s",(x0,x1,y0,y1)).fetchall()}
         occupied={(a_,b_) for a_,b_ in db.execute("SELECT x,y FROM cells WHERE x BETWEEN %s AND %s AND y BETWEEN %s AND %s",(x0,x1,y0,y1)).fetchall()}
