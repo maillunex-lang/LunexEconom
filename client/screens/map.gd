@@ -271,4 +271,12 @@ func _build_selected() -> void:
     var parcel: Dictionary = stream.parcel_at(selected.x, selected.y)
     if str(parcel.get("owner_kind", "")) != "player":
         return
-    build_requested.emit(parcel, Vector2i(selected.x*6, selected.y*6))
+    var cell := Vector2i(selected.x*6, selected.y*6)
+    var chunk := Vector2i(Gen.floor_div(cell.x,12), Gen.floor_div(cell.y,12))
+    var snapshot: Dictionary = stream.chunks.get(chunk, {})
+    var zones: Array = snapshot.get("zones", [])
+    if zones.size() > posmod(cell.y,12) and zones[posmod(cell.y,12)].size() > posmod(cell.x,12):
+        parcel["zone"] = str(zones[posmod(cell.y,12)][posmod(cell.x,12)])
+    parcel["px"] = selected.x
+    parcel["py"] = selected.y
+    build_requested.emit(parcel, cell)
