@@ -25,6 +25,8 @@ const server = createServer(async (req, res) => {
 });
 (async () => {
   await mkdir(output, {recursive:true});
+  const roadmap = JSON.parse(await readFile(join(webRoot, "roadmap.json"), "utf8"));
+  const expectedProgress = `${Math.round(roadmap.phases.reduce((sum, phase) => sum + phase.progress, 0) / roadmap.phases.length)}%`;
   await new Promise(resolve => server.listen(0, "127.0.0.1", resolve));
   const base = `http://127.0.0.1:${server.address().port}/lunexeconom/`;
   const browser = await chromium.launch({headless:true});
@@ -50,7 +52,7 @@ const server = createServer(async (req, res) => {
             if ((await page.locator("#apk-link").innerText()) !== "Скачать для Android") throw Error("Live APK button not enabled");
             if ((await page.locator("#apk-version").innerText()) !== manifest.version_name) throw Error("Wrong version");
           }
-          if ((await page.locator("#roadmap-progress").innerText()) !== "28%") throw Error("Roadmap wrong total");
+          if ((await page.locator("#roadmap-progress").innerText()) !== expectedProgress) throw Error(`Roadmap wrong total, expected ${expectedProgress}`);
           const overflow = await page.evaluate(() => document.documentElement.scrollWidth > innerWidth + 1);
           if (overflow) throw Error(`Horizontal overflow at ${width}`);
           if (errors.length) throw Error(`Browser errors: ${errors.join(" | ")}`);
