@@ -176,6 +176,9 @@ def seed_city(db, ph, city_id, now, population=None, max_new=None, dry_run=False
     import zoning
     level = zoning.levels(db, ph).get(city_id, 0)
     occupied, dynamic = _world_state(db, ph, city)
+    import terrain_rules
+    rad = city["radius"] + 128
+    override_map = terrain_rules.preload(db, ph, (city["x"]-rad,city["x"]+rad,city["y"]-rad,city["y"]+rad))
     cx, cy = city["x"], city["y"]
     index = have
     failures = 0
@@ -185,9 +188,9 @@ def seed_city(db, ph, city_id, now, population=None, max_new=None, dry_run=False
         for w, h in ([(w0, h0)] if w0 == h0 else [(w0, h0), (h0, w0)]):
             for x0, y0 in _candidates(city_id, w, h, level):
                 cells = [(x0 + i, y0 + j) for i in range(w) for j in range(h)]
-                if any(c in occupied or c in dynamic for c in cells):
+                if any(c in occupied or c in dynamic or terrain_rules.manual(*c, override_map) or terrain_rules.is_water(*c, override_map) for c in cells):
                     continue
-                error, path = roads.plan_access(cells, dynamic, occupied, MAX_COORD)
+                error, path = roads.plan_access(cells, dynamic, occupied, MAX_COORD, override_map)
                 if error or len(path) > MAX_ACCESS:
                     continue
                 distance = ((x0 + w / 2.0 - cx) ** 2 + (y0 + h / 2.0 - cy) ** 2) ** 0.5

@@ -68,6 +68,14 @@ def _prepare(db):
     import deposits
     deposits.ensure(db, "?")
     zoning.ensure(db, "?")
+    import terrain_edits
+    terrain_edits.ensure(db)
+    # BEGIN ChatGPT11 schema
+    import holding
+    holding.ensure(db, "?")
+    # END ChatGPT11 schema
+    import households
+    households.ensure(db, "?")
     db.commit()
 
 
@@ -106,7 +114,9 @@ def build(owner, payload):
         x0,x1,y0,y1=road_rules.search_box(footprint)
         dynamic={(rx,ry) for rx,ry in db.execute("SELECT x,y FROM roads WHERE x BETWEEN ? AND ? AND y BETWEEN ? AND ?",(x0,x1,y0,y1))}
         occupied={(cx_,cy_) for cx_,cy_ in db.execute("SELECT x,y FROM cells WHERE x BETWEEN ? AND ? AND y BETWEEN ? AND ?",(x0,x1,y0,y1))}
-        error,path=road_rules.plan_access(footprint,dynamic,occupied,MAX_COORD)
+        import terrain_rules
+        overrides=terrain_rules.preload(db, "?", (x0,x1,y0,y1))
+        error,path=road_rules.plan_access(footprint,dynamic,occupied,MAX_COORD,overrides)
         if error:
             return 409,{"error":error}
         import deposits
@@ -483,7 +493,28 @@ def research_start(owner, payload):
     return _player_command(owner, payload, research.start)
 
 
+# BEGIN banking routes
+def bank_loan(owner, payload):
+    import routes_banking
+    return _player_command(owner, payload, routes_banking.loan)
+
+
+def bank_repay(owner, payload):
+    import routes_banking
+    return _player_command(owner, payload, routes_banking.repay)
+
+
+def shares_buy(owner, payload):
+    import routes_banking
+    return _player_command(owner, payload, routes_banking.buy_shares)
+# END banking routes
+
 ECONOMY_POST={"/sell":"sell","/loan":"loan","/city/taxes":"city_taxes","/city/build":"city_build","/city/candidacy":"city_candidacy","/city/vote":"city_vote","/contracts/offer":"contracts_offer","/contracts/accept":"contracts_accept","/contracts/cancel":"contracts_cancel","/trucks/buy":"trucks_buy","/research/start":"research_start"}
+# BEGIN banking routes
+ECONOMY_POST["/bank/loan"] = "bank_loan"
+ECONOMY_POST["/bank/repay"] = "bank_repay"
+ECONOMY_POST["/shares/buy"] = "shares_buy"
+# END banking routes
 
 class Handler(BaseHTTPRequestHandler):
     def _send_geo(self, data):
@@ -585,6 +616,14 @@ class Handler(BaseHTTPRequestHandler):
         return True
     def do_GET(self):
         url=urlsplit(self.path)
+        # BEGIN ChatGPT11 routes
+        if url.path in ('/hq','/enterprise','/finance/overview'):
+            import routes_hq
+            owner=self._identity()
+            if not owner:return self._send(401,{'error':'unauthorized'})
+            with NPC_CONNECT() as db:
+                return self._send(*routes_hq.get(db,NPC_PH,owner,url.path,parse_qs(url.query,keep_blank_values=True)))
+        # END ChatGPT11 routes
         if url.path == "/terrain/chunk":
             import devtools
             try:
@@ -665,6 +704,29 @@ class Handler(BaseHTTPRequestHandler):
                 with connect() as db:
                     payload = deposits.query(db, "?", *box)
             return self._send_cached(payload, 300)
+        # BEGIN population routes
+        if url.path in ("/population", "/housing"):
+            import routes_population
+            query = parse_qs(url.query)
+            if os.environ.get("LUNEX_DB_ENGINE") == "postgres":
+                import postgres_db
+                with postgres_db.connect() as db:
+                    return self._send(*routes_population.handle_get(db, "%s", url.path, query))
+            with connect() as db:
+                return self._send(*routes_population.handle_get(db, "?", url.path, query))
+        # END population routes
+        # BEGIN banking routes
+        if url.path in ("/bank/offers", "/bank/loans", "/inflation"):
+            import routes_banking
+            query = parse_qs(url.query)
+            owner = self._identity()
+            if os.environ.get("LUNEX_DB_ENGINE") == "postgres":
+                import postgres_db
+                with postgres_db.connect() as db:
+                    return self._send(*routes_banking.handle_get(db, "%s", url.path, query, owner))
+            with connect() as db:
+                return self._send(*routes_banking.handle_get(db, "?", url.path, query, owner))
+        # END banking routes
         if url.path=="/health":return self._send(200,health_details())
         if url.path in ("/leaderboard", "/feed"):
             owner = self._identity()
@@ -697,6 +759,22 @@ class Handler(BaseHTTPRequestHandler):
             return self._send(*result)
         return self._send(404,{"error":"not_found"})
     def do_POST(self):
+        # BEGIN ChatGPT11 routes
+        if urlsplit(self.path).path == '/enterprise/settings':
+            import routes_hq
+            owner=self._identity()
+            if not owner:return self._send(401,{'error':'unauthorized'})
+            try:
+                size=int(self.headers.get('Content-Length','0'))
+                if size<2 or size>4096:return self._send(400,{'error':'invalid_body'})
+                payload=json.loads(self.rfile.read(size))
+            except (ValueError,UnicodeError,json.JSONDecodeError):
+                return self._send(400,{'error':'invalid_body'})
+            with LOCK, NPC_CONNECT() as db:
+                if NPC_PH=='%s':db.execute('SELECT pg_advisory_xact_lock(20261114)')
+                else:db.execute('BEGIN IMMEDIATE')
+                return self._send(*routes_hq.post(db,NPC_PH,owner,'/enterprise/settings',payload,int(time.time())))
+        # END ChatGPT11 routes
         if urlsplit(self.path).path.startswith("/dev/"):
             import devtools
             path = urlsplit(self.path).path

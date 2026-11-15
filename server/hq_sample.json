@@ -1,0 +1,62 @@
+{
+  "version": 1,
+  "server_time": 1800000000,
+  "clock": {
+    "month_index": 0,
+    "year": 2027,
+    "month": 1,
+    "day": 1,
+    "seconds_to_next_month": 86400
+  },
+  "company": {
+    "owner": "demo",
+    "name": "demo",
+    "rating": null,
+    "founded_month": 0
+  },
+  "money": {
+    "cash": 0,
+    "income_month": 0,
+    "expenses_month": 0,
+    "profit_month": 0,
+    "forecast_next_month": null
+  },
+  "enterprises": [],
+  "projects": [],
+  "finance": {
+    "loans": [],
+    "arrears": 0,
+    "taxes_due": 0,
+    "next_payments": [],
+    "credit_available": 0
+  },
+  "city": {
+    "id": "ufa",
+    "name": "Уфа",
+    "population": 0,
+    "rating": null,
+    "budget": 0,
+    "mayor": ""
+  },
+  "market": [],
+  "contracts": {
+    "active": 0,
+    "open": 0
+  },
+  "exchange": {
+    "open_orders": 0
+  },
+  "alerts": [],
+  "dev": false,
+  "inventory": {},
+  "consolidated": {
+    "assets": 0,
+    "debts": {
+      "loans": 0,
+      "arrears": 0,
+      "taxes": 0
+    },
+    "subsidiaries": 0
+  },
+  "profit_allocation": "estimated_by_reference_cost"
+}

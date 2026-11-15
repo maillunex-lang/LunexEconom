@@ -56,7 +56,9 @@ def build(owner,payload):
         x0,x1,y0,y1=road_rules.search_box(footprint)
         dynamic={(rx,ry) for rx,ry in db.execute("SELECT x,y FROM roads WHERE x BETWEEN %s AND %s AND y BETWEEN %s AND %s",(x0,x1,y0,y1)).fetchall()}
         occupied={(a_,b_) for a_,b_ in db.execute("SELECT x,y FROM cells WHERE x BETWEEN %s AND %s AND y BETWEEN %s AND %s",(x0,x1,y0,y1)).fetchall()}
-        error,path=road_rules.plan_access(footprint,dynamic,occupied,MAX_COORD)
+        import terrain_rules
+        overrides=terrain_rules.preload(db, "%s", (x0,x1,y0,y1))
+        error,path=road_rules.plan_access(footprint,dynamic,occupied,MAX_COORD,overrides)
         if error:return 409,{"error":error}
         deposits.ensure(db, "%s")
         decision = deposits.gate(db, "%s", kind, footprint)

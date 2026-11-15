@@ -21,6 +21,8 @@ var cash_label: Label
 var gain_label: Label
 var rating_label: Label
 var status_label: Label
+var retry_button: Button
+var top_scroll: ScrollContainer
 var content: VBoxContainer
 var notifications: VBoxContainer
 var nav_buttons: Dictionary = {}
@@ -106,7 +108,7 @@ func refresh() -> void:
     if not visible_to_user or waiting:
         return
     if not sample_mode and not GameSession.is_authenticated():
-        status_label.text = "Требуется вход в аккаунт"
+        _network_error("Войдите в аккаунт, чтобы загрузить штаб-квартиру.")
         return
     var now := Time.get_ticks_msec()
     if count_requests > 0 and now - last_refresh_msec < 15000:
@@ -120,20 +122,20 @@ func refresh() -> void:
     var err := request.request(API.ROOT + "hq", API.authorize())
     if err != OK:
         waiting = false
-        status_label.text = "Сервер штаба недоступен (%d)" % err
+        _network_error("Не удалось подключиться к серверу (%d)." % err)
 
 func _on_hq_response(result: int, code: int, _headers: PackedStringArray, body: PackedByteArray) -> void:
     waiting = false
     if not visible_to_user:
         return
     if result != HTTPRequest.RESULT_SUCCESS or code != 200:
-        status_label.text = "Нет данных /hq (HTTP %d). Проверьте подключение" % code
+        _network_error("Сессия истекла. Войдите снова." if code == 401 else "Не удалось загрузить данные (HTTP %d). Проверьте сеть." % code)
         return
     var response = JSON.parse_string(body.get_string_from_utf8())
     if response is Dictionary:
         apply_hq(response)
     else:
-        status_label.text = "Сервер вернул неверный формат /hq"
+        _network_error("Сервер вернул некорректные данные.")
 
 func apply_hq(response: Dictionary) -> void:
     data = response
@@ -149,8 +151,9 @@ func apply_hq(response: Dictionary) -> void:
     meta_label.text = "%02d.%04d · до нового месяца %d ч %02d мин" % [int(clock.get("month", 1)), int(clock.get("year", 2027)), sec / 3600, (sec % 3600) / 60]
     cash_label.text = _money(int(money.get("cash", 0)))
     gain_label.text = "%+d ₽ / мес" % int(money.get("profit_month", 0))
-    rating_label.text = "★ %d" % int(company.get("rating", 0))
-    status_label.text = "Данные: образец" if sample_mode else "Данные сервера"
+    rating_label.text = "★ —" if company.get("rating") == null else "★ %d" % int(company.get("rating", 0))
+    status_label.text = "Демо-данные" if sample_mode else "Данные сервера"
+    retry_button.visible = false
     _render_section()
     _render_alerts()
 
@@ -191,7 +194,10 @@ func _label(parent: Node, value: String, size: int = 17, color: Color = INK) -> 
     label.text = value
     label.add_theme_color_override("font_color", color)
     label.add_theme_font_size_override("font_size", size)
-    label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+    label.autowrap_mode = TextServer.AUTOWRAP_OFF
+    label.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+    label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+    label.custom_minimum_size.x = 64
     parent.add_child(label)
     return label
 
@@ -230,40 +236,43 @@ func _build_ui() -> void:
     var main := VBoxContainer.new()
     main.add_theme_constant_override("separation", 10)
     root_margin.add_child(main)
-    var top_scroll := ScrollContainer.new()
+    top_scroll = ScrollContainer.new()
     top_scroll.name = "HeaderScroll"
     top_scroll.follow_focus = false
     top_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_AUTO
     top_scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
     top_scroll.scroll_deadzone = 0
     main.add_child(top_scroll)
-    top_scroll.custom_minimum_size.y = 80
+    top_scroll.custom_minimum_size.y = 74
     top_scroll.clip_contents = true
     top_scroll.size_flags_stretch_ratio = 0.0
     top_scroll.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
     top_scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
     var top_panel := _panel(top_scroll)
     top_panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-    top_panel.custom_minimum_size.y = 80
+    top_panel.custom_minimum_size.y = 74
     header = HBoxContainer.new()
     header.size_flags_horizontal = Control.SIZE_EXPAND_FILL
     header.alignment = BoxContainer.ALIGNMENT_BEGIN
     header.add_theme_constant_override("separation", 13)
     top_panel.add_child(header)
-    header.custom_minimum_size.y = 55
+    header.custom_minimum_size.y = 48
     var identity := VBoxContainer.new()
     identity.size_flags_horizontal = Control.SIZE_EXPAND_FILL
     identity.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
     header.add_child(identity)
-    title_label = _label(identity, "МОЯ КОМПАНИЯ", 23, GREEN)
-    meta_label = _label(identity, "Подключение...", 13, MUTED)
+    title_label = _label(identity, "МОЯ КОМПАНИЯ", 19, GREEN)
+    title_label.custom_minimum_size.x = 160
+    meta_label = _label(identity, "Подключение...", 14, MUTED)
     var cash_box := VBoxContainer.new()
-    cash_box.custom_minimum_size.x = 130
+    cash_box.custom_minimum_size.x = 170
     header.add_child(cash_box)
     cash_box.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
-    cash_label = _label(cash_box, "— ₽", 23)
-    gain_label = _label(cash_box, "— ₽ / мес", 13, GREEN)
-    rating_label = _label(header, "★ —", 20)
+    cash_label = _label(cash_box, "— ₽", 19)
+    gain_label = _label(cash_box, "— ₽ / мес", 14, GREEN)
+    rating_label = _label(header, "★ —", 18)
+    rating_label.custom_minimum_size.x = 75
+    rating_label.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
     top_buttons = HBoxContainer.new()
     header.add_child(top_buttons)
     top_buttons.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
@@ -306,7 +315,11 @@ func _build_ui() -> void:
     notifications.name = "Alerts"
     notifications.add_theme_constant_override("separation", 9)
     right_panel.add_child(notifications)
-    status_label = _label(main, "Ожидаем данные...", 12, MUTED)
+    var status_row := HBoxContainer.new()
+    main.add_child(status_row)
+    status_label = _label(status_row, "Ожидаем данные...", 14, MUTED)
+    retry_button = _button(status_row, "Повторить", _retry, 110)
+    retry_button.visible = false
     open_section("Обзор")
     _render_alerts()
 
@@ -332,13 +345,15 @@ func _layout() -> void:
         root_margin.add_theme_constant_override("margin_bottom", 4)
         root_margin.add_theme_constant_override("margin_left", 8)
         root_margin.add_theme_constant_override("margin_right", 8)
-    left_nav.custom_minimum_size.x = 155 if small else 215
-    right_scroll.custom_minimum_size.x = 0 if small else 240
+    left_nav.custom_minimum_size.x = 108 if small else 174
+    right_scroll.custom_minimum_size.x = 0 if small else 205
     right_scroll.visible = not small
     for b in nav_buttons.values():
-        (b as Button).custom_minimum_size.x = 145 if small else 205
-    title_label.add_theme_font_size_override("font_size", 17 if small else 23)
-    cash_label.add_theme_font_size_override("font_size", 18 if small else 23)
+        (b as Button).custom_minimum_size.x = 100 if small else 164
+    title_label.add_theme_font_size_override("font_size", 16 if small else 19)
+    cash_label.add_theme_font_size_override("font_size", 16 if small else 19)
+    top_scroll.custom_minimum_size.y = minf(74.0, view.y * 0.115)
+    _button_text_scale(small)
     _render_alerts()
 
 func _clear(node: Node) -> void:
@@ -406,33 +421,100 @@ func _render_section() -> void:
     elif current_section == "Финансы":
         _load_endpoint("wallet")
 
+func _button_text_scale(small: bool) -> void:
+    for button in nav_buttons.values():
+        (button as Button).add_theme_font_size_override("font_size", 14 if small else 16)
+
+func _retry() -> void:
+    # A retry is queued for the next allowed 15-second slot; never bypass the rate limit.
+    if Time.get_ticks_msec() - last_refresh_msec >= 15000:
+        refresh()
+    else:
+        status_label.text = "Повтор через несколько секунд…"
+
+func _network_error(message: String) -> void:
+    status_label.text = message
+    retry_button.visible = true
+
 func _overview() -> void:
+    # The first row is the dashboard. Both columns stay in the first viewport.
     var money := _dict(data, "money")
-    var financial := _card("ДЕНЕЖНЫЙ ПОТОК", "Доход: %s  ·  Расход: %s" % [_money(int(money.get("income_month", 0))), _money(int(money.get("expenses_month", 0)))])
-    var row := HBoxContainer.new()
-    financial.add_child(row)
-    _label(row, "Прибыль: " + _money(int(money.get("profit_month", 0))), 20, GREEN)
-    row.add_spacer(false)
-    _label(row, "Прогноз: " + _money(int(money.get("forecast_next_month", 0))), 16)
+    var f := _dict(data, "finance")
+    var first := HBoxContainer.new()
+    first.name = "OverviewDashboard"
+    first.add_theme_constant_override("separation", 8)
+    content.add_child(first)
+    var left := _panel(first)
+    left.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+    left.size_flags_stretch_ratio = 1.0
+    var left_box := VBoxContainer.new()
+    left_box.add_theme_constant_override("separation", 3)
+    left.add_child(left_box)
+    _label(left_box, "ДЕНЕЖНЫЙ ПОТОК", 16, GREEN)
+    _label(left_box, "Прибыль: %s" % _money(int(money.get("profit_month", 0))), 16, GREEN)
+    var forecast = money.get("forecast_next_month")
+    _label(left_box, "Прогноз: —" if forecast == null else "Прогноз: %s" % _money(int(forecast)), 14, MUTED)
     var chart = load("res://hq/hq_chart.gd").new()
     chart.name = "FinancialChart"
-    chart.custom_minimum_size = Vector2(0, 100)
-    financial.add_child(chart)
+    chart.custom_minimum_size = Vector2(150, 65)
+    chart.size_flags_vertical = Control.SIZE_EXPAND_FILL
+    left_box.add_child(chart)
     chart.set_history(_arr(data, "history"))
-    _enterprises()
+    var payments := VBoxContainer.new()
+    payments.name = "OverviewPayments"
+    left_box.add_child(payments)
+    _label(payments, "БЛИЖАЙШИЕ ПЛАТЕЖИ", 14, GREEN)
+    var next := _arr(f, "next_payments")
+    if next.is_empty():
+        _label(payments, "Платежей нет", 14, MUTED)
+    else:
+        var entry = next[0]
+        if entry is Dictionary:
+            _label(payments, "%s · %s" % [str(entry.get("kind", "Платёж")), _money(int(entry.get("amount", 0)))], 14)
+    # Alerts remain visible even on narrow phones where the right sidebar is hidden.
+    if get_viewport_rect().size.x < 1020:
+        var alerts := _arr(data, "alerts")
+        _label(payments, "ОПОВЕЩЕНИЯ", 14, GREEN)
+        _label(payments, "Нет оповещений" if alerts.is_empty() else str(alerts[0].get("text", "Событие")) if alerts[0] is Dictionary else "Событие", 14, MUTED)
+    var right := _panel(first)
+    right.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+    right.size_flags_stretch_ratio = 1.15
+    var preview := VBoxContainer.new()
+    preview.name = "OverviewEnterprises"
+    preview.add_theme_constant_override("separation", 4)
+    right.add_child(preview)
+    var enterprises := _arr(data, "enterprises")
+    _label(preview, "ПРЕДПРИЯТИЯ · %d" % enterprises.size(), 16, GREEN)
+    if enterprises.is_empty():
+        _label(preview, "Нет предприятий", 14, MUTED)
+    for i in mini(5, enterprises.size()):
+        var item = enterprises[i]
+        if not item is Dictionary:
+            continue
+        var row := HBoxContainer.new()
+        row.add_theme_constant_override("separation", 5)
+        preview.add_child(row)
+        var name := _label(row, str(item.get("name", "Предприятие")), 14)
+        name.size_flags_stretch_ratio = 1.0
+        var state := str(item.get("status", "—"))
+        var state_label := _label(row, "● " + state, 14, GREEN)
+        state_label.custom_minimum_size.x = 70
+        state_label.size_flags_horizontal = Control.SIZE_SHRINK_END
+        var profit := _label(row, _money(int(item.get("profit_month", 0))), 14)
+        profit.custom_minimum_size.x = 85
+        profit.size_flags_horizontal = Control.SIZE_SHRINK_END
+    _button(preview, "Все предприятия", func(): open_section("Предприятия"), 160)
     _projects()
-    var f := _dict(data, "finance")
-    var box := _card("ФИНАНСЫ", "Налоги к уплате: %s  ·  Просрочки: %s" % [_money(int(f.get("taxes_due", 0))), _money(int(f.get("arrears", 0)))])
-    _button(box, "Финансовый кабинет", func(): open_section("Финансы"), 210)
+    var box := _card("ФИНАНСЫ", "Налоги: %s · Просрочки: %s" % [_money(int(f.get("taxes_due", 0))), _money(int(f.get("arrears", 0)))])
+    _button(box, "Финансовый кабинет", func(): open_section("Финансы"), 190)
     var city := _dict(data, "city")
-    box = _card("ГОРОД", "%s · Население: %d · Рейтинг: %d" % [str(city.get("name", "—")), int(city.get("population", 0)), int(city.get("rating", 0))])
-    _button(box, "Открыть город", func(): open_section("Город"), 210)
+    box = _card("ГОРОД", "%s · Население: %d" % [str(city.get("name", "—")), int(city.get("population", 0))])
+    _button(box, "Открыть город", func(): open_section("Город"), 170)
     var contracts := _dict(data, "contracts")
-    box = _card("КОНТРАКТЫ И БИРЖА", "Активных: %d · Доступных: %d · Заявок: %d" % [int(contracts.get("active", 0)), int(contracts.get("open", 0)), int(_dict(data, "exchange").get("open_orders", 0))])
-    _button(box, "Контракты", func(): open_section("Контракты"), 180)
-    var quotes := _arr(data, "market")
-    box = _card("РЫНОК", "Товаров в сводке: %d" % quotes.size())
-    _button(box, "Биржа и цены", func(): open_section("Рынок и биржа"), 180)
+    box = _card("КОНТРАКТЫ И БИРЖА", "Активных: %d · Доступных: %d" % [int(contracts.get("active", 0)), int(contracts.get("open", 0))])
+    _button(box, "Контракты", func(): open_section("Контракты"), 170)
+    box = _card("РЫНОК", "Товаров в сводке: %d" % _arr(data, "market").size())
+    _button(box, "Биржа и цены", func(): open_section("Рынок и биржа"), 170)
 
 func _enterprises() -> void:
     var enterprises := _arr(data, "enterprises")
