@@ -67,6 +67,21 @@ class TestUpdater(unittest.TestCase):
         with patch.object(updater,'fetch',return_value=b'not json'):
             self.assertFalse(updater.api_budget_ok())
 
+    def test_github_token_only_sent_to_api_and_never_logged(self):
+        with tempfile.TemporaryDirectory() as temp:
+            token_file=Path(temp)/'github-token'
+            token_file.write_text('github_pat_'+'a'*40+'\n')
+            with patch.object(updater,'TOKEN_FILE',token_file):
+                api_headers=updater.request_headers('https://api.github.com/repos/x/y/commits/main')
+                raw_headers=updater.request_headers('https://raw.githubusercontent.com/x/y/z/file')
+                self.assertEqual(api_headers['Authorization'],'Bearer github_pat_'+'a'*40)
+                self.assertNotIn('Authorization',raw_headers)
+            token_file.write_text('bad token with spaces\n')
+            with patch.object(updater,'TOKEN_FILE',token_file):
+                self.assertNotIn('Authorization',updater.request_headers('https://api.github.com/rate_limit'))
+            with patch.object(updater,'TOKEN_FILE',Path(temp)/'missing'):
+                self.assertNotIn('Authorization',updater.request_headers('https://api.github.com/rate_limit'))
+
     def test_atomic_sha_preserves_secrets_order_permissions(self):
         with tempfile.TemporaryDirectory() as t:
             env=Path(t)/'v2.env'

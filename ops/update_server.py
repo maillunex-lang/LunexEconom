@@ -21,6 +21,7 @@ OWNER = os.getenv('LUNEX_SERVER_USER','gamedev')
 WORKFLOW = 'server-check.yml'
 ENV_FILE = Path(os.getenv('LUNEX_ENV_FILE', '/etc/lunexeconom-v2/v2.env'))
 VENV = Path(os.getenv('LUNEX_VENV', '/opt/lunexeconom-v2/venv'))
+TOKEN_FILE = Path(os.getenv('LUNEX_GITHUB_TOKEN_FILE', '/etc/lunexeconom-v2/github-token'))
 UA = {'User-Agent':'LunexEconom-V2-Updater/1', 'Accept':'application/vnd.github+json'}
 MAX_FILE = 2_000_000
 KEEP_BACKUPS = 5
@@ -42,8 +43,25 @@ def files_from_tree(tree):
     return names
 
 
+def github_token():
+    """Optional read-only GitHub token (raises the API limit from 60 to 5000 per hour). Never logged, never sent elsewhere."""
+    try:
+        value = TOKEN_FILE.read_text(encoding='ascii').strip()
+    except (OSError, UnicodeError):
+        return None
+    return value if re.fullmatch(r'[A-Za-z0-9_\-]{20,255}', value) else None
+
+
+def request_headers(url):
+    headers = dict(UA)
+    if url.startswith('https://api.github.com/'):
+        token = github_token()
+        if token: headers['Authorization'] = 'Bearer ' + token
+    return headers
+
+
 def fetch(url, limit=MAX_FILE):
-    with urllib.request.urlopen(urllib.request.Request(url, headers=UA), timeout=20) as response:
+    with urllib.request.urlopen(urllib.request.Request(url, headers=request_headers(url)), timeout=20) as response:
         raw = response.read(limit+1)
     if len(raw)>limit: raise ValueError('Response too large')
     return raw
