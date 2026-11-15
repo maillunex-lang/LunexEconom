@@ -10,7 +10,7 @@ def health(body, ctx):
 
 def register(body, ctx):
     username, password = body.get('username'), body.get('password')
-    if not isinstance(username, str) or not 3 <= len(username) <= 40 or not username.replace('_', '').isalnum():
+    if not isinstance(username, str) or not 3 <= len(username) <= 40 or not username.replace('_', '').isascii() or not username.replace('_', '').isalnum():
         return 400, {'error': 'invalid_username'}
     try:
         hashed = hash_password(password)
