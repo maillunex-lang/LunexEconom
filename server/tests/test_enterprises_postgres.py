@@ -85,6 +85,63 @@ class EnterpriseDatabaseTests(unittest.TestCase):
             conn.rollback()
             conn.close()
 
+    def test_monthly_arrears_isolated_repaid_and_idempotent(self):
+        conn=db.connect(DSN)
+        try:
+            ids=[]
+            wallets=[]
+            treasury=account(conn,'system:treasury')
+            seed=uuid4().hex
+            # Create two independent players and enterprises without depending
+            # on generated world placement. Roll back the entire fixture.
+            for i in range(2):
+                username='arrears'+seed[:10]+str(i)
+                owner=conn.execute("""INSERT INTO accounts(username,email,password_hash,role)
+                  VALUES(%s,%s,'test-hash','player') RETURNING id""",
+                  (username,username+'@example.test')).fetchone()[0]
+                wallet=account(conn,'player:'+username,'player',owner)
+                wallets.append(wallet)
+                capital=transfer(conn,'arrears:fixture:'+seed+str(i),treasury,wallet,10000 if i else 1)
+                if i==0:
+                    transfer(conn,'arrears:empty:'+seed,wallet,treasury,1)
+                px=1000000+owner
+                py=1000000+owner
+                conn.execute("""INSERT INTO world_parcels(px,py,city_id,owner_kind,owner_ref,paid_amount)
+                  VALUES(%s,%s,NULL,'player',%s,0)""",(px,py,str(owner)))
+                eid=conn.execute("""INSERT INTO enterprises
+                  (owner_id,building_id,px,py,x,y,width,height,name,build_cost,
+                   build_days,upkeep_month,jobs,storage_capacity,started_day,stage,
+                   recipe_id,build_request_id,build_transfer_id)
+                  VALUES(%s,'field',%s,%s,%s,%s,1,1,'Arrears test',1,
+                         1,100,2,4000,0,4,'field_grain',%s,%s) RETURNING id""",
+                  (owner,px,py,px*6,py*6,'arrears:build:'+seed+str(i),capital)).fetchone()[0]
+                ids.append(eid)
+            broke,solvent=ids
+            enterprises.close_month(conn,1)
+            self.assertEqual(conn.execute('SELECT balance FROM ledger_accounts WHERE id=%s',(wallets[0],)).fetchone()[0],0)
+            self.assertEqual(conn.execute('SELECT balance FROM ledger_accounts WHERE id=%s',(wallets[1],)).fetchone()[0],9700)
+            self.assertEqual(conn.execute('SELECT amount,consecutive_months FROM enterprise_arrears WHERE enterprise_id=%s AND paid_at IS NULL',(broke,)).fetchone(),(300,1))
+            self.assertEqual(conn.execute('SELECT count(*) FROM enterprise_month_reports WHERE month_index=1 AND enterprise_id=ANY(%s)',(ids,)).fetchone()[0],2)
+            enterprises.production(conn,broke,31)
+            self.assertEqual(enterprises.stock(conn,broke),{})
+            self.assertEqual(conn.execute('SELECT load_bp FROM enterprises WHERE id=%s',(broke,)).fetchone()[0],0)
+            enterprises.close_month(conn,2)
+            self.assertEqual(conn.execute('SELECT amount,consecutive_months FROM enterprise_arrears WHERE enterprise_id=%s AND month_index=2',(broke,)).fetchone(),(300,2))
+            transfer(conn,'arrears:refill:'+seed,treasury,wallets[0],1000)
+            enterprises.close_month(conn,3)
+            self.assertEqual(conn.execute('SELECT count(*) FROM enterprise_arrears WHERE enterprise_id=%s AND paid_at IS NULL',(broke,)).fetchone()[0],0)
+            self.assertEqual(conn.execute('SELECT balance FROM ledger_accounts WHERE id=%s',(wallets[0],)).fetchone()[0],100)
+            self.assertEqual(conn.execute('SELECT count(*) FROM ledger_transfers WHERE request_id=%s',(f'enterprise:upkeep:{broke}:3',)).fetchone()[0],1)
+            enterprises.production(conn,broke,91)
+            self.assertEqual(enterprises.stock(conn,broke)['grain']['quantity'],100)
+            enterprises.close_month(conn,3)
+            self.assertEqual(conn.execute('SELECT balance FROM ledger_accounts WHERE id=%s',(wallets[0],)).fetchone()[0],100)
+            self.assertEqual(conn.execute('SELECT count(*) FROM ledger_transfers WHERE request_id=%s',(f'enterprise:upkeep:{broke}:3',)).fetchone()[0],1)
+            self.assertTrue(reconcile(conn)['ok'])
+        finally:
+            conn.rollback()
+            conn.close()
+
     def test_integer_load_boundaries(self):
         recipe=enterprises.catalog().index['recipes']['mill_flour']
         self.assertEqual(enterprises.load_bp({'grain':{'quantity':50,'quality':50}},recipe,4000,10000),5000)
