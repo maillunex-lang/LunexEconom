@@ -1,5 +1,6 @@
 """Authenticated administration API with emergency loopback access."""
 import hmac, json, os, time
+from decimal import Decimal
 from datetime import datetime, timezone
 from . import settings
 from .api import STARTED, _ip
@@ -17,6 +18,17 @@ ALL = {'owner'}
 def _query(ctx, key, default=None):
     values = ctx.get('query',{}).get(key)
     return values[0] if values else default
+
+
+def _json_value(value):
+    """Convert PostgreSQL numeric values before JSON encoding or audit storage."""
+    if isinstance(value, Decimal):
+        return int(value)
+    if isinstance(value, dict):
+        return {key: _json_value(item) for key, item in value.items()}
+    if isinstance(value, (list, tuple)):
+        return [_json_value(item) for item in value]
+    return value
 
 
 def authorized(ctx):
@@ -58,7 +70,9 @@ def _need(ctx, roles):
 
 
 def _audit(ctx, actor, action, payload=None, target=None, old=None, new=None):
-    payload = payload or {}
+    payload = _json_value(payload or {})
+    old = _json_value(old)
+    new = _json_value(new)
     ctx['conn'].execute('''INSERT INTO audit(actor,actor_role,target_account_id,action,payload,ip,old_value,new_value)
         VALUES(%s,%s,%s,%s,%s,%s,%s,%s)''', (actor['username'],actor['role'],target,action,Jsonb(payload),_ip(ctx),Jsonb(old) if old is not None else None,Jsonb(new) if new is not None else None))
 
@@ -118,8 +132,8 @@ def overview(body,ctx):
     peak=conn.execute("SELECT COALESCE(max(peak),0) FROM presence_daily_peak WHERE day=(now() AT TIME ZONE 'Asia/Yekaterinburg')::date").fetchone()[0]
     enterprises=conn.execute("SELECT count(*) FROM enterprises WHERE sold_at IS NULL").fetchone()[0] if _table(conn,'enterprises') else 0
     parcels=conn.execute("SELECT count(*) FROM world_parcels WHERE owner_kind='player'").fetchone()[0] if _table(conn,'world_parcels') else 0
-    system_balance=conn.execute("SELECT COALESCE(sum(balance),0) FROM ledger_accounts WHERE kind='system'").fetchone()[0]
-    return 200,{'version':os.getenv('LUNEX_VERSION','v2.1.0-dev'),'sha':os.getenv('LUNEX_SHA','unknown'),'uptime_seconds':int(time.monotonic()-STARTED),'database':'ok' if health else 'down','pool':ctx['pool'].get_stats() if ctx.get('pool') else {},'last_tick':{'day':last[0],'duration_ms':last[1],'error':last[2],'at':last[3].isoformat() if last[3] else None} if last else None,'online':online,'peak_24h':peak,'players':people,'registrations_24h':registrations,'enterprises':enterprises,'owned_parcels':parcels,'system_balance':system_balance,'reconcile':reconcile(conn),'errors_24h':conn.execute("SELECT count(*) FROM game_ticks WHERE error IS NOT NULL AND started_at>=now()-interval '1 day'").fetchone()[0]}
+    system_balance=int(conn.execute("SELECT COALESCE(sum(balance),0) FROM ledger_accounts WHERE kind='system'").fetchone()[0])
+    return 200,{'version':os.getenv('LUNEX_VERSION','v2.1.0-dev'),'sha':os.getenv('LUNEX_SHA','unknown'),'uptime_seconds':int(time.monotonic()-STARTED),'database':'ok' if health else 'down','pool':ctx['pool'].get_stats() if ctx.get('pool') else {},'last_tick':{'day':last[0],'duration_ms':last[1],'error':last[2],'at':last[3].isoformat() if last[3] else None} if last else None,'online':online,'peak_24h':peak,'players':people,'registrations_24h':registrations,'enterprises':enterprises,'owned_parcels':parcels,'system_balance':system_balance,'reconcile':_json_value(reconcile(conn)),'errors_24h':conn.execute("SELECT count(*) FROM game_ticks WHERE error IS NOT NULL AND started_at>=now()-interval '1 day'").fetchone()[0]}
 
 
 def _table(conn,name): return conn.execute('SELECT to_regclass(%s)',(name,)).fetchone()[0] is not None
@@ -194,7 +208,7 @@ def player_detail(body,ctx):
     enterprises=[]
     if _table(ctx['conn'],'enterprises'): enterprises=[{'id':x[0],'name':x[1],'city_id':x[2],'running':x[3]} for x in ctx['conn'].execute('SELECT id,name,city_id,running FROM enterprises WHERE owner_id=%s AND sold_at IS NULL',(pid,)).fetchall()]
     parcels=ctx['conn'].execute("SELECT px,py,city_id FROM world_parcels WHERE owner_kind='player' AND owner_ref=%s",(str(pid),)).fetchall() if _table(ctx['conn'],'world_parcels') else []
-    return 200,{'id':row[0],'username':row[1],'email':row[2],'role':row[3],'blocked':row[4],'registered_at':row[5].isoformat(),'wallet':wallet[0] if wallet else 0,'enterprises':enterprises,'parcels':[{'px':x[0],'py':x[1],'city_id':x[2]} for x in parcels]}
+    return 200,{'id':row[0],'username':row[1],'email':row[2],'role':row[3],'blocked':row[4],'registered_at':row[5].isoformat(),'wallet':int(wallet[0]) if wallet else 0,'enterprises':enterprises,'parcels':[{'px':x[0],'py':x[1],'city_id':x[2]} for x in parcels]}
 
 
 def block_player(body,ctx):
@@ -240,7 +254,7 @@ def compensate(body,ctx):
     try: tx=ledger_transfer(ctx['conn'],request_id,treasury,wallet,amount) if amount>0 else ledger_transfer(ctx['conn'],request_id,wallet,treasury,-amount)
     except ValueError as exc:return 400,{'error':str(exc)}
     after=ctx['conn'].execute('SELECT balance FROM ledger_accounts WHERE id=%s',(wallet,)).fetchone()[0]
-    _audit(ctx,actor,'player.compensate',{'request_id':request_id,'amount':amount,'reason':reason,'ticket':ticket},target=pid,old={'wallet':before},new={'wallet':after})
+    _audit(ctx,actor,'player.compensate',{'request_id':request_id,'amount':amount,'reason':reason,'ticket':ticket},target=pid,old={'wallet':int(before)},new={'wallet':int(after)})
     return 200,{'ok':True,'transfer_id':tx}
 
 
