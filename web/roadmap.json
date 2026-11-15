@@ -119,7 +119,7 @@
       "milestone": "m1",
       "title": "Поставки и рынок",
       "status": "wip",
-      "progress": 60,
+      "progress": 70,
       "items": [
         {
           "title": "До трёх поставщиков на каждый вход",
@@ -143,20 +143,24 @@
       "id": "retail",
       "milestone": "m1",
       "title": "Розница",
-      "status": "planned",
-      "progress": 0,
+      "status": "wip",
+      "progress": 60,
       "items": [
         {
-          "title": "Магазины с ячейками прилавка",
-          "status": "planned"
+          "title": "Магазины с ячейками прилавка (сервер)",
+          "status": "done"
         },
         {
           "title": "Рейтинг товара: качество, цена, бренд",
-          "status": "planned"
+          "status": "done"
         },
         {
-          "title": "Первая цепочка: поле, мельница, пекарня, магазин",
-          "status": "planned"
+          "title": "Первая цепочка: поле, мельница, пекарня, магазин (сервер)",
+          "status": "done"
+        },
+        {
+          "title": "Экран магазина в игре",
+          "status": "wip"
         }
       ]
     },
