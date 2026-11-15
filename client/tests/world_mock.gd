@@ -9,6 +9,16 @@ var bought: Dictionary = {}
 var versions: Dictionary = {}
 var growth_events: Array = []
 var cities: Array = []
+var road_cells: Dictionary = {}
+var road_posts: Array = []
+var built: Dictionary = {}
+var build_requests: Dictionary = {}
+var cash := 99999999
+const BUILDING_CATALOG := [
+    {"id":"field","name":"Поле","description":"Выращивание зерна","category":"farm","zones":["free","industrial"],"size":{"width":2,"height":2},"build_cost":150000,"build_days":1},
+    {"id":"mill","name":"Мельница","description":"Помол зерна","category":"factory","zones":["industrial"],"size":{"width":2,"height":2},"build_cost":250000,"build_days":1},
+    {"id":"bakery","name":"Пекарня","description":"Выпечка хлеба","category":"factory","zones":["industrial"],"size":{"width":2,"height":2},"build_cost":300000,"build_days":1}
+]
 var requests_in_flight := 0
 var max_parallel := 0
 
@@ -37,6 +47,102 @@ func respond(path: String, method: int, data: Dictionary, headers: PackedStringA
     max_parallel = maxi(requests_in_flight, max_parallel)
     await get_tree().process_frame
     requests_in_flight -= 1
+    if path == "/catalog":
+        return {"code":200,"etag":"test-polish","data":{"version":"test-polish","products":[],"recipes":[],"buildings":BUILDING_CATALOG}}
+    if path == "/ledger/balance":
+        return {"code":200,"data":{"balance":cash}}
+    if path == "/enterprises" and method == HTTPClient.METHOD_POST:
+        var parcel_key := "%d,%d" % [int(data.get("px",-999)),int(data.get("py",-999))]
+        if not bought.has(parcel_key):
+            return {"code":409,"data":{"error":"parcel_not_owned"}}
+        var building: Dictionary = {}
+        for entry in BUILDING_CATALOG:
+            if entry["id"]==str(data.get("building_id","")):
+                building=entry
+        if building.is_empty():
+            return {"code":404,"data":{"error":"unknown_building"}}
+        var x := int(data.get("x",0))
+        var y := int(data.get("y",0))
+        var width := int(building["size"]["width"])
+        var height := int(building["size"]["height"])
+        if x<int(data["px"])*6 or y<int(data["py"])*6 or x+width>int(data["px"])*6+6 or y+height>int(data["py"])*6+6:
+            return {"code":409,"data":{"error":"outside_parcel"}}
+        for cy in range(y,y+height):
+            for cx in range(x,x+width):
+                if Gen.zone(cx,cy,0,0,12,1) not in building["zones"]:
+                    return {"code":409,"data":{"error":"invalid_zone"}}
+                if Gen.terrain(Gen.SEED,cx,cy)=="water":
+                    return {"code":409,"data":{"error":"water"}}
+                if _has_road(cx,cy):
+                    return {"code":409,"data":{"error":"road_overlap"}}
+        var access := false
+        for cy in range(y,y+height):
+            for cx in range(x,x+width):
+                for near in [Vector2i(cx-1,cy),Vector2i(cx+1,cy),Vector2i(cx,cy-1),Vector2i(cx,cy+1)]:
+                    if near.x>=x and near.x<x+width and near.y>=y and near.y<y+height:
+                        continue
+                    if _has_road(near.x,near.y):
+                        access = true
+        if not access:
+            return {"code":409,"data":{"error":"no_road_access"}}
+        if cash<int(building["build_cost"])*300/1000:
+            return {"code":409,"data":{"error":"insufficient_funds"}}
+        var request_id := str(data.get("request_id",""))
+        if build_requests.has(request_id):
+            return {"code":200,"data":{"id":build_requests[request_id],"idempotent":true}}
+        var id := built.size()+1
+        built[id]={"id":id,"x":x,"y":y,"width":width,"height":height,"name":building["name"],"building_id":building["id"],"stage_index":0}
+        build_requests[request_id]=id
+        cash-=int(building["build_cost"])*300/1000
+        for cy in range(y,y+height):
+            for cx in range(x,x+width):
+                var key := "%d,%d" % [Gen.floor_div(cx,12),Gen.floor_div(cy,12)]
+                versions[key] = int(versions.get(key,0))+1
+        return {"code":201,"data":{"id":id}}
+    if path == "/enterprises":
+        return {"code":200,"data":{"enterprises":built.keys()}}
+    if path.begins_with("/enterprises/"):
+        var id := int(path.get_slice("/",2))
+        if built.has(id):
+            return {"code":200,"data":built[id]}
+        return {"code":404,"data":{"error":"not_found"}}
+    if path == "/world/roads" and method == HTTPClient.METHOD_POST:
+        var cells: Array = data.get("cells",[])
+        if cells.is_empty():
+            return {"code":400,"data":{"error":"invalid_road_cells"}}
+        var requested := {}
+        var connection := false
+        for cell in cells:
+            var cx := int(cell[0])
+            var cy := int(cell[1])
+            requested["%d,%d" % [cx,cy]] = true
+            if not bought.has("%d,%d" % [Gen.floor_div(cx,6),Gen.floor_div(cy,6)]):
+                return {"code":403,"data":{"error":"parcel_not_owned"}}
+            if Gen.terrain(Gen.SEED,cx,cy) == "water":
+                return {"code":409,"data":{"error":"water_requires_bridge"}}
+        for cell in cells:
+            var x := int(cell[0])
+            var y := int(cell[1])
+            for adjacent in [Vector2i(x-1,y),Vector2i(x+1,y),Vector2i(x,y-1),Vector2i(x,y+1)]:
+                if _has_road(adjacent.x,adjacent.y) and not requested.has("%d,%d" % [adjacent.x,adjacent.y]):
+                    connection = true
+        if not connection:
+            return {"code":409,"data":{"error":"no_road_connection"}}
+        var added := 0
+        var changed := {}
+        for cell in cells:
+            var x := int(cell[0])
+            var y := int(cell[1])
+            var key := "%d,%d" % [x,y]
+            if road_cells.has(key):
+                continue
+            road_cells[key]=true
+            added+=1
+            changed["%d,%d" % [Gen.floor_div(x,12),Gen.floor_div(y,12)]]=true
+        for chunk in changed:
+            versions[chunk]=int(versions.get(chunk,0))+1
+        road_posts.append(data.duplicate(true))
+        return {"code":200,"data":{"created":added}}
     if path == "/world/cities":
         return {"code":200,"data":{"cities":cities,"seed":Gen.SEED}}
     if path.begins_with("/world/events"):
@@ -96,8 +202,11 @@ func _chunk(cx: int,cy: int,version: int,etag: String) -> Dictionary:
             var y := cy*12+dy
             t.append(Gen.terrain(Gen.SEED,x,y))
             z.append(Gen.zone(x,y,0,0,12,1))
-            r.append(x == 0 or y == 0)
+            r.append(_has_road(x,y))
         terrain.append(t)
         zones.append(z)
         roads.append(r)
     return {"cx":cx,"cy":cy,"terrain":terrain,"zones":zones,"roads":roads,"version":version,"etag":etag}
+
+func _has_road(x: int, y: int) -> bool:
+    return x==0 or y==0 or road_cells.has("%d,%d" % [x,y])
