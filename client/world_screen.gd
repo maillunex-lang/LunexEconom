@@ -57,6 +57,7 @@ func _ready() -> void:
     )
     updater.check()
 var developer_editor: Control
+var developer_editor_insets := Vector4(20, 20, 20, 20)
 
 func _check_developer_role() -> void:
     if not GameSession.is_authenticated(): return
@@ -81,9 +82,33 @@ func _toggle_developer_editor() -> void:
     if developer_editor == null:
         developer_editor = load("res://dev_editor.gd").new()
         $UIOverlay.add_child(developer_editor)
-        developer_editor.set_anchors_and_offsets_preset(Control.PRESET_CENTER_RIGHT)
+        _layout_developer_editor()
     else:
         developer_editor.visible = not developer_editor.visible
+        if developer_editor.visible:
+            _layout_developer_editor()
+
+func _layout_developer_editor() -> void:
+    if developer_editor == null:
+        return
+    var viewport_size := get_viewport_rect().size
+    var left := developer_editor_insets.x
+    var top := developer_editor_insets.y
+    var right := developer_editor_insets.z
+    var bottom := developer_editor_insets.w
+    var available_width := maxf(0.0, viewport_size.x - left - right)
+    var panel_width := minf(available_width, minf(640.0, maxf(420.0, viewport_size.x * 0.42)))
+    # The editor is a direct child of a CanvasLayer. Set all four anchors
+    # and offsets explicitly: CENTER_RIGHT would otherwise create a zero-
+    # height panel off the right edge of the screen.
+    developer_editor.anchor_left = 1.0
+    developer_editor.anchor_right = 1.0
+    developer_editor.anchor_top = 0.0
+    developer_editor.anchor_bottom = 1.0
+    developer_editor.offset_left = -right - panel_width
+    developer_editor.offset_right = -right
+    developer_editor.offset_top = top
+    developer_editor.offset_bottom = -bottom
 
 func set_selection(cell: Vector2i) -> void:
     if developer_editor != null:
@@ -128,6 +153,9 @@ func _update_safe_area() -> void:
         top = maxi(top, int(float(safe.position.y) * v.y / s.y) + 12)
         right = maxi(right, int(float(s.x - safe.end.x) * v.x / s.x) + 12)
         bottom = maxi(bottom, int(float(s.y - safe.end.y) * v.y / s.y) + 12)
+    developer_editor_insets = Vector4(left, top, right, bottom)
+    if developer_editor != null:
+        _layout_developer_editor()
     hud.add_theme_constant_override("margin_left", left)
     hud.add_theme_constant_override("margin_top", top)
     hud.add_theme_constant_override("margin_right", right)
