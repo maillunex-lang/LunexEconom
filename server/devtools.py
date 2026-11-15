@@ -205,6 +205,21 @@ def undo(db, ph, owner, payload, ip):
                 return 409, {"error": "undo_conflict", "cell": [x, y]}
             if original["operation"] == "remove" and current is not None:
                 return 409, {"error": "undo_conflict", "cell": [x, y]}
+    if action_kind == "roads":
+        import dev_road_connectivity
+        deletions = [tuple(map(int, coordinate.split(","))) for coordinate, state in snapshot.items() if state is None]
+        conflict = dev_road_connectivity.validate_removal(db, ph, deletions)
+        if conflict:
+            return 409, {"error": conflict}
+        for coordinate, state in snapshot.items():
+            if state is None:
+                continue
+            x, y = map(int, coordinate.split(","))
+            if db.execute("SELECT 1 FROM cells WHERE x=" + ph + " AND y=" + ph, (x, y)).fetchone():
+                return 409, {"error": "occupied", "cell": [x, y]}
+            import roads
+            if roads.is_water(x, y) or db.execute("SELECT kind FROM terrain_edits WHERE x=" + ph + " AND y=" + ph, (x, y)).fetchone() == ("water",):
+                return 409, {"error": "water", "cell": [x, y]}
     for coordinate, state in snapshot.items():
         x, y = map(int, coordinate.split(","))
         if action_kind == "roads":
@@ -264,13 +279,10 @@ def roads_set(db, ph, owner, payload, ip):
         row = db.execute("SELECT owner,created FROM roads WHERE x=" + ph + " AND y=" + ph, (x, y)).fetchone()
         old[f"{x},{y}"] = list(row) if row else None
     if operation == "remove":
-        # Refuse removing a road immediately serving a building. Full
-        # network connectivity analysis is deferred; this conservative
-        # guard prevents the most direct disconnections.
-        for x, y in coords:
-            neighbors = ((x - 1, y), (x + 1, y), (x, y - 1), (x, y + 1))
-            if any(db.execute("SELECT 1 FROM cells WHERE x=" + ph + " AND y=" + ph, (nx, ny)).fetchone() for nx, ny in neighbors):
-                return 409, {"error": "building_access_road", "cell": [x, y]}
+        import dev_road_connectivity
+        conflict = dev_road_connectivity.validate_removal(db, ph, coords)
+        if conflict:
+            return 409, {"error": conflict}
     for x, y in coords:
         if operation == "add":
             db.execute("INSERT INTO roads(x,y,owner,created) VALUES(" + ",".join([ph]*4) + ") ON CONFLICT(x,y) DO NOTHING", (x, y, owner, now))
