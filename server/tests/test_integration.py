@@ -43,23 +43,23 @@ class TestPostgres(unittest.TestCase):
     def test_health_accounts_sessions(self):
         from uuid import uuid4
         user = 'test_' + uuid4().hex[:12]
-        status, health = request(self.app,'GET','/health')
+        status, health = request(type(self).app,'GET','/health')
         self.assertEqual(status, 200)
         self.assertTrue(health['ok'])
         self.assertEqual(health['database'],'ok')
         self.assertIn('sha', health)
-        self.assertEqual(request(self.app,'POST','/auth/register',{'username':user,'password':'1234'})[0],201)
-        self.assertEqual(request(self.app,'POST','/auth/register',{'username':user,'password':'1234'})[0],409)
-        self.assertEqual(request(self.app,'POST','/auth/login',{'username':user,'password':'wrong'})[0],401)
-        status, login = request(self.app,'POST','/auth/login',{'username':user,'password':'1234'})
+        self.assertEqual(request(type(self).app,'POST','/auth/register',{'username':user,'password':'1234'})[0],201)
+        self.assertEqual(request(type(self).app,'POST','/auth/register',{'username':user,'password':'1234'})[0],409)
+        self.assertEqual(request(type(self).app,'POST','/auth/login',{'username':user,'password':'wrong'})[0],401)
+        status, login = request(type(self).app,'POST','/auth/login',{'username':user,'password':'1234'})
         self.assertEqual(status,200)
         self.assertEqual(login['role'],'player')
-        status, me = request(self.app,'GET','/auth/me',auth='Bearer '+login['token'])
+        status, me = request(type(self).app,'GET','/auth/me',auth='Bearer '+login['token'])
         self.assertEqual(status,200)
         self.assertEqual(me['username'],user)
         self.assertEqual(me['role'],'player')
-        self.assertEqual(request(self.app,'GET','/config')[0],503)
-        self.assertEqual(request(self.app,'GET','/catalog')[0],200)
+        self.assertEqual(request(type(self).app,'GET','/config')[0],503)
+        self.assertEqual(request(type(self).app,'GET','/catalog')[0],200)
 
     def test_ledger_idempotent(self):
         from uuid import uuid4
