@@ -33,6 +33,7 @@ def create_app(dsn=None, start_tick=False):
         raise RuntimeError('LUNEX_DATABASE_URL must be PostgreSQL')
     with db.connect(url) as connection:
         db.migrate(connection,registry.modules)
+        world.bootstrap(connection)
         clock.core.ensure_epoch(connection)
         connection.commit()
     pool=ConnectionPool(conninfo=url,min_size=int(os.getenv('LUNEX_POOL_MIN','2')),max_size=int(os.getenv('LUNEX_POOL_MAX','20')),timeout=10, max_waiting=200,kwargs={'options':'-c statement_timeout=7000 -c lock_timeout=5000 -c idle_in_transaction_session_timeout=10000'},open=True)
@@ -68,7 +69,7 @@ def create_app(dsn=None, start_tick=False):
                 return _send(start_response,400,{'error':'expected_json_object'})
             with pool.connection() as conn:
                 with conn.transaction():
-                    context={'conn':conn,'pool':pool,'registry':registry,'authorization':environ.get('HTTP_AUTHORIZATION',''),'remote_addr':environ.get('REMOTE_ADDR','127.0.0.1'),'real_ip':environ.get('HTTP_X_REAL_IP',''),'admin_token':environ.get('HTTP_X_ADMIN_TOKEN',''),'query':parse_qs(environ.get('QUERY_STRING','')),'client_version':environ.get('HTTP_X_CLIENT_VERSION',''),'if_none_match':environ.get('HTTP_IF_NONE_MATCH','')}
+                    context={'conn':conn,'pool':pool,'registry':registry,'authorization':environ.get('HTTP_AUTHORIZATION',''),'remote_addr':environ.get('REMOTE_ADDR','127.0.0.1'),'real_ip':environ.get('HTTP_X_REAL_IP',''),'admin_token':environ.get('HTTP_X_ADMIN_TOKEN',''),'query':parse_qs(environ.get('QUERY_STRING','')),'client_version':environ.get('HTTP_X_CLIENT_VERSION',''),'if_none_match':environ.get('HTTP_IF_NONE_MATCH',''),'admin_verified':admin_path,'method':method}
                     context['settings']=read_settings(conn,registry.flags,registry.flag_constraints)
                     status,payload=registry.dispatch(method,path,data,context)
         except (ValueError,UnicodeError,json.JSONDecodeError):
@@ -76,6 +77,8 @@ def create_app(dsn=None, start_tick=False):
         except Exception:
             LOGGER.exception('Platform request failure %s %s',method,path)
             return _send(start_response,503,{'error':'service_unavailable'})
+        if path == '/world/chunk' and method == 'GET' and status in (200,304):
+            return _send_catalog(start_response,status,payload,context['world_etag'])
         if path == '/catalog' and method == 'GET' and status in (200,304):
             return _send_catalog(start_response,status,payload,registry.catalog.etag)
         return _send(start_response,status,payload)

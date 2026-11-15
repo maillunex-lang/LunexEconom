@@ -1,0 +1,136 @@
+{
+  "algorithm": "splitmix64-river-v1",
+  "seed": 20261115,
+  "cells": [
+    {
+      "x": 0,
+      "y": 0,
+      "noise": 7747080494258983607,
+      "terrain": "ground"
+    },
+    {
+      "x": 1,
+      "y": 1,
+      "noise": 6896906991592985243,
+      "terrain": "ground"
+    },
+    {
+      "x": -1,
+      "y": -1,
+      "noise": 14327001929158451621,
+      "terrain": "ground"
+    },
+    {
+      "x": -12,
+      "y": 0,
+      "noise": 17129106026951559974,
+      "terrain": "ground"
+    },
+    {
+      "x": 0,
+      "y": -12,
+      "noise": 16916911292179687883,
+      "terrain": "ground"
+    },
+    {
+      "x": 12,
+      "y": 12,
+      "noise": 17217686336554933651,
+      "terrain": "ground"
+    },
+    {
+      "x": 24,
+      "y": 24,
+      "noise": 8381588568998584819,
+      "terrain": "ground"
+    },
+    {
+      "x": -53,
+      "y": 87,
+      "noise": 5374698208797788137,
+      "terrain": "ground"
+    },
+    {
+      "x": 120,
+      "y": 178,
+      "noise": 2961015465791674722,
+      "terrain": "ground"
+    },
+    {
+      "x": -304,
+      "y": 127,
+      "noise": 9975642096614698341,
+      "terrain": "ground"
+    },
+    {
+      "x": -100001,
+      "y": 1250,
+      "noise": 12918564295239899749,
+      "terrain": "ground"
+    },
+    {
+      "x": 100002,
+      "y": 1250,
+      "noise": 16843354256670296084,
+      "terrain": "ground"
+    }
+  ],
+  "zones": [
+    {
+      "x": 0,
+      "y": 0,
+      "level": 1,
+      "zone": "center"
+    },
+    {
+      "x": 12,
+      "y": 0,
+      "level": 1,
+      "zone": "industrial"
+    },
+    {
+      "x": 15,
+      "y": 0,
+      "level": 2,
+      "zone": "industrial"
+    },
+    {
+      "x": 25,
+      "y": 0,
+      "level": 2,
+      "zone": "free"
+    },
+    {
+      "x": 18,
+      "y": 0,
+      "level": 2,
+      "zone": "free"
+    },
+    {
+      "x": 12,
+      "y": 0,
+      "level": 6,
+      "zone": "industrial"
+    },
+    {
+      "x": -12,
+      "y": -12,
+      "level": 6,
+      "zone": "residential"
+    },
+    {
+      "x": 2,
+      "y": 0,
+      "level": 1,
+      "zone": "center"
+    }
+  ],
+  "radii": [
+    12,
+    15,
+    19,
+    24,
+    30,
+    38
+  ]
+}
