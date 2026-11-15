@@ -184,6 +184,20 @@ func clamp_camera() -> void:
 	target_focus.z = clampf(target_focus.z, -25000.0, 25000.0)
 
 # ---------- terrain (identical rules to the server, docs/CITYGEN.md) ----------
+var terrain_edits: Dictionary = {}
+
+func set_terrain_edits(chunk: Vector2i, edits: Array) -> void:
+	for x in range(chunk.x * CHUNK, (chunk.x + 1) * CHUNK):
+		for y in range(chunk.y * CHUNK, (chunk.y + 1) * CHUNK):
+			terrain_edits.erase(Vector2i(x, y))
+	for item in edits:
+		if not item is Dictionary: continue
+		var cell := Vector2i(int(item.get("x", 0)), int(item.get("y", 0)))
+		if _chunk_of(cell) != chunk: continue
+		terrain_edits[cell] = str(item.get("kind", ""))
+		_mark_cell(cell, true)
+	_dirty_chunks[chunk] = true
+
 func cell_kind(x: int, y: int) -> int:
 	var coord := Vector2i(x, y)
 	if server_cells.has(coord):
@@ -192,6 +206,11 @@ func cell_kind(x: int, y: int) -> int:
 		if kind == "building_created" or kind in BUILDING_KINDS: return 6
 		if kind == "building_removed": return 0
 	if planner.occupied.has(coord): return 6
+	if terrain_edits.has(coord):
+		match str(terrain_edits[coord]):
+			"water": return 4
+			"tree": return 5
+			"grass", "clear": return 0
 	if roads.is_road(coord):
 		return 3 # roads
 	if ROAD_SCRIPT.is_water(coord):
