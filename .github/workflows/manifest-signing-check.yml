@@ -26,12 +26,12 @@ jobs:
           test -n "$MANIFEST_SIGNING_KEY"
           mkdir -p "$RUNNER_TEMP/manifest-check"
           python - <<'PY'
-          import json
           import os
+          import sys
           from pathlib import Path
-          from cryptography.hazmat.primitives import serialization
-          from tools.manifest_security import canonical_json
-          from tools.sign_manifest_env import sign
+          sys.path.insert(0, 'tools')
+          from manifest_security import canonical_json
+          from sign_manifest_env import sign
           root = Path(os.environ["RUNNER_TEMP"]) / "manifest-check"
           manifest = root / "update.json"
           manifest.write_bytes(canonical_json({"test_only": True}))
