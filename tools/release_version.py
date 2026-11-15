@@ -31,19 +31,6 @@ def validate_monotonic(tag, previous_tags):
             raise ValueError(f"Version {tag} must be newer than {previous}")
 
 
-def validate_monotonic(tag, previous_tags):
-    code, _ = parse(tag)
-    for previous in previous_tags:
-        if not previous or previous == tag:
-            continue
-        try:
-            prior_code, _ = parse(previous)
-        except ValueError:
-            continue
-        if code <= prior_code:
-            raise ValueError(f"Version {tag} must be newer than {previous}")
-
-
 def stamp(preset, tag, info, earlier_tags=()):
     validate_monotonic(tag, earlier_tags)
     code, name = parse(tag)

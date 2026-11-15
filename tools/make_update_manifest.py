@@ -8,16 +8,12 @@ from release_version import parse
 from check_apk_size import check as check_apk_size
 
 ALPHA_BASE = "https://rikagro.ru/lunexeconom/v2"
-from check_apk_size import check as check_apk_size
-
-ALPHA_BASE = "https://rikagro.ru/lunexeconom/v2"
 
 
 def make(apk, version, minimum, notes, base, apk_name=None):
     apk = Path(apk)
     code, name = parse(version)
     minimum = int(minimum)
-    check_apk_size(apk)
     check_apk_size(apk)
     if not 1 <= minimum <= code:
         raise ValueError("min_version_code must be between 1 and current version code")
@@ -46,7 +42,6 @@ if __name__ == "__main__":
     ap.add_argument("--version", required=True)
     ap.add_argument("--min-code", type=int, required=True)
     ap.add_argument("--notes", default="Обновление игры")
-    ap.add_argument("--apk-name", help="Versioned APK name on V2 website")
     ap.add_argument("--apk-name", help="Versioned APK name on V2 website")
     ap.add_argument("--base", default=None)
     ap.add_argument("--output", default="build/update.json")
