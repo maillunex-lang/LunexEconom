@@ -10,6 +10,7 @@ const PLANNER_SCRIPT = preload("res://construction_planner.gd")
 const TOPOLOGY = preload("res://road_topology.gd")
 const SEASONS = preload("res://season_visual.gd")
 const MODELS = preload("res://world3d/building_models.gd")
+const TRAFFIC = preload("res://world3d/road_traffic.gd")
 const ZONES = preload("res://zones.gd")
 const INDUSTRIAL_TINT := Color("#b0a58a")   # ground colour of the industrial zone (blended over the grass)
 ## Every building kind a server snapshot or event may carry ("house" = a city-generated dwelling, never player-built).
@@ -43,6 +44,9 @@ var build_square_size := 0
 var expansion_radius := 48
 var selected := Vector2i(-1, -1)
 var active_chunks: Dictionary = {}             # Vector2i chunk -> Node3D
+var traffic: Node3D
+var _traffic_center := Vector2i(2147483647, 2147483647)
+var _traffic_refresh_pending := true
 var building_nodes: Dictionary = {}            # object id -> Node3D
 var building_signatures: Dictionary = {}
 var camera: Camera3D
@@ -134,6 +138,10 @@ func _ready() -> void:
 	_overlay.add_child(_preview_node)
 	_sync_camera()
 	_update_visible_chunks()
+	traffic = TRAFFIC.new()
+	traffic.name = "DecorativeRoadTraffic"
+	traffic.configure(roads)
+	add_child(traffic)
 
 # ---------- coordinates ----------
 static func cell_center(cell: Vector2i) -> Vector3:
@@ -214,11 +222,12 @@ func apply_server_event(event: Dictionary) -> void:
 		if not cell is Array or cell.size() != 2: continue
 		var coord := Vector2i(int(cell[0]), int(cell[1]))
 		if kind == "road_changed":
+			_traffic_refresh_pending = true
 			roads.segments[coord] = true
 			_mark_cell(coord, true)
 			continue
 		if kind == "building_removed": server_cells.erase(coord)
-		else: server_cells[coord] = {"kind": "building_created", "building_kind": building_kind, "object_id": str(event.get("object_id", "")), "owner": str(event.get("owner", ""))}
+		else: server_cells[coord] = {"kind": "building_created", "building_kind": building_kind, "object_id": str(event.get("object_id", "")), "owner": str(event.get("owner", "")), "construction_stage": str(event.get("construction_stage", "complete"))}
 		_mark_cell(coord, false)
 	_buildings_dirty = true
 
@@ -235,7 +244,7 @@ func apply_chunk_snapshot(coord: Vector2i, cells: Array) -> void:
 			roads.segments[c] = true
 		else:
 			var bk := str(cell.get("building_kind", kind if kind in BUILDING_KINDS else ""))
-			server_cells[c] = {"kind": "building_created", "building_kind": bk, "object_id": str(cell.get("object_id", "")), "owner": str(cell.get("owner", ""))}
+			server_cells[c] = {"kind": "building_created", "building_kind": bk, "object_id": str(cell.get("object_id", "")), "owner": str(cell.get("owner", "")), "construction_stage": str(cell.get("construction_stage", "complete"))}
 	for dx in range(-1, 2):
 		for dy in range(-1, 2):
 			_dirty_chunks[coord + Vector2i(dx, dy)] = true
@@ -274,11 +283,11 @@ func objects() -> Dictionary:
 		if oid.is_empty():
 			continue
 		if not out.has(oid):
-			out[oid] = {"kind": str(data.get("building_kind", "")), "owner": str(data.get("owner", "")), "cells": []}
+			out[oid] = {"kind": str(data.get("building_kind", "")), "owner": str(data.get("owner", "")), "construction_stage": str(data.get("construction_stage", "complete")), "cells": []}
 		out[oid]["cells"].append(coord)
 	for oid in building_records:
 		var record: Dictionary = building_records[oid]
-		out[oid] = {"kind": str(record.get("kind", "")), "owner": "", "cells": record.get("cells", [])}
+		out[oid] = {"kind": str(record.get("kind", "")), "owner": "", "construction_stage": str(record.get("construction_stage", "complete")), "cells": record.get("cells", [])}
 	return out
 
 # ---------- chunks: ground, roads, water and trees ----------
@@ -363,7 +372,7 @@ func build_chunk(coord: Vector2i) -> void:
 	var st := SurfaceTool.new()
 	st.begin(Mesh.PRIMITIVE_TRIANGLES)
 	var trees: Array = []
-	var road_pieces := {"road_straight_1x1": [], "road_cross_1x1": []}
+	var road_pieces := {"road_straight_1x1": [], "road_cross_1x1": [], "road_corner_1x1": []}
 	var half := CELL * 0.5
 	for x in range(coord.x * CHUNK, (coord.x + 1) * CHUNK):
 		for y in range(coord.y * CHUNK, (coord.y + 1) * CHUNK):
@@ -420,6 +429,14 @@ func _road_piece(cell: Vector2i, cx: float, cz: float, pieces: Dictionary, st: S
 	if shape == "straight":
 		name = "road_straight_1x1"
 		turn = 0.0 if (mask == TOPOLOGY.NORTH | TOPOLOGY.SOUTH) else PI * 0.5
+	elif shape == "corner":
+		name = "road_corner_1x1"
+		# Corner GLB's baseline arms point north and east.
+		match mask:
+			TOPOLOGY.NORTH | TOPOLOGY.EAST: turn = 0.0
+			TOPOLOGY.EAST | TOPOLOGY.SOUTH: turn = PI * 0.5
+			TOPOLOGY.SOUTH | TOPOLOGY.WEST: turn = PI
+			TOPOLOGY.WEST | TOPOLOGY.NORTH: turn = PI * 1.5
 	elif shape == "t_junction" or shape == "cross":
 		name = "road_cross_1x1"
 	if name != "" and not MODELS.piece(name).is_empty():
@@ -506,12 +523,17 @@ func _refresh_buildings() -> void:
 			min_c = Vector2i(mini(min_c.x, c.x), mini(min_c.y, c.y))
 			max_c = Vector2i(maxi(max_c.x, c.x), maxi(max_c.y, c.y))
 		var size := max_c - min_c + Vector2i.ONE
-		var signature := "%s|%s|%s|%s" % [record["kind"], record["owner"], str(min_c), str(size)]
+		var stage := str(record.get("construction_stage", "complete"))
+		var visual_kind := str(record["kind"])
+		# Optional server-authoritative stage; absent/unknown values preserve the completed building.
+		if stage in ["foundation", "frame"] and size == Vector2i(3, 2):
+			visual_kind = "construction_" + stage
+		var signature := "%s|%s|%s|%s" % [visual_kind, record["owner"], str(min_c), str(size)]
 		if building_nodes.has(oid) and building_signatures.get(oid, "") == signature:
 			continue
 		if building_nodes.has(oid):
 			building_nodes[oid].queue_free()
-		var node: Node3D = MODELS.make(str(record["kind"]), size.x, size.y, str(oid), str(record["owner"]))
+		var node: Node3D = MODELS.make(visual_kind, size.x, size.y, str(oid), str(record["owner"]))
 		node.name = "B_" + str(oid).left(24)
 		node.position = Vector3((float(min_c.x) + float(size.x - 1) * 0.5) * CELL, 0.0, (float(min_c.y) + float(size.y - 1) * 0.5) * CELL)
 		node.set_meta("object_id", str(oid))
@@ -692,6 +714,7 @@ func commit_access_road(site: Vector2i) -> bool:
 	var path: Array[Vector2i] = preview_access_road(site)
 	var accepted: bool = roads.add_path(path)
 	if accepted:
+		_traffic_refresh_pending = true
 		for cell in path: _mark_cell(cell, true)
 	return accepted
 
@@ -713,6 +736,12 @@ func _process(delta: float) -> void:
 		_update_visible_chunks()
 	_read_season()
 	_flush()
+	if traffic != null:
+		var center := cell_of(focus)
+		if _traffic_refresh_pending or absi(center.x - _traffic_center.x) + absi(center.y - _traffic_center.y) >= 12:
+			_traffic_center = center
+			_traffic_refresh_pending = false
+			traffic.refresh_around(center)
 
 ## Apply pending changes now (chunk meshes and buildings). Called every frame; tests call it directly.
 func _flush(limit: int = CHUNK_BUILDS_PER_FRAME) -> void:

@@ -1,4 +1,5 @@
 import os
+from construction_test_fixtures import fast_construction
 import tempfile
 import unittest
 import uuid
@@ -102,11 +103,15 @@ class LabourWorldTests(unittest.TestCase):
         self.assertIn("labor", m)
         self.assertEqual(m["labor"]["jobs"], 0)
 
+    @fast_construction
+
     def test_buildings_create_jobs(self):
         self.build("alice", "farm")
         self.build("alice", "mine")
         lab = game_server.wallet("alice")[1]["labor"]
         self.assertEqual(lab["jobs"], 4 + 10)
+
+    @fast_construction
 
     def test_wages_paid_to_residents_and_ledger_balanced(self):
         # Wages are what residents earn; their spending is switched off here so that the balance shows the earnings alone.
@@ -150,6 +155,8 @@ class LabourWorldTests(unittest.TestCase):
             db.execute("UPDATE wallets SET balance=? WHERE account=?", (amount, economy.player_account(who)))
             db.execute("UPDATE wallets SET balance=balance-? WHERE account=?", (amount - 1_000_000, economy.TREASURY))
 
+    @fast_construction
+
     def test_labour_shortage_grows_population_and_cuts_output(self):
         self.rich()
         for _ in range(40):
@@ -166,6 +173,8 @@ class LabourWorldTests(unittest.TestCase):
             supply = db.execute("SELECT supply FROM market_prices WHERE product='honey' AND month_index=0").fetchone()[0]
         self.assertLess(supply, 40 * 100)                                   # output scaled down by staffing
         self.assertAlmostEqual(supply, 40 * 100 * staffing / 1000, delta=40)
+
+    @fast_construction
 
     def test_wages_rise_with_shortage_so_costs_rise(self):
         self.rich()
@@ -186,6 +195,8 @@ class LabourWorldTests(unittest.TestCase):
             demand = db.execute("SELECT demand FROM market_prices WHERE product='honey' AND month_index=0").fetchone()[0]
         expected = economy.demand_for("honey", 0, rows[0][6] / 1000)
         self.assertAlmostEqual(demand, expected, delta=2)
+
+    @fast_construction
 
     def test_forecast_shows_wages(self):
         self.build("alice", "factory")

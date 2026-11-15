@@ -115,5 +115,428 @@
     "triangles": 132,
     "height_m": 1.1,
     "license": "Original / CC0"
+  },
+  {
+    "file": "road_corner_1x1.glb",
+    "kind": "road_corner",
+    "w": 1,
+    "h": 1,
+    "triangles": 60,
+    "height_m": 0.07,
+    "license": "Original / CC0"
+  },
+  {
+    "file": "truck_2x3.glb",
+    "kind": "truck",
+    "w": 2,
+    "h": 3,
+    "triangles": 156,
+    "height_m": 1.49,
+    "license": "Original / CC0"
+  },
+  {
+    "file": "tractor_2x2.glb",
+    "kind": "tractor",
+    "w": 2,
+    "h": 2,
+    "triangles": 156,
+    "height_m": 1.81,
+    "license": "Original / CC0"
+  },
+  {
+    "file": "construction_foundation_3x2.glb",
+    "kind": "construction_foundation",
+    "w": 3,
+    "h": 2,
+    "triangles": 72,
+    "height_m": 0.7,
+    "license": "Original / CC0"
+  },
+  {
+    "file": "construction_frame_3x2.glb",
+    "kind": "construction_frame",
+    "w": 3,
+    "h": 2,
+    "triangles": 108,
+    "height_m": 2.9,
+    "license": "Original / CC0"
+  },
+  {
+    "file": "grain_field_3x2.glb",
+    "kind": "grain_field",
+    "w": 3,
+    "h": 2,
+    "triangles": 108,
+    "height_m": 0.56,
+    "license": "Original / CC0"
+  },
+  {
+    "file": "elevator_3x3.glb",
+    "kind": "elevator",
+    "w": 3,
+    "h": 3,
+    "triangles": 90,
+    "height_m": 6.48,
+    "license": "Original / CC0"
+  },
+  {
+    "file": "mill_3x2.glb",
+    "kind": "mill",
+    "w": 3,
+    "h": 2,
+    "triangles": 96,
+    "height_m": 4.61,
+    "license": "Original / CC0"
+  },
+  {
+    "file": "bread_plant_3x2.glb",
+    "kind": "bread_plant",
+    "w": 3,
+    "h": 2,
+    "triangles": 96,
+    "height_m": 4.61,
+    "license": "Original / CC0"
+  },
+  {
+    "file": "oil_well_2x2.glb",
+    "kind": "oil_well",
+    "w": 2,
+    "h": 2,
+    "triangles": 84,
+    "height_m": 3.72,
+    "license": "Original / CC0"
+  },
+  {
+    "file": "gas_well_2x2.glb",
+    "kind": "gas_well",
+    "w": 2,
+    "h": 2,
+    "triangles": 84,
+    "height_m": 3.72,
+    "license": "Original / CC0"
+  },
+  {
+    "file": "sand_pit_2x2.glb",
+    "kind": "sand_pit",
+    "w": 2,
+    "h": 2,
+    "triangles": 42,
+    "height_m": 0.83,
+    "license": "Original / CC0"
+  },
+  {
+    "file": "logging_camp_2x3.glb",
+    "kind": "logging_camp",
+    "w": 2,
+    "h": 3,
+    "triangles": 102,
+    "height_m": 2.53,
+    "license": "Original / CC0"
+  },
+  {
+    "file": "factory_3x2.glb",
+    "kind": "factory",
+    "w": 3,
+    "h": 2,
+    "triangles": 96,
+    "height_m": 4.61,
+    "license": "Original / CC0"
+  },
+  {
+    "file": "farm_2x2.glb",
+    "kind": "farm",
+    "w": 2,
+    "h": 2,
+    "triangles": 108,
+    "height_m": 0.56,
+    "license": "Original / CC0"
+  },
+  {
+    "file": "mine_2x3.glb",
+    "kind": "mine",
+    "w": 2,
+    "h": 3,
+    "triangles": 48,
+    "height_m": 1.38,
+    "license": "Original / CC0"
+  },
+  {
+    "file": "factory.glb",
+    "kind": "factory",
+    "w": 3,
+    "h": 2,
+    "triangles": 96,
+    "height_m": 4.61,
+    "license": "Original / CC0"
+  },
+  {
+    "file": "farm.glb",
+    "kind": "farm",
+    "w": 2,
+    "h": 2,
+    "triangles": 108,
+    "height_m": 0.56,
+    "license": "Original / CC0"
+  },
+  {
+    "file": "mine.glb",
+    "kind": "mine",
+    "w": 2,
+    "h": 3,
+    "triangles": 48,
+    "height_m": 1.38,
+    "license": "Original / CC0"
+  },
+  {
+    "file": "oil_well.glb",
+    "kind": "oil_well",
+    "w": 2,
+    "h": 2,
+    "triangles": 84,
+    "height_m": 3.72,
+    "license": "Original / CC0"
+  },
+  {
+    "file": "administration.glb",
+    "kind": "catalog_generic",
+    "w": 3,
+    "h": 2,
+    "triangles": 96,
+    "height_m": 2.19,
+    "license": "Original / CC0"
+  },
+  {
+    "file": "block_12.glb",
+    "kind": "catalog_generic",
+    "w": 3,
+    "h": 3,
+    "triangles": 96,
+    "height_m": 2.19,
+    "license": "Original / CC0"
+  },
+  {
+    "file": "block_16.glb",
+    "kind": "catalog_generic",
+    "w": 3,
+    "h": 3,
+    "triangles": 96,
+    "height_m": 2.19,
+    "license": "Original / CC0"
+  },
+  {
+    "file": "block_2.glb",
+    "kind": "catalog_generic",
+    "w": 2,
+    "h": 2,
+    "triangles": 96,
+    "height_m": 2.19,
+    "license": "Original / CC0"
+  },
+  {
+    "file": "block_3.glb",
+    "kind": "catalog_generic",
+    "w": 2,
+    "h": 2,
+    "triangles": 96,
+    "height_m": 2.19,
+    "license": "Original / CC0"
+  },
+  {
+    "file": "block_5.glb",
+    "kind": "catalog_generic",
+    "w": 2,
+    "h": 3,
+    "triangles": 96,
+    "height_m": 2.19,
+    "license": "Original / CC0"
+  },
+  {
+    "file": "block_9.glb",
+    "kind": "catalog_generic",
+    "w": 2,
+    "h": 3,
+    "triangles": 96,
+    "height_m": 2.19,
+    "license": "Original / CC0"
+  },
+  {
+    "file": "bus_station.glb",
+    "kind": "catalog_generic",
+    "w": 3,
+    "h": 2,
+    "triangles": 96,
+    "height_m": 2.19,
+    "license": "Original / CC0"
+  },
+  {
+    "file": "bus_stop.glb",
+    "kind": "catalog_generic",
+    "w": 1,
+    "h": 1,
+    "triangles": 96,
+    "height_m": 2.19,
+    "license": "Original / CC0"
+  },
+  {
+    "file": "college.glb",
+    "kind": "catalog_generic",
+    "w": 3,
+    "h": 3,
+    "triangles": 96,
+    "height_m": 2.19,
+    "license": "Original / CC0"
+  },
+  {
+    "file": "complex_modern.glb",
+    "kind": "catalog_generic",
+    "w": 4,
+    "h": 4,
+    "triangles": 96,
+    "height_m": 2.19,
+    "license": "Original / CC0"
+  },
+  {
+    "file": "cottage.glb",
+    "kind": "catalog_generic",
+    "w": 2,
+    "h": 2,
+    "triangles": 96,
+    "height_m": 2.19,
+    "license": "Original / CC0"
+  },
+  {
+    "file": "fap.glb",
+    "kind": "catalog_generic",
+    "w": 1,
+    "h": 2,
+    "triangles": 96,
+    "height_m": 2.19,
+    "license": "Original / CC0"
+  },
+  {
+    "file": "fire_depot.glb",
+    "kind": "catalog_generic",
+    "w": 2,
+    "h": 3,
+    "triangles": 96,
+    "height_m": 2.19,
+    "license": "Original / CC0"
+  },
+  {
+    "file": "house_wood.glb",
+    "kind": "catalog_generic",
+    "w": 1,
+    "h": 1,
+    "triangles": 96,
+    "height_m": 2.19,
+    "license": "Original / CC0"
+  },
+  {
+    "file": "kindergarten.glb",
+    "kind": "catalog_generic",
+    "w": 2,
+    "h": 2,
+    "triangles": 96,
+    "height_m": 2.19,
+    "license": "Original / CC0"
+  },
+  {
+    "file": "landscaping.glb",
+    "kind": "catalog_generic",
+    "w": 1,
+    "h": 1,
+    "triangles": 96,
+    "height_m": 2.19,
+    "license": "Original / CC0"
+  },
+  {
+    "file": "lyceum.glb",
+    "kind": "catalog_generic",
+    "w": 3,
+    "h": 3,
+    "triangles": 96,
+    "height_m": 2.19,
+    "license": "Original / CC0"
+  },
+  {
+    "file": "parking.glb",
+    "kind": "catalog_generic",
+    "w": 2,
+    "h": 2,
+    "triangles": 96,
+    "height_m": 2.19,
+    "license": "Original / CC0"
+  },
+  {
+    "file": "playground.glb",
+    "kind": "catalog_generic",
+    "w": 1,
+    "h": 1,
+    "triangles": 96,
+    "height_m": 2.19,
+    "license": "Original / CC0"
+  },
+  {
+    "file": "police.glb",
+    "kind": "catalog_generic",
+    "w": 2,
+    "h": 2,
+    "triangles": 96,
+    "height_m": 2.19,
+    "license": "Original / CC0"
+  },
+  {
+    "file": "polyclinic.glb",
+    "kind": "catalog_generic",
+    "w": 3,
+    "h": 2,
+    "triangles": 96,
+    "height_m": 2.19,
+    "license": "Original / CC0"
+  },
+  {
+    "file": "quarter.glb",
+    "kind": "catalog_generic",
+    "w": 6,
+    "h": 6,
+    "triangles": 96,
+    "height_m": 2.19,
+    "license": "Original / CC0"
+  },
+  {
+    "file": "sports.glb",
+    "kind": "catalog_generic",
+    "w": 3,
+    "h": 2,
+    "triangles": 96,
+    "height_m": 2.19,
+    "license": "Original / CC0"
+  },
+  {
+    "file": "square.glb",
+    "kind": "catalog_generic",
+    "w": 1,
+    "h": 1,
+    "triangles": 96,
+    "height_m": 2.19,
+    "license": "Original / CC0"
+  },
+  {
+    "file": "townhouse.glb",
+    "kind": "catalog_generic",
+    "w": 2,
+    "h": 3,
+    "triangles": 96,
+    "height_m": 2.19,
+    "license": "Original / CC0"
+  },
+  {
+    "file": "university.glb",
+    "kind": "catalog_generic",
+    "w": 4,
+    "h": 4,
+    "triangles": 96,
+    "height_m": 2.19,
+    "license": "Original / CC0"
   }
 ]

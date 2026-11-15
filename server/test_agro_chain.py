@@ -1,5 +1,6 @@
 """BE-107: grain field → elevator → mill → bread plant → shop, without breaking the old trio."""
 import os
+from construction_test_fixtures import fast_construction
 import tempfile
 import unittest
 import uuid
@@ -95,6 +96,8 @@ class AgroChainTests(AgroBase):
         self.assertGreater(dave["reports"][0]["revenue"], 0)
         self.assert_ledger()
         self.assertGreater(alice["reports"][0]["revenue"], 0)
+
+    @fast_construction
 
     def test_a_hungry_mill_does_not_stop_the_old_factory(self):
         self.grant("alice", 400_000)

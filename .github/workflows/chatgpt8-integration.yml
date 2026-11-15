@@ -1,0 +1,76 @@
+name: ChatGPT8 isolated integration QA
+on:
+  push:
+    branches: [ChatGPT8]
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - 'server/**'
+      - 'tools/http_*.py'
+      - 'tools/postgres_ci_concurrency.py'
+      - 'tools/postgres_ci_200_trades.py'
+      - '.github/workflows/chatgpt8-integration.yml'
+
+jobs:
+  sqlite-http:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python -m pip install psycopg[binary]
+      - name: SQLite world, economics and construction regression tests
+        run: |
+          set -euo pipefail
+          python -m unittest discover -s server -p 'test_*.py' -q
+      - name: HTTP isolated checks
+        run: |
+          set -euo pipefail
+          python tools/http_isolated_probe.py
+          python tools/http_200_authenticated.py
+          python tools/http_deposits_build.py
+      - name: Regions query benchmark
+        run: python tools/benchmark_regions_overview.py
+
+  postgres-exchange:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: lunex_ci
+          POSTGRES_USER: lunex_ci
+          POSTGRES_PASSWORD: ci_ephemeral_password
+        ports:
+          - 15499:5432
+        options: >-
+          --health-cmd "pg_isready -U lunex_ci -d lunex_ci"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 12
+    env:
+      LUNEX_DB_ENGINE: postgres
+      LUNEX_PG_HOST: 127.0.0.1
+      LUNEX_PG_PORT: '15499'
+      LUNEX_PG_DB: lunex_ci
+      LUNEX_PG_USER: lunex_ci
+      LUNEX_PG_PASSWORD: ci_ephemeral_password
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python -m pip install psycopg[binary]
+      - name: Apply migrations to disposable database
+        run: python server/migrate.py up
+      - name: PostgreSQL construction and commissioning regression tests
+        run: |
+          set -euo pipefail
+          python -m unittest discover -s server -p 'test_postgres_commissioning.py' -v
+      - name: Race buyers and sellers
+        run: python tools/postgres_ci_concurrency.py
+      - name: Stress 200 independent exchange actors
+        run: python tools/postgres_ci_200_trades.py

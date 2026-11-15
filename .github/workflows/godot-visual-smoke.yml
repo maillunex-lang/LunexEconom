@@ -1,0 +1,75 @@
+name: Godot 4.7 visual smoke (isolated)
+on:
+  push:
+    branches: [ChatGPT8]
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - 'client/**'
+      - '.github/workflows/godot-visual-smoke.yml'
+jobs:
+  import:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install display and Godot 4.7.2
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq xvfb libgl1 libx11-6
+          curl -fL --retry 3 -o /tmp/godot.zip https://github.com/godotengine/godot/releases/download/4.7.2-stable/Godot_v4.7.2-stable_linux.x86_64.zip
+          unzip -q /tmp/godot.zip -d /tmp
+          chmod +x /tmp/Godot_v4.7.2-stable_linux.x86_64
+      - name: Import GLB under Xvfb
+        run: |
+          set -o pipefail
+          timeout 120 xvfb-run -a /tmp/Godot_v4.7.2-stable_linux.x86_64 --headless --path client --editor --quit 2>&1 | tee godot-import.log
+          ! grep -E 'ERROR:|Parse Error:' godot-import.log
+      - name: World 2.5D smoke
+        run: |
+          set -o pipefail
+          timeout 90 xvfb-run -a /tmp/Godot_v4.7.2-stable_linux.x86_64 --headless --path client --script res://tests/world3d_smoke.gd 2>&1 | tee godot-world.log
+          grep -q 'WORLD3D_SMOKE_PASS' godot-world.log
+          ! grep -E 'FAIL:|ERROR:|Parse Error:' godot-world.log
+      - name: Road traffic animation smoke
+        run: |
+          set -o pipefail
+          timeout 90 xvfb-run -a /tmp/Godot_v4.7.2-stable_linux.x86_64 --headless --path client --script res://tests/road_traffic_smoke.gd 2>&1 | tee godot-traffic.log
+          grep -q 'ROAD_TRAFFIC_SMOKE_PASS' godot-traffic.log
+          ! grep -E 'FAIL:|ERROR:|Parse Error:' godot-traffic.log
+      - name: Build menu functional smoke
+        run: |
+          set -o pipefail
+          timeout 90 xvfb-run -a /tmp/Godot_v4.7.2-stable_linux.x86_64 --headless --path client --script res://tests/build_menu_smoke.gd 2>&1 | tee godot-build-menu.log
+          grep -q 'BUILD_MENU_SMOKE_PASS' godot-build-menu.log
+          ! grep -E 'FAIL:|ERROR:|Parse Error:' godot-build-menu.log
+      - name: GLB runtime lookup and instantiation smoke
+        run: |
+          set -o pipefail
+          timeout 90 xvfb-run -a /tmp/Godot_v4.7.2-stable_linux.x86_64 --headless --path client --script res://tests/asset_runtime_smoke.gd 2>&1 | tee godot-assets.log
+          grep -q 'ASSET_RUNTIME_SMOKE_PASS count=7' godot-assets.log
+          ! grep -E 'ERROR:|Parse Error:' godot-assets.log
+      - name: Capture isolated GLB screenshot
+        run: |
+          set -o pipefail
+          mkdir -p qa-artifacts
+          for spec in "factory 3 2" "truck 2 3" "tractor 2 2" "construction_foundation 3 2" "construction_frame 3 2" "road_corner 1 1"; do
+            read -r kind width height <<< "$spec"
+            LUNEX_QA_KIND="$kind" LUNEX_QA_WIDTH="$width" LUNEX_QA_HEIGHT="$height" LUNEX_QA_SCREENSHOT="$PWD/qa-artifacts/$kind.png" timeout 90 xvfb-run -a /tmp/Godot_v4.7.2-stable_linux.x86_64 --audio-driver Dummy --path client --script res://qa/capture_model.gd 2>&1 | tee -a godot-render.log
+            test -s "qa-artifacts/$kind.png"
+          done
+          ! grep -E 'ERROR:|Parse Error:' godot-render.log
+      - name: Upload screenshot
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: godot-render-screenshot
+          path: |
+            qa-artifacts/*.png
+            godot-render.log
+      - name: Upload diagnostic log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: godot-import-log
+          path: godot-import.log

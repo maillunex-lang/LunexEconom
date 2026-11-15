@@ -2,6 +2,7 @@
 import io
 import json
 import os
+from construction_test_fixtures import fast_construction
 import tempfile
 import unittest
 import uuid
@@ -186,6 +187,8 @@ class DeliveryTests(ContractBase):
             rows = db.execute("SELECT delivered,shortfall,paid,penalty_paid FROM trade_deliveries").fetchall()
         return supply, demand, permille, rows
 
+    @fast_construction
+
     def test_delivery_reaches_the_factory_before_the_market(self):
         self.build("alice", "farm")
         self.build("bob", "factory")
@@ -209,6 +212,8 @@ class DeliveryTests(ContractBase):
         self.assertEqual(paid, -4000)
         self.assertGreater(again["balance"], 0)
 
+    @fast_construction
+
     def test_supplier_keeps_raw_material_for_their_own_factory(self):
         self.build("alice", "farm")
         self.build("alice", "factory")
@@ -220,6 +225,8 @@ class DeliveryTests(ContractBase):
         self.assertEqual(game_server.wallet("alice")[1]["reports"][0]["input_cost"], 0)
         self.assert_ledger_balanced()
 
+    @fast_construction
+
     def test_shortfall_pays_the_penalty_and_two_buyers_share_in_id_order(self):
         self.build("alice", "farm")
         self.trade("alice", "bob", qty=150, price=100, penalty=10, term=2)
@@ -229,6 +236,8 @@ class DeliveryTests(ContractBase):
         self.assertEqual((delivered, shortfall, paid, penalty_paid), (100, 50, 10000, 500))
         self.assert_ledger_balanced()
         # a second supplier month is not required; priority is checked on a fresh pair of contracts below
+
+    @fast_construction
 
     def test_lower_contract_id_is_filled_first(self):
         self.build("alice", "farm")

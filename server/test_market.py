@@ -1,4 +1,5 @@
 import os
+from construction_test_fixtures import fast_construction
 import tempfile
 import unittest
 import uuid
@@ -77,6 +78,8 @@ class MarketIntegrationTests(unittest.TestCase):
         self.assertGreater(honey["demand"], 0)
         self.assertLess(honey["price_if_added"], honey["price"])
 
+    @fast_construction
+
     def test_more_farms_lower_the_price(self):
         before = self.products()["honey"]["price"]
         self.build("alice", "farm", 8, 10)
@@ -86,6 +89,8 @@ class MarketIntegrationTests(unittest.TestCase):
         self.assertEqual((one["supply"], two["supply"]), (100, 200))
         self.assertLess(one["price"], before)
         self.assertLess(two["price"], one["price"])
+
+    @fast_construction
 
     def test_all_players_get_the_same_stored_price(self):
         self.build("alice", "farm", 8, 10)
@@ -112,6 +117,8 @@ class MarketIntegrationTests(unittest.TestCase):
         with game_server.connect() as db:
             again = db.execute("SELECT price FROM market_prices WHERE product='honey' AND month_index=0").fetchone()[0]
         self.assertEqual(stored, again)
+
+    @fast_construction
 
     def test_wallet_contains_market_and_forecast_uses_it(self):
         self.build("alice", "farm", 8, 10)

@@ -1,4 +1,5 @@
 import os
+from construction_test_fixtures import fast_construction
 import tempfile
 import unittest
 import uuid
@@ -57,6 +58,8 @@ class SettlementTests(unittest.TestCase):
         self.now += DAY - 10
         self.assertEqual(self.balance(), res["balance"])
 
+    @fast_construction
+
     def test_first_month_paid_after_it_ends(self):
         _, res = self.build()
         self.now += DAY + 5
@@ -66,6 +69,8 @@ class SettlementTests(unittest.TestCase):
         self.assertEqual(w["reports"][0]["profit"], 12_000)
         self.assertEqual(w["forecast"], {"revenue": 20_000, "input_cost": 0, "upkeep": 8_000, "wages": 6_000, "interest": 0, "profit": 12_000, "profit_tax": 0, "property_tax": 0, "profit_after_tax": 12_000, "owner_spend": 0, "owner_spend_share": economy.OWNER_SPEND_SHARE, "buildings": 1})
 
+    @fast_construction
+
     def test_settlement_is_idempotent(self):
         _, res = self.build()
         self.now += DAY * 2 + 5
@@ -73,10 +78,14 @@ class SettlementTests(unittest.TestCase):
         self.assertEqual(self.balance(), first)
         self.assertEqual(first, res["balance"] + 24_000)
 
+    @fast_construction
+
     def test_catch_up_over_many_months(self):
         _, res = self.build()
         self.now += DAY * 6 + 5
         self.assertEqual(self.balance(), res["balance"] + 6 * 12_000)
+
+    @fast_construction
 
     def test_first_month_is_prorated(self):
         game_server.wallet("alice")      # starts the clock at T0
@@ -84,6 +93,8 @@ class SettlementTests(unittest.TestCase):
         _, res = self.build()
         self.now += DAY // 2 + 5
         self.assertEqual(self.balance(), res["balance"] + 6_000)
+
+    @fast_construction
 
     def test_second_building_adds_income(self):
         self.build("farm", 8, 10)

@@ -19,6 +19,8 @@ import bank
 import city
 import economy
 import goods_catalog
+import clock
+import construction_stages
 import taxes
 
 
@@ -74,9 +76,17 @@ def _month_products(companies):
 
 
 def register_building(db, ph, owner, object_id, kind, clk):
-    """Start operating a new building; the construction month is prorated."""
+    """Register the commissioning month, with partial output after completion."""
     month = clk["month_index"]
     elapsed = clk["month_seconds"] - clk["seconds_to_next_month"]
+    # New construction is commissioned on its server-scheduled completion date.
+    # Older buildings without a stage record preserve the legacy start timestamp.
+    stage = db.execute(_q("SELECT stage,next_at FROM construction_stages WHERE object_id=%s", ph), (object_id,)).fetchone()
+    if stage is not None and stage[0] != 'complete':
+        finish_at = int(stage[1]) + (construction_stages.step_seconds() if stage[0] == 'foundation' else 0)
+        calendar = (clk['epoch'], clk['month_seconds'], clk['base_index'])
+        month = clock.month_index(calendar, finish_at)
+        elapsed = max(0, finish_at - clk['epoch']) % clk['month_seconds']
     permille = min(999, max(0, elapsed * 1000 // clk["month_seconds"]))
     db.execute(_q("INSERT INTO building_ops(object_id,owner,kind,start_month,start_permille) VALUES(%s,%s,%s,%s,%s)", ph),
                (object_id, owner, kind, month, permille))
@@ -216,7 +226,9 @@ def sell_building(db, ph, owner, object_id, now):
     if price:
         economy.post(db, ph, "sale", "Продажа здания: %s" % kind, [(economy.CONSTRUCTION, -price), (account, price)], now)
     # Stock above the remaining warehouse capacity cannot stay: it is sold at the liquidation share of the market price.
-    capacity = sum(_spec(k)["capacity"] for k, in db.execute(_q("SELECT kind FROM building_ops WHERE owner=%s", ph), (owner,)).fetchall()
+    capacity = sum(_spec(k)["capacity"] for k, in db.execute(_q("""SELECT o.kind FROM building_ops o
+        LEFT JOIN construction_stages cs ON cs.object_id=o.object_id
+        WHERE o.owner=%s AND (cs.stage IS NULL OR cs.stage='complete')""", ph), (owner,)).fetchall()
                    if _spec(k) and _spec(k).get("capacity"))
     stock = {p: int(q) for p, q in db.execute(_q("SELECT product,qty FROM inventory WHERE owner=%s", ph), (owner,)).fetchall() if q > 0}
     excess = sum(stock.values()) - capacity
@@ -691,7 +703,8 @@ def _input_fraction_for(reg, inputs):
 
 
 def advance(db, ph, clk, now):
-    """Process all completed, not yet processed months for the whole world (idempotent)."""
+    """Process completed months, synchronizing server construction before settlement."""
+    construction_stages.advance(db, ph, now)
     for object_id, owner, kind in db.execute("SELECT id,owner,kind FROM buildings WHERE id NOT IN (SELECT object_id FROM building_ops)").fetchall():
         register_building(db, ph, owner, object_id, kind, clk)     # buildings from before production existed start now
     row = db.execute("SELECT processed_through FROM world_state WHERE id=1").fetchone()
@@ -710,7 +723,10 @@ def advance(db, ph, clk, now):
 
 
 def _ops(db, ph):
-    return db.execute("SELECT owner,kind,start_month,start_permille FROM building_ops").fetchall()
+    """Operational enterprises only. Legacy structures lacking a stage remain active."""
+    return db.execute("""SELECT o.owner,o.kind,o.start_month,o.start_permille FROM building_ops o
+        LEFT JOIN construction_stages cs ON cs.object_id=o.object_id
+        WHERE cs.stage IS NULL OR cs.stage='complete'""").fetchall()
 
 
 def _current_labor(db, ph, month, ops):
@@ -781,7 +797,9 @@ def forecast(db, ph, owner, quotes, labor):
     revenue = inputs = maint = wages = count = 0
     staffing = labor["staffing"]
     kinds = []
-    for kind, in db.execute(_q("SELECT kind FROM building_ops WHERE owner=%s", ph), (owner,)).fetchall():
+    for kind, in db.execute(_q("""SELECT o.kind FROM building_ops o
+        LEFT JOIN construction_stages cs ON cs.object_id=o.object_id
+        WHERE o.owner=%s AND (cs.stage IS NULL OR cs.stage='complete')""", ph), (owner,)).fetchall():
         kinds.append((kind, 1000))
         spec = _spec(kind)
         if not spec:
@@ -808,7 +826,9 @@ def forecast(db, ph, owner, quotes, labor):
 
 def inventory_view(db, ph, owner):
     rows = db.execute(_q("SELECT product,qty FROM inventory WHERE owner=%s ORDER BY product", ph), (owner,)).fetchall()
-    capacity = sum(_spec(k)["capacity"] for k, in db.execute(_q("SELECT kind FROM building_ops WHERE owner=%s", ph), (owner,)).fetchall()
+    capacity = sum(_spec(k)["capacity"] for k, in db.execute(_q("""SELECT o.kind FROM building_ops o
+        LEFT JOIN construction_stages cs ON cs.object_id=o.object_id
+        WHERE o.owner=%s AND (cs.stage IS NULL OR cs.stage='complete')""", ph), (owner,)).fetchall()
                    if _spec(k) and _spec(k).get("capacity"))
     items = []
     for p, q in rows:

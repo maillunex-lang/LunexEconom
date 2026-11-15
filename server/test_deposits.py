@@ -1,6 +1,7 @@
 """BE-108: deterministic deposits, depletion, and the legacy-mine exception."""
 import json
 import os
+from construction_test_fixtures import fast_construction
 import tempfile
 import threading
 import unittest
@@ -122,6 +123,8 @@ class BuildTests(DepositWorld):
         self.assertEqual(sold[0], 201, sold[1])
         again = game_server.build("alice", {"kind": "oil_well", "x": x, "y": y, "request_id": rid()})
         self.assertEqual(again[1].get("error"), "no_deposit")
+
+    @fast_construction
 
     def test_legacy_mine_builds_anywhere_and_does_not_deplete(self):
         x, y = self.site()

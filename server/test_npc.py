@@ -1,4 +1,5 @@
 import os
+from construction_test_fixtures import fast_construction
 import tempfile
 import unittest
 import uuid
@@ -150,6 +151,8 @@ class WorldTests(unittest.TestCase):
         data = game_server.market_state()[1]
         self.assertEqual([c["name"] for c in data["competitors"]], [p["name"] for p in npc.PERSONAS])
         self.assertEqual(sum(c["buildings"] for c in data["competitors"]), len(self.npc_buildings()))
+
+    @fast_construction
 
     def test_players_share_the_market_with_npcs(self):
         game_server.npc_tick()

@@ -184,6 +184,107 @@ def create(name, kind, w, d):
         b.box(-.25,-2.89,0,.8,.06,1.25,"dark")
         b.box(0,-2.96,3.93,.98,.10,.16,"red")
         b.box(0,-2.97,3.93,.16,.11,.91,"red")
+    elif kind in ("grain_field","elevator","mill","bread_plant","oil_well","gas_well","sand_pit","logging_camp","factory","farm","mine"):
+        W,D=w*2,d*2
+        b.box(0,0,0,W-.12,D-.12,.08,"grass" if kind in ("grain_field","farm","logging_camp") else "sand")
+        if kind in ("grain_field","farm"):
+            for row in range(7):
+                y=-D*.40+row*D*.13
+                b.box(0,y,.08,W*.85,.16,.15,"yellow" if row%2 else "green")
+            b.box(-W*.34,D*.29,.08,.4,.4,.48,"wood")
+        elif kind=="elevator":
+            for x in (-1.45,0,1.45):
+                b.box(x,.55,.08,1.13,1.13,5.8,"light")
+                b.pyramid(x,.55,5.88,1.14,1.14,.6,"roof")
+            b.box(0,-1.5,.08,4.3,1.8,2.5,"brick2")
+            b.box(0,-2.43,.12,1.1,.07,1.8,"dark")
+        elif kind in ("mill","bread_plant","factory"):
+            b.box(0,0,.08,W*.84,D*.78,2.8,"brick2" if kind=="bread_plant" else "light")
+            b.box(0,0,2.88,W*.89,D*.83,.23,"roof")
+            for x in (-W*.25,0,W*.25):
+                b.box(x,-D*.39,.55,.48,.07,.95,"window")
+            b.box(W*.27,D*.15,3.11,.5,.5,1.5,"dark")
+            b.box(-W*.30,-D*.40,.08,.95,.08,1.65,"teal")
+        elif kind in ("oil_well","gas_well"):
+            b.box(0,0,.08,W*.8,D*.72,.17,"dark")
+            b.box(-.45,0,.25,.18,.24,3.3,"yellow" if kind=="oil_well" else "teal")
+            b.box(.45,0,.25,.18,.24,3.3,"yellow" if kind=="oil_well" else "teal")
+            b.box(0,0,3.5,2.2,.27,.22,"dark")
+            b.box(.35,.25,.5,.55,.8,.55,"red" if kind=="oil_well" else "blue")
+            b.box(1.2,.5,.25,.24,1.8,.25,"dark")
+        elif kind=="sand_pit":
+            for x,y in ((-1,-.7),(.9,-.5),(0,.8)):
+                b.pyramid(x,y,.08,1.7,1.6,.75,"sand")
+            b.box(-1.1,1.1,.08,.8,.6,.65,"yellow")
+        elif kind=="logging_camp":
+            b.box(-.6,0,.08,1.5,2.4,1.7,"wood")
+            b.pyramid(-.6,0,1.78,1.7,2.7,.75,"roof")
+            for y in (-1.25,-.7,-.15,.4,.95):
+                b.box(1.35,y,.1,1.2,.24,.24,"wood")
+            b.box(1.35,0,.35,1.3,2.6,.12,"wood")
+        elif kind=="mine":
+            b.box(0,.45,.08,W*.75,D*.48,1.0,"dark")
+            b.box(0,-D*.30,.08,W*.55,D*.18,1.3,"brick")
+            b.box(0,-D*.40,.08,1.2,.07,.9,"dark")
+    elif kind in ("truck", "tractor", "construction_foundation", "construction_frame", "road_corner"):
+        W,D=w*2,d*2
+        if kind in ("truck", "tractor"):
+            # Distinct silhouette: tall glazed cab, front bonnet, visible large tyres.
+            # Box-only geometry keeps the original vertex-color mobile pipeline.
+            cab_color="teal" if kind=="truck" else "yellow"
+            bonnet_color="teal" if kind=="truck" else "yellow"
+            b.box(0,0,.52,W*.63,D*.65,.32,"dark")
+            b.box(0,-D*.20,.85,W*.53,D*.29,1.04,cab_color)
+            b.box(0,-D*.355,1.04,W*.40,.045,.58,"window")
+            for x in (-W*.267,W*.267):
+                b.box(x,-D*.20,1.07,.05,D*.20,.53,"window2")
+            b.box(0,-D*.20,1.89,W*.58,D*.32,.12,"roof")
+            b.box(0,D*.16,.77,W*.57,D*.32,.49,bonnet_color)
+            b.box(0,D*.33,.89,W*.48,.06,.27,"dark")
+            if kind=="truck":
+                b.box(0,D*.30,.72,W*.68,D*.28,1.15,"light")
+                b.box(0,D*.30,1.87,W*.70,D*.30,.09,"roof")
+                b.box(0,D*.46,.95,W*.50,.055,.16,"brick2")
+            else:
+                b.box(0,D*.20,1.27,W*.49,D*.29,.08,"roof")
+                b.box(0,-D*.13,2.01,.10,.10,.33,"dark")
+                b.box(0,D*.34,1.06,.12,.08,.09,"window2")
+            for x in (-W*.32,W*.32):
+                for y in (-D*.26,D*.27):
+                    wheel_h=.96 if y<0 else .72
+                    b.box(x,y,0,.37,.62,wheel_h,"dark")
+                    b.box(x+(-.19 if x<0 else .19),y,wheel_h*.32,.045,.32,wheel_h*.35,"roof")
+            for x in (-W*.23,W*.23):
+                b.box(x,D*.35,.86,.12,.055,.13,"yellow")
+        elif kind=="construction_foundation":
+            b.box(0,0,0,W-.14,D-.14,.10,"sand")
+            b.box(0,0,.10,W*.83,D*.80,.28,"light")
+            for x in (-W*.33,W*.33):
+                for y in (-D*.30,D*.30):
+                    b.box(x,y,.38,.12,.12,.32,"dark")
+        elif kind=="construction_frame":
+            b.box(0,0,0,W-.14,D-.14,.10,"sand")
+            for z in (.12,1.45,2.78):
+                b.box(0,0,z,W*.82,D*.80,.12,"light")
+            for x in (-W*.36,W*.36):
+                for y in (-D*.34,D*.34):
+                    b.box(x,y,.12,.15,.15,2.78,"brick2")
+            b.box(0,-D*.39,1.54,W*.66,.07,.06,"yellow")
+        else:
+            b.box(0,0,0,1.94,1.94,.04,"pave")
+            b.box(0,-.27,.04,1.47,1.40,.015,"asphalt")
+            b.box(.27,0,.04,1.40,1.47,.015,"asphalt")
+            b.box(-.15,-.55,.06,.04,.24,.009,"yellow")
+            b.box(.55,.15,.06,.24,.04,.009,"yellow")
+    elif kind=="catalog_generic":
+        W,D=w*2,d*2
+        b.box(0,0,0,W-.12,D-.12,.07,"pave")
+        b.box(0,0,.07,W*.78,D*.74,1.8,"light")
+        b.box(0,0,1.87,W*.83,D*.79,.17,"roof")
+        b.box(0,-D*.375,.07,.7,.07,1.3,"dark")
+        for x in (-W*.23,0,W*.23):
+            b.box(x,-D*.38,.9,.36,.045,.43,"window")
+        b.box(0,0,2.04,.6,.6,.15,"teal")
     elif kind=="park":
         b.box(0,0,0,3.92,3.92,.07,"grass")
         b.box(0,0,.07,3.82,.38,.03,"pave")
@@ -229,7 +330,34 @@ def main():
         ("hospital_3x3","hospital",3,3), ("park_2x2","park",2,2),
         ("road_straight_1x1","road_straight",1,1),
         ("road_cross_1x1","road_cross",1,1),
-        ("bridge_1x1","bridge",1,1)]
+        ("bridge_1x1","bridge",1,1),
+        ("road_corner_1x1","road_corner",1,1),
+        ("truck_2x3","truck",2,3),
+        ("tractor_2x2","tractor",2,2),
+        ("construction_foundation_3x2","construction_foundation",3,2),
+        ("construction_frame_3x2","construction_frame",3,2),
+        ("grain_field_3x2","grain_field",3,2),
+        ("elevator_3x3","elevator",3,3),
+        ("mill_3x2","mill",3,2),
+        ("bread_plant_3x2","bread_plant",3,2),
+        ("oil_well_2x2","oil_well",2,2),
+        ("gas_well_2x2","gas_well",2,2),
+        ("sand_pit_2x2","sand_pit",2,2),
+        ("logging_camp_2x3","logging_camp",2,3),
+        ("factory_3x2","factory",3,2),
+        ("farm_2x2","farm",2,2),
+        ("mine_2x3","mine",2,3),
+        ("factory","factory",3,2), ("farm","farm",2,2),
+        ("mine","mine",2,3), ("oil_well","oil_well",2,2)]
+    # Missing city-catalog IDs are generated as generic distinct placeholder buildings.
+    # They are real GLBs with valid footprints, not claimed bespoke architectural art.
+    sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "server"))
+    import city_catalog
+    present_ids={name for name, _, _, _ in specs}
+    for oid, entry in sorted(city_catalog.CATALOG.items()):
+        if oid in present_ids or any(name.startswith(oid+"_") for name in present_ids):
+            continue
+        specs.append((oid,"catalog_generic",int(entry["w"]),int(entry["h"])))
     manifest=[]
     for name,kind,w,d in specs:
         mesh=create(name,kind,w,d)
@@ -238,7 +366,7 @@ def main():
         print(name, row["triangles"], "triangles", flush=True)
     # This metadata is used only by documentation script, not the Android client.
     (output.parent.parent.parent/"tools/models_build.json").write_text(json.dumps(manifest,indent=2))
-    assert len(manifest)==13
+    assert len(manifest)>=28
 
 
 if __name__=="__main__":

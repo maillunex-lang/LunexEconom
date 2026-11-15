@@ -1,4 +1,5 @@
 import os
+from construction_test_fixtures import fast_construction
 import tempfile
 import unittest
 import uuid
@@ -101,6 +102,7 @@ class RateTests(unittest.TestCase):
 
 
 class CollectionTests(TaxBase):
+    @fast_construction
     def test_vat_is_borne_by_the_buyer_and_collected_by_the_city(self):
         self.build("alice", "farm")
         base = game_server.wallet("alice")[1]["balance"]
@@ -121,6 +123,8 @@ class CollectionTests(TaxBase):
         self.assertEqual(row[0], 0)
         self.assertEqual(row[1], 0)
 
+    @fast_construction
+
     def test_property_tax_is_charged_even_without_profit(self):
         self.build("alice", "factory")
         self.month("alice", 1)
@@ -139,6 +143,8 @@ class CollectionTests(TaxBase):
         self.assertTrue(all(v >= 0 for _, v in rows))
         self.ledger_ok()
 
+    @fast_construction
+
     def test_taxes_follow_the_policy_rates(self):
         with game_server.connect() as db:
             db.execute("INSERT INTO city_policy(id,profit_tax_permille,property_tax_permille,social_share_permille,changed_month) VALUES(1,50,0,300,0)")
@@ -147,6 +153,8 @@ class CollectionTests(TaxBase):
         w = self.month("alice", 1)
         self.assertEqual(w["balance"], base + 12_000 - int(12_000 * 0.05))     # 5 % profit tax, no property tax
         self.assertEqual(game_server.market_state()[1]["taxes"]["profit_tax"], 0.05)
+
+    @fast_construction
 
     def test_view_and_forecast_expose_taxes(self):
         self.build("alice", "farm")

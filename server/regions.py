@@ -255,17 +255,23 @@ def overview(db, ph):
     active = active_regions(db, ph)
     rows = db.execute("SELECT MAX(month_index) FROM market_prices_region").fetchone()
     month = int(rows[0]) if rows and rows[0] is not None else None
+    # Fetch all region prices for the same month in one query rather than N
+    # queries (one per active region). Works with SQLite and PostgreSQL.
+    price_by_region = {}
+    if month is not None:
+        for region_id, product, price, supply, demand, imports, exports in db.execute(_q(
+                "SELECT region,product,price,supply,demand,imports,exports FROM market_prices_region WHERE month_index=%s", ph),
+                (month,)).fetchall():
+            price_by_region.setdefault(region_id, {})[product] = {
+                "price": int(price), "supply": int(supply), "demand": int(demand),
+                "imports": int(imports), "exports": int(exports)}
     cities = []
     for region in active:
         pop = db.execute(_q("SELECT population,labor_force,jobs,wage,staffing_permille,month_index FROM region_population WHERE region=%s ORDER BY month_index DESC LIMIT 1", ph),
                          (region,)).fetchone()
         if region == HOME:
             pop = db.execute("SELECT population,labor_force,jobs,wage,staffing_permille,month_index FROM population ORDER BY month_index DESC LIMIT 1").fetchone()
-        prices = {}
-        if month is not None:
-            for product, price, supply, demand, imports, exports in db.execute(_q(
-                    "SELECT product,price,supply,demand,imports,exports FROM market_prices_region WHERE region=%s AND month_index=%s", ph), (region, month)).fetchall():
-                prices[product] = {"price": int(price), "supply": int(supply), "demand": int(demand), "imports": int(imports), "exports": int(exports)}
+        prices = price_by_region.get(region, {})
         cities.append({"id": region, "name": name(region), "population": int(pop[0]) if pop else base_population(region),
                        "labor_force": int(pop[1]) if pop else 0, "jobs": int(pop[2]) if pop else 0, "wage": int(pop[3]) if pop else economy.BASE_WAGE,
                        "staffing": (int(pop[4]) / 1000.0) if pop else 1.0, "prices": prices})

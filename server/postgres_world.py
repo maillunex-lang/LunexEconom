@@ -7,6 +7,7 @@ import postgres_db
 import roads as road_rules
 import zoning
 import economy
+import construction_stages
 import building_dimensions
 import production
 import taxes
@@ -69,6 +70,7 @@ def build(owner,payload):
         paid,cost,balance=economy.charge_build(db,"%s",owner,kind,len(new_roads),now,payload.get("size"))
         if not paid:return 402,{"error":"insufficient_funds","cost":cost,"balance":balance}
         db.execute("INSERT INTO buildings(id,owner,kind,x,y,created) VALUES(%s,%s,%s,%s,%s,%s)",(oid,owner,kind,x,y,now))
+        construction_stages.register(db,"%s",oid,now)
         production.register_building(db,"%s",owner,oid,kind,clk)
         if decision and decision.get("deposit_id"):
             deposits.link(db, "%s", oid, decision["deposit_id"], decision["resource"])
@@ -86,7 +88,9 @@ def build(owner,payload):
                 version=db.execute("""INSERT INTO chunks(cx,cy,version) VALUES(%s,%s,1)
                    ON CONFLICT(cx,cy) DO UPDATE SET version=chunks.version+1 RETURNING version""",(cx,cy)).fetchone()[0]
                 data={"object_id":oid,"owner":owner,"cells":coords}
-                if kind_name=="building_created":data["building_kind"]=kind
+                if kind_name=="building_created":
+                    data["building_kind"]=kind
+                    data["construction_stage"]="foundation"
                 seq=db.execute("""INSERT INTO events(cx,cy,version,kind,payload)
                     VALUES(%s,%s,%s,%s,%s) RETURNING seq""",(cx,cy,version,kind_name,json.dumps(data))).fetchone()[0]
                 events.append({"seq":seq,"cx":cx,"cy":cy,"version":version,"kind":kind_name,**data})
@@ -226,6 +230,8 @@ def contracts_cancel(owner,payload):
 def events(after):
     if type(after) is not int or after<0:return 400,{"error":"invalid_cursor"}
     with postgres_db.connect() as db:
+        db.execute("SELECT pg_advisory_xact_lock(20261114)")
+        construction_stages.advance(db,"%s",int(time.time()))
         rows=db.execute("SELECT seq,cx,cy,version,kind,payload FROM events WHERE seq>%s ORDER BY seq LIMIT 100",(after,)).fetchall()
         latest=db.execute("SELECT COALESCE(MAX(seq),0) FROM events").fetchone()[0]
     items=[road_rules.event_item(s,cx,cy,v,kind,payload) for s,cx,cy,v,kind,payload in rows]
@@ -235,12 +241,15 @@ def chunk(cx,cy):
     if type(cx) is not int or type(cy) is not int or abs(cx)>1000 or abs(cy)>1000:
         return 400,{"error":"invalid_chunk"}
     with postgres_db.connect() as db:
+        db.execute("SELECT pg_advisory_xact_lock(20261114)")
+        construction_stages.advance(db,"%s",int(time.time()))
         row=db.execute("SELECT version FROM chunks WHERE cx=%s AND cy=%s",(cx,cy)).fetchone()
         cells=db.execute("""SELECT c.x,c.y,b.kind,b.id,b.owner FROM cells c JOIN buildings b ON c.object_id=b.id
           WHERE c.x>=%s AND c.x<%s AND c.y>=%s AND c.y<%s ORDER BY c.x,c.y""",
           (cx*CHUNK,(cx+1)*CHUNK,cy*CHUNK,(cy+1)*CHUNK)).fetchall()
         rds=db.execute("SELECT x,y,owner FROM roads WHERE x>=%s AND x<%s AND y>=%s AND y<%s ORDER BY x,y",(cx*CHUNK,(cx+1)*CHUNK,cy*CHUNK,(cy+1)*CHUNK)).fetchall()
-    items=[{"x":x,"y":y,"kind":"building_created","building_kind":kind,"object_id":oid,"owner":owner} for x,y,kind,oid,owner in cells]
+        stages=construction_stages.stages_for_chunk(db,"%s",list({oid for x,y,kind,oid,owner in cells}))
+    items=[{"x":x,"y":y,"kind":"building_created","building_kind":kind,"object_id":oid,"owner":owner,"construction_stage":stages.get(oid,"complete")} for x,y,kind,oid,owner in cells]
     items+=[{"x":x,"y":y,"kind":"road_changed","object_id":"","owner":owner} for x,y,owner in rds]
     return 200,{"cx":cx,"cy":cy,"version":row[0] if row else 0,"cells":items}
 

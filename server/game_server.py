@@ -12,6 +12,7 @@ import sqlite_util
 import roads as road_rules
 import zoning
 import economy
+import construction_stages
 import building_dimensions
 import production
 import taxes
@@ -57,6 +58,7 @@ def _prepare(db):
     db.execute("CREATE TABLE IF NOT EXISTS events(seq INTEGER PRIMARY KEY AUTOINCREMENT,cx INTEGER NOT NULL,cy INTEGER NOT NULL,version INTEGER NOT NULL,kind TEXT NOT NULL,payload TEXT NOT NULL)")
     db.execute("CREATE TABLE IF NOT EXISTS roads(x INTEGER NOT NULL,y INTEGER NOT NULL,owner TEXT NOT NULL,created INTEGER NOT NULL,PRIMARY KEY(x,y))")
     db.execute("CREATE TABLE IF NOT EXISTS commands(owner TEXT NOT NULL,request_id TEXT NOT NULL,response TEXT NOT NULL,PRIMARY KEY(owner,request_id))")
+    construction_stages.ensure(db, "?")
     for statement in economy.SCHEMA + clock.SCHEMA + social.SCHEMA:
         db.execute(statement)
     admin_api.ensure(db, "?")
@@ -120,6 +122,7 @@ def build(owner, payload):
         if not paid:
             return 402,{"error":"insufficient_funds","cost":cost,"balance":balance}
         db.execute("INSERT INTO buildings VALUES(?,?,?,?,?,?)",(object_id,owner,kind,x,y,now))
+        construction_stages.register(db,"?",object_id,now)
         production.register_building(db,"?",owner,object_id,kind,clk)
         if decision and decision.get("deposit_id"):
             deposits.link(db, "?", object_id, decision["deposit_id"], decision["resource"])
@@ -136,7 +139,9 @@ def build(owner, payload):
                 db.execute("INSERT INTO chunks VALUES(?,?,1) ON CONFLICT(cx,cy) DO UPDATE SET version=version+1",(cx,cy))
                 version=db.execute("SELECT version FROM chunks WHERE cx=? AND cy=?",(cx,cy)).fetchone()[0]
                 data={"object_id":object_id,"owner":owner,"cells":coords}
-                if kind_name=="building_created":data["building_kind"]=kind
+                if kind_name=="building_created":
+                    data["building_kind"]=kind
+                    data["construction_stage"]="foundation"
                 payload=json.dumps(data)
                 seq=db.execute("INSERT INTO events(cx,cy,version,kind,payload) VALUES(?,?,?,?,?)",(cx,cy,version,kind_name,payload)).lastrowid
                 events.append({"seq":seq,"cx":cx,"cy":cy,"version":version,"kind":kind_name,**data})
@@ -333,7 +338,9 @@ def contracts_cancel(owner,payload):
 
 def events(after):
     if type(after) is not int or after<0:return 400,{"error":"invalid_cursor"}
-    with connect() as db:
+    with LOCK, connect() as db:
+        db.execute("BEGIN IMMEDIATE")
+        construction_stages.advance(db,"?",int(time.time()))
         rows=db.execute("SELECT seq,cx,cy,version,kind,payload FROM events WHERE seq>? ORDER BY seq LIMIT 100",(after,)).fetchall()
         latest=db.execute("SELECT COALESCE(MAX(seq),0) FROM events").fetchone()[0]
     items=[road_rules.event_item(s,cx,cy,v,kind,payload) for s,cx,cy,v,kind,payload in rows]
@@ -342,12 +349,15 @@ def events(after):
 def chunk(cx,cy):
     if type(cx) is not int or type(cy) is not int or abs(cx)>1000 or abs(cy)>1000:
         return 400,{"error":"invalid_chunk"}
-    with connect() as db:
+    with LOCK, connect() as db:
+        db.execute("BEGIN IMMEDIATE")
+        construction_stages.advance(db,"?",int(time.time()))
         row=db.execute("SELECT version FROM chunks WHERE cx=? AND cy=?",(cx,cy)).fetchone()
         cells=db.execute("""SELECT c.x,c.y,b.kind,b.id,b.owner FROM cells c JOIN buildings b ON c.object_id=b.id
             WHERE c.x>=? AND c.x<? AND c.y>=? AND c.y<? ORDER BY c.x,c.y""",(cx*CHUNK,(cx+1)*CHUNK,cy*CHUNK,(cy+1)*CHUNK)).fetchall()
         rds=db.execute("SELECT x,y,owner FROM roads WHERE x>=? AND x<? AND y>=? AND y<? ORDER BY x,y",(cx*CHUNK,(cx+1)*CHUNK,cy*CHUNK,(cy+1)*CHUNK)).fetchall()
-    items=[{"x":x,"y":y,"kind":"building_created","building_kind":kind,"object_id":oid,"owner":owner} for x,y,kind,oid,owner in cells]
+        stages=construction_stages.stages_for_chunk(db,"?",list({oid for x,y,kind,oid,owner in cells}))
+    items=[{"x":x,"y":y,"kind":"building_created","building_kind":kind,"object_id":oid,"owner":owner,"construction_stage":stages.get(oid,"complete")} for x,y,kind,oid,owner in cells]
     items+=[{"x":x,"y":y,"kind":"road_changed","object_id":"","owner":owner} for x,y,owner in rds]
     return 200,{"cx":cx,"cy":cy,"version":row[0] if row else 0,"cells":items}
 

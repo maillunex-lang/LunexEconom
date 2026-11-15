@@ -5,6 +5,7 @@ import threading
 import unittest
 import uuid
 from unittest import mock
+from construction_test_fixtures import fast_construction
 
 DAY = 86400
 T0 = 1_800_000_000
@@ -345,6 +346,7 @@ class PostgresEconomyTests(unittest.TestCase):
             self.assertEqual(postgres_world.clock_state()["month_index"], 5)
 
 
+    @fast_construction
     def test_player_contract_delivers_off_market_and_keeps_the_ledger_closed(self):
         self.build("alice", "farm")
         self.build("bob", "factory")
