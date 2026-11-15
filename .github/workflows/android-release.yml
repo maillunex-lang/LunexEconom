@@ -7,6 +7,10 @@ on:
         required: true
         default: "v0.1.0"
         type: string
+      verify_signing_only:
+        description: "Verify owner certificate without building or publishing"
+        type: boolean
+        default: false
       pipeline_test:
         description: "TEST-ONLY: ephemeral Android signing key; never publish"
         type: boolean
@@ -18,7 +22,12 @@ on:
 permissions:
   contents: read
 jobs:
+  verify-owner-signing:
+    if: ${{ inputs.verify_signing_only == true }}
+    uses: ./.github/workflows/android-verify-signing.yml
+    secrets: inherit
   signed-candidate:
+    if: ${{ inputs.verify_signing_only != true }}
     runs-on: ubuntu-latest
     timeout-minutes: 65
     environment: ${{ (inputs.pipeline_test == true || github.ref == 'refs/heads/v2/release') && 'ci-test' || 'android-signing' }}
