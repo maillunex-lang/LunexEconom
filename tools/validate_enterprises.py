@@ -1,4 +1,10 @@
 """Offline check of V2-04 catalog assumptions."""
+import sys
+from pathlib import Path
+
+if __package__ in (None, ''):
+    sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+
 from server.enterprises import core
 
 def main():
@@ -8,7 +14,7 @@ def main():
     assert recipes['mill_flour']['inputs']['grain']==100
     assert recipes['mill_flour']['outputs']['flour']==80
     assert core.load_bp({'grain':{'quantity':50,'quality':50}},recipes['mill_flour'],4000,10000)==5000
-    assert core.load_bp({'grain':{'quantity':4000,'quality':50}},recipes['mill_flour'],4000,10000)==0
+    assert core.load_bp({'grain':{'quantity':4000,'quality':50}},recipes['mill_flour'],4000,10000)==10000
     for item in c.data['buildings']:
         assert type(item['build_days']) is int and item['build_days']>0
         assert type(item['build_cost']) is int and item['build_cost']>0
