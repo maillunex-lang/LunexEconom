@@ -31,6 +31,15 @@ CREATE TABLE enterprise_build_waits (
   first_waited_at timestamptz NOT NULL DEFAULT now()
 );
 
+-- D-14: separate idempotent demolition receipt. Zero refund has no fake ledger transfer.
+CREATE TABLE enterprise_demolition_requests (
+  request_id text PRIMARY KEY,
+  enterprise_id bigint NOT NULL UNIQUE REFERENCES enterprises(id),
+  owner_id bigint NOT NULL REFERENCES accounts(id),
+  refund bigint NOT NULL CHECK(refund >= 0),
+  transfer_id bigint REFERENCES ledger_transfers(id)
+);
+
 -- Legacy payments: one full ledger transfer already exists, never duplicate it.
 -- Mark four stages as prepaid; the original single build_transfer_id is retained.
 INSERT INTO enterprise_stage_payments
