@@ -22,6 +22,18 @@ def terrain_chunk(db, ph, owner, cx, cy):
         return 400, {"error": "invalid_query"}
     return 200, {"cx":cx,"cy":cy,"edits":[{"x":x,"y":y,**entry} for (x,y),entry in terrain_edits.chunk(db,ph,cx,cy).items()]}
 
+def publish_terrain_events(db, ph, coords):
+    """Publish per-chunk versioned events through the existing world event stream."""
+    chunks = {}
+    for x, y in coords:
+        chunks.setdefault((x // 12, y // 12), []).append([x, y])
+    for (cx, cy), cells in chunks.items():
+        db.execute("INSERT INTO chunks(cx,cy,version) VALUES(" + ",".join([ph]*3) + ") ON CONFLICT(cx,cy) DO UPDATE SET version=chunks.version+1", (cx, cy, 1))
+        version = db.execute("SELECT version FROM chunks WHERE cx=" + ph + " AND cy=" + ph, (cx, cy)).fetchone()[0]
+        payload = json.dumps({"cells": cells, "kind": "terrain_changed"})
+        db.execute("INSERT INTO events(cx,cy,version,kind,payload) VALUES(" + ",".join([ph]*5) + ")", (cx, cy, version, "terrain_changed", payload))
+
+
 def terrain_set(db, ph, owner, payload, ip):
     if not require_developer(owner,db):
         return 403, {"error": "forbidden"}
@@ -60,6 +72,7 @@ def terrain_set(db, ph, owner, payload, ip):
     for x,y in coords:
         db.execute("INSERT INTO terrain_edits(x,y,kind,editor,created,manual) VALUES("+",".join([ph]*6)+") ON CONFLICT(x,y) DO UPDATE SET kind=excluded.kind,editor=excluded.editor,created=excluded.created,manual=1",(x,y,kind,owner,now,1))
     db.execute("INSERT INTO dev_actions(id,actor,action,payload_json,inverse_json,created,undone) VALUES("+",".join([ph]*7)+")",(request_id,owner,"terrain",json.dumps(payload,ensure_ascii=False),json.dumps(previous),action_time,0))
+    publish_terrain_events(db, ph, coords)
     admin_api.audit(db,ph,owner,"dev_terrain",str(coords[0]),f"cells={len(coords)} kind={kind}",ip,now)
     db.commit()
     terrain_edits.invalidate()
@@ -99,6 +112,7 @@ def undo(db, ph, owner, payload, ip):
             db.execute("INSERT INTO terrain_edits(x,y,kind,editor,created,manual) VALUES(" + ",".join([ph]*6) + ") ON CONFLICT(x,y) DO UPDATE SET kind=excluded.kind,editor=excluded.editor,created=excluded.created,manual=excluded.manual", (x, y, *state))
     db.execute("UPDATE dev_actions SET undone=1 WHERE id=" + ph + " AND actor=" + ph, (action_id, owner))
     db.execute("INSERT INTO dev_actions(id,actor,action,payload_json,inverse_json,created,undone) VALUES(" + ",".join([ph]*7) + ")", (request_id, owner, "undo", json.dumps(payload), inverse, action_time, 0))
+    publish_terrain_events(db, ph, [tuple(map(int, c.split(","))) for c in snapshot])
     admin_api.audit(db, ph, owner, "dev_undo", action_id, f"cells={len(snapshot)}", ip, now)
     db.commit()
     terrain_edits.invalidate()
