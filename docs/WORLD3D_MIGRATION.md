@@ -22,3 +22,11 @@ Status: prototype, **not** active in the Android main scene. Keep existing Node2
 - `world3d.gd` exposes `apply_chunk_snapshot`, `apply_server_event` and `apply_server_cells`. Rebuilds an object mesh if its footprint or kind changes.
 - `tests/world3d_server_sync_smoke.gd` tests snapshot, grouping, roads and removal.
 - **Not yet connected to production networking or live Android UI**. No change to PostgreSQL, active service or published APK.
+
+## Stage 3: initial native GLB assets (work in progress)
+
+- Blender 5.0.1 generated `factory.glb`, `mine.glb`, `farm.glb`, `oil_well.glb` in `client/world3d/models/` on the Lunex development VPS.
+- The Godot scene loads these via `PackedScene` and retains procedural fallback for other kinds.
+- Footprint change triggers rebuilding the model for the same authoritative object ID.
+- Both Godot smoke tests passed on the VPS; Android device performance remains untested.
+- IMPORTANT: The GLB binary assets must be present in GitHub before building from a fresh clone. This deployment step is pending; do not treat the main branch as a complete standalone 3D build until verified.
