@@ -80,10 +80,20 @@ systemctl reload nginx
 
 say "verification through public name (resolved to this server)"
 H="--resolve rikagro.ru:443:127.0.0.1"
+code_ct() { curl -sk $H -m 10 -o /dev/null -w '%{http_code} %{content_type}' "$1" || true; }
 V2=$(curl -sk $H -m 10 -o /dev/null -w '%{http_code}' https://rikagro.ru/lunexeconom/v2/api/health || true)
 V1=$(curl -sk $H -m 10 -o /dev/null -w '%{http_code}' https://rikagro.ru/lunexeconom/api/health || true)
-AD=$(curl -sk $H -m 10 -o /dev/null -w '%{http_code}' https://rikagro.ru/lunexeconom/v2/api/admin/x || true)
-say "V2 via nginx: $V2 (need 200) | V1 via nginx: $V1 (need 200) | V2 admin path: $AD (need 404)"
-if [ "$V2" != 200 ] || [ "$V1" != 200 ] || [ "$AD" != 404 ]; then restore; echo "verification failed, nginx restored"; exit 1; fi
+# Служебный путь должен быть закрыт ТАК ЖЕ, как закрыт он у V1 (на этом сервере код 404 может превращаться в страницу сайта),
+# и ни в коем случае не отдавать JSON от V2.
+AD1=$(code_ct https://rikagro.ru/lunexeconom/api/admin/x)
+AD2=$(code_ct https://rikagro.ru/lunexeconom/v2/api/admin/x)
+say "V2 via nginx: $V2 (need 200) | V1 via nginx: $V1 (need 200)"
+say "admin path V1: [$AD1] | admin path V2: [$AD2] (must be identical and not JSON)"
+BAD=0
+[ "$V2" = 200 ] || BAD=1
+[ "$V1" = 200 ] || BAD=1
+[ "$AD1" = "$AD2" ] || BAD=1
+case "$AD2" in *json*) BAD=1;; esac
+if [ "$BAD" != 0 ]; then restore; echo "verification failed, nginx restored"; exit 1; fi
 curl -sk $H -m 10 https://rikagro.ru/lunexeconom/v2/api/health | head -c 400; echo
 say "DONE. To remove the route: cp -a $BACKUP $FILE && nginx -t && systemctl reload nginx"
