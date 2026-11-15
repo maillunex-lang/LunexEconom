@@ -86,7 +86,9 @@ def build(owner,payload):
                 version=db.execute("""INSERT INTO chunks(cx,cy,version) VALUES(%s,%s,1)
                    ON CONFLICT(cx,cy) DO UPDATE SET version=chunks.version+1 RETURNING version""",(cx,cy)).fetchone()[0]
                 data={"object_id":oid,"owner":owner,"cells":coords}
-                if kind_name=="building_created":data["building_kind"]=kind
+                if kind_name=="building_created":
+                    data["building_kind"]=kind
+                    data["construction_stage"]="complete"
                 seq=db.execute("""INSERT INTO events(cx,cy,version,kind,payload)
                     VALUES(%s,%s,%s,%s,%s) RETURNING seq""",(cx,cy,version,kind_name,json.dumps(data))).fetchone()[0]
                 events.append({"seq":seq,"cx":cx,"cy":cy,"version":version,"kind":kind_name,**data})
@@ -240,7 +242,7 @@ def chunk(cx,cy):
           WHERE c.x>=%s AND c.x<%s AND c.y>=%s AND c.y<%s ORDER BY c.x,c.y""",
           (cx*CHUNK,(cx+1)*CHUNK,cy*CHUNK,(cy+1)*CHUNK)).fetchall()
         rds=db.execute("SELECT x,y,owner FROM roads WHERE x>=%s AND x<%s AND y>=%s AND y<%s ORDER BY x,y",(cx*CHUNK,(cx+1)*CHUNK,cy*CHUNK,(cy+1)*CHUNK)).fetchall()
-    items=[{"x":x,"y":y,"kind":"building_created","building_kind":kind,"object_id":oid,"owner":owner} for x,y,kind,oid,owner in cells]
+    items=[{"x":x,"y":y,"kind":"building_created","building_kind":kind,"object_id":oid,"owner":owner,"construction_stage":"complete"} for x,y,kind,oid,owner in cells]
     items+=[{"x":x,"y":y,"kind":"road_changed","object_id":"","owner":owner} for x,y,owner in rds]
     return 200,{"cx":cx,"cy":cy,"version":row[0] if row else 0,"cells":items}
 
