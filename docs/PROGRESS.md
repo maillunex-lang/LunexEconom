@@ -49,7 +49,6 @@
 - **Ветка `Grok7`.** Домохозяйства на город (`households.py`), рынок жилья и ипотека (`housing_market.py`), NPC-банки, доли и доп. налоги (`banking.py`), наблюдаемый индекс цен (`inflation.py`). Чтение: `GET /population`, `GET /housing`, `GET /bank/offers`, `GET /bank/loans`, `GET /inflation`. Запись: `POST /bank/loan`, `POST /bank/repay`, `POST /shares/buy` (идемпотентность по `request_id`).
 - **Совместимость.** `HOUSEHOLDS_ENABLED`, `BANKS_ENABLED`, `INFLATION_ENABLED`, `TAX_EXTRAS_ENABLED` по умолчанию выключены. Живой рынок труда (Уфа, 200 жителей) и таблица `loans` не затронуты. Масштаб домохозяйств `POPULATION_SCALE=100`. При выключенных флагах отпечаток симулятора прежний.
 - **Не сделано здесь.** Окна штаба не рисуются. `labor_market` по-прежнему не берёт городскую зарплату из `regional_prices.wage`. Строительство само не вызывает `housing_market.on_commissioned` (месяц замечает сданный дом сам). PostgreSQL в этой среде не запускался (нет `lunex_ci`).
->>>>>>> origin/main
 
 ## 2026-11-15 — ChatGPT12: EX-03 земля, EX-04 стройка (ветка, до слияния)
 
