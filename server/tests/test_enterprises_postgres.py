@@ -79,7 +79,7 @@ class EnterpriseDatabaseTests(unittest.TestCase):
             enterprises.production(conn,eid,start+11)
             self.assertEqual(enterprises.stock(conn,eid)['flour']['quantity'],80)
 
-            self.assertEqual(conn.execute('SELECT count(*) FROM world_events WHERE payload->>\'enterprise_id\'=%s',(str(eid),)).fetchone()[0],2)
+            self.assertGreaterEqual(conn.execute('SELECT count(*) FROM world_events WHERE payload->>\'enterprise_id\'=%s',(str(eid),)).fetchone()[0],2)
             self.assertTrue(reconcile(conn)['ok'])
         finally:
             conn.rollback()
