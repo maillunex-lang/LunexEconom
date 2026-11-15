@@ -15,7 +15,9 @@ CREATE TABLE enterprise_stage_payments (
   PRIMARY KEY (enterprise_id,stage),
   CONSTRAINT enterprise_stage_payment_source CHECK (
     (legacy_prepaid AND request_id IS NULL AND transfer_id IS NULL)
-    OR (NOT legacy_prepaid AND request_id IS NOT NULL AND transfer_id IS NOT NULL)
+    OR (NOT legacy_prepaid AND request_id IS NOT NULL
+        AND ((amount = 0 AND transfer_id IS NULL)
+             OR (amount > 0 AND transfer_id IS NOT NULL)))
   )
 );
 
