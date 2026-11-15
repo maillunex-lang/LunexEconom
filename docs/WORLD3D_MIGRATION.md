@@ -29,4 +29,4 @@ Status: prototype, **not** active in the Android main scene. Keep existing Node2
 - The Godot scene loads these via `PackedScene` and retains procedural fallback for other kinds.
 - Footprint change triggers rebuilding the model for the same authoritative object ID.
 - Both Godot smoke tests passed on the VPS; Android device performance remains untested.
-- IMPORTANT: The GLB binary assets must be present in GitHub before building from a fresh clone. This deployment step is pending; do not treat the main branch as a complete standalone 3D build until verified.
+- GLB binary assets were uploaded to GitHub main in commit 2610765. The isolated scene and both headless smoke tests pass on the VPS. Main scene integration, Android APK, live network and real-device profiling remain pending.
