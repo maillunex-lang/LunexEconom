@@ -27,7 +27,7 @@
   "quantity": "Количество: {quantity}, качество: {quality}",
   "report": "Месячный отчёт",
   "report.empty": "Нет данных за период",
-  "report.row": "Месяц {month}: выручка {revenue} ₽, расходы {expenses} ₽, прибыль {profit} ₽",
+  "report.row": "Месяц {month}: выручка {revenue}, расходы {expenses}, прибыль {profit}",
   "running": "Работает",
   "stopped": "Остановлено",
   "construction": "Строительство: {stage} ({progress}%)",
@@ -120,5 +120,9 @@
   "idle.insufficient_funds": "Нет денег на зарплату или содержание",
   "idle.construction": "Строительство, стадия {stage}",
   "idle.overdue": "Просрочка платежа",
-  "idle.empty": "Неизвестная причина"
+  "idle.empty": "Неизвестная причина",
+  "store.source.stock": "Склад магазина",
+  "store.source.slot1": "Поставка 1",
+  "store.source.slot2": "Поставка 2",
+  "store.source.slot3": "Поставка 3"
 }
