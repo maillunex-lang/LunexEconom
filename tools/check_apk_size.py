@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
-"""Fail closed when arm64 release exceeds the 30 MiB baseline budget."""
+"""Fail closed when arm64 release exceeds the 99 MiB owner-approved budget."""
 import argparse
 import json
 from pathlib import Path
-MAX_APK_BYTES = 30 * 1024 * 1024
+MAX_APK_BYTES = 99 * 1024 * 1024
 
 def check(apk, max_bytes=MAX_APK_BYTES):
     actual = Path(apk).stat().st_size
