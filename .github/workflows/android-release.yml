@@ -114,7 +114,16 @@ jobs:
           "$GODOT" --headless --path client --editor --quit
           "$GODOT" --headless --path client --install-android-build-template --export-release Android "$GITHUB_WORKSPACE/build/lunex.apk"
           test -s build/lunex.apk
+          # Godot determines Android output type from the export preset, not from the file suffix.
+          # AAB requires Gradle export_format=1; restore the preset after the second export.
+          cp client/export_presets.cfg "$RUNNER_TEMP/export_presets.apk.cfg"
+          if grep -q '^gradle_build/export_format=' client/export_presets.cfg; then
+            sed -i 's/^gradle_build\/export_format=.*/gradle_build\/export_format=1/' client/export_presets.cfg
+          else
+            sed -i '/^gradle_build\/use_gradle_build=true/a gradle_build/export_format=1' client/export_presets.cfg
+          fi
           "$GODOT" --headless --path client --export-release Android "$GITHUB_WORKSPACE/build/lunex.aab"
+          mv "$RUNNER_TEMP/export_presets.apk.cfg" client/export_presets.cfg
           test -s build/lunex.aab
       - name: Enforce signature, ABI, version and APK size
         run: |
