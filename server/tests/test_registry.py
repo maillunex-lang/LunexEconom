@@ -20,7 +20,7 @@ class TestRegistry(unittest.TestCase):
 
     def test_module_contract(self):
         r = build_registry()
-        self.assertEqual(len(r.modules),6)
+        self.assertEqual(len(r.modules),8)
         self.assertIn('server.enterprises', [module.__name__ for module in r.modules])
         for path in ('/health','/config','/catalog'):
             self.assertIn(('GET',path),r.routes)
