@@ -164,7 +164,7 @@ class SupplyPostgresTests(unittest.TestCase):
         self.link(mill, 'grain', field, quality=60)
         before = self.balance(owner)
         supply.links_day(self.conn, 0, FLAGS)
-        self.assertEqual(self.qty(mill, 'grain'), 100)
+        self.assertEqual(self.qty(mill, 'grain'), 100, (supply._need(self.conn, supply._enterprises(self.conn)[-1]), self.conn.execute('SELECT * FROM supply_daily_needs WHERE enterprise_id=%s',(mill,)).fetchall(), self.conn.execute('SELECT id,owner_id,stage,running,recipe_id FROM enterprises WHERE id=%s',(mill,)).fetchone()))
         self.assertEqual(self.qty(field, 'grain'), 0)
         self.assertEqual(enterprises.stock(self.conn, mill)['grain']['quality'], 65)
         self.assertEqual(self.balance(owner), before)
