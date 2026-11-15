@@ -61,5 +61,13 @@
   "error.parcel_not_owned": "Участок вам не принадлежит",
   "error.invalid_zone": "Здание не подходит для зоны",
   "error.occupied": "Место занято",
-  "error.rate_limited": "Слишком много запросов, попробуйте позже"
+  "error.rate_limited": "Слишком много запросов, попробуйте позже",
+  "category.farm": "Сельское хозяйство",
+  "category.factory": "Промышленность",
+  "category.extraction": "Добыча",
+  "category.retail": "Торговля",
+  "category.housing": "Жильё",
+  "category.office": "Офисы",
+  "category.warehouse": "Склады",
+  "recipe.none": "Без рецепта"
 }
