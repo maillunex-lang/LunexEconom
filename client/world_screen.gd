@@ -25,6 +25,7 @@ func _ready() -> void:
     _refresh_terms()
     _refresh_wallet()
     _connect_server()
+    _check_developer_role()
     _load_goods_catalog()
     _load_zones()
     var deposit_timer := Timer.new()
@@ -55,7 +56,38 @@ func _ready() -> void:
             updater.check()
     )
     updater.check()
+var developer_editor: Control
+
+func _check_developer_role() -> void:
+    if not GameSession.is_authenticated(): return
+    var req := HTTPRequest.new()
+    add_child(req)
+    req.request_completed.connect(func(result: int, code: int, _headers: PackedStringArray, body: PackedByteArray) -> void:
+        req.queue_free()
+        if result != HTTPRequest.RESULT_SUCCESS or code != 200: return
+        var profile = JSON.parse_string(body.get_string_from_utf8())
+        if not profile is Dictionary or not bool(profile.get("dev", false)): return
+        var button := Button.new()
+        button.name = "DeveloperTools"
+        button.text = "Редактор"
+        $UIOverlay/HUD/Top.add_child(button)
+        button.pressed.connect(_toggle_developer_editor)
+    )
+    var headers := PackedStringArray(["Authorization: Bearer " + GameSession.access_token])
+    if req.request("https://rikagro.ru/lunexeconom/api/auth/me", headers) != OK:
+        req.queue_free()
+
+func _toggle_developer_editor() -> void:
+    if developer_editor == null:
+        developer_editor = load("res://dev_editor.gd").new()
+        $UIOverlay.add_child(developer_editor)
+        developer_editor.set_anchors_and_offsets_preset(Control.PRESET_CENTER_RIGHT)
+    else:
+        developer_editor.visible = not developer_editor.visible
+
 func set_selection(cell: Vector2i) -> void:
+    if developer_editor != null:
+        developer_editor.select_cell(cell)
     info.text = "Регион 01 · Участок %d:%d" % [cell.x, cell.y]
     if regional_map_panel != null and regional_map_panel.loaded:
         for city_ref in regional_map_panel.cities:
