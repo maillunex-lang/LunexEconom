@@ -70,4 +70,15 @@ def stages_for_chunk(db, marker, object_ids):
     if not object_ids:
         return {}
     params=','.join([marker]*len(object_ids))
-    return dict(db.execute(f'SELECT object_id,stage FROM construction_stages WHERE object_id IN ({params})', tuple(object_ids)).fetchall())
+    result = dict(db.execute(f'SELECT object_id,stage FROM construction_stages WHERE object_id IN ({params})', tuple(object_ids)).fetchall())
+    # BEGIN ChatGPT12 project visual compatibility
+    # The old renderer recognizes foundation/frame/complete only. Keep the
+    # richer four-stage truth in construction_projects.stage_index and events.
+    import construction_projects
+    if construction_projects.enabled():
+        for oid, idx in db.execute(
+                f"SELECT id,stage_index FROM construction_projects WHERE id IN ({params}) AND status!='cancelled'",
+                tuple(object_ids)).fetchall():
+            result[oid] = 'foundation' if idx == 0 else ('frame' if idx < 4 else 'complete')
+    # END ChatGPT12 project visual compatibility
+    return result

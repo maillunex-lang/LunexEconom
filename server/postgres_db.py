@@ -147,4 +147,10 @@ def init():
         deposits.ensure(db, "%s")
         import zoning
         zoning.ensure(db, "%s")
+        # BEGIN ChatGPT12 schema
+        import land, construction_projects, tenders
+        land.ensure(db, "%s")
+        construction_projects.ensure(db, "%s")
+        tenders.ensure(db, "%s")
+        # END ChatGPT12 schema
         db.commit()

@@ -656,6 +656,14 @@ def step_month(db, ph, month, now):
     citygen.grow(db, ph, next_pop, now)
     import zoning
     zoning.expand_cities(db, ph, now)                 # a city that fills up grows: free land always remains (docs/ZONING.md)
+    # BEGIN ChatGPT12 monthly
+    import land as land_rules, construction_projects as building_projects, tenders as municipal_tenders
+    if land_rules.enabled():
+        land_rules.monthly(db, ph, month, now)
+    if building_projects.enabled():
+        building_projects.monthly(db, ph, month, now)
+        municipal_tenders.monthly(db, ph, month, now)
+    # END ChatGPT12 monthly
     # the other active cities: their own residents, jobs and wage (no social services there yet, docs/CITY_ECONOMY.md)
     for region in active:
         if region != regions.HOME:
