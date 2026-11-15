@@ -383,6 +383,10 @@ def placement_valid(conn,building_id,x,y):
             return False,'invalid_zone'
         if terrain(SEED,a,b)=='water':
             return False,'water'
+        if virtual_road(a,b,states) or conn.execute(
+            'SELECT 1 FROM world_roads WHERE x=%s AND y=%s',(a,b)
+        ).fetchone():
+            return False,'road_overlap'
         if conn.execute('SELECT 1 FROM world_occupied_cells WHERE x=%s AND y=%s',(a,b)).fetchone():
             return False,'occupied'
     for a,b in footprint:
