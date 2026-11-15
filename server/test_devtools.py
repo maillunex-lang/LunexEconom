@@ -10,7 +10,9 @@ class DeveloperToolsTests(unittest.TestCase):
         self.db=sqlite3.connect(":memory:")
         self.db.execute("CREATE TABLE users(username TEXT PRIMARY KEY)")
         self.db.executemany("INSERT INTO users VALUES (?)",[("dev",),("player",)])
-        self.db.execute("CREATE TABLE chunks(cx INTEGER,y INTEGER,cy INTEGER,version INTEGER,PRIMARY KEY(cx,cy))")
+        self.db.execute("CREATE TABLE chunks(cx INTEGER,cy INTEGER,version INTEGER,PRIMARY KEY(cx,cy))")
+        self.db.execute("CREATE TABLE cells(x INTEGER,y INTEGER,object_id TEXT)")
+        self.db.execute("CREATE TABLE roads(x INTEGER,y INTEGER,owner TEXT)")
         self.db.execute("CREATE TABLE events(seq INTEGER PRIMARY KEY AUTOINCREMENT,cx INTEGER,cy INTEGER,version INTEGER,kind TEXT,payload TEXT)")
         admin_api.ensure(self.db,"?")
         devtools.ensure(self.db,"?")
@@ -24,6 +26,14 @@ class DeveloperToolsTests(unittest.TestCase):
         payload={"request_id":"c2c3ad2b-180e-4517-839c-c47e48dbd7cb","kind":"water","cells":[[1,2]]}
         self.assertEqual(devtools.terrain_set(self.db,"?","player",payload,"127.0.0.1")[0],403)
         self.assertEqual(self.db.execute("SELECT COUNT(*) FROM terrain_edits").fetchone()[0],0)
+
+    def test_cannot_paint_occupied_or_road_cell(self):
+        payload={"request_id":"c2c3ad2b-180e-4517-839c-c47e48dbd7cb","kind":"water","cells":[[1,2]]}
+        self.db.execute("INSERT INTO cells VALUES (1,2,'building')")
+        self.assertEqual(devtools.terrain_set(self.db,"?","dev",payload,"local")[1]["error"],"occupied")
+        self.db.execute("DELETE FROM cells")
+        self.db.execute("INSERT INTO roads VALUES (1,2,'city')")
+        self.assertEqual(devtools.terrain_set(self.db,"?","dev",payload,"local")[1]["error"],"road_overlap")
 
     def test_undo_restores_prior_terrain(self):
         first={"request_id":"c2c3ad2b-180e-4517-839c-c47e48dbd7cb","kind":"water","cells":[[1,2]]}
