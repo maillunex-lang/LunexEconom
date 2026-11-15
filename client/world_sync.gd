@@ -46,9 +46,10 @@ func poll() -> void:
                 _schedule_snapshot(coord)
             elif not pending.has(coord):
                 if str(event.get("kind", "")) == "terrain_changed":
-                    _load_terrain(coord)
-                world.apply_server_event(event)
-                versions[coord] = version
+                    _schedule_snapshot(coord)
+                else:
+                    world.apply_server_event(event)
+                    versions[coord] = version
             cursor = seq
         if not pending.is_empty(): _load_next_snapshot()
         elif bool(data.get("has_more", false)): poll.call_deferred()
