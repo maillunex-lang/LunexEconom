@@ -22,6 +22,16 @@ jobs:
         with:
           ref: main
           fetch-depth: 0
+      - name: Refuse incomplete legacy alpha publication
+        shell: bash
+        env:
+          VERSION_TAG: ${{ inputs.version_tag }}
+        run: |
+          set -euo pipefail
+          if [[ "$VERSION_TAG" == v0.1.* ]]; then
+            echo 'V2 alpha releases must use the Android alpha release orchestrator'
+            exit 1
+          fi
       - name: Verify approved candidate is for current main
         env:
           GH_TOKEN: ${{ github.token }}
@@ -49,7 +59,7 @@ jobs:
           apksigner verify --verbose --print-certs dist/build/lunex.apk > dist/verified-certificate.txt
           python3 tools/verify_apk_cert.py dist/verified-certificate.txt ops/release_cert_sha256.txt
           python3 tools/check_apk_size.py dist/build/lunex.apk
-      - name: Publish GitHub Release (manual approval required)
+      - name: Publish GitHub Release (legacy, non-alpha versions only)
         env:
           GH_TOKEN: ${{ github.token }}
           VERSION_TAG: ${{ inputs.version_tag }}
