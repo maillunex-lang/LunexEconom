@@ -40,7 +40,7 @@ All routes verify the developer role against the **authentication database**, se
 ## Outstanding safety work
 
 - Integrate manual terrain overrides into server-side road access and water checks without per-cell SQL.
-- Road removal now rejects cells directly adjacent to buildings, but full road-network connectivity analysis remains pending. Building relocation now checks zoning; full road-access validation remains pending.
+- Road removal and road-add undo now run a cardinal graph connectivity check over all base and dynamic roads. The check rejects splits of any surviving connected component and loss of every road entrance to an existing building. Dead-end trimming and removal with an alternate route remain allowed. Building relocation checks zoning; full road-access validation for moves remains pending.
 - Validate all economic dependencies of demolition and restoration, especially contracts, loans and deposits.
 - Test PostgreSQL with isolated `lunex_ci` only; never use production DB.
 - Run Android landscape/safe-area, touch and editor UI integration tests on an actual device.
