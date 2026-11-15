@@ -56,10 +56,10 @@ def place(conn, actor, request_id, building_id, px, py, x, y):
         return 409,{'error':reason}
     payer=account(conn,'player:'+actor['username'].lower(),'player',actor['id'])
     treasury=account(conn,'system:treasury')
-    try:
-        transfer_id=transfer(conn,'enterprise:build:'+request_id,payer,treasury,building['build_cost'])
-    except ValueError:
+    wallet_balance=conn.execute('SELECT balance FROM ledger_accounts WHERE id=%s',(payer,)).fetchone()[0]
+    if wallet_balance<building['build_cost']:
         return 409,{'error':'insufficient_funds'}
+    transfer_id=transfer(conn,'enterprise:build:'+request_id,payer,treasury,building['build_cost'])
     recipes=[r for r in catalog().data['recipes'] if r['building']==building_id]
     recipe_id=recipes[0]['id'] if recipes else None
     eid=conn.execute("""INSERT INTO enterprises(owner_id,building_id,px,py,x,y,width,height,city_id,name,build_cost,build_days,upkeep_month,jobs,storage_capacity,started_day,recipe_id,build_request_id,build_transfer_id)
@@ -67,12 +67,15 @@ def place(conn, actor, request_id, building_id, px, py, x, y):
       (actor['id'],building_id,px,py,x,y,building['size']['width'],building['size']['height'],city_id,building['name'],building['build_cost'],building['build_days'],building['upkeep_month'],building['jobs'],building['storage_capacity'],today(conn),recipe_id,request_id,transfer_id)).fetchone()[0]
     # World mark_occupied currently rejects free land; preserve world tables
     # and use the same sparse occupancy and chunk-event contract for both zones.
-    for cx,cy in sorted(cells):
-        nearest=city_id or world.nearest_city(cx,cy)['id']
-        conn.execute('INSERT INTO world_occupied_cells(x,y,city_id,building_ref) VALUES(%s,%s,%s,%s)',
-                     (cx,cy,nearest,'enterprise:'+str(eid)))
-    event=world._touch(conn,world._chunks_for_cells(cells),'enterprise_construction',city_id,
-                       {'enterprise_id':eid,'stage_index':0,'stage':'foundation'})
+    if city_id:
+        event=world.mark_occupied(conn,city_id,'enterprise:'+str(eid),sorted(cells))
+    else:
+        for cx,cy in sorted(cells):
+            nearest=world.nearest_city(cx,cy)['id']
+            conn.execute('INSERT INTO world_occupied_cells(x,y,city_id,building_ref) VALUES(%s,%s,%s,%s)',
+                         (cx,cy,nearest,'enterprise:'+str(eid)))
+        event=world._touch(conn,world._chunks_for_cells(cells),'enterprise_construction',None,
+                           {'enterprise_id':eid,'stage_index':0,'stage':'foundation'})
     return 201,{'id':eid,'build_cost':building['build_cost'],'transfer_id':transfer_id,
                 'event_version':event,'idempotent':False,'balance':'draft'}
 
