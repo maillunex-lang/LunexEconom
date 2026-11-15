@@ -63,7 +63,6 @@ class DeveloperToolsTests(unittest.TestCase):
     def test_demolish_removes_building_without_ledger(self):
         self.db.execute("INSERT INTO buildings VALUES ('b1','player','shop',11,12,0)")
         self.db.execute("INSERT INTO cells VALUES (11,12,'b1')")
-        self.db.execute("INSERT INTO building_ops VALUES ('b1','player','shop',0,0)")
         payload={"request_id":"c2c3ad2b-180e-4517-839c-c47e48dbd7cb","object_id":"b1"}
         status,result=devtools.building_demolish(self.db,"?","dev",payload,"local")
         self.assertEqual(status,200,result)
@@ -74,8 +73,19 @@ class DeveloperToolsTests(unittest.TestCase):
         status,result=devtools.undo(self.db,"?","dev",{"request_id":"b0f1e34b-cda2-4924-a687-a421c82f581d"},"local")
         self.assertEqual(status,200,result)
         self.assertEqual(self.db.execute("SELECT owner,kind FROM buildings WHERE id='b1'").fetchone(),("player","shop"))
-        self.assertEqual(self.db.execute("SELECT owner FROM building_ops WHERE object_id='b1'").fetchone(),("player",))
+        self.assertIsNone(self.db.execute("SELECT object_id FROM building_ops WHERE object_id='b1'").fetchone())
         self.assertEqual(self.db.execute("SELECT COUNT(*) FROM ledger_entries").fetchone()[0],0)
+
+    def test_demolish_refuses_active_economy_and_deposits(self):
+        self.db.execute("INSERT INTO buildings VALUES ('b1','player','shop',11,12,0)")
+        self.db.execute("INSERT INTO cells VALUES (11,12,'b1')")
+        self.db.execute("INSERT INTO building_ops VALUES ('b1','player','shop',0,0)")
+        payload={"request_id":"c2c3ad2b-180e-4517-839c-c47e48dbd7cb","object_id":"b1"}
+        self.assertEqual(devtools.building_demolish(self.db,"?","dev",payload,"local")[1]["error"],"active_economic_building")
+        self.db.execute("DELETE FROM building_ops WHERE object_id='b1'")
+        self.db.execute("INSERT INTO building_deposits VALUES ('b1','deposit1','oil')")
+        self.assertEqual(devtools.building_demolish(self.db,"?","dev",payload,"local")[1]["error"],"deposit_bound")
+        self.assertIsNotNone(self.db.execute("SELECT 1 FROM buildings WHERE id='b1'").fetchone())
 
     def test_move_preserves_owner_and_rejects_overlap(self):
         self.db.execute("INSERT INTO buildings VALUES ('b1','player','shop',11,12,0)")
