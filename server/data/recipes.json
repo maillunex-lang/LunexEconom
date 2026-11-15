@@ -1,1 +1,250 @@
-[]
+[
+  {
+    "id": "field_grain",
+    "building": "field",
+    "inputs": {},
+    "outputs": {
+      "grain": 100
+    },
+    "workers": 4,
+    "technology_level": 1,
+    "quality_model": "weighted_inputs_or_base",
+    "balance": "draft",
+    "name": "Выращивание зерна",
+    "description": "Черновой технологический процесс для игрового каталога."
+  },
+  {
+    "id": "field_vegetables",
+    "building": "field",
+    "inputs": {},
+    "outputs": {
+      "vegetables": 80
+    },
+    "workers": 4,
+    "technology_level": 1,
+    "quality_model": "weighted_inputs_or_base",
+    "balance": "draft",
+    "name": "Выращивание овощей",
+    "description": "Черновой технологический процесс для игрового каталога."
+  },
+  {
+    "id": "apiary_honey",
+    "building": "apiary",
+    "inputs": {},
+    "outputs": {
+      "honey": 12
+    },
+    "workers": 2,
+    "technology_level": 1,
+    "quality_model": "weighted_inputs_or_base",
+    "balance": "draft",
+    "name": "Сбор мёда",
+    "description": "Черновой технологический процесс для игрового каталога."
+  },
+  {
+    "id": "mill_flour",
+    "building": "mill",
+    "inputs": {
+      "grain": 100
+    },
+    "outputs": {
+      "flour": 80
+    },
+    "workers": 7,
+    "technology_level": 1,
+    "quality_model": "weighted_inputs_or_base",
+    "balance": "draft",
+    "name": "Помол зерна",
+    "description": "Черновой технологический процесс для игрового каталога."
+  },
+  {
+    "id": "bakery_bread",
+    "building": "bakery",
+    "inputs": {
+      "flour": 80
+    },
+    "outputs": {
+      "bread": 100
+    },
+    "workers": 9,
+    "technology_level": 1,
+    "quality_model": "weighted_inputs_or_base",
+    "balance": "draft",
+    "name": "Выпечка хлеба",
+    "description": "Черновой технологический процесс для игрового каталога."
+  },
+  {
+    "id": "oil_well_oil",
+    "building": "oil_well",
+    "inputs": {},
+    "outputs": {
+      "oil": 40
+    },
+    "workers": 5,
+    "technology_level": 1,
+    "quality_model": "weighted_inputs_or_base",
+    "balance": "draft",
+    "name": "Добыча нефти",
+    "description": "Черновой технологический процесс для игрового каталога."
+  },
+  {
+    "id": "refinery_fuel",
+    "building": "refinery",
+    "inputs": {
+      "oil": 40
+    },
+    "outputs": {
+      "fuel": 300
+    },
+    "workers": 18,
+    "technology_level": 1,
+    "quality_model": "weighted_inputs_or_base",
+    "balance": "draft",
+    "name": "Переработка нефти",
+    "description": "Черновой технологический процесс для игрового каталога."
+  },
+  {
+    "id": "dairy_milk",
+    "building": "dairy",
+    "inputs": {},
+    "outputs": {
+      "milk": 90
+    },
+    "workers": 6,
+    "technology_level": 1,
+    "quality_model": "weighted_inputs_or_base",
+    "balance": "draft",
+    "name": "Производство молока",
+    "description": "Черновой технологический процесс для игрового каталога."
+  },
+  {
+    "id": "slaughter_meat",
+    "building": "slaughter",
+    "inputs": {},
+    "outputs": {
+      "meat": 35
+    },
+    "workers": 7,
+    "technology_level": 1,
+    "quality_model": "weighted_inputs_or_base",
+    "balance": "draft",
+    "name": "Производство мяса",
+    "description": "Черновой технологический процесс для игрового каталога."
+  },
+  {
+    "id": "quarry_sand",
+    "building": "quarry",
+    "inputs": {},
+    "outputs": {
+      "sand": 150
+    },
+    "workers": 8,
+    "technology_level": 1,
+    "quality_model": "weighted_inputs_or_base",
+    "balance": "draft",
+    "name": "Добыча песка",
+    "description": "Черновой технологический процесс для игрового каталога."
+  },
+  {
+    "id": "quarry_stone",
+    "building": "quarry",
+    "inputs": {},
+    "outputs": {
+      "stone": 100
+    },
+    "workers": 8,
+    "technology_level": 1,
+    "quality_model": "weighted_inputs_or_base",
+    "balance": "draft",
+    "name": "Добыча камня",
+    "description": "Черновой технологический процесс для игрового каталога."
+  },
+  {
+    "id": "sawmill_wood",
+    "building": "sawmill",
+    "inputs": {},
+    "outputs": {
+      "wood": 70
+    },
+    "workers": 8,
+    "technology_level": 1,
+    "quality_model": "weighted_inputs_or_base",
+    "balance": "draft",
+    "name": "Заготовка леса",
+    "description": "Черновой технологический процесс для игрового каталога."
+  },
+  {
+    "id": "cement_plant_cement",
+    "building": "cement_plant",
+    "inputs": {
+      "stone": 70
+    },
+    "outputs": {
+      "cement": 55
+    },
+    "workers": 12,
+    "technology_level": 1,
+    "quality_model": "weighted_inputs_or_base",
+    "balance": "draft",
+    "name": "Производство цемента",
+    "description": "Черновой технологический процесс для игрового каталога."
+  },
+  {
+    "id": "steel_mill_steel",
+    "building": "steel_mill",
+    "inputs": {},
+    "outputs": {
+      "steel": 35
+    },
+    "workers": 18,
+    "technology_level": 1,
+    "quality_model": "weighted_inputs_or_base",
+    "balance": "draft",
+    "name": "Выплавка стали",
+    "description": "Черновой технологический процесс для игрового каталога."
+  },
+  {
+    "id": "textile_fabric",
+    "building": "textile",
+    "inputs": {},
+    "outputs": {
+      "fabric": 65
+    },
+    "workers": 9,
+    "technology_level": 1,
+    "quality_model": "weighted_inputs_or_base",
+    "balance": "draft",
+    "name": "Производство ткани",
+    "description": "Черновой технологический процесс для игрового каталога."
+  },
+  {
+    "id": "textile_clothes",
+    "building": "textile",
+    "inputs": {
+      "fabric": 40
+    },
+    "outputs": {
+      "clothes": 25
+    },
+    "workers": 11,
+    "technology_level": 1,
+    "quality_model": "weighted_inputs_or_base",
+    "balance": "draft",
+    "name": "Пошив одежды",
+    "description": "Черновой технологический процесс для игрового каталога."
+  },
+  {
+    "id": "electronics_plant_electronics",
+    "building": "electronics_plant",
+    "inputs": {},
+    "outputs": {
+      "electronics": 12
+    },
+    "workers": 16,
+    "technology_level": 1,
+    "quality_model": "weighted_inputs_or_base",
+    "balance": "draft",
+    "name": "Сборка электроники",
+    "description": "Черновой технологический процесс для игрового каталога."
+  }
+]

@@ -1,1 +1,348 @@
-{"$schema":"https://json-schema.org/draft/2020-12/schema","type":"array","items":{"type":"object","required":["id","name"],"properties":{"id":{"type":"string","minLength":1},"name":{"type":"string","minLength":1}},"additionalProperties":true}}
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "LunexEconom V2 catalog data",
+  "$defs": {
+    "products": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "description",
+          "balance",
+          "category",
+          "unit",
+          "type",
+          "reference_price",
+          "storage_life_factor",
+          "quality_range",
+          "consumer",
+          "base_demand_per_capita",
+          "elasticity",
+          "rating_weights",
+          "vat_category"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9_]*$"
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1
+          },
+          "description": {
+            "type": "string",
+            "minLength": 1
+          },
+          "balance": {
+            "const": "draft"
+          },
+          "category": {
+            "enum": [
+              "food",
+              "consumer",
+              "construction",
+              "materials",
+              "industrial"
+            ]
+          },
+          "unit": {
+            "enum": [
+              "kg",
+              "liter",
+              "barrel",
+              "m3",
+              "piece"
+            ]
+          },
+          "type": {
+            "enum": [
+              "raw",
+              "intermediate",
+              "consumer",
+              "construction",
+              "industrial"
+            ]
+          },
+          "reference_price": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "storage_life_factor": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "quality_range": {
+            "type": "object",
+            "required": [
+              "min",
+              "max"
+            ],
+            "properties": {
+              "min": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 100
+              },
+              "max": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 100
+              }
+            },
+            "additionalProperties": false
+          },
+          "consumer": {
+            "type": "boolean"
+          },
+          "base_demand_per_capita": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "elasticity": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "rating_weights": {
+            "type": "object",
+            "required": [
+              "brand",
+              "quality",
+              "price"
+            ],
+            "properties": {
+              "brand": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "quality": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "price": {
+                "type": "integer",
+                "minimum": 0
+              }
+            },
+            "additionalProperties": false
+          },
+          "vat_category": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    "buildings": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "description",
+          "balance",
+          "category",
+          "role",
+          "size",
+          "build_cost",
+          "build_days",
+          "build_months",
+          "upkeep_month",
+          "jobs",
+          "storage_capacity",
+          "zones",
+          "production"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9_]*$"
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1
+          },
+          "description": {
+            "type": "string",
+            "minLength": 1
+          },
+          "balance": {
+            "const": "draft"
+          },
+          "category": {
+            "enum": [
+              "farm",
+              "factory",
+              "extraction",
+              "warehouse",
+              "retail",
+              "office",
+              "housing"
+            ]
+          },
+          "role": {
+            "enum": [
+              "farm",
+              "factory",
+              "extraction",
+              "warehouse",
+              "retail",
+              "office",
+              "housing"
+            ]
+          },
+          "size": {
+            "type": "object",
+            "required": [
+              "width",
+              "height"
+            ],
+            "properties": {
+              "width": {
+                "type": "integer",
+                "minimum": 1
+              },
+              "height": {
+                "type": "integer",
+                "minimum": 1
+              }
+            },
+            "additionalProperties": false
+          },
+          "build_cost": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "build_days": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "build_months": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "upkeep_month": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "jobs": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "storage_capacity": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "zones": {
+            "type": "array",
+            "items": {
+              "enum": [
+                "industrial",
+                "residential",
+                "center",
+                "free"
+              ]
+            },
+            "minItems": 1,
+            "uniqueItems": true
+          },
+          "production": {
+            "type": "boolean"
+          },
+          "retail_cells": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "allowed_goods": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "pattern": "^[a-z][a-z0-9_]*$"
+            },
+            "uniqueItems": true
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    "recipes": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "description",
+          "balance",
+          "building",
+          "inputs",
+          "outputs",
+          "workers",
+          "technology_level",
+          "quality_model"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9_]*$"
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1
+          },
+          "description": {
+            "type": "string",
+            "minLength": 1
+          },
+          "balance": {
+            "const": "draft"
+          },
+          "building": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9_]*$"
+          },
+          "inputs": {
+            "type": "object",
+            "propertyNames": {
+              "pattern": "^[a-z][a-z0-9_]*$"
+            },
+            "additionalProperties": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "minProperties": 0
+          },
+          "outputs": {
+            "type": "object",
+            "propertyNames": {
+              "pattern": "^[a-z][a-z0-9_]*$"
+            },
+            "additionalProperties": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "minProperties": 1
+          },
+          "workers": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "technology_level": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "quality_model": {
+            "enum": [
+              "weighted_inputs_or_base"
+            ]
+          }
+        },
+        "additionalProperties": false
+      }
+    }
+  }
+}

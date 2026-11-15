@@ -1,1 +1,485 @@
-[]
+[
+  {
+    "id": "field",
+    "name": "Поле",
+    "description": "Участок под зерно или овощи.",
+    "category": "farm",
+    "role": "farm",
+    "size": {
+      "width": 2,
+      "height": 2
+    },
+    "build_cost": 400000,
+    "build_days": 1,
+    "build_months": 1,
+    "upkeep_month": 4000,
+    "jobs": 25,
+    "storage_capacity": 4000,
+    "zones": [
+      "free",
+      "industrial"
+    ],
+    "production": true,
+    "balance": "draft"
+  },
+  {
+    "id": "apiary",
+    "name": "Пасека",
+    "description": "Ульи на склоне.",
+    "category": "farm",
+    "role": "farm",
+    "size": {
+      "width": 1,
+      "height": 1
+    },
+    "build_cost": 100000,
+    "build_days": 2,
+    "build_months": 1,
+    "upkeep_month": 1000,
+    "jobs": 25,
+    "storage_capacity": 1000,
+    "zones": [
+      "free",
+      "industrial"
+    ],
+    "production": true,
+    "balance": "draft"
+  },
+  {
+    "id": "mill",
+    "name": "Мельница",
+    "description": "Здание, где зерно становится мукой.",
+    "category": "factory",
+    "role": "factory",
+    "size": {
+      "width": 2,
+      "height": 2
+    },
+    "build_cost": 400000,
+    "build_days": 1,
+    "build_months": 1,
+    "upkeep_month": 4000,
+    "jobs": 25,
+    "storage_capacity": 4000,
+    "zones": [
+      "industrial"
+    ],
+    "production": true,
+    "balance": "draft"
+  },
+  {
+    "id": "bakery",
+    "name": "Пекарня",
+    "description": "Печёт хлеб из муки.",
+    "category": "factory",
+    "role": "factory",
+    "size": {
+      "width": 2,
+      "height": 2
+    },
+    "build_cost": 400000,
+    "build_days": 1,
+    "build_months": 1,
+    "upkeep_month": 4000,
+    "jobs": 25,
+    "storage_capacity": 4000,
+    "zones": [
+      "industrial"
+    ],
+    "production": true,
+    "balance": "draft"
+  },
+  {
+    "id": "oil_well",
+    "name": "Нефтяная скважина",
+    "description": "Добывает сырую нефть.",
+    "category": "extraction",
+    "role": "extraction",
+    "size": {
+      "width": 2,
+      "height": 2
+    },
+    "build_cost": 400000,
+    "build_days": 8,
+    "build_months": 1,
+    "upkeep_month": 4000,
+    "jobs": 25,
+    "storage_capacity": 4000,
+    "zones": [
+      "industrial"
+    ],
+    "production": true,
+    "balance": "draft"
+  },
+  {
+    "id": "refinery",
+    "name": "НПЗ",
+    "description": "Перерабатывает нефть в топливо.",
+    "category": "factory",
+    "role": "factory",
+    "size": {
+      "width": 3,
+      "height": 3
+    },
+    "build_cost": 900000,
+    "build_days": 18,
+    "build_months": 1,
+    "upkeep_month": 9000,
+    "jobs": 25,
+    "storage_capacity": 9000,
+    "zones": [
+      "industrial"
+    ],
+    "production": true,
+    "balance": "draft"
+  },
+  {
+    "id": "dairy",
+    "name": "Молочная ферма",
+    "description": "Держит коров и даёт молоко.",
+    "category": "farm",
+    "role": "farm",
+    "size": {
+      "width": 2,
+      "height": 2
+    },
+    "build_cost": 400000,
+    "build_days": 8,
+    "build_months": 1,
+    "upkeep_month": 4000,
+    "jobs": 25,
+    "storage_capacity": 4000,
+    "zones": [
+      "free",
+      "industrial"
+    ],
+    "production": true,
+    "balance": "draft"
+  },
+  {
+    "id": "slaughter",
+    "name": "Бойня",
+    "description": "Готовит мясо.",
+    "category": "factory",
+    "role": "factory",
+    "size": {
+      "width": 2,
+      "height": 2
+    },
+    "build_cost": 400000,
+    "build_days": 8,
+    "build_months": 1,
+    "upkeep_month": 4000,
+    "jobs": 25,
+    "storage_capacity": 4000,
+    "zones": [
+      "industrial"
+    ],
+    "production": true,
+    "balance": "draft"
+  },
+  {
+    "id": "quarry",
+    "name": "Карьер",
+    "description": "Добывает песок, камень.",
+    "category": "extraction",
+    "role": "extraction",
+    "size": {
+      "width": 3,
+      "height": 3
+    },
+    "build_cost": 900000,
+    "build_days": 18,
+    "build_months": 1,
+    "upkeep_month": 9000,
+    "jobs": 25,
+    "storage_capacity": 9000,
+    "zones": [
+      "industrial"
+    ],
+    "production": true,
+    "balance": "draft"
+  },
+  {
+    "id": "sawmill",
+    "name": "Лесопилка",
+    "description": "Пилит лес в доски.",
+    "category": "factory",
+    "role": "factory",
+    "size": {
+      "width": 2,
+      "height": 2
+    },
+    "build_cost": 400000,
+    "build_days": 8,
+    "build_months": 1,
+    "upkeep_month": 4000,
+    "jobs": 25,
+    "storage_capacity": 4000,
+    "zones": [
+      "industrial"
+    ],
+    "production": true,
+    "balance": "draft"
+  },
+  {
+    "id": "cement_plant",
+    "name": "Цементный завод",
+    "description": "Делает цемент.",
+    "category": "factory",
+    "role": "factory",
+    "size": {
+      "width": 3,
+      "height": 3
+    },
+    "build_cost": 900000,
+    "build_days": 18,
+    "build_months": 1,
+    "upkeep_month": 9000,
+    "jobs": 25,
+    "storage_capacity": 9000,
+    "zones": [
+      "industrial"
+    ],
+    "production": true,
+    "balance": "draft"
+  },
+  {
+    "id": "steel_mill",
+    "name": "Сталелитейный",
+    "description": "Выпускает сталь.",
+    "category": "factory",
+    "role": "factory",
+    "size": {
+      "width": 3,
+      "height": 3
+    },
+    "build_cost": 900000,
+    "build_days": 18,
+    "build_months": 1,
+    "upkeep_month": 9000,
+    "jobs": 25,
+    "storage_capacity": 9000,
+    "zones": [
+      "industrial"
+    ],
+    "production": true,
+    "balance": "draft"
+  },
+  {
+    "id": "textile",
+    "name": "Текстильная фабрика",
+    "description": "Делает ткань и одежду.",
+    "category": "factory",
+    "role": "factory",
+    "size": {
+      "width": 3,
+      "height": 2
+    },
+    "build_cost": 600000,
+    "build_days": 12,
+    "build_months": 1,
+    "upkeep_month": 6000,
+    "jobs": 25,
+    "storage_capacity": 6000,
+    "zones": [
+      "industrial"
+    ],
+    "production": true,
+    "balance": "draft"
+  },
+  {
+    "id": "electronics_plant",
+    "name": "Завод электроники",
+    "description": "Собирает технику.",
+    "category": "factory",
+    "role": "factory",
+    "size": {
+      "width": 3,
+      "height": 3
+    },
+    "build_cost": 900000,
+    "build_days": 18,
+    "build_months": 1,
+    "upkeep_month": 9000,
+    "jobs": 25,
+    "storage_capacity": 9000,
+    "zones": [
+      "industrial"
+    ],
+    "production": true,
+    "balance": "draft"
+  },
+  {
+    "id": "warehouse",
+    "name": "Склад",
+    "description": "Хранит товары.",
+    "category": "warehouse",
+    "role": "warehouse",
+    "size": {
+      "width": 2,
+      "height": 2
+    },
+    "build_cost": 400000,
+    "build_days": 8,
+    "build_months": 1,
+    "upkeep_month": 4000,
+    "jobs": 5,
+    "storage_capacity": 10000,
+    "zones": [
+      "industrial"
+    ],
+    "production": false,
+    "balance": "draft"
+  },
+  {
+    "id": "grocery_store",
+    "name": "Продуктовый магазин",
+    "description": "Продаёт еду в ячейках.",
+    "category": "retail",
+    "role": "retail",
+    "size": {
+      "width": 2,
+      "height": 2
+    },
+    "build_cost": 400000,
+    "build_days": 1,
+    "build_months": 1,
+    "upkeep_month": 4000,
+    "jobs": 10,
+    "storage_capacity": 4000,
+    "zones": [
+      "residential",
+      "center"
+    ],
+    "production": false,
+    "balance": "draft",
+    "retail_cells": 9,
+    "allowed_goods": [
+      "bread",
+      "butter",
+      "cheese",
+      "clothes",
+      "eggs",
+      "electronics",
+      "fish",
+      "honey",
+      "meat",
+      "milk",
+      "sugar",
+      "vegetables"
+    ]
+  },
+  {
+    "id": "supermarket",
+    "name": "Супермаркет",
+    "description": "Большой магазин с многими ячейками.",
+    "category": "retail",
+    "role": "retail",
+    "size": {
+      "width": 3,
+      "height": 3
+    },
+    "build_cost": 900000,
+    "build_days": 18,
+    "build_months": 1,
+    "upkeep_month": 9000,
+    "jobs": 10,
+    "storage_capacity": 9000,
+    "zones": [
+      "residential",
+      "center"
+    ],
+    "production": false,
+    "balance": "draft",
+    "retail_cells": 16,
+    "allowed_goods": [
+      "bread",
+      "butter",
+      "cheese",
+      "clothes",
+      "eggs",
+      "electronics",
+      "fish",
+      "honey",
+      "meat",
+      "milk",
+      "sugar",
+      "vegetables"
+    ]
+  },
+  {
+    "id": "clothing_store",
+    "name": "Магазин одежды",
+    "description": "Продаёт ткань и одежду.",
+    "category": "retail",
+    "role": "retail",
+    "size": {
+      "width": 2,
+      "height": 2
+    },
+    "build_cost": 400000,
+    "build_days": 8,
+    "build_months": 1,
+    "upkeep_month": 4000,
+    "jobs": 10,
+    "storage_capacity": 4000,
+    "zones": [
+      "residential",
+      "center"
+    ],
+    "production": false,
+    "balance": "draft",
+    "retail_cells": 9,
+    "allowed_goods": [
+      "clothes",
+      "fabric"
+    ]
+  },
+  {
+    "id": "office",
+    "name": "Офис",
+    "description": "Штаб-квартира компании.",
+    "category": "office",
+    "role": "office",
+    "size": {
+      "width": 2,
+      "height": 2
+    },
+    "build_cost": 400000,
+    "build_days": 8,
+    "build_months": 1,
+    "upkeep_month": 4000,
+    "jobs": 5,
+    "storage_capacity": 4000,
+    "zones": [
+      "residential",
+      "center"
+    ],
+    "production": false,
+    "balance": "draft"
+  },
+  {
+    "id": "housing",
+    "name": "Жильё",
+    "description": "Дома для жителей.",
+    "category": "housing",
+    "role": "housing",
+    "size": {
+      "width": 3,
+      "height": 3
+    },
+    "build_cost": 900000,
+    "build_days": 18,
+    "build_months": 1,
+    "upkeep_month": 9000,
+    "jobs": 5,
+    "storage_capacity": 9000,
+    "zones": [
+      "residential",
+      "center"
+    ],
+    "production": false,
+    "balance": "draft"
+  }
+]
