@@ -37,6 +37,13 @@ func check_all() -> void:
         LiveConfig.check_once()
         var live_result: Array = await LiveConfig.check_finished
         results["config"] = "ревизия %d" % LiveConfig.revision if bool(live_result[1]) else "ошибка: " + str(live_result[0])
+    if not LiveConfig.settings.is_empty():
+        var min_version: int = int(LiveConfig.settings.get("min_version", 0))
+        var recommended: int = int(LiveConfig.settings.get("recommended_version", 0))
+        if updater.local_version < min_version:
+            results["config"] += " · требуется APK версии %d или выше" % min_version
+        elif updater.local_version < recommended:
+            results["config"] += " · рекомендуется APK версии %d" % recommended
     results["content"] = "проверяем…"
     status_changed.emit(summarize(results))
     var old_revision: int = patch.current_revision()

@@ -56,6 +56,47 @@ def image_dimensions(extension, payload):
         raise ValueError("image dimensions out of range (max %d x %d)" % (MAX_DIMENSION, MAX_DIMENSION))
     return width, height
 
+def validate_glb(payload):
+    """Accept only bounded, self-contained GLB 2.0 data, with no external URI access."""
+    if not isinstance(payload, bytes) or not 24 <= len(payload) <= MAX_GLB:
+        raise ValueError("invalid_glb")
+    if payload[:4] != b"glTF" or struct.unpack_from("<II", payload, 4) != (2, len(payload)):
+        raise ValueError("invalid_glb")
+    size, kind = struct.unpack_from("<I4s", payload, 12)
+    if kind != b"JSON" or not 4 <= size <= 2 * 1024 * 1024 or size % 4 or 20 + size > len(payload):
+        raise ValueError("invalid_glb")
+    try:
+        document = json.loads(payload[20:20 + size].decode("utf-8").rstrip(" \t\r\n\x00"))
+    except (ValueError, UnicodeDecodeError, RecursionError):
+        raise ValueError("invalid_glb")
+    if not isinstance(document, dict) or not isinstance(document.get("asset"), dict) or document["asset"].get("version") != "2.0":
+        raise ValueError("invalid_glb")
+    for key, maximum in (("nodes", 1024), ("meshes", 256), ("images", 128), ("accessors", 6000)):
+        entries = document.get(key, [])
+        if not isinstance(entries, list) or len(entries) > maximum:
+            raise ValueError("invalid_glb")
+    pending, visited = [document], 0
+    while pending:
+        value = pending.pop()
+        visited += 1
+        if visited > 20000:
+            raise ValueError("invalid_glb")
+        if isinstance(value, dict):
+            if "uri" in value:
+                raise ValueError("invalid_glb_external_uri")
+            pending.extend(value.values())
+        elif isinstance(value, list):
+            pending.extend(value)
+    end = 20 + size
+    if end < len(payload):
+        if end + 8 > len(payload):
+            raise ValueError("invalid_glb")
+        bin_size, bin_kind = struct.unpack_from("<I4s", payload, end)
+        if bin_kind != b"BIN\x00" or bin_size % 4 or end + 8 + bin_size != len(payload):
+            raise ValueError("invalid_glb")
+    return True
+
+
 def _ip(ip):
     return " · ip=" + str(ip)[:64] if ip else ""
 
@@ -122,9 +163,7 @@ class Store:
         if extension not in (*MIMES, "glb") or not 12 <= len(payload) <= (MAX_GLB if extension == "glb" else MAX_FILE):
             raise ValueError("invalid asset")
         if extension == "glb":
-            # GLB 2.0 only: 12-byte header and strict total length.
-            if payload[:4] != b"glTF" or struct.unpack("<II", payload[4:12]) != (2, len(payload)):
-                raise ValueError("invalid_glb")
+            validate_glb(payload)
         if extension == "png" and not payload.startswith(MIMES["png"]):
             raise ValueError("invalid PNG")
         if extension == "webp" and not (payload.startswith(b"RIFF") and payload[8:12] == b"WEBP"):

@@ -117,35 +117,49 @@ static func make(kind: String, w: int, h: int, object_id: String = "", owner: St
 const VARIANTS := {"house": ["panel", "brick", "modern"]}
 
 # BEGIN ChatGPT13 signed 3D content override. Never load arbitrary user paths.
+# Verify the release manifest and each model only once, not once per building.
+static var _live_manifest_loaded := false
+static var _live_assets: Dictionary = {}
+static var _live_verified: Dictionary = {}
+
 static func _signed_glb(name: String) -> String:
-		if not name.ends_with(".glb"):
-			return ""
+	if not name.ends_with(".glb"):
+		return ""
+	if not _live_manifest_loaded:
+		_live_manifest_loaded = true
 		var verifier = load("res://livepatch.gd").new()
 		var manifest: Variant = verifier.load_verified_manifest()
 		verifier.free()
-		if not manifest is Dictionary:
-			return ""
-		var ident := name.trim_suffix(".glb")
-		for asset in manifest["assets"]:
-			if str(asset.get("id", "")) != ident or asset.get("extension") != "glb":
-				continue
-			var hash_value := str(asset.get("sha256", ""))
-			var path := "user://livepatch/" + hash_value + ".glb"
-			if FileAccess.file_exists(path) and FileAccess.get_sha256(path) == hash_value:
-				return path
+		if manifest is Dictionary:
+			for asset in manifest["assets"]:
+				if str(asset.get("extension", "")) == "glb":
+					_live_assets[str(asset.get("id", "")) + ".glb"] = str(asset.get("sha256", ""))
+	if not _live_assets.has(name):
 		return ""
+	var digest: String = str(_live_assets[name])
+	var path := "user://livepatch/" + digest + ".glb"
+	if not _live_verified.has(path):
+		var good := FileAccess.file_exists(path) and FileAccess.get_sha256(path) == digest
+		if good:
+			var validator = load("res://livepatch.gd").new()
+			good = validator.valid_glb(FileAccess.get_file_as_bytes(path))
+			validator.free()
+		_live_verified[path] = good
+	return path if bool(_live_verified[path]) else ""
 
 static func _live_scene(path: String) -> Node3D:
-		# Godot imports GLB from user:// through GLTFDocument at runtime.
-		var state := GLTFState.new()
-		var gltf := GLTFDocument.new()
-		if gltf.append_from_file(ProjectSettings.globalize_path(path), state) != OK:
-			return null
-		return gltf.generate_scene(state) as Node3D
+	var state := GLTFState.new()
+	var gltf := GLTFDocument.new()
+	if gltf.append_from_file(ProjectSettings.globalize_path(path), state) != OK:
+		return null
+	return gltf.generate_scene(state) as Node3D
 
 static func clear_live_model_cache() -> void:
-		_model_cache.clear()
-		_piece_cache.clear()
+	_model_cache.clear()
+	_piece_cache.clear()
+	_live_manifest_loaded = false
+	_live_assets.clear()
+	_live_verified.clear()
 # END ChatGPT13 signed 3D content override
 
 static func model_path(kind: String, w: int, h: int, object_id: String = "") -> Dictionary:
@@ -153,7 +167,9 @@ static func model_path(kind: String, w: int, h: int, object_id: String = "") -> 
 	if VARIANTS.has(kind):
 		var found_variants: Array = []
 		for variant in VARIANTS[kind]:
-			if ResourceLoader.exists(MODEL_DIR + "%s_%s_%dx%d.glb" % [kind, variant, w, h]) or ResourceLoader.exists(MODEL_DIR + "%s_%s_%dx%d.glb" % [kind, variant, h, w]):
+			var direct: String = "%s_%s_%dx%d.glb" % [kind, variant, w, h]
+			var rotated: String = "%s_%s_%dx%d.glb" % [kind, variant, h, w]
+			if ResourceLoader.exists(MODEL_DIR + direct) or ResourceLoader.exists(MODEL_DIR + rotated) or not _signed_glb(direct).is_empty() or not _signed_glb(rotated).is_empty():
 				found_variants.append(variant)
 		if not found_variants.is_empty():
 			var chosen: String = found_variants[_hash(object_id + kind) % found_variants.size()]
@@ -205,11 +221,16 @@ static func _model_for(kind: String, w: int, h: int, object_id: String = "") -> 
 	if found.is_empty():
 		return null
 	var path: String = found["path"]
-	if path.begins_with("user://livepatch/"):
+	if path.begins_with("user://livepatch/") and not _model_cache.has(path):
 		var live_instance := _live_scene(path)
 		if live_instance == null:
 			return null
-		return _fit_model_instance(live_instance, bool(found["rotate"]), w, h)
+		var scene_cache := PackedScene.new()
+		if scene_cache.pack(live_instance) != OK:
+			live_instance.free()
+			return null
+		_model_cache[path] = scene_cache
+		live_instance.free()
 	if not _model_cache.has(path):
 		_model_cache[path] = load(path)
 	var scene = _model_cache[path]

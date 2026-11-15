@@ -267,7 +267,13 @@ func _on_response(result: int, code: int, _headers: PackedStringArray, body: Pac
         status_label.text = errors.get(str(data.get("error","")), "Сервер ответил: %d" % code)
 
 func _enter_hq() -> void:
-    get_tree().change_scene_to_file("res://hq.tscn")
+    # BEGIN ChatGPT13: signed client visibility. Never strand the player if
+    # HQ and map are both disabled by an operator; keep the safe HQ fallback.
+    if not LiveConfig.visible("client_feature_hq") and LiveConfig.visible("client_feature_map"):
+        get_tree().change_scene_to_file("res://world.tscn")
+    else:
+        get_tree().change_scene_to_file("res://hq.tscn")
+    # END ChatGPT13
 
 # Compatibility shim for existing callers/tests.
 func _enter_world() -> void:

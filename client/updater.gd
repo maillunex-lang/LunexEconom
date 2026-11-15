@@ -19,6 +19,8 @@ func _read_local_version() -> int:
 
 func check() -> void:
     if busy: return
+    # A failed refresh must not be mistaken for a fresh successful check.
+    manifest.clear()
     busy = true
     state_changed.emit("Проверяем обновления...", false)
     var req := HTTPRequest.new()

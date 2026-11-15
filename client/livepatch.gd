@@ -154,6 +154,50 @@ func _valid_manifest(data: Variant) -> bool:
             return false
     return true
 
+# ---------- GLB 2.0 safety ----------
+## GLB must have a bounded JSON chunk, embedded-only resources, and at most one BIN chunk.
+## This is checked before GLTFDocument ever parses a downloaded 3D model.
+static func valid_glb(blob: PackedByteArray) -> bool:
+    if blob.size() < 24 or blob.size() > MAX_GLB or blob.slice(0, 4).get_string_from_ascii() != "glTF":
+        return false
+    if _le(blob, 4, 4) != 2 or _le(blob, 8, 4) != blob.size():
+        return false
+    var json_size := _le(blob, 12, 4)
+    if json_size < 4 or json_size > 2 * 1024 * 1024 or json_size % 4 or 20 + json_size > blob.size():
+        return false
+    if blob.slice(16, 20).get_string_from_ascii() != "JSON":
+        return false
+    var document: Variant = JSON.parse_string(blob.slice(20, 20 + json_size).get_string_from_utf8().strip_edges())
+    if not document is Dictionary or not document.get("asset") is Dictionary:
+        return false
+    if str(document["asset"].get("version", "")) != "2.0":
+        return false
+    for field in ["nodes", "meshes", "images", "accessors"]:
+        var entries: Variant = document.get(field, [])
+        if not entries is Array:
+            return false
+        if entries.size() > ({"nodes":1024,"meshes":256,"images":128,"accessors":6000}[field]):
+            return false
+    var pending: Array = [document]
+    var checked := 0
+    while not pending.is_empty():
+        var item: Variant = pending.pop_back()
+        checked += 1
+        if checked > 20000:
+            return false
+        if item is Dictionary:
+            if item.has("uri"):
+                return false
+            pending.append_array(item.values())
+        elif item is Array:
+            pending.append_array(item)
+    var next_chunk: int = 20 + json_size
+    if next_chunk == blob.size():
+        return true
+    if next_chunk + 8 > blob.size():
+        return false
+    return _le(blob, next_chunk + 4, 4) == 0x004E4942 and _le(blob, next_chunk, 4) % 4 == 0 and next_chunk + 8 + _le(blob, next_chunk, 4) == blob.size()
+
 # ---------- files ----------
 func _write_atomic(path: String, bytes: PackedByteArray) -> bool:
     var temporary := path + ".tmp"
@@ -268,8 +312,8 @@ func check_and_download() -> void:
             _fail("Контрольная сумма ресурса не совпала")
             return
         if str(asset["extension"]) == "glb":
-            if bytes.size() < 20 or bytes.slice(0, 4).get_string_from_ascii() != "glTF" or _le(bytes, 4, 4) != 2 or _le(bytes, 8, 4) != bytes.size():
-                _fail("Недопустимый формат 3D-модели")
+            if not valid_glb(bytes):
+                _fail("Недопустимый формат или внешние ссылки 3D-модели")
                 return
         elif not bytes_dimensions_ok(str(asset["extension"]), bytes):
             _fail("Недопустимый размер изображения")

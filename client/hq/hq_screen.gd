@@ -33,6 +33,11 @@ var content_row: HBoxContainer
 var left_nav: ScrollContainer
 var right_scroll: ScrollContainer
 var top_buttons: HBoxContainer
+# BEGIN ChatGPT13: signed client display flags and Android update center
+var map_button: Button
+var update_center: Node
+var update_status_label: Label
+# END ChatGPT13
 var right_panel: PanelContainer
 var _first_view := true
 var _last_render_hash := 0
@@ -51,6 +56,14 @@ func _ready() -> void:
     original_fps = Engine.max_fps
     original_low_processor = OS.low_processor_usage_mode
     _build_ui()
+    # BEGIN ChatGPT13 signed config and updates
+    update_center = load("res://update_center.gd").new()
+    update_center.name = "UpdateCenter"
+    add_child(update_center)
+    update_center.status_changed.connect(_on_content_update_status)
+    LiveConfig.changed.connect(_on_signed_client_config)
+    _apply_client_flags()
+    # END ChatGPT13
     get_viewport().size_changed.connect(_layout)
     _layout()
     request = HTTPRequest.new()
@@ -276,7 +289,7 @@ func _build_ui() -> void:
     top_buttons = HBoxContainer.new()
     header.add_child(top_buttons)
     top_buttons.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
-    _button(top_buttons, "◈ Карта", func(): open_map(), 115)
+    map_button = _button(top_buttons, "◈ Карта", func(): open_map(), 115)
     _button(top_buttons, "☰ Меню", _open_menu, 110)
     content_row = HBoxContainer.new()
     content_row.size_flags_vertical = Control.SIZE_EXPAND_FILL
@@ -642,6 +655,22 @@ func _soon(value: String) -> void:
 
 func _settings() -> void:
     var box := _card("НАСТРОЙКИ И АККАУНТ", "Режим данных влияет только на интерфейс штаба")
+    # BEGIN ChatGPT13 signed client text and update channels
+    _label(box, LiveConfig.override_text("hq_title", "Штаб-квартира"), 15, GREEN)
+    var summary := "Обновления ещё не проверялись"
+    if update_center != null and not update_center.results.is_empty():
+        summary = update_center.summarize(update_center.results)
+    update_status_label = _label(box, summary, 14, MUTED)
+    update_status_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+    _button(box, "Проверить обновление", func() -> void:
+        if update_center != null:
+            update_center.check_all()
+    , 210)
+    _button(box, "Скачать / установить APK", func() -> void:
+        if update_center != null:
+            update_center.install()
+    , 230)
+    # END ChatGPT13
     _button(box, "Данные: " + ("демо JSON" if sample_mode else "сервер") + " · переключить", func() -> void:
         sample_mode = not sample_mode
         API.set_sample_enabled(sample_mode)
@@ -656,6 +685,28 @@ func _settings() -> void:
         refresh()
     )
     _button(box, "Вернуться ко входу", func(): get_tree().change_scene_to_file("res://main.tscn"), 220)
+
+# BEGIN ChatGPT13: client-only visibility; the server remains authoritative.
+func _apply_client_flags() -> void:
+    if map_button != null:
+        map_button.disabled = not LiveConfig.visible("client_feature_map")
+    for section in nav_buttons:
+        var allowed := true
+        if section == "Рынок и биржа":
+            allowed = LiveConfig.visible("client_feature_market")
+        elif section == "Контракты":
+            allowed = LiveConfig.visible("client_feature_contracts")
+        (nav_buttons[section] as Button).disabled = not allowed
+
+func _on_signed_client_config(_revision: int) -> void:
+    _apply_client_flags()
+    if current_section == "Настройки":
+        _render_section()
+
+func _on_content_update_status(message: String) -> void:
+    if update_status_label != null and is_instance_valid(update_status_label) and not update_status_label.is_queued_for_deletion():
+        update_status_label.text = message
+# END ChatGPT13
 
 func _render_alerts() -> void:
     if notifications == null:
@@ -721,6 +772,8 @@ func _open_menu() -> void:
     open_section("Настройки")
 
 func open_map(cell: Vector2i = Vector2i(-1, -1)) -> void:
+    if not LiveConfig.visible("client_feature_map"):
+        return
     _desired_focus = cell
     map_requested.emit(cell)
     _set_active(false)
