@@ -34,7 +34,7 @@ class Registry:
 
     def dispatch(self, method, path, body, context):
         handler = self.routes.get((method.upper(),path))
-        if handler is None and (path.startswith('/enterprises/') or path.startswith('/admin/enterprises/')):
+        if handler is None:
             import re
             for (verb, template), candidate in self.routes.items():
                 if verb != method.upper() or '{id}' not in template:
