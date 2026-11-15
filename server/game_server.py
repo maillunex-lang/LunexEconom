@@ -645,24 +645,41 @@ class Handler(BaseHTTPRequestHandler):
     def do_POST(self):
         if urlsplit(self.path).path.startswith("/dev/"):
             import devtools
-            owner=self._identity()
-            if not owner:return self._send(403,{"error":"forbidden"})
-            with NPC_CONNECT() as db:
-                devtools.ensure(db,NPC_PH,os.environ.get("LUNEX_DB_ENGINE")=="postgres")
-                if not devtools.require_developer(owner,db):return self._send(403,{"error":"forbidden"})
-                if urlsplit(self.path).path not in ("/dev/terrain","/dev/undo","/dev/roads","/dev/move"):return self._send(404,{"error":"not_found"})
-                try:
-                    size=int(self.headers.get("Content-Length","0"))
-                    if size<2 or size>4096:return self._send(400,{"error":"invalid_body"})
-                    payload=json.loads(self.rfile.read(size))
-                except (ValueError,UnicodeError,json.JSONDecodeError):return self._send(400,{"error":"invalid_body"})
-                if urlsplit(self.path).path=="/dev/move":
-                    return self._send(*devtools.building_move(db,NPC_PH,owner,payload,self._client()))
-                if urlsplit(self.path).path=="/dev/roads":
-                    return self._send(*devtools.roads_set(db,NPC_PH,owner,payload,self._client()))
-                if urlsplit(self.path).path=="/dev/undo":
-                    return self._send(*devtools.undo(db,NPC_PH,owner,payload,self._client()))
-                return self._send(*devtools.terrain_set(db,NPC_PH,owner,payload,self._client()))
+            path = urlsplit(self.path).path
+            if path not in ("/dev/terrain", "/dev/undo", "/dev/roads", "/dev/move"):
+                return self._send(404, {"error": "not_found"})
+            owner = self._identity()
+            if not owner or not devtools.require_developer(owner, None):
+                return self._send(403, {"error": "forbidden"})
+            try:
+                size = int(self.headers.get("Content-Length", "0"))
+                if size < 2 or size > 4096:
+                    return self._send(400, {"error": "invalid_body"})
+                payload = json.loads(self.rfile.read(size))
+                if not isinstance(payload, dict):
+                    return self._send(400, {"error": "invalid_body"})
+            except (ValueError, UnicodeError, json.JSONDecodeError):
+                return self._send(400, {"error": "invalid_body"})
+            # The world build/sell commands already serialize with LOCK on
+            # SQLite and advisory key 20261114 on PostgreSQL. Dev commands
+            # must share that same critical section, including validation.
+            postgres = os.environ.get("LUNEX_DB_ENGINE") == "postgres"
+            with LOCK:
+                with NPC_CONNECT() as db:
+                    devtools.ensure(db, NPC_PH, postgres)
+                    if postgres:
+                        db.execute("SELECT pg_advisory_xact_lock(20261114)")
+                    else:
+                        db.execute("BEGIN IMMEDIATE")
+                    if not devtools.require_developer(owner, None):
+                        return self._send(403, {"error": "forbidden"})
+                    handler = {
+                        "/dev/move": devtools.building_move,
+                        "/dev/roads": devtools.roads_set,
+                        "/dev/undo": devtools.undo,
+                        "/dev/terrain": devtools.terrain_set,
+                    }[path]
+                    return self._send(*handler(db, NPC_PH, owner, payload, self._client()))
         if urlsplit(self.path).path.startswith("/admin/"):
             return self._admin("POST")
         if self._soc_post():return
