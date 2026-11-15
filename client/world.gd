@@ -217,7 +217,7 @@ func apply_server_event(event: Dictionary) -> void:
 			_mark_cell(coord, true)
 			continue
 		if kind == "building_removed": server_cells.erase(coord)
-		else: server_cells[coord] = {"kind": "building_created", "building_kind": building_kind, "object_id": str(event.get("object_id", "")), "owner": str(event.get("owner", ""))}
+		else: server_cells[coord] = {"kind": "building_created", "building_kind": building_kind, "object_id": str(event.get("object_id", "")), "owner": str(event.get("owner", "")), "construction_stage": str(event.get("construction_stage", "complete"))}
 		_mark_cell(coord, false)
 	_buildings_dirty = true
 
@@ -234,7 +234,7 @@ func apply_chunk_snapshot(coord: Vector2i, cells: Array) -> void:
 			roads.segments[c] = true
 		else:
 			var bk := str(cell.get("building_kind", kind if kind in BUILDING_KINDS else ""))
-			server_cells[c] = {"kind": "building_created", "building_kind": bk, "object_id": str(cell.get("object_id", "")), "owner": str(cell.get("owner", ""))}
+			server_cells[c] = {"kind": "building_created", "building_kind": bk, "object_id": str(cell.get("object_id", "")), "owner": str(cell.get("owner", "")), "construction_stage": str(cell.get("construction_stage", "complete"))}
 	for dx in range(-1, 2):
 		for dy in range(-1, 2):
 			_dirty_chunks[coord + Vector2i(dx, dy)] = true
@@ -273,11 +273,11 @@ func objects() -> Dictionary:
 		if oid.is_empty():
 			continue
 		if not out.has(oid):
-			out[oid] = {"kind": str(data.get("building_kind", "")), "owner": str(data.get("owner", "")), "cells": []}
+			out[oid] = {"kind": str(data.get("building_kind", "")), "owner": str(data.get("owner", "")), "construction_stage": str(data.get("construction_stage", "complete")), "cells": []}
 		out[oid]["cells"].append(coord)
 	for oid in building_records:
 		var record: Dictionary = building_records[oid]
-		out[oid] = {"kind": str(record.get("kind", "")), "owner": "", "cells": record.get("cells", [])}
+		out[oid] = {"kind": str(record.get("kind", "")), "owner": "", "construction_stage": str(record.get("construction_stage", "complete")), "cells": record.get("cells", [])}
 	return out
 
 # ---------- chunks: ground, roads, water and trees ----------
@@ -513,12 +513,17 @@ func _refresh_buildings() -> void:
 			min_c = Vector2i(mini(min_c.x, c.x), mini(min_c.y, c.y))
 			max_c = Vector2i(maxi(max_c.x, c.x), maxi(max_c.y, c.y))
 		var size := max_c - min_c + Vector2i.ONE
-		var signature := "%s|%s|%s|%s" % [record["kind"], record["owner"], str(min_c), str(size)]
+		var stage := str(record.get("construction_stage", "complete"))
+		var visual_kind := str(record["kind"])
+		# Optional server-authoritative stage; absent/unknown values preserve the completed building.
+		if stage in ["foundation", "frame"] and size == Vector2i(3, 2):
+			visual_kind = "construction_" + stage
+		var signature := "%s|%s|%s|%s" % [visual_kind, record["owner"], str(min_c), str(size)]
 		if building_nodes.has(oid) and building_signatures.get(oid, "") == signature:
 			continue
 		if building_nodes.has(oid):
 			building_nodes[oid].queue_free()
-		var node: Node3D = MODELS.make(str(record["kind"]), size.x, size.y, str(oid), str(record["owner"]))
+		var node: Node3D = MODELS.make(visual_kind, size.x, size.y, str(oid), str(record["owner"]))
 		node.name = "B_" + str(oid).left(24)
 		node.position = Vector3((float(min_c.x) + float(size.x - 1) * 0.5) * CELL, 0.0, (float(min_c.y) + float(size.y - 1) * 0.5) * CELL)
 		node.set_meta("object_id", str(oid))
