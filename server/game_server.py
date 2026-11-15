@@ -13,7 +13,7 @@ from server import db
 from server.registry import Registry
 from server import platform, ledger, clock, world, catalog, enterprises, supply, market, retail
 from server.platform.settings import read_settings
-from server.platform.admin import authorized
+from server.platform.admin import _actor
 
 LOGGER=logging.getLogger(__name__)
 MAX_BODY=65536
@@ -52,11 +52,8 @@ def create_app(dsn=None, start_tick=False):
             start_response('200 OK',[('Content-Type','text/html; charset=utf-8'),('Content-Length',str(len(html))),('Cache-Control','no-store'),('X-Content-Type-Options','nosniff')])
             return [html]
         admin_path=path.startswith('/admin/')
-        if admin_path:
-            ctx_guard={'remote_addr':environ.get('REMOTE_ADDR',''),'admin_token':environ.get('HTTP_X_ADMIN_TOKEN','')}
-            host=environ.get('HTTP_HOST','').lower().rsplit(':',1)[0]
-            if (not authorized(ctx_guard) or host not in ('localhost','127.0.0.1','[::1]') or environ.get('HTTP_X_FORWARDED_FOR') or environ.get('HTTP_FORWARDED') or environ.get('HTTP_X_REAL_IP')):
-                return _send(start_response,403,{'error':'forbidden'})
+        # Admin routes authenticate inside handlers: emergency loopback token or short admin session.
+        # Keeping the guard in the handler allows a separate HTTPS/nginx admin path without exposing game auth.
         try:
             raw_length=environ.get('CONTENT_LENGTH','')
             length=int(raw_length or '0')
@@ -69,8 +66,15 @@ def create_app(dsn=None, start_tick=False):
                 return _send(start_response,400,{'error':'expected_json_object'})
             with pool.connection() as conn:
                 with conn.transaction():
-                    context={'conn':conn,'pool':pool,'registry':registry,'authorization':environ.get('HTTP_AUTHORIZATION',''),'remote_addr':environ.get('REMOTE_ADDR','127.0.0.1'),'real_ip':environ.get('HTTP_X_REAL_IP',''),'admin_token':environ.get('HTTP_X_ADMIN_TOKEN',''),'query':parse_qs(environ.get('QUERY_STRING','')),'client_version':environ.get('HTTP_X_CLIENT_VERSION',''),'if_none_match':environ.get('HTTP_IF_NONE_MATCH',''),'admin_verified':admin_path,'method':method}
+                    context={'conn':conn,'pool':pool,'registry':registry,'authorization':environ.get('HTTP_AUTHORIZATION',''),'remote_addr':environ.get('REMOTE_ADDR','127.0.0.1'),'real_ip':environ.get('HTTP_X_REAL_IP',''),'admin_token':environ.get('HTTP_X_ADMIN_TOKEN',''),'query':parse_qs(environ.get('QUERY_STRING','')),'client_version':environ.get('HTTP_X_CLIENT_VERSION',''),'if_none_match':environ.get('HTTP_IF_NONE_MATCH',''),'admin_verified':False,'method':method,'host':environ.get('HTTP_HOST',''),'forwarded':bool(environ.get('HTTP_X_FORWARDED_FOR') or environ.get('HTTP_FORWARDED') or environ.get('HTTP_X_REAL_IP'))}
                     context['settings']=read_settings(conn,registry.flags,registry.flag_constraints)
+                    if admin_path and path != '/admin/login':
+                        # Every admin route, including routes owned by other modules, must authenticate centrally.
+                        admin_actor=_actor(context)
+                        if not admin_actor:
+                            return _send(start_response,403,{'error':'forbidden'})
+                        context['admin_verified']=True
+                        context['admin_actor']=admin_actor
                     status,payload=registry.dispatch(method,path,data,context)
         except (ValueError,UnicodeError,json.JSONDecodeError):
             return _send(start_response,400,{'error':'invalid_request'})
