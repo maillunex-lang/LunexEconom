@@ -9,6 +9,8 @@ const LoginScreen = preload("res://screens/login.tscn")
 const HeadquartersScreen = preload("res://screens/headquarters.tscn")
 const SettingsScreen = preload("res://screens/settings.tscn")
 const MapScreen = preload("res://screens/map.tscn")
+const EnterprisesScreen = preload("res://screens/enterprises.tscn")
+const BuildScreen = preload("res://screens/build.tscn")
 const VERSION := "2.1.0"
 const PUBLIC_KEY_PATH := "res://security/config_public.pem"
 const SESSION_PATH := "user://platform_session.cfg"
@@ -20,6 +22,8 @@ var login_screen: Control
 var headquarters_screen: Control
 var settings_screen: Control
 var map_screen: Control
+var enterprises_screen: Control
+var build_screen: Control
 var login_card: PanelContainer
 var form: VBoxContainer
 var headquarters: VBoxContainer
@@ -51,10 +55,14 @@ func _ready() -> void:
     headquarters_screen = HeadquartersScreen.instantiate()
     settings_screen = SettingsScreen.instantiate()
     map_screen = MapScreen.instantiate()
+    enterprises_screen = EnterprisesScreen.instantiate()
+    build_screen = BuildScreen.instantiate()
     router.register_screen("login",login_screen)
     router.register_screen("headquarters",headquarters_screen)
     router.register_screen("settings",settings_screen)
     router.register_screen("map",map_screen)
+    router.register_screen("enterprises",enterprises_screen)
+    router.register_screen("build",build_screen)
     # Existing V2-01b implementation stays untouched.
     update_screen = UpdatesPanel.instantiate()
     router.register_screen("updates", update_screen)
@@ -66,6 +74,13 @@ func _ready() -> void:
     settings_screen.back_requested.connect(func(): router.back())
     map_screen.back_requested.connect(func(): router.back())
     map_screen.wallet_changed.connect(_load_hq)
+    map_screen.build_requested.connect(_on_build_requested)
+    map_screen.enterprise_requested.connect(_on_enterprise_requested)
+    enterprises_screen.back_requested.connect(func(): router.back())
+    enterprises_screen.wallet_changed.connect(_load_hq)
+    build_screen.back_requested.connect(func(): router.back())
+    build_screen.built.connect(_on_enterprise_built)
+    build_screen.preview_changed.connect(func(footprint: Dictionary): map_screen.canvas.preview = footprint; map_screen.canvas.queue_redraw())
     form = login_screen.form
     login_card = login_screen.card
     login_username = login_screen.username
@@ -95,6 +110,30 @@ func _navigate(screen: String) -> void:
     elif screen == "map":
         map_screen.api.refresh = Callable(self,"_refresh_map_access")
         map_screen.open(base_url,token)
+    elif screen == "enterprises":
+        enterprises_screen.open(_enterprise_transport())
+
+func _enterprise_transport() -> Node:
+    map_screen.api.base_url = base_url
+    map_screen.api.token = token
+    map_screen.api.refresh = Callable(self, "_refresh_map_access")
+    return map_screen.api
+
+func _on_build_requested(parcel: Dictionary, cell: Vector2i) -> void:
+    router.go("build")
+    build_screen.open(_enterprise_transport(), parcel, cell)
+
+func _on_enterprise_requested(id: int) -> void:
+    router.go("enterprises")
+    enterprises_screen.open(_enterprise_transport(), id)
+
+func _on_enterprise_built() -> void:
+    map_screen.canvas.preview = {}
+    map_screen.canvas.queue_redraw()
+    _load_hq()
+    map_screen.stream.poll_events()
+    router.go("enterprises")
+    enterprises_screen.open(_enterprise_transport())
 
 func _refresh_map_access() -> String:
     if await _renew_tokens():
@@ -136,6 +175,8 @@ func _on_viewport_resized() -> void:
     headquarters_screen.resize_ui(size_now)
     settings_screen.resize_ui(size_now)
     map_screen.resize_ui(size_now)
+    enterprises_screen.resize_ui(size_now)
+    build_screen.resize_ui(size_now)
     Forest.apply_touch(update_screen,size_now)
 
 func _process(_delta: float) -> void:

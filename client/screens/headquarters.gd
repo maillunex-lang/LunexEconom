@@ -58,6 +58,8 @@ func _ready() -> void:
         var tab := _button(key,tabs)
         if key == "map.title":
             tab.pressed.connect(func(): navigate.emit("map"))
+        elif key == "player.enterprises":
+            tab.pressed.connect(func(): navigate.emit("enterprises"))
         else:
             tab.disabled = true
             tab.focus_mode = Control.FOCUS_NONE

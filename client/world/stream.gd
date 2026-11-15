@@ -3,6 +3,7 @@ signal chunk_ready(key: Vector2i, snapshot: Dictionary)
 signal chunk_removed(key: Vector2i)
 signal parcels_ready(key: Vector2i, data: Array)
 signal city_grew(event: Dictionary)
+signal enterprise_changed
 signal network_error(code: String)
 signal land_purchased(data: Dictionary)
 const Gen = preload("res://world/generator.gd")
@@ -166,7 +167,9 @@ func poll_events() -> void:
         cursor = maxi(cursor, int(event.get("version", 0)))
         if event.get("kind", "") == "city_growth":
             _apply_growth(event)
-        elif event.get("kind", "") in ["land_buy", "road_build", "occupation", "demolition"]:
+        elif event.get("kind", "") in ["land_buy", "road_build", "occupation", "demolition", "enterprise_stage"]:
+            if event.get("kind", "") in ["occupation", "demolition", "enterprise_stage"]:
+                enterprise_changed.emit()
             var key := Vector2i(int(event.get("cx", 0)), int(event.get("cy", 0)))
             if desired.has(key):
                 revalidate(key)

@@ -1,6 +1,8 @@
 extends Control
 signal back_requested
 signal wallet_changed
+signal build_requested(parcel: Dictionary, cell: Vector2i)
+signal enterprise_requested(id: int)
 const API = preload("res://world/api.gd")
 const Stream = preload("res://world/stream.gd")
 const Canvas = preload("res://world/map_canvas.gd")
@@ -18,12 +20,14 @@ var parcel_zone: Label
 var parcel_owner: Label
 var parcel_price: Label
 var buy_button: Button
+var build_button: Button
 var confirm: ConfirmationDialog
 var selected := Vector2i(2147483647,2147483647)
 var home_city := "ufa"
 var _started := false
 var _panel_visible := false
 var _city_data: Dictionary = {}
+var _enterprise_refresh_busy := false
 
 func _ready() -> void:
     set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
@@ -36,6 +40,7 @@ func _ready() -> void:
     stream.configure(api)
     stream.network_error.connect(_on_error)
     stream.city_grew.connect(_on_growth)
+    stream.enterprise_changed.connect(_refresh_enterprise_map)
     stream.land_purchased.connect(func(_data: Dictionary):
         info.text = Words.get_text("world.parcel.bought")
         wallet_changed.emit()
@@ -106,6 +111,11 @@ func _ready() -> void:
     buy_button.text = Words.get_text("world.parcel.buy")
     buy_button.pressed.connect(_confirm_purchase)
     actions.add_child(buy_button)
+    build_button = Button.new()
+    build_button.text = "Построить"
+    build_button.disabled = true
+    build_button.pressed.connect(_build_selected)
+    actions.add_child(build_button)
     var close := Button.new()
     close.text = Words.get_text("button.close")
     close.pressed.connect(func(): panel.hide(); _panel_visible = false)
@@ -140,6 +150,7 @@ func open(url: String, access_token: String, preferred_city: String = "ufa") -> 
     if not preferred_city.is_empty():
         home_city = preferred_city
     stream.start()
+    _refresh_enterprise_map()
     if not _started:
         _started = true
         _load_world()
@@ -184,6 +195,8 @@ func _focus_on_city(id: String) -> void:
             break
     panel.hide()
     _panel_visible = false
+    canvas.preview = {}
+    canvas.queue_redraw()
 
 func center_home() -> void:
     _focus_on_city(home_city)
@@ -195,6 +208,13 @@ func _on_growth(_event: Dictionary) -> void:
     info.text = Words.get_text("world.map.growth")
 
 func _on_parcel_tapped(px: int, py: int) -> void:
+    for chunk in canvas.building_cells:
+        for cell in canvas.building_cells[chunk]:
+            if Gen.floor_div(int(cell["x"]),6) == px and Gen.floor_div(int(cell["y"]),6) == py:
+                var reference := str(cell.get("ref",""))
+                if reference.begins_with("enterprise:") and reference.get_slice(":",1).is_valid_int():
+                    enterprise_requested.emit(int(reference.get_slice(":",1)))
+                    return
     selected = Vector2i(px, py)
     _panel_visible = true
     panel.show()
@@ -210,6 +230,7 @@ func _show_selected() -> void:
         parcel_owner.text = ""
         parcel_price.text = ""
         buy_button.disabled = true
+        build_button.disabled = true
         _fetch_parcel(selected)
         return
     var zone_id: String = str(parcel.get("zone", "free"))
@@ -219,6 +240,7 @@ func _show_selected() -> void:
     parcel_owner.text = Words.get_text("world.parcel.owner",{"owner":owner_text})
     parcel_price.text = Words.get_text("world.parcel.price",{"price":str(parcel.get("price","—"))})
     buy_button.disabled = not owner_id in ["city","state"] or not parcel.has("price")
+    build_button.disabled = owner_id != "player"
 
 func _fetch_parcel(target: Vector2i) -> void:
     var key := Vector2i(Gen.floor_div(target.x,2),Gen.floor_div(target.y,2))
@@ -247,3 +269,32 @@ func _purchase() -> void:
         info.text = Words.get_text("world.error."+error_id if error_id in ["payment_failed","parcel_unavailable","request_id_conflict","unauthorized"] else "world.parcel.failed")
         if target == selected:
             buy_button.disabled = false
+
+func _build_selected() -> void:
+    var parcel: Dictionary = stream.parcel_at(selected.x, selected.y)
+    if str(parcel.get("owner_kind", "")) != "player":
+        return
+    var cell := Vector2i(selected.x*6, selected.y*6)
+    var chunk := Vector2i(Gen.floor_div(cell.x,12), Gen.floor_div(cell.y,12))
+    var snapshot: Dictionary = stream.chunks.get(chunk, {})
+    var zones: Array = snapshot.get("zones", [])
+    if zones.size() > posmod(cell.y,12) and zones[posmod(cell.y,12)].size() > posmod(cell.x,12):
+        parcel["zone"] = str(zones[posmod(cell.y,12)][posmod(cell.x,12)])
+    parcel["px"] = selected.x
+    parcel["py"] = selected.y
+    build_requested.emit(parcel, cell)
+
+func _refresh_enterprise_map() -> void:
+    if _enterprise_refresh_busy:
+        return
+    _enterprise_refresh_busy = true
+    var response: Dictionary = await api.fetch("/enterprises")
+    if int(response.get("code",0)) == 200:
+        var metadata := {}
+        for id in response.get("data",{}).get("enterprises",[]):
+            var detail: Dictionary = await api.fetch("/enterprises/%d" % int(id))
+            if int(detail.get("code",0)) == 200:
+                metadata["enterprise:%d" % int(id)] = detail.get("data",{})
+        canvas.enterprise_info = metadata
+        canvas.queue_redraw()
+    _enterprise_refresh_busy = false

@@ -1,7 +1,7 @@
 name: Client checks
 on:
   push:
-    branches: [main, v2/client-map]
+    branches: [main, v2/client-map, v2/client-enterprises]
     paths: ['client/**', 'tools/build_strings.py', 'tools/tests/test_strings.py', '.github/workflows/client-check.yml']
   pull_request:
     paths: ['client/**', 'tools/build_strings.py', 'tools/tests/test_strings.py', '.github/workflows/client-check.yml']
@@ -25,7 +25,7 @@ jobs:
           ./godot --headless --path client --editor --quit
           python3 tools/build_strings.py --check
           python3 -m unittest tools.tests.test_strings -v
-          for test in smoke release_smoke strings_smoke router_smoke keyboard_smoke world_generator_smoke world_roads_smoke world_stream_smoke world_interaction_smoke; do
+          for test in smoke release_smoke strings_smoke router_smoke keyboard_smoke world_generator_smoke world_roads_smoke world_stream_smoke world_interaction_smoke enterprises_smoke enterprises_map_smoke; do
             ./godot --headless --path client -s "tests/${test}.gd"
           done
           # pack_smoke and network_smoke require generated fixtures and arguments.
@@ -40,6 +40,10 @@ jobs:
           for i in 0 1 2 3; do
             LUNEX_TEST_SIZE_INDEX="$i" LUNEX_SCREENSHOT_DIR="$GITHUB_WORKSPACE/build/ui-screenshots" \
               xvfb-run -a ./godot --path client --rendering-driver opengl3 -s tests/map_layout_smoke.gd
+          done
+          for i in 0 1 2 3; do
+            LUNEX_TEST_SIZE_INDEX="$i" LUNEX_SCREENSHOT_DIR="$GITHUB_WORKSPACE/build/ui-screenshots" \
+              xvfb-run -a ./godot --path client --rendering-driver opengl3 -s tests/enterprises_layout_smoke.gd
           done
       - uses: actions/upload-artifact@v4
         if: always()
