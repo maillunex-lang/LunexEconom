@@ -18,7 +18,21 @@ def parse(tag):
     return code, tag[1:]
 
 
-def stamp(preset, tag, info):
+def validate_monotonic(tag, previous_tags):
+    code, _ = parse(tag)
+    for previous in previous_tags:
+        if not previous or previous == tag:
+            continue
+        try:
+            prior_code, _ = parse(previous)
+        except ValueError:
+            continue
+        if code <= prior_code:
+            raise ValueError(f"Version {tag} must be newer than {previous}")
+
+
+def stamp(preset, tag, info, earlier_tags=()):
+    validate_monotonic(tag, earlier_tags)
     code, name = parse(tag)
     path = Path(preset)
     text = path.read_text()
@@ -38,5 +52,7 @@ if __name__ == "__main__":
     ap.add_argument("tag")
     ap.add_argument("--preset", default="client/export_presets.cfg")
     ap.add_argument("--info", default="client/build_info.json")
+    ap.add_argument("--previous-tags", help="File with already created semver release tags")
     opts = ap.parse_args()
-    stamp(opts.preset, opts.tag, opts.info)
+    previous = Path(opts.previous_tags).read_text().splitlines() if opts.previous_tags else ()
+    stamp(opts.preset, opts.tag, opts.info, previous)
