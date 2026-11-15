@@ -196,7 +196,7 @@ func show_detail(id: int) -> void:
         if reports.is_empty():
             _label(Words.get_text("report.empty"))
         for item in reports:
-            _label(Words.get_text("report.row",{"month":item.get("month_index",0),"revenue":item.get("revenue",0),"expenses":item.get("expenses",0),"profit":item.get("profit",0)}))
+            _label(Words.get_text("report.row",{"month":item.get("month_index",0),"revenue":Format.money(item.get("revenue",0)),"expenses":Format.money(item.get("expenses",0)),"profit":Format.money(item.get("profit",0))}))
     else:
         _label(Words.error(report))
     var sell_button := Button.new()
