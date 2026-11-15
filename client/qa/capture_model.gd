@@ -26,7 +26,19 @@ func _initialize() -> void:
     camera.current = true
     root3d.add_child(camera)
     camera.look_at.call_deferred(Vector3(0, 1, 0))
-    var model := BuildingModels.make("factory", 3, 2, "qa-factory")
+    var kind := OS.get_environment("LUNEX_QA_KIND")
+    if kind.is_empty():
+        kind = "factory"
+    var w := int(OS.get_environment("LUNEX_QA_WIDTH"))
+    var h := int(OS.get_environment("LUNEX_QA_HEIGHT"))
+    if w < 1 or h < 1:
+        w = 3
+        h = 2
+    if BuildingModels.model_path(kind, w, h).is_empty():
+        push_error("GLB lookup failed: " + kind)
+        quit(2)
+        return
+    var model := BuildingModels.make(kind, w, h, "qa-" + kind)
     root3d.add_child(model)
 
 func _process(_delta: float) -> bool:
