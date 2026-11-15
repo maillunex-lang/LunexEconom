@@ -131,4 +131,24 @@ class TestUpdater(unittest.TestCase):
             self.assertEqual((target/'game_server.py').read_text(),'old')
             self.assertNotIn('FAKE_PRIVATE_SECRET',output.getvalue())
 
+    def test_restart_does_not_log_systemd_secret(self):
+        with patch.object(updater,'run',return_value=Mock(returncode=1,stderr='FAKE_PRIVATE_SECRET')):
+            with self.assertRaises(RuntimeError) as raised:
+                updater.restart()
+            self.assertNotIn('FAKE_PRIVATE_SECRET',str(raised.exception))
+
+    def test_atomic_sha_preserves_crlf_and_rejects_duplicate(self):
+        with tempfile.TemporaryDirectory() as t:
+            env=Path(t)/'v2.env'
+            original=b'# comment\r\nPASSWORD=FAKE_PRIVATE_SECRET\r\nLUNEX_SHA='+b'a'*40+b'\r\nFLAG=yes\r\n'
+            env.write_bytes(original)
+            with patch.object(updater,'ENV_FILE',env):
+                self.assertEqual(updater.atomic_sha('b'*40),'a'*40)
+                self.assertEqual(env.read_bytes(),original.replace(b'LUNEX_SHA='+b'a'*40,b'LUNEX_SHA='+b'b'*40))
+                duplicate=env.read_bytes()+b'LUNEX_SHA='+b'c'*40+b'\n'
+                env.write_bytes(duplicate)
+                with self.assertRaisesRegex(RuntimeError,'exactly one'):
+                    updater.atomic_sha('d'*40)
+                self.assertEqual(env.read_bytes(),duplicate)
+
 if __name__=='__main__': unittest.main()
