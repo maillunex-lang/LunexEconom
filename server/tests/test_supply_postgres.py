@@ -95,6 +95,16 @@ class SupplyPostgresTests(unittest.TestCase):
             enterprises.adjust(self.conn, eid, product, amount, quality)
         return eid
 
+    def publish(self, enterprise_id, direct=False, market=False):
+        self.conn.execute(
+            """INSERT INTO supply_seller_policy
+            (enterprise_id,allow_direct_sales,allow_city_market)
+            VALUES(%s,%s,%s)
+            ON CONFLICT(enterprise_id)
+            DO UPDATE SET allow_direct_sales=EXCLUDED.allow_direct_sales,
+                          allow_city_market=EXCLUDED.allow_city_market""",
+            (enterprise_id, direct, market))
+
     def link(self, buyer, product, source, slot=1, share=1000, priority=1,
              cap=1000000, quality=0, kind='enterprise'):
         self.conn.execute(
@@ -188,6 +198,7 @@ class SupplyPostgresTests(unittest.TestCase):
         buyer = self.owner()
         field = self.enterprise(seller, 'field', stock=[('grain', 70, 40)])
         mill = self.enterprise(buyer, 'mill')
+        self.publish(field, market=True)
         self.link(mill, 'grain', field, cap=24, quality=50)
         supply.links_day(self.conn, self.day, FLAGS)
         self.assertEqual(self.qty(mill, 'grain'), 0)
@@ -248,6 +259,7 @@ class SupplyPostgresTests(unittest.TestCase):
         field = self.enterprise(seller, 'field', stock=[('grain', 200, 50)])
         first = self.enterprise(broke, 'mill')
         second = self.enterprise(solvent, 'mill')
+        self.publish(field, direct=True)
         self.link(first, 'grain', field)
         self.link(second, 'grain', field)
         supply.links_day(self.conn, self.day, FLAGS)
@@ -273,6 +285,56 @@ class SupplyPostgresTests(unittest.TestCase):
         self.assertEqual(self.qty(field, 'grain'), 100)
         self.assertTrue(reconcile(self.conn)['ok'])
 
+    def test_external_sales_require_seller_consent(self):
+        seller, buyer = self.owner(), self.owner()
+        field = self.enterprise(seller, 'field', stock=[('grain', 300, 50)])
+        mill = self.enterprise(buyer, 'mill')
+        self.link(mill, 'grain', field)
+        # No seller policy: neither direct nor market sales are authorized.
+        supply.links_day(self.conn, self.day, FLAGS)
+        supply.market_day(self.conn, self.day, FLAGS)
+        self.assertEqual(self.qty(mill, 'grain'), 0)
+        self.assertEqual(self.qty(field, 'grain'), 300)
+        self.assertEqual(self.conn.execute(
+            'SELECT volume FROM market_prices WHERE city_id=%s '
+            'AND product_id=%s AND day_index=%s',
+            ('ufa','grain',self.day)).fetchone()[0], 0)
+
+        other_day = self.day + 1
+        self.publish(field, direct=True, market=False)
+        supply.links_day(self.conn, other_day, FLAGS)
+        supply.market_day(self.conn, other_day, FLAGS)
+        self.assertEqual(self.qty(mill, 'grain'), 100)
+        self.assertEqual(self.qty(field, 'grain'), 200)
+        self.assertTrue(reconcile(self.conn)['ok'])
+
+    def test_seller_policy_endpoint_owner_and_types(self):
+        seller, outsider = self.owner(), self.owner()
+        field = self.enterprise(seller, 'field')
+        ctx = {'conn': self.conn, 'path_params': {'id': str(field)}}
+        with patch('server.supply.api.authenticate', return_value=seller):
+            self.assertEqual(supply_api.policy_get({},ctx)[1], {
+                'enterprise_id': field,
+                'allow_direct_sales': False,
+                'allow_city_market': False})
+            self.assertEqual(supply_api.policy_put(
+                {'allow_direct_sales': True,
+                 'allow_city_market': False},ctx)[0], 200)
+            self.assertEqual(supply_api.policy_get({},ctx)[1]['allow_direct_sales'],
+                             True)
+            self.assertEqual(supply_api.policy_put(
+                {'allow_direct_sales': 1,
+                 'allow_city_market': False},ctx)[0], 400)
+        with patch('server.supply.api.authenticate', return_value=outsider):
+            self.assertEqual(supply_api.policy_put({
+                'allow_direct_sales': True,
+                'allow_city_market': True},ctx)[0],404)
+        with patch('server.supply.api.authenticate', return_value=None):
+            self.assertEqual(supply_api.policy_get({},ctx)[0],401)
+        r = build_registry()
+        self.assertIn(('GET','/enterprises/{id}/supply/policy'),r.routes)
+        self.assertIn(('PUT','/enterprises/{id}/supply/policy'),r.routes)
+
     def test_two_hundred_links_benchmark_and_ledger(self):
         seller = self.owner()
         buyer = self.owner(10000000)
@@ -281,6 +343,7 @@ class SupplyPostgresTests(unittest.TestCase):
             for _ in range(200)]
         customers = [self.enterprise(buyer, 'mill') for _ in range(67)]
         for index, supplier in enumerate(suppliers):
+            self.publish(supplier, direct=True)
             self.link(customers[index // 3], 'grain', supplier,
                       slot=index % 3 + 1, priority=index % 3 + 1,
                       share=334 if index % 3 == 0 else 333)
