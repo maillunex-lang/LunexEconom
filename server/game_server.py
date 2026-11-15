@@ -579,7 +579,13 @@ class Handler(BaseHTTPRequestHandler):
         if url.path=="/construction/catalog":return self._send(200,construction_catalog.view())
         if url.path=="/catalog/city":
             import city_catalog
-            return self._send(200,city_catalog.view())
+            import geo as geo_module
+            requested=parse_qs(url.query).get("city",["ufa"])[0]
+            if geo_module.get_city(requested) is None:return self._send(400,{"error":"unknown_city"})
+            return self._send(200,city_catalog.view(requested))
+        if url.path=="/catalog/prices":
+            import regional_prices
+            return self._send(200,{"real_per_game":regional_prices.REAL_PER_GAME,"cities":regional_prices.table()})
         if url.path=="/catalog/goods":return self._send_cached(goods_catalog.public_view(), 86400)
         if url.path=="/deposits":
             import deposits
