@@ -109,11 +109,11 @@ func _add_cell(index: int, allowed: Array, current: Array) -> void:
     min_stock.max_value = 2147483647
     min_stock.step = 1
     min_stock.custom_minimum_size = Vector2(150, 48)
-    var source := SpinBox.new()
-    source.min_value = 0
-    source.max_value = 3
-    source.step = 1
-    source.custom_minimum_size = Vector2(120, 48)
+    var source := OptionButton.new()
+    source.custom_minimum_size = Vector2(160, 48)
+    for pair in [["store.source.stock", 0], ["store.source.slot1", 1], ["store.source.slot2", 2], ["store.source.slot3", 3]]:
+        source.add_item(Words.get_text(pair[0]))
+        source.set_item_metadata(source.item_count - 1, pair[1])
     for label_key in ["store.product", "store.price", "store.min_stock", "store.source"]:
         var caption := Label.new()
         caption.text = Words.get_text(label_key)
@@ -137,7 +137,7 @@ func _add_cell(index: int, allowed: Array, current: Array) -> void:
     _set_product(product, str(selected.get("product_id", "")))
     price.value = int(selected.get("price", 1))
     min_stock.value = int(selected.get("min_stock", 0))
-    source.value = int(selected.get("supply_link_slot", 0))
+    _set_source(source, int(selected.get("supply_link_slot", 0)))
     row_controls.append({"index": index, "product": product, "price": price, "min_stock": min_stock, "source": source})
     var good := str(selected.get("product_id", ""))
     if good.is_empty() and product.item_count > 0:
@@ -177,6 +177,12 @@ func _revenue(items: Array) -> int:
         total += int(item.get("revenue", int(item.get("quantity", 0)) * int(item.get("price", 0))))
     return total
 
+func _set_source(option: OptionButton, value: int) -> void:
+    for index in range(option.item_count):
+        if int(option.get_item_metadata(index)) == value:
+            option.select(index)
+            return
+
 func _set_product(option: OptionButton, value: String) -> void:
     for index in range(option.item_count):
         if str(option.get_item_metadata(index)) == value:
@@ -187,7 +193,7 @@ func _save() -> void:
     save_button.disabled = true
     var output: Array = []
     for row in row_controls:
-        output.append({"cell_index": row.index, "product_id": str(row.product.get_item_metadata(row.product.selected)), "price": int(row.price.value), "min_stock": int(row.min_stock.value), "supply_link_slot": int(row.source.value) if int(row.source.value) > 0 else null})
+        output.append({"cell_index": row.index, "product_id": str(row.product.get_item_metadata(row.product.selected)), "price": int(row.price.value), "min_stock": int(row.min_stock.value), "supply_link_slot": int(row.source.get_item_metadata(row.source.selected)) if int(row.source.get_item_metadata(row.source.selected)) > 0 else null})
     var result: Dictionary = await api.save_cells(enterprise_id, output)
     if int(result.get("code", 0)) >= 200 and int(result.get("code", 0)) < 300:
         message.text = Words.get_text("chain.saved")
