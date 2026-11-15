@@ -15,7 +15,9 @@ class EnterprisesUnitTests(unittest.TestCase):
         self.assertEqual(divmod(80*5000,10000),(40,0))
     def test_full_storage(self):
         r=core.catalog().index['recipes']['mill_flour']
-        self.assertEqual(core.load_bp({'grain':{'quantity':4000,'quality':50}},r,4000,10000),0)
+        self.assertEqual(core.load_bp({'grain':{'quantity':4000,'quality':50}},r,4000,10000),10000)
+        # Milling 100 units of grain frees room for 80 units of flour.
+        self.assertEqual(core.load_bp({'grain':{'quantity':50,'quality':50},'flour':{'quantity':3950,'quality':50}},r,4000,10000),5000)
     def test_precision_remainder(self):
         q,rem=divmod(3*3333+1,10000)
         self.assertEqual((q,rem),(1,0))
