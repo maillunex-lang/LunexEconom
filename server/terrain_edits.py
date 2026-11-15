@@ -13,8 +13,8 @@ def ensure(db):
     db.commit()
 
 def chunk(db, ph, cx, cy):
-    key = (id(db), int(cx), int(cy))
-    # Connections are short-lived; caller controls cache lifetime by clearing it.
+    key = (int(cx), int(cy))
+    # Global invalidation occurs on every successful write.
     if key not in _cache:
         x, y = int(cx) * CHUNK, int(cy) * CHUNK
         rows = db.execute("SELECT x,y,kind,manual FROM terrain_edits WHERE x >= " + ph + " AND x < " + ph + " AND y >= " + ph + " AND y < " + ph, (x, x + CHUNK, y, y + CHUNK)).fetchall()
