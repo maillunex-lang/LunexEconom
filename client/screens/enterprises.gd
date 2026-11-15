@@ -135,7 +135,12 @@ func show_detail(id: int) -> void:
         _label(Words.get_text("inventory.empty"))
     for product in inventory:
         var stock: Dictionary = inventory[product]
-        _label("%s: %s" % [product,Words.get_text("quantity",{"quantity":stock.get("quantity",0),"quality":stock.get("quality",0)})])
+        var product_name := str(product)
+        for product_entry in catalog.data.get("products", []):
+            if str(product_entry.get("id", "")) == str(product):
+                product_name = str(product_entry.get("name", product))
+                break
+        _label("%s: %s" % [product_name,Words.get_text("quantity",{"quantity":stock.get("quantity",0),"quality":stock.get("quality",0)})])
     running_toggle = CheckButton.new()
     running_toggle.text = Words.get_text("running")
     running_toggle.button_pressed = bool(current.get("running", false))
@@ -148,11 +153,11 @@ func show_detail(id: int) -> void:
     body.add_child(staffing_slider)
     _label(Words.get_text("recipe"))
     recipe_select = OptionButton.new()
-    recipe_select.add_item("Без рецепта")
+    recipe_select.add_item(Words.get_text("recipe.none"))
     recipe_select.set_item_metadata(0, "")
     for recipe in catalog.data.get("recipes", []):
         if str(recipe.get("building", "")) == str(current.get("building_id", "")):
-            recipe_select.add_item(str(recipe.get("id", "")))
+            recipe_select.add_item(str(recipe.get("name", recipe.get("id", ""))))
             recipe_select.set_item_metadata(recipe_select.item_count-1, str(recipe.get("id", "")))
     for i in range(recipe_select.item_count):
         if str(recipe_select.get_item_metadata(i)) == str(current.get("recipe_id", "")):
