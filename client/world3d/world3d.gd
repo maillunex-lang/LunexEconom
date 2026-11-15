@@ -1,6 +1,12 @@
 extends Node3D
 ## Standalone 2.5D renderer prototype; does not mutate the live 2D world.
 const GRID = preload("res://world3d/grid_projection.gd")
+const ADAPTER = preload("res://world3d/server_visual_adapter.gd")
+const FACTORY = preload("res://world3d/visual_factory.gd")
+var visuals = ADAPTER.new()
+var building_nodes: Dictionary = {}
+var building_signatures: Dictionary = {}
+var road_nodes: Dictionary = {}
 const CHUNK_RADIUS := 2
 var chunk_nodes: Dictionary = {}
 var camera: Camera3D
@@ -82,10 +88,58 @@ func _make_chunk(coord: Vector2i) -> Node3D:
     root.add_child(ground)
     return root
 
-func apply_server_cells(_cells: Dictionary) -> void:
-    # Contract reserved for server snapshots. Prototype intentionally does not
-    # invent buildings or take authority over placement.
-    pass
+func apply_server_cells(cells: Dictionary) -> void:
+    # Dictionary keyed by Vector2i with the same entries as the existing world.
+    visuals.cells.clear()
+    visuals.roads.clear()
+    for coord in cells:
+        var data: Dictionary = cells[coord]
+        if str(data.get("kind", "")) == "road_changed":
+            visuals.roads[coord] = true
+        elif not str(data.get("object_id", "")).is_empty():
+            visuals.cells[coord] = data.duplicate()
+    visuals._reindex()
+    _refresh_visuals()
+
+func apply_chunk_snapshot(coord: Vector2i, entries: Array) -> void:
+    visuals.apply_chunk(coord, entries)
+    _refresh_visuals()
+
+func apply_server_event(event: Dictionary) -> void:
+    visuals.apply_event(event)
+    _refresh_visuals()
+
+func _refresh_visuals() -> void:
+    # One mesh per authoritative object ID; no fake player-owned buildings.
+    for oid in building_nodes.keys():
+        if not visuals.objects.has(oid):
+            building_nodes[oid].queue_free()
+            building_nodes.erase(oid)
+            building_signatures.erase(oid)
+    for oid in visuals.objects:
+        var record: Dictionary = visuals.objects[oid]
+        var signature := str(record["kind"]) + "|" + str(record["footprint"])
+        if building_nodes.has(oid) and building_signatures.get(oid, "") != signature:
+            building_nodes[oid].queue_free()
+            building_nodes.erase(oid)
+        if not building_nodes.has(oid):
+            var node: Node3D = FACTORY.building(str(record["kind"]), record["footprint"])
+            node.name = "Building_" + str(oid).left(20)
+            add_child(node)
+            building_nodes[oid] = node
+            building_signatures[oid] = signature
+        var center: Vector2 = visuals.object_center(oid)
+        building_nodes[oid].position = Vector3(center.x * GRID.CELL_METERS, 0.0, center.y * GRID.CELL_METERS)
+    for cell in road_nodes.keys():
+        if not visuals.roads.has(cell):
+            road_nodes[cell].queue_free()
+            road_nodes.erase(cell)
+    for cell in visuals.roads:
+        if not road_nodes.has(cell):
+            var road: MeshInstance3D = FACTORY.box(Vector3(1.98, 0.06, 1.98), Color("#50575b"))
+            road.position = GRID.cell_to_world(cell) + Vector3(0.0, 0.035, 0.0)
+            add_child(road)
+            road_nodes[cell] = road
 
 func _unhandled_input(event: InputEvent) -> void:
     if event is InputEventScreenTouch:
