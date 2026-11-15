@@ -330,6 +330,13 @@ def publish(stage, meta, rel, *, dry=False, with_latest=False):
                 copy_fsync(stage / n, signed_dir / n)
             sync_dir(signed_dir)
             sync_dir(signed_root)
+        # The service runs with UMask=0077, so mkdir(mode=...) alone leaves 0700 and nginx
+        # answers 403. Set world-readable modes explicitly, also for a directory left by an
+        # earlier failed run.
+        os.chmod(signed_root, 0o755)
+        os.chmod(signed_dir, 0o755)
+        for n in ('update.json', 'update.json.sig'):
+            os.chmod(signed_dir / n, 0o644)
         for i, p in enumerate(tracked):
             if p.is_symlink() or (p.exists() and not p.is_file()):
                 fail('non-regular tracked file')
