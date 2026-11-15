@@ -11,11 +11,12 @@ const SettingsScreen = preload("res://screens/settings.tscn")
 const MapScreen = preload("res://screens/map.tscn")
 const EnterprisesScreen = preload("res://screens/enterprises.tscn")
 const BuildScreen = preload("res://screens/build.tscn")
+const PublicBase = preload("res://config/public_base.gd")
 const VERSION := "2.1.0"
 const PUBLIC_KEY_PATH := "res://security/config_public.pem"
 const SESSION_PATH := "user://platform_session.cfg"
 const CONFIG_CACHE_PATH := "user://platform_config.cfg"
-var base_url := "https://rikagro.ru/lunexeconom/api"
+var base_url := PublicBase.api_url()
 var shell: MarginContainer
 var router: Control
 var login_screen: Control
@@ -192,6 +193,9 @@ func _process(_delta: float) -> void:
 var _last_keyboard_height := 0
 
 func _api(path: String, method: int = HTTPClient.METHOD_GET, payload: Dictionary = {}, authenticated: bool = false) -> Dictionary:
+    base_url = PublicBase.api_url()
+    if base_url.is_empty():
+        return {"code": 0, "data": {"error": "service_unavailable"}}
     var req := HTTPRequest.new()
     req.timeout = 12.0
     add_child(req)
@@ -264,7 +268,7 @@ func _send_auth(mode: String) -> void:
     var response: Dictionary = await _api("/auth/" + mode,HTTPClient.METHOD_POST,data)
     _auth_busy = false
     if response.code != 200 and response.code != 201:
-        status_label.text = Strings.get_text("error.auth") if response.code in [401, 403] else Strings.get_text("error.generic")
+        status_label.text = "Сервер временно недоступен. Попробуйте позже." if response.data.get("error", "") == "service_unavailable" else (Strings.get_text("error.auth") if response.code in [401, 403] else Strings.get_text("error.generic"))
         return
     if mode == "register":
         status_label.text = Strings.get_text("auth.login.title")
