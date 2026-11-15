@@ -45,7 +45,7 @@ class LayoutTests(unittest.TestCase):
                 for dy in range(deposits.PAD):
                     self.assertFalse(roads.is_water(item["x"] + dx, item["y"] + dy))
                     self.assertFalse(roads.is_base_road(item["x"] + dx, item["y"] + dy))
-        self.assertEqual(counts, {"oil": 40, "gas": 20, "sand": 20, "forest": 20})
+        self.assertEqual(counts, {name: 20 * deposits.COUNTS[name] for name in deposits.RESOURCES})
         ids = [item["id"] for item in first]
         self.assertEqual(len(ids), len(set(ids)))
 
@@ -172,7 +172,8 @@ class CatalogHttpTests(DepositWorld):
                 self.assertEqual(response.status, 200)
                 self.assertEqual(response.headers["Cache-Control"], "public, max-age=86400")
                 payload = json.loads(response.read())
-            self.assertEqual(payload["version"], 1)
+            self.assertEqual(payload["version"], 2)
+            self.assertIn("stone", [g["id"] for g in payload["goods"]])
             self.assertIn("bread", [g["id"] for g in payload["goods"]])
             self.assertIn("bread_plant", [r["kind"] for r in payload["recipes"]])
             self.assertTrue(payload["recipes"][[r["kind"] for r in payload["recipes"]].index("mine")]["legacy"])

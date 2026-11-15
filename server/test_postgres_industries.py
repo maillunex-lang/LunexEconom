@@ -66,8 +66,9 @@ class PostgresIndustryTests(unittest.TestCase):
         self.assertIn("bread_plant", postgres_world.KINDS)
         with postgres_db.connect() as db:
             created = deposits.ensure(db, "%s")
-        self.assertEqual(self.sql("SELECT COUNT(*) FROM deposits")[0][0], 100)
-        self.assertEqual(created, 100)
+        expected = 20 * sum(deposits.COUNTS.values())
+        self.assertEqual(self.sql("SELECT COUNT(*) FROM deposits")[0][0], expected)
+        self.assertEqual(created, expected)
 
     def test_agro_chain_sells_bread_and_balances(self):
         self.grant("alice", 500_000)

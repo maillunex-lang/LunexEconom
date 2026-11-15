@@ -17,6 +17,8 @@ import threading
 import uuid
 
 import economy
+import goods_catalog
+import balance as balance_registry
 
 SEED = 20261114
 MAX_PAYBACK_MONTHS = 14        # NPCs accept slower payback than players expect (10), but not much slower
@@ -26,6 +28,14 @@ MAX_BUILDINGS = 15
 MAX_CATCH_UP = 3               # months of decisions processed per tick after downtime
 LOCATION_ATTEMPTS = 40
 PLACEMENT_ERRORS = ("water", "road_overlap", "occupied", "no_road_access", "outside_world")
+DEPOSIT_ERRORS = PLACEMENT_ERRORS + ("no_deposit", "deposit_busy", "wrong_zone")
+# Considered only when NPC_NEW_KINDS is 1. Weights are modest so a saturated old market still leaves room.
+NEW_FOCUS = (
+    ("stone_pit", 2.0), ("iron_mine", 1.6), ("coal_mine", 1.5), ("flax_camp", 1.3),
+    ("logging_camp", 1.2), ("cement_plant", 1.4), ("steel_plant", 1.4), ("brick_yard", 1.3),
+    ("sawmill", 1.2), ("machine_plant", 1.0), ("metalworks", 1.5), ("textile_mill", 1.3),
+    ("garment_plant", 1.5), ("refinery", 1.1), ("electronics_plant", 1.1),
+)
 
 PERSONAS = [
     {"owner": "npc:ural-agro", "name": "Урал-Агро", "pace": 0.60,
@@ -67,21 +77,33 @@ def choose_kind(persona, wallet, quotes, wage=economy.BASE_WAGE, tax_rates=None)
     total = sum(holdings.values())
     if total >= MAX_BUILDINGS:
         return None
-    producers = sum(n for k, n in holdings.items() if economy.PRODUCTION.get(k, {}).get("product"))
+    producers = sum(n for k, n in holdings.items()
+                    if (economy.PRODUCTION.get(k) or goods_catalog.production_spec(k) or {}).get("product"))
     retail = quotes.get("_retail") or {}
-    options = sorted(persona["focus"].items())
+    options = list(sorted(persona["focus"].items()))
+    if balance_registry.get("NPC_NEW_KINDS"):
+        for kind, weight in NEW_FOCUS:
+            options.append((kind, weight))
     if int(retail.get("unmet_units", 0)) > 0 and "shop" not in persona["focus"]:
         options.append(("shop", persona["focus"].get("shop", 1.0)))
     best = None
     seen = set()
     for kind, weight in options:
-        if kind in seen or kind not in economy.PRODUCTION:
+        if kind in seen:
             continue
         seen.add(kind)
+        spec = economy.PRODUCTION.get(kind)
+        if spec is None:
+            if not balance_registry.get("NPC_NEW_KINDS"):
+                continue
+            spec = goods_catalog.production_spec(kind)
+            if spec is None or not spec.get("product"):
+                continue
+        if kind not in economy.BUILD_COST:
+            continue
         cost = economy.BUILD_COST[kind] + economy.ROAD_CELL_COST * ROAD_ESTIMATE_CELLS
         if wallet["balance"] - cost < RESERVE:
             continue
-        spec = economy.PRODUCTION[kind]
         if kind == "warehouse":
             if producers < 2 or holdings.get("warehouse", 0) >= (producers + 2) // 3:
                 continue
@@ -92,7 +114,15 @@ def choose_kind(persona, wallet, quotes, wage=economy.BASE_WAGE, tax_rates=None)
                 continue
             score = weight / (cost / profit)
         else:
-            profit = _profit(spec, quotes, wage, (tax_rates or {}).get("profit", 0.0), (tax_rates or {}).get("property", 0.0), economy.BUILD_COST[kind])
+            quoted = quotes
+            product = spec.get("product")
+            if product and product not in quotes and not spec.get("inputs"):
+                ref = goods_catalog.good(product).reference_price
+                quoted = dict(quotes)
+                quoted[product] = {"price": ref, "price_if_added": ref, "supply": 1}
+            elif product and (product not in quotes or any(raw not in quotes for raw in spec.get("inputs", {}))):
+                continue
+            profit = _profit(spec, quoted, wage, (tax_rates or {}).get("profit", 0.0), (tax_rates or {}).get("property", 0.0), economy.BUILD_COST[kind])
             if profit is None or profit <= 0 or cost / profit > MAX_PAYBACK_MONTHS:
                 continue
             score = weight / (cost / profit)
@@ -113,8 +143,11 @@ def _shop_profit(spec, retail, wage, profit_tax, property_tax, cost):
     return profit - max(profit, 0) * profit_tax - cost * property_tax / 12
 
 
-def _place(owner, month, kind, total, build_fn):
+def _place(owner, month, kind, total, build_fn, connect=None, ph="?"):
+    if goods_catalog.deposit_resource(kind) and connect is not None:
+        return _place_on_deposit(owner, month, kind, build_fn, connect, ph)
     radius = 12 + 3 * total
+    errors = DEPOSIT_ERRORS if balance_registry.get("NPC_NEW_KINDS") else PLACEMENT_ERRORS
     for attempt in range(LOCATION_ATTEMPTS):
         h = _rand(owner, month, "loc%d" % attempt)
         x = h % (2 * radius + 1) - radius
@@ -123,12 +156,32 @@ def _place(owner, month, kind, total, build_fn):
         status, result = build_fn(owner, {"kind": kind, "x": x, "y": y, "request_id": request_id})
         if status in (200, 201):
             return True
-        if status == 402 or (status == 409 and result.get("error") not in PLACEMENT_ERRORS):
+        if status == 402 or (status == 409 and result.get("error") not in errors):
             return False
     return False
 
 
-def act(persona, month, wallet_fn, market_fn, build_fn):
+def _place_on_deposit(owner, month, kind, build_fn, connect, ph):
+    """Extractors only stand on a free deposit. A miss is retried; a zone or money error stops the search."""
+    import deposits
+    resource = goods_catalog.deposit_resource(kind)
+    with connect() as db:
+        origins = deposits.open_origins(db, ph, resource)
+    if not origins:
+        return False
+    start = _rand(owner, month, "dep") % len(origins)
+    for offset in range(min(LOCATION_ATTEMPTS, len(origins))):
+        x, y, _dep = origins[(start + offset) % len(origins)]
+        request_id = str(uuid.uuid5(uuid.NAMESPACE_URL, "npc/%s/%d/dep%d" % (owner, month, offset)))
+        status, result = build_fn(owner, {"kind": kind, "x": x, "y": y, "request_id": request_id})
+        if status in (200, 201):
+            return True
+        if status == 402 or (status == 409 and result.get("error") not in DEPOSIT_ERRORS):
+            return False
+    return False
+
+
+def act(persona, month, wallet_fn, market_fn, build_fn, connect=None, ph="?"):
     """One monthly decision of one NPC. Returns the built kind or None."""
     owner = persona["owner"]
     if _rand(owner, month, "pace") % 1000 >= persona["pace"] * 1000:
@@ -144,7 +197,7 @@ def act(persona, month, wallet_fn, market_fn, build_fn):
     if kind is None:
         return None
     total = sum(wallet.get("holdings", {}).values())
-    return kind if _place(owner, month, kind, total, build_fn) else None
+    return kind if _place(owner, month, kind, total, build_fn, connect, ph) else None
 
 
 def recapitalize(connect, ph, owner, now):
@@ -206,7 +259,7 @@ def tick(connect, ph, clock_fn, market_fn, wallet_fn, build_fn, city_fn=None):
             if needs_investor(wallet_fn(persona["owner"]), month):
                 recapitalize(connect, ph, persona["owner"], clk["server_time"])
             for k in range(min(pending, MAX_CATCH_UP)):
-                if act(persona, acted + 1 + k, wallet_fn, market_fn, build_fn):
+                if act(persona, acted + 1 + k, wallet_fn, market_fn, build_fn, connect, ph):
                     built += 1
             with connect() as db:
                 db.execute("UPDATE npc_state SET acted_through=%s WHERE owner=%s".replace("%s", ph), (month - 1, persona["owner"]))

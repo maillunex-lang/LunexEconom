@@ -124,6 +124,20 @@ class ScenarioTests(unittest.TestCase):
         self.assertGreaterEqual(agro["bots"][0]["built"], 1)
         self.assertGreaterEqual(extract["bots"][0]["built"], 1)
 
+    def test_new_scenarios_keep_invariants_on_five_seeds(self):
+        specs = (
+            ("build_materials", True, 4),
+            ("trucking", True, 2),
+            ("quality", True, 2),
+            ("npc_builders", True, 2),
+        )
+        for seed in (1, 2, 3, 4, 5):
+            for strategy, npc_on, cap in specs:
+                run = balance_sim.run_scenario(months=6, seed=seed, npc_on=npc_on, strategies=(strategy,), build_cap=cap)
+                self.assertEqual(run["invariants"], [], (strategy, seed, run["invariants"][:2]))
+                self.assertEqual(run["flags"], [], (strategy, seed))
+                self.assertEqual(run["rows"][-1]["wallet_sum"], 0)
+
     def test_month_length_does_not_change_boundary_economy(self):
         common = dict(months=12, seed=20261114, npc_on=True, strategies=())
         day = balance_sim.run_scenario(month_seconds=86400, **common)

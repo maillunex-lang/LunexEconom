@@ -27,6 +27,7 @@ import deposits  # noqa: E402
 import economy  # noqa: E402
 import game_server  # noqa: E402
 import goods_catalog  # noqa: E402
+import balance as balance_registry
 import npc  # noqa: E402
 import production  # noqa: E402
 import roads  # noqa: E402
@@ -35,9 +36,14 @@ T0 = 1_800_000_000
 CYCLE = ("farm", "mine", "factory", "warehouse")
 AGRO_CYCLE = ("grain_field", "elevator", "mill", "bread_plant", "shop")
 EXTRACT_CYCLE = ("oil_well", "gas_well", "sand_pit", "logging_camp")
-STRATEGIES = ("rotate", "hoard", "loan", "idle", "contract", "shop", "agro", "extract")
+MATERIALS_CYCLE = ("stone_pit", "iron_mine", "coal_mine", "flax_camp", "cement_plant", "steel_plant",
+                   "brick_yard", "sawmill", "refinery", "machine_plant", "metalworks", "textile_mill",
+                   "garment_plant", "electronics_plant")
+STRATEGIES = ("rotate", "hoard", "loan", "idle", "contract", "shop", "agro", "extract",
+              "build_materials", "trucking", "quality", "npc_builders")
 _PREFIX = {"rotate": "rot", "hoard": "hor", "loan": "lon", "idle": "idl", "contract": "con", "shop": "shp",
-           "agro": "agr", "extract": "ext"}
+           "agro": "agr", "extract": "ext", "build_materials": "mat", "trucking": "trk", "quality": "qlt",
+           "npc_builders": "bld"}
 
 # Целые метрики месяца. Время шага сюда не входит: оно не детерминировано.
 METRIC_FIELDS = (
@@ -178,6 +184,33 @@ class Bot:
             elif month == 0 and self.built < 1:
                 game_server.wallet(self.name)
             return
+        if self.strategy == "build_materials":
+            if self.built >= world.build_cap:
+                return
+            kind = MATERIALS_CYCLE[(self.built + self.index) % len(MATERIALS_CYCLE)]
+            built = world.try_build_on_deposit(self.name, kind, month) if goods_catalog.deposit_resource(kind) else world.try_build(self.name, kind, month)
+            if built:
+                self.built += 1
+            elif month == 0 and self.built < 1:
+                game_server.wallet(self.name)
+            return
+        if self.strategy == "trucking":
+            if month == 0:
+                game_server.trucks_buy(self.name, {"count": 1, "request_id": world.request_id(self.name, month, "truck")})
+            if self.built < 1:
+                if world.try_build(self.name, "farm", month):
+                    self.built += 1
+            return
+        if self.strategy == "quality":
+            if month == 0:
+                game_server.research_start(self.name, {"track": "quality", "request_id": world.request_id(self.name, month, "research")})
+            if self.built < 1 and world.try_build(self.name, "farm", month):
+                self.built += 1
+            return
+        if self.strategy == "npc_builders":
+            if month == 0:
+                game_server.wallet(self.name)
+            return
         if self.strategy == "contract":
             self._contract(world, month)
             return
@@ -221,6 +254,7 @@ class World:
         self.builds_ok = 0
         self.builds_fail = 0
         self.bots = []
+        self.npc_new_kinds = "npc_builders" in strategies
         for index, strategy in enumerate(strategies):
             if strategy not in STRATEGIES:
                 raise ValueError("неизвестная стратегия: %s" % strategy)
@@ -237,6 +271,15 @@ class World:
         try:
             game_server.DB = self.db_path
             os.environ["LUNEX_MONTH_SECONDS"] = str(self.month_seconds)
+            if self.npc_new_kinds:
+                os.environ["LUNEX_BAL_NPC_NEW_KINDS"] = "1"
+                balance_registry.reload()
+            # The road matrix is computed once per process. Counting it as a monthly step
+            # flags the first multi-city month (~2s) even though later months are cheap.
+            import regions
+            others = [r for r in regions.region_ids() if r != regions.HOME]
+            if others:
+                regions.road_km(regions.HOME, others[0])
         except BaseException:
             self._patch.stop()
             raise
@@ -251,6 +294,9 @@ class World:
             os.environ.pop("LUNEX_MONTH_SECONDS", None)
         else:
             os.environ["LUNEX_MONTH_SECONDS"] = self._old_env
+        if self.npc_new_kinds:
+            os.environ.pop("LUNEX_BAL_NPC_NEW_KINDS", None)
+            balance_registry.reload()
         return False
 
     def request_id(self, owner, month, salt):
@@ -760,7 +806,8 @@ def render_report(runs, perf, compares):
                  "Новые виды не входят в `economy.PRODUCTION` и `economy.MARKET`: месяц без агрозданий и скважин "
                  "по-прежнему публикует ровно три цены. На нижней границе цены (`MIN_PRICE_K`) выручка нового "
                  "производителя ниже содержания и зарплат, поэтому наращивать цепочку бесконечно убыточно "
-                 "(проверка — `server/test_goods_catalog.py`). NPC выбирают только старые виды.")
+                 "(проверка — `server/test_goods_catalog.py`). NPC по умолчанию выбирают только старые виды "
+                 "(`NPC_NEW_KINDS=0`); сценарий `npc_builders` включает новые.")
     lines.append("")
     lines.append("| Сценарий | Инварианты | Красные флаги | Рынок, ₽ | Здания NPC | Банкротства NPC |")
     lines.append("|---|---:|---|---:|---:|---:|")
@@ -774,6 +821,10 @@ def render_report(runs, perf, compares):
     lines.append("это однократный расчёт дорожной сети (`geo.routes`), а не клиринг новых отраслей.")
     lines.append("Повторные месяцы и замер на 50/200/1000 зданий — в таблице производительности ниже.")
     lines.append("Агроцепочка и добыча (`agro_18`, `extract_18`) журнал не ломают, NPC в них не вымирают.")
+    lines.append("Сценарии `build_materials`, `trucking`, `quality` и `npc_builders` — стройматериалы, парк грузовиков,")
+    lines.append("исследование качества и NPC на новых видах. Без грузовиков межгородский тариф прежний.")
+    lines.append("Те же четыре сценария на зёрнах 1…5 по 6 месяцев (NPC включены) держат инварианты в нуле и не дают")
+    lines.append("красных флагов: `tools/test_balance_sim.py`, `test_new_scenarios_keep_invariants_on_five_seeds`.")
     lines.append("")
     lines.append("## Сценарии")
     lines.append("")
@@ -1026,6 +1077,10 @@ def _suite(args):
         ("shop_36", dict(months=36, seed=11, strategies=("shop", "shop"), npc_on=True, build_cap=4)),
         ("agro_18", dict(months=18, seed=20261115, strategies=("agro", "agro"), npc_on=True, build_cap=6)),
         ("extract_18", dict(months=18, seed=20261115, strategies=("extract",), npc_on=True, build_cap=4)),
+        ("build_materials_12", dict(months=12, seed=20261115, strategies=("build_materials",), npc_on=True, build_cap=6)),
+        ("trucking_12", dict(months=12, seed=20261115, strategies=("trucking",), npc_on=True, build_cap=2)),
+        ("quality_12", dict(months=12, seed=20261115, strategies=("quality",), npc_on=True, build_cap=2)),
+        ("npc_builders_12", dict(months=12, seed=20261115, strategies=("npc_builders",), npc_on=True, build_cap=2)),
     ]
     runs = []
     for name, spec in specs:

@@ -3,7 +3,6 @@ import unittest
 
 import building_dimensions
 import city_catalog as cc
-import industry_catalog
 import zoning
 
 TARGET = {   # the approved starting table: id -> ((w, h), capacity)
@@ -40,8 +39,11 @@ class CityCatalogTests(unittest.TestCase):
             self.assertTrue(item["materials"], oid)
             self.assertTrue(all(type(q) is int and q > 0 for q in item["materials"].values()), oid)
 
-    def test_materials_are_goods_of_the_industry_catalog(self):
-        known = {recipe.product for recipe in industry_catalog.RECIPES.values()}
+    def test_materials_are_goods_of_the_goods_catalog(self):
+        import goods_catalog
+        known = {item.id for item in goods_catalog.GOODS}
+        for name in ("timber", "stone", "cement", "steel"):
+            self.assertIn(name, known)
         for oid, item in cc.CATALOG.items():
             self.assertTrue(set(item["materials"]) <= known, (oid, set(item["materials"]) - known))
 

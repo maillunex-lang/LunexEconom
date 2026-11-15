@@ -269,6 +269,11 @@ def _population_at(db, ph, month):
 def step_month(db, ph, month, now):
     """Run the market step for one completed month."""
     import regions
+    import research as company_research
+    import trucks
+    import quality as product_grade
+    company_research.advance(db, ph, month)
+    trucks.release_arrived(db, ph, month)
     active = regions.active_regions(db, ph)                      # the game city, cities with company buildings, generated cities
     where = regions.building_regions(db, ph)
     ops = db.execute(_q("SELECT owner,kind,start_month,start_permille,object_id FROM building_ops WHERE start_month<=%s", ph), (month,)).fetchall()
@@ -284,6 +289,7 @@ def step_month(db, ph, month, now):
         reg = c["regional"].setdefault(region, {"buildings": [], "jobs": 0, "needs": {}, "got": {}, "need_ext": {}})
         c["buildings"].append((kind, factor))
         reg["buildings"].append((kind, factor))
+        reg.setdefault("meta", []).append((object_id, kind, factor))
         if goods_catalog.deposit_resource(kind):
             reg.setdefault("wells", []).append((object_id, kind, factor))
         c["maint"] += spec["upkeep"] * factor // 1000
@@ -324,6 +330,10 @@ def step_month(db, ph, month, now):
             for product, amount in reg["needs"].items():
                 c["needs"][product] = c["needs"].get(product, 0) + amount
         c["wage_bill"] = sum(reg["jobs"] * lab_r[region]["wage"] for region, reg in c["regional"].items())
+    company_research.apply_input_relief(db, ph, companies, month)
+    equip = {row[0]: int(row[1]) for row in db.execute("SELECT object_id, equipment_level FROM building_dimensions").fetchall()}
+    bonus_owners = company_research.quality_owners(db, ph, month)
+    made_grade = {}
 
     consumed = input_products() | goods_catalog.all_inputs()
     prices = {}
@@ -334,6 +344,7 @@ def step_month(db, ph, month, now):
     spend_r = {region: 0 for region in active}       # value of what each city's residents bought (consumer demand x fill x price)
     units_r = {region: 0 for region in active}       # units of consumer goods behind that value (shops serve these)
     consumer_spend = 0
+    grade_cache = {}
     for product in _month_products(companies):
         ref = economy.market_of(product)["reference_price"]
         hold_share = _hold_share(db, ph, product, month, ref)
@@ -341,11 +352,15 @@ def step_month(db, ph, month, now):
         release_all = previous is not None and previous >= ref       # price above the reference: the warehouse sells everything
         produced_by = {}
         produced_map = {}
+        owner_grades = {}
         for owner, c in companies.items():
             by_region = {}
+            mass = units = 0
+            known = made_grade.get(owner, {})
+            bonus = 1 if owner in bonus_owners else 0
             for region, reg in c["regional"].items():
                 produced = 0
-                for kind, factor in reg["buildings"]:
+                for object_id, kind, factor in reg.get("meta", ()):
                     spec = _spec(kind)
                     if not spec or spec.get("product") != product:
                         continue
@@ -356,6 +371,10 @@ def step_month(db, ph, month, now):
                     out = int(out * staffing_r[region] * scale * (economy.DISTRESS_OUTPUT if c["distress"] else 1.0)
                               * (1 + economy.SOCIAL_PRODUCTIVITY * quality_r[region]))
                     produced += out
+                    if out:
+                        grade = product_grade.score(equip.get(object_id, 1), product_grade.input_grade(spec.get("inputs") or {}, known), bonus)
+                        mass += grade * out
+                        units += out
                 for object_id, kind, factor in reg.get("wells", ()):
                     spec = _spec(kind)
                     if not spec or spec.get("product") != product:
@@ -363,10 +382,20 @@ def step_month(db, ph, month, now):
                     out = spec["output"] * factor // 1000
                     out = int(out * staffing_r[region] * (economy.DISTRESS_OUTPUT if c["distress"] else 1.0)
                               * (1 + economy.SOCIAL_PRODUCTIVITY * quality_r[region]))
-                    produced += deposits.draw(well_left, object_id, out)
+                    taken = deposits.draw(well_left, object_id, out)
+                    produced += taken
+                    if taken:
+                        grade = product_grade.score(equip.get(object_id, 1), 3, bonus)
+                        mass += grade * taken
+                        units += taken
                 by_region[region] = produced
             produced_by[owner] = by_region
             produced_map[owner] = sum(by_region.values())
+            if units:
+                grade = mass / float(units)
+                owner_grades[owner] = grade
+                made_grade.setdefault(owner, {})[product] = int(round(grade))
+        grade_factor = product_grade.factor_for(db, ph, produced_map, month, grade_cache, owner_grades)
         before = dict(produced_map)
         contract_deliveries.extend(trade_contracts.deliver(db, ph, product, month, companies, produced_map))
         for owner, c in companies.items():                    # a buyer without buildings is a shell company in the game city
@@ -444,18 +473,25 @@ def step_month(db, ph, month, now):
                 if qty <= 0:
                     continue
                 shares = _split_units(offers_r[origin], qty)
+                shipped = 0
                 for owner, taken in shares.items():
-                    offers_r[origin][owner] -= taken
-                    transport_by[(owner, origin)] = transport_by.get((owner, origin), 0) + taken
-                    freight_by[(owner, origin)] = freight_by.get((owner, origin), 0) + taken * regions.unit_cost(product, origin, destination)
-                if regions.dispatch(db, ph, product, origin, destination, qty, month, "ship:%d:%s:%s:%s" % (month, product, origin, destination)):
-                    received[destination] += qty              # a trip of hours: the goods are in the destination's market this month
-                sent[origin] += qty
+                    ship, fee = trucks.take(db, ph, owner, product, origin, destination, taken, month)
+                    if ship <= 0:
+                        continue
+                    offers_r[origin][owner] -= ship
+                    transport_by[(owner, origin)] = transport_by.get((owner, origin), 0) + ship
+                    freight_by[(owner, origin)] = freight_by.get((owner, origin), 0) + fee
+                    shipped += ship
+                if shipped and regions.dispatch(db, ph, product, origin, destination, shipped, month, "ship:%d:%s:%s:%s" % (month, product, origin, destination)):
+                    received[destination] += shipped              # a trip of hours: the goods are in the destination's market this month
+                sent[origin] += shipped
         price_r, fill_r, supply_r = {}, {}, {}
         for region in active:
             supply = sum(offers_r[region].values()) + received[region]
             demand = demand_local[region]
             price = economy.price_for(product, supply, demand)
+            if grade_factor != 1.0:
+                price = int(round(price * grade_factor))
             price_r[region], supply_r[region] = price, supply
             fill = 1.0 if demand <= 0 else min(1.0, supply / demand)
             fill_r[region] = fill
@@ -501,6 +537,7 @@ def step_month(db, ph, month, now):
                 for key, value in shim["rev_by"].items():
                     companies[owner]["rev_by"][key] = companies[owner]["rev_by"].get(key, 0) + value
 
+    trucks.add_upkeep(db, ph, companies)
     loans = {o: int(b) for o, b in db.execute("SELECT owner,balance FROM loans WHERE balance>0").fetchall()}
     rates = taxes.rates(db, ph)
     budget = economy.player_account(economy.CITY)

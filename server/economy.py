@@ -8,18 +8,22 @@ placeholder style ("?" for sqlite3, "%s" for psycopg).
 """
 import uuid
 
+import balance as balance_registry
 import goods_catalog
 
 CURRENCY = "RUB"
-START_CAPITAL = 1_000_000
+START_CAPITAL = balance_registry.get("START_CAPITAL")
 BUILD_COST = {"farm": goods_catalog.recipe("farm").build_cost, "mine": goods_catalog.recipe("mine").build_cost,
-              "factory": goods_catalog.recipe("factory").build_cost, "warehouse": 80_000,
-              "shop": 160_000,
-              "school": 400_000, "hospital": 800_000, "park": 150_000}   # social buildings are paid from the city budget
+              "factory": goods_catalog.recipe("factory").build_cost,
+              "warehouse": balance_registry.get("WAREHOUSE_COST"),
+              "shop": balance_registry.get("SHOP_COST"),
+              "school": balance_registry.get("SCHOOL_COST"),
+              "hospital": balance_registry.get("HOSPITAL_COST"),
+              "park": balance_registry.get("PARK_COST")}   # social buildings are paid from the city budget
 BUILD_COST.update(goods_catalog.extra_build_costs())
 # /world `economy.building_costs` stays the original eight kinds. New costs are in GET /catalog/goods.
 TERMS_BUILD_KINDS = ("farm", "mine", "factory", "warehouse", "shop", "school", "hospital", "park")
-ROAD_CELL_COST = 5_000
+ROAD_CELL_COST = balance_registry.get("ROAD_CELL_COST")
 TREASURY = "system:treasury"
 CONSTRUCTION = "system:construction"
 MARKET_ACCOUNT = "system:market"      # buys all production at the clearing price
@@ -55,126 +59,127 @@ SOCIAL_KINDS = ("school", "hospital", "park")
 #   income ratio      = employed * wage / (labour force * BASE_WAGE)
 #   consumer demand   = base_demand * season * (population / BASE_POPULATION) * (1 - INCOME_WEIGHT + INCOME_WEIGHT * min(income ratio, INCOME_CAP))
 #   migration         = shortage of workers attracts people, unemployment drives them away; natural growth on top.
-BASE_WAGE = 1_500
-PARTICIPATION = 0.5
-BASE_POPULATION = 200
-MIN_POPULATION = 140
-WAGE_ELASTICITY = 0.8
-WAGE_MAX = 2.0
-INCOME_WEIGHT = 0.25
-INCOME_CAP = 1.5
-NATURAL_GROWTH = 0.003
-MIGRATION_IN = 0.03
-MIGRATION_OUT = 0.005
+BASE_WAGE = balance_registry.get("BASE_WAGE")
+PARTICIPATION = balance_registry.get("PARTICIPATION")
+BASE_POPULATION = balance_registry.get("BASE_POPULATION")
+MIN_POPULATION = balance_registry.get("MIN_POPULATION")
+WAGE_ELASTICITY = balance_registry.get("WAGE_ELASTICITY")
+WAGE_MAX = balance_registry.get("WAGE_MAX")
+INCOME_WEIGHT = balance_registry.get("INCOME_WEIGHT")
+INCOME_CAP = balance_registry.get("INCOME_CAP")
+NATURAL_GROWTH = balance_registry.get("NATURAL_GROWTH")
+MIGRATION_IN = balance_registry.get("MIGRATION_IN")
+MIGRATION_OUT = balance_registry.get("MIGRATION_OUT")
 
 # ---- Insolvency ----
 # Costs a company cannot pay become arrears (wages, raw materials, maintenance; repaid in that order from later cash).
 # An unpaid month cuts output to DISTRESS_OUTPUT (workers walk away). After BANKRUPT_AFTER_MISSED unpaid months in a row
 # the company is liquidated: buildings leave the map, buildings/stock are sold for a share of their value, creditors
 # are paid from the proceeds and the rest of the debt is written off. NPC owners get a new investor later.
-BANKRUPT_AFTER_MISSED = 3
-DISTRESS_OUTPUT = 0.5
-LIQUIDATION_RATE = 0.4
-SELL_RATE = 0.5                # voluntary sale of a building: better than a forced liquidation, still a loss
-INVENTORY_LIQUIDATION_RATE = 0.5
-NPC_RECAPITAL_MONTHS = 6
+BANKRUPT_AFTER_MISSED = balance_registry.get("BANKRUPT_AFTER_MISSED")
+DISTRESS_OUTPUT = balance_registry.get("DISTRESS_OUTPUT")
+LIQUIDATION_RATE = balance_registry.get("LIQUIDATION_RATE")
+SELL_RATE = balance_registry.get("SELL_RATE")                # voluntary sale of a building: better than a forced liquidation, still a loss
+INVENTORY_LIQUIDATION_RATE = balance_registry.get("INVENTORY_LIQUIDATION_RATE")
+NPC_RECAPITAL_MONTHS = balance_registry.get("NPC_RECAPITAL_MONTHS")
 
 # ---- Taxes (rates researched for Russia / Republic of Bashkortostan, see docs/TAXES.md) ----
 # Game defaults chosen by the owner: profit tax 13 %, VAT by product category up to 22 %, property tax at the Bashkortostan
 # general rate 2.2 % a year. All tax revenue goes to the city budget (account of the pseudo-owner CITY).
 # VAT is federal law (not regulated by the mayor); the mayor may change profit and property tax inside the legal limits.
-TAXES_ENABLED = True
+TAXES_ENABLED = balance_registry.get("TAXES_ENABLED")
 CITY = "city"                          # pseudo-owner whose wallet is the city budget (no start capital, never bankrupt)
-VAT_STANDARD = 0.22                    # general rate from 2026-01-01 (Federal Law 425-FZ)
+VAT_STANDARD = balance_registry.get("VAT_STANDARD")                    # general rate from 2026-01-01 (Federal Law 425-FZ)
 VAT_RATES = {gid: goods_catalog.good(gid).vat_rate for gid in ("honey", "oil", "goods")}
 VAT_RATES.update(goods_catalog.extra_vat_rates())
-DEFAULT_PROFIT_TAX = 0.13
-PROFIT_TAX_LIMITS = (0.05, 0.25)       # real total profit tax is 25 % (8 % federal + 17 % regional)
-DEFAULT_PROPERTY_TAX = 0.022           # per year of the book value of buildings; Bashkortostan general rate (cap 2.2 % by Tax Code art. 380)
-PROPERTY_TAX_LIMITS = (0.0, 0.022)
+DEFAULT_PROFIT_TAX = balance_registry.get("DEFAULT_PROFIT_TAX")
+PROFIT_TAX_LIMITS = (balance_registry.get("PROFIT_TAX_MIN"), balance_registry.get("PROFIT_TAX_MAX"))
+DEFAULT_PROPERTY_TAX = balance_registry.get("DEFAULT_PROPERTY_TAX")
+PROPERTY_TAX_LIMITS = (balance_registry.get("PROPERTY_TAX_MIN"), balance_registry.get("PROPERTY_TAX_MAX"))
 
 # ---- City government and social services ----
 # quality of life = average coverage of schools, hospitals and parks (0..1); an underfunded city (budget arrears) works at half.
 # It raises output (educated, healthy workers), natural growth and immigration, and reduces emigration.
-SOCIAL_PRODUCTIVITY = 0.10
-SOCIAL_GROWTH = 0.002
-MAYOR_SALARY = 40_000          # per game month from the budget, only for a human mayor
-MAYOR_BONUS_SHARE = 0.02       # performance bonus: share of the taxes the city collected in the month, paid from the budget
-TERM_BONUS = ((0.75, 600_000), (0.60, 300_000))   # end-of-term reward from the Republic (treasury, not the budget) by average rating
+SOCIAL_PRODUCTIVITY = balance_registry.get("SOCIAL_PRODUCTIVITY")
+SOCIAL_GROWTH = balance_registry.get("SOCIAL_GROWTH")
+MAYOR_SALARY = balance_registry.get("MAYOR_SALARY")
+MAYOR_BONUS_SHARE = balance_registry.get("MAYOR_BONUS_SHARE")
+TERM_BONUS = ((balance_registry.get("TERM_BONUS_HIGH_RATING"), balance_registry.get("TERM_BONUS_HIGH")),
+              (balance_registry.get("TERM_BONUS_MID_RATING"), balance_registry.get("TERM_BONUS_MID")))
 # Mayor rating (0..1), smoothed monthly: 70 % residents' approval (quality of life, employment, healthy budget) +
 # 30 % business approval (tax burden). A human mayor below DISMISS_BELOW for DISMISS_AFTER months in a row is dismissed
 # (the administration governs until the next election). Nobody may govern more than MAX_CONSECUTIVE_TERMS terms in a row.
-RATING_RESIDENTS_WEIGHT = 0.7
-RATING_SMOOTHING = 0.2
-DISMISS_BELOW = 0.15
-DISMISS_AFTER = 3
-MAX_CONSECUTIVE_TERMS = 2
-ROAD_MAINTENANCE = 30          # per built road cell per month from the budget
-ELECTION_PERIOD = 12           # game months between elections (the length of a mayor's term)
-ELECTION_REGISTRATION_MONTHS = 2   # candidates register in the two months before voting starts
-ELECTION_VOTING_MONTHS = 2         # voting lasts two months; the result is counted when the last of them completes
-ELECTION_FEE = 50_000              # candidacy fee paid into the city budget
-VOTE_WEIGHT_BASE = 10              # a player's vote weight = base + per_job * jobs of the player's company
-VOTE_WEIGHT_PER_JOB = 5
+RATING_RESIDENTS_WEIGHT = balance_registry.get("RATING_RESIDENTS_WEIGHT")
+RATING_SMOOTHING = balance_registry.get("RATING_SMOOTHING")
+DISMISS_BELOW = balance_registry.get("DISMISS_BELOW")
+DISMISS_AFTER = balance_registry.get("DISMISS_AFTER")
+MAX_CONSECUTIVE_TERMS = balance_registry.get("MAX_CONSECUTIVE_TERMS")
+ROAD_MAINTENANCE = balance_registry.get("ROAD_MAINTENANCE")
+ELECTION_PERIOD = balance_registry.get("ELECTION_PERIOD")
+ELECTION_REGISTRATION_MONTHS = balance_registry.get("ELECTION_REGISTRATION_MONTHS")
+ELECTION_VOTING_MONTHS = balance_registry.get("ELECTION_VOTING_MONTHS")
+ELECTION_FEE = balance_registry.get("ELECTION_FEE")
+VOTE_WEIGHT_BASE = balance_registry.get("VOTE_WEIGHT_BASE")
+VOTE_WEIGHT_PER_JOB = balance_registry.get("VOTE_WEIGHT_PER_JOB")
 RESERVED_OWNERS = ("city",)    # nobody may register under these names
 
 # ---- Bank: one revolving loan per company, secured by its buildings ----
 # Limit = LOAN_LTV of the construction cost of the company's buildings (capped by LOAN_MAX). Interest is charged every game
 # month after operating costs; interest that cannot be paid is added to the loan and counts as an unpaid month. A company in
 # default (unpaid costs or arrears) gets no new credit. In bankruptcy the bank is the last creditor and loses the rest.
-LOAN_INTEREST = 0.015
-LOAN_LTV = 0.5
-LOAN_MAX = 5_000_000
-LOAN_MIN = 10_000
+LOAN_INTEREST = balance_registry.get("LOAN_INTEREST")
+LOAN_LTV = balance_registry.get("LOAN_LTV")
+LOAN_MAX = balance_registry.get("LOAN_MAX")
+LOAN_MIN = balance_registry.get("LOAN_MIN")
 # A new company borrows only LOAN_NEW_LTV of its buildings. The rest of the way to LOAN_LTV opens with age
 # (LOAN_RAMP_MONTHS of operation) and with confirmed revenue (average of the last LOAN_REVENUE_MONTHS at least
 # LOAN_REVENUE_PROOF). Both are required: time alone or one lucky month alone does not unlock the full limit.
-LOAN_NEW_LTV = 0.12
-LOAN_RAMP_MONTHS = 12
-LOAN_REVENUE_MONTHS = 3
-LOAN_REVENUE_PROOF = 20_000
+LOAN_NEW_LTV = balance_registry.get("LOAN_NEW_LTV")
+LOAN_RAMP_MONTHS = balance_registry.get("LOAN_RAMP_MONTHS")
+LOAN_REVENUE_MONTHS = balance_registry.get("LOAN_REVENUE_MONTHS")
+LOAN_REVENUE_PROOF = balance_registry.get("LOAN_REVENUE_PROOF")
 # A warehouse owner holds production back while the recent average price is below reference * HOLD_BELOW. The held share grows
 # with the depth of the fall (the full output is held only at HOLD_BELOW * (1 - HOLD_DEPTH)) and the stock is released gradually
 # (RELEASE_SHARE of it per month, all of it at once while the price is above the reference). Fractions instead of an all-or-nothing
 # rule keep all warehouses from switching in the same month (supply 0 -> price at the ceiling -> everything dumped -> price at the floor).
-HOLD_BELOW = 0.9
-HOLD_DEPTH = 0.5
-HOLD_SMOOTH_MONTHS = 3
-RELEASE_SHARE = 0.34
+HOLD_BELOW = balance_registry.get("HOLD_BELOW")
+HOLD_DEPTH = balance_registry.get("HOLD_DEPTH")
+HOLD_SMOOTH_MONTHS = balance_registry.get("HOLD_SMOOTH_MONTHS")
+RELEASE_SHARE = balance_registry.get("RELEASE_SHARE")
 # Residents spend the wages they earned on consumer goods: money flows system:residents -> system:market (closed money circle).
-RESIDENT_SPEND_TO_MARKET = True
+RESIDENT_SPEND_TO_MARKET = balance_registry.get("RESIDENT_SPEND_TO_MARKET")
 # Owners spend a share of positive after-tax operating profit on their own life. The money returns to system:market,
 # so producer profit is not paid out of thin air. Cash above OWNER_SPEND_RESERVE_MONTHS of wages, maintenance and
 # raw materials is what may be spent; the city budget does not consume. Share 0.90 and a 3-month reserve: a farm
 # that is actually earning stays in the black (about 10% of after-tax profit plus the reserve), while the stock of
 # unspent owner profit stops compounding. See docs/OWNER_SPENDING.md.
-OWNER_SPEND_ENABLED = True
-OWNER_SPEND_SHARE = 0.35      # was 0.90 in Grok1two: the owner kept 10 % of the profit and could not save for the next building; see docs/OWNER_SPENDING.md
-OWNER_SPEND_RESERVE_MONTHS = 3
+OWNER_SPEND_ENABLED = balance_registry.get("OWNER_SPEND_ENABLED")
+OWNER_SPEND_SHARE = balance_registry.get("OWNER_SPEND_SHARE")
+OWNER_SPEND_RESERVE_MONTHS = balance_registry.get("OWNER_SPEND_RESERVE_MONTHS")
 # Retail: a shop sells consumer goods to residents at a markup. With no shops the wage loop is unchanged.
 # See docs/RETAIL.md.
-RETAIL_ENABLED = True
-RETAIL_MARKUP = 0.30
+RETAIL_ENABLED = balance_registry.get("RETAIL_ENABLED")
+RETAIL_MARKUP = balance_registry.get("RETAIL_MARKUP")
 # Market: one world-wide market per product (regions/cities come later).
 #   price = reference_price * (demand / supply) ** (1 / elasticity), clamped to [MIN_PRICE_K, MAX_PRICE_K] x reference.
 #   demand = base_demand * season[calendar month] * demand scale (population and income, see above)
 # base_demand = 2 buildings' output: the world absorbs two buildings of a kind at the reference price;
 # a lone first building enjoys a premium, a crowded market pushes prices (and profit) down.
 MARKET = {gid: goods_catalog.market_entry(gid) for gid in ("honey", "oil", "goods")}
-MIN_PRICE_K = 0.25
-MAX_PRICE_K = 2.5
+MIN_PRICE_K = balance_registry.get("MIN_PRICE_K")
+MAX_PRICE_K = balance_registry.get("MAX_PRICE_K")
 
 # ---- Direct contracts between players (see docs/CONTRACTS.md) ----
 # Price is checked against the reference (base) price, not the live quote, so the bound does not move under the player.
 CONTRACT_PRODUCTS = ("honey", "oil", "goods")
-CONTRACT_PRICE_MIN_K = 0.50
-CONTRACT_PRICE_MAX_K = 2.00
-CONTRACT_QTY_MIN = 1
-CONTRACT_QTY_MAX = 10_000
-CONTRACT_TERM_MIN = 1
-CONTRACT_TERM_MAX = 24
-CONTRACT_MAX_ACTIVE = 6
-CONTRACT_MAX_OPEN = 6
+CONTRACT_PRICE_MIN_K = balance_registry.get("CONTRACT_PRICE_MIN_K")
+CONTRACT_PRICE_MAX_K = balance_registry.get("CONTRACT_PRICE_MAX_K")
+CONTRACT_QTY_MIN = balance_registry.get("CONTRACT_QTY_MIN")
+CONTRACT_QTY_MAX = balance_registry.get("CONTRACT_QTY_MAX")
+CONTRACT_TERM_MIN = balance_registry.get("CONTRACT_TERM_MIN")
+CONTRACT_TERM_MAX = balance_registry.get("CONTRACT_TERM_MAX")
+CONTRACT_MAX_ACTIVE = balance_registry.get("CONTRACT_MAX_ACTIVE")
+CONTRACT_MAX_OPEN = balance_registry.get("CONTRACT_MAX_OPEN")
 
 SCHEMA = (
     "CREATE TABLE IF NOT EXISTS wallets(account TEXT PRIMARY KEY, balance BIGINT NOT NULL)",
@@ -205,6 +210,9 @@ SCHEMA = (
     "CREATE TABLE IF NOT EXISTS trade_deliveries(contract_id TEXT NOT NULL, month_index BIGINT NOT NULL, delivered BIGINT NOT NULL, shortfall BIGINT NOT NULL, paid BIGINT NOT NULL, penalty_paid BIGINT NOT NULL, PRIMARY KEY(contract_id, month_index))",
     "CREATE TABLE IF NOT EXISTS trade_debts(debtor TEXT NOT NULL, creditor TEXT NOT NULL, amount BIGINT NOT NULL, PRIMARY KEY(debtor, creditor))",
     "CREATE TABLE IF NOT EXISTS eco_owner_spend(owner TEXT NOT NULL, month_index BIGINT NOT NULL, amount BIGINT NOT NULL, PRIMARY KEY(owner, month_index))",
+    "CREATE TABLE IF NOT EXISTS company_trucks(owner TEXT PRIMARY KEY, units INTEGER NOT NULL, capacity_each INTEGER NOT NULL)",
+    "CREATE TABLE IF NOT EXISTS truck_trips(id TEXT PRIMARY KEY, owner TEXT NOT NULL, origin TEXT NOT NULL, destination TEXT NOT NULL, product TEXT NOT NULL, qty BIGINT NOT NULL, trucks INTEGER NOT NULL, depart_month BIGINT NOT NULL, arrive_month BIGINT NOT NULL, status TEXT NOT NULL)",
+    "CREATE TABLE IF NOT EXISTS company_research(id TEXT PRIMARY KEY, owner TEXT NOT NULL, track TEXT NOT NULL, cost BIGINT NOT NULL, start_month BIGINT NOT NULL, ready_month BIGINT NOT NULL, status TEXT NOT NULL)",
 )
 
 

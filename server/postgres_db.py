@@ -114,6 +114,18 @@ CREATE TABLE IF NOT EXISTS eco_owner_spend (
  owner TEXT NOT NULL, month_index BIGINT NOT NULL, amount BIGINT NOT NULL,
  PRIMARY KEY(owner, month_index)
 );
+CREATE TABLE IF NOT EXISTS company_trucks (
+ owner TEXT PRIMARY KEY, units INTEGER NOT NULL, capacity_each INTEGER NOT NULL
+);
+CREATE TABLE IF NOT EXISTS truck_trips (
+ id TEXT PRIMARY KEY, owner TEXT NOT NULL, origin TEXT NOT NULL, destination TEXT NOT NULL,
+ product TEXT NOT NULL, qty BIGINT NOT NULL, trucks INTEGER NOT NULL,
+ depart_month BIGINT NOT NULL, arrive_month BIGINT NOT NULL, status TEXT NOT NULL
+);
+CREATE TABLE IF NOT EXISTS company_research (
+ id TEXT PRIMARY KEY, owner TEXT NOT NULL, track TEXT NOT NULL, cost BIGINT NOT NULL,
+ start_month BIGINT NOT NULL, ready_month BIGINT NOT NULL, status TEXT NOT NULL
+);
 """
 
 def init():

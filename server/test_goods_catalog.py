@@ -9,10 +9,10 @@ import production
 
 class CatalogInvariantTests(unittest.TestCase):
     def test_version_and_check(self):
-        self.assertEqual(goods_catalog.CATALOG_VERSION, 1)
+        self.assertEqual(goods_catalog.CATALOG_VERSION, 2)
         self.assertTrue(goods_catalog.check())
         view = goods_catalog.public_view()
-        self.assertEqual(view["version"], 1)
+        self.assertEqual(view["version"], 2)
         self.assertEqual(view["retail_kind"], "shop")
         self.assertTrue(all(view["invariants"].values()))
         self.assertEqual({g["id"] for g in view["goods"]}, {g.id for g in goods_catalog.GOODS})
@@ -42,7 +42,13 @@ class CatalogInvariantTests(unittest.TestCase):
         order = goods_catalog.product_order()
         self.assertLess(order.index("grain"), order.index("flour"))
         self.assertLess(order.index("flour"), order.index("bread"))
-        self.assertEqual(order[0], "honey")
+        self.assertLess(order.index("honey"), order.index("goods"))
+        self.assertLess(order.index("stone"), order.index("cement"))
+        self.assertLess(order.index("iron_ore"), order.index("steel"))
+        self.assertLess(order.index("coal"), order.index("steel"))
+        self.assertLess(order.index("flax"), order.index("fabric"))
+        self.assertLess(order.index("fabric"), order.index("clothing"))
+        self.assertLess(order.index("timber"), order.index("lumber"))
         outputs = {item.output for item in goods_catalog.RECIPES if item.output}
         for item in goods_catalog.RECIPES:
             for raw in item.inputs:
@@ -53,11 +59,16 @@ class CatalogInvariantTests(unittest.TestCase):
             self.assertEqual(len(item.season), 12)
 
     def test_new_kinds_are_buildable_and_shop_specialization_ids_stay_free(self):
-        for kind in ("grain_field", "elevator", "mill", "bread_plant", "oil_well", "gas_well", "sand_pit", "logging_camp"):
+        for kind in ("grain_field", "elevator", "mill", "bread_plant", "oil_well", "gas_well", "sand_pit", "logging_camp",
+                     "stone_pit", "iron_mine", "coal_mine", "flax_camp", "cement_plant", "steel_plant", "brick_yard",
+                     "sawmill", "refinery", "machine_plant", "metalworks", "textile_mill", "garment_plant", "electronics_plant"):
             self.assertIn(kind, game_server.KINDS)
             self.assertIn(kind, economy.BUILD_COST)
             self.assertEqual(game_server.KINDS[kind], (goods_catalog.recipe(kind).width, goods_catalog.recipe(kind).height))
         self.assertNotIn("bakery", game_server.KINDS)
+        self.assertNotIn("clothing", game_server.KINDS)
+        self.assertNotIn("electronics", game_server.KINDS)
+        self.assertNotIn("hardware", game_server.KINDS)
         self.assertEqual(set(game_server.KINDS), set(economy.BUILD_COST))
         self.assertEqual(set(economy.terms()["building_costs"]),
                          {"farm", "mine", "factory", "warehouse", "shop", "school", "hospital", "park"})
@@ -91,7 +102,7 @@ class CatalogInvariantTests(unittest.TestCase):
 
     def test_consumer_goods_have_the_shop_as_buyer(self):
         consumers = [g.id for g in goods_catalog.GOODS if g.consumer]
-        self.assertEqual(consumers, ["honey", "goods", "bread"])
+        self.assertEqual(consumers, ["honey", "goods", "bread", "hardware", "clothing", "electronics"])
         self.assertEqual(economy.PRODUCTION["shop"]["role"], "retail")
         self.assertEqual(economy.VAT_RATES["bread"], 0.10)
         self.assertEqual(economy.VAT_RATES["grain"], 0.10)

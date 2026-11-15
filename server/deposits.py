@@ -16,12 +16,14 @@ import regions
 import roads
 
 SEED = geo.SEED
-RESOURCES = ("oil", "gas", "sand", "forest")
-# How many patches of each resource to drop around every city.
-COUNTS = {"oil": 2, "gas": 1, "sand": 1, "forest": 1}
+RESOURCES = ("oil", "gas", "sand", "forest", "iron", "coal", "stone", "flax")
+# How many patches of each resource to drop around every city. New resources are appended
+# so the earlier oil/gas/sand/forest coordinates stay put.
+COUNTS = {"oil": 2, "gas": 1, "sand": 1, "forest": 1, "iron": 1, "coal": 1, "stone": 1, "flax": 1}
 PATCH = (2, 2)          # deposit rectangle; the 3x3 pad around it stays dry and off the crossroads
 PAD = 3
-INITIAL = {"oil": 2400, "gas": 6400, "sand": 12000, "forest": 5600}
+INITIAL = {"oil": 2400, "gas": 6400, "sand": 12000, "forest": 5600,
+           "iron": 3200, "coal": 11200, "stone": 16000, "flax": 8000}
 
 SCHEMA = (
     "CREATE TABLE IF NOT EXISTS deposits(id TEXT PRIMARY KEY, resource TEXT NOT NULL, region TEXT NOT NULL, "
@@ -38,11 +40,15 @@ def _q(sql, ph):
 def ensure(db, ph):
     for statement in SCHEMA:
         db.execute(statement)
-    row = db.execute("SELECT COUNT(*) FROM deposits").fetchone()
-    if row and int(row[0]) > 0:
+    expected = len(geo.cities()) * sum(COUNTS.values())
+    have_n = int(db.execute("SELECT COUNT(*) FROM deposits").fetchone()[0] or 0)
+    if have_n >= expected:
         return 0
+    have = {row[0] for row in db.execute("SELECT id FROM deposits").fetchall()}
     created = 0
     for item in layout():
+        if item["id"] in have:
+            continue
         db.execute(_q("INSERT INTO deposits(id,resource,region,x,y,width,height,initial_qty,remaining) "
                       "VALUES(%s,%s,%s,%s,%s,%s,%s,%s,%s)", ph),
                    (item["id"], item["resource"], item["region"], item["x"], item["y"], item["width"], item["height"],
@@ -71,8 +77,18 @@ def _hits(x, y, taken):
     return False
 
 
+_LAYOUT = None
+
+
 def layout():
-    """Deterministic deposit list. Does not touch the database."""
+    """Deterministic deposit list. Does not touch the database. Cached: the seed does not change."""
+    global _LAYOUT
+    if _LAYOUT is None:
+        _LAYOUT = _layout()
+    return _LAYOUT
+
+
+def _layout():
     placed = []
     taken = []
     for city in geo.cities():
@@ -80,7 +96,7 @@ def layout():
         for resource in RESOURCES:
             for index in range(COUNTS[resource]):
                 found = None
-                for attempt in range(80):
+                for attempt in range(160):
                     hop = _mix(city["id"], resource, index, attempt)
                     dx = 5 + (attempt % 12)
                     dy = 5 + (hop % 9)
