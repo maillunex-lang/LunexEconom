@@ -2,7 +2,7 @@ name: Client checks (Godot headless)
 
 on:
   push:
-    branches: [main, ChatGPT13]
+    branches: [main, ChatGPT10, ChatGPT13]
     paths: ["client/**", ".github/workflows/client-check.yml"]
   pull_request:
     paths: ["client/**", ".github/workflows/client-check.yml"]
@@ -33,7 +33,7 @@ jobs:
         run: |
           set -uo pipefail
           failed=0
-          for pair in world3d_smoke:WORLD3D_SMOKE_PASS zones_smoke:ZONES_SMOKE_PASS build_menu_smoke:BUILD_MENU_SMOKE_PASS world_smoke:WORLD_TEST_PASS world_027_smoke:WORLD_027_TEST_PASS \
+          for pair in hq_smoke:HQ_SMOKE_PASS hq_layout_smoke:HQ_LAYOUT_SMOKE_PASS hq_visual_smoke:HQ_VISUAL_SMOKE_PASS hq_navigation_smoke:HQ_NAVIGATION_SMOKE_PASS hq_perf_smoke:HQ_PERF_SMOKE_PASS world3d_smoke:WORLD3D_SMOKE_PASS zones_smoke:ZONES_SMOKE_PASS build_menu_smoke:BUILD_MENU_SMOKE_PASS world_smoke:WORLD_TEST_PASS world_027_smoke:WORLD_027_TEST_PASS \
                       world_027_integration:WORLD_027_INTEGRATION_PASS citygen_smoke:CITYGEN_SMOKE_PASS regional_map_smoke:REGIONAL_MAP_SMOKE_PASS \
                       season_perf_smoke:SEASON_AND_PERF_SMOKE_PASS scroll_panels_smoke:SCROLL_PANELS_PASS contracts_panel_smoke:CONTRACTS_PANEL_PASS \
                       retail_smoke:RETAIL_SMOKE_PASS livepatch_security_smoke:LIVEPATCH_SECURITY_SMOKE_PASS patch_visuals_smoke:PATCH_VISUALS_SMOKE_PASS \

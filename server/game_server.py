@@ -83,6 +83,12 @@ def _prepare(db):
     # END ChatGPT11 schema
     import households
     households.ensure(db, "?")
+    # BEGIN ChatGPT12 schema
+    import land, construction_projects, tenders
+    land.ensure(db, "?")
+    construction_projects.ensure(db, "?")
+    tenders.ensure(db, "?")
+    # END ChatGPT12 schema
     db.commit()
 
 
@@ -118,6 +124,14 @@ def build(owner, payload):
         wrong=zoning.check(db,"?",kind,footprint)
         if wrong:
             return 409,zoning.error_body(wrong,kind)
+        # BEGIN ChatGPT12 land gate
+        import land
+        if land.enabled():
+            land.migrate_existing(db, "?")
+            denied = land.allowed_to_build(db, "?", owner, footprint, int(time.time()))
+            if denied:
+                return 409, denied
+        # END ChatGPT12 land gate
         x0,x1,y0,y1=road_rules.search_box(footprint)
         dynamic={(rx,ry) for rx,ry in db.execute("SELECT x,y FROM roads WHERE x BETWEEN ? AND ? AND y BETWEEN ? AND ?",(x0,x1,y0,y1))}
         occupied={(cx_,cy_) for cx_,cy_ in db.execute("SELECT x,y FROM cells WHERE x BETWEEN ? AND ? AND y BETWEEN ? AND ?",(x0,x1,y0,y1))}
@@ -651,6 +665,11 @@ class Handler(BaseHTTPRequestHandler):
         self._send(*soc_post(owner, path, payload, self._client()))
         return True
     def do_GET(self):
+        # BEGIN ChatGPT12 routes
+        import routes_land
+        if routes_land.handle_http(self, "GET"):
+            return
+        # END ChatGPT12 routes
         url=urlsplit(self.path)
         # BEGIN ChatGPT11 routes
         if url.path in ('/hq','/enterprise','/finance/overview'):
@@ -817,6 +836,11 @@ class Handler(BaseHTTPRequestHandler):
                 else:db.execute('BEGIN IMMEDIATE')
                 return self._send(*routes_hq.post(db,NPC_PH,owner,'/enterprise/settings',payload,int(time.time())))
         # END ChatGPT11 routes
+        # BEGIN ChatGPT12 routes
+        import routes_land
+        if routes_land.handle_http(self, "POST"):
+            return
+        # END ChatGPT12 routes
         if urlsplit(self.path).path.startswith("/dev/"):
             import devtools
             path = urlsplit(self.path).path

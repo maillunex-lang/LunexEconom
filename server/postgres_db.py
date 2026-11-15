@@ -162,4 +162,10 @@ def init():
         # END ChatGPT11 schema
         import households
         households.ensure(db, "%s")
+        # BEGIN ChatGPT12 schema
+        import land, construction_projects, tenders
+        land.ensure(db, "%s")
+        construction_projects.ensure(db, "%s")
+        tenders.ensure(db, "%s")
+        # END ChatGPT12 schema
         db.commit()

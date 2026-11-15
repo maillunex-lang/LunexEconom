@@ -2,7 +2,7 @@ name: Android APK build for manual device testing
 on:
   workflow_dispatch:
   push:
-    branches: [main]
+    branches: [main, ChatGPT10]
     paths:
       - 'client/**'
       - '.github/workflows/android-build.yml'

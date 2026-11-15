@@ -48,7 +48,7 @@ jobs:
         run: python -c 'import postgres_db; postgres_db.init()'
       - name: PostgreSQL integration tests
         working-directory: server
-        run: python -m unittest test_postgres_integration test_postgres_world_ci test_postgres_economy test_postgres_social test_postgres_stats test_postgres_migrations test_postgres_admin test_postgres_citygen test_postgres_regions test_postgres_zoning test_postgres_industries test_postgres_expansion test_postgres_population test_postgres_banking test_postgres_hq test_postgres_devtools test_postgres_commissioning -v
+        run: python -m unittest test_postgres_integration test_postgres_world_ci test_postgres_economy test_postgres_social test_postgres_stats test_postgres_migrations test_postgres_admin test_postgres_citygen test_postgres_regions test_postgres_zoning test_postgres_industries test_postgres_expansion test_postgres_population test_postgres_banking test_postgres_hq test_postgres_devtools test_postgres_commissioning test_postgres_land test_postgres_construction -v
       - name: Full server regression suite (SQLite fixtures remain isolated)
         working-directory: server
         env:
