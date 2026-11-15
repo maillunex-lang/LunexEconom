@@ -61,13 +61,13 @@ func _load() -> void:
     row_controls.clear()
     for child in rows.get_children():
         child.queue_free()
-    var detail := await api.detail(enterprise_id)
+    var detail: Dictionary = await api.detail(enterprise_id)
     if int(detail.get("code", 0)) != 200:
         _fail(detail)
         return
     var data: Dictionary = detail.get("data", {})
     city = str(data.get("city", data.get("city_id", "ufa")))
-    var cells_response := await api.cells(enterprise_id)
+    var cells_response: Dictionary = await api.cells(enterprise_id)
     if int(cells_response.get("code", 0)) != 200:
         _fail(cells_response)
         return
@@ -143,7 +143,7 @@ func _add_cell(index: int, allowed: Array, current: Array) -> void:
     if good.is_empty() and product.item_count > 0:
         good = str(product.get_item_metadata(0))
     if not good.is_empty():
-        var rating := await api.ratings(city, good)
+        var rating: Dictionary = await api.ratings(city, good)
         if int(rating.get("code", 0)) == 200:
             var items: Array = rating.get("data", {}).get("items", rating.get("data", {}).get("ratings", []))
             var values: Array[int] = []
@@ -153,7 +153,7 @@ func _add_cell(index: int, allowed: Array, current: Array) -> void:
             competitor.text = hint
         else:
             competitor.text = Words.get_text("store.competitors.unavailable")
-    var sales := await api.sales(enterprise_id, 0, 1)
+    var sales: Dictionary = await api.sales(enterprise_id, 0, 1)
     if int(sales.get("code", 0)) == 200:
         var sale_items: Array = sales.get("data", {}).get("sales", sales.get("data", {}).get("items", []))
         var total := 0
@@ -188,7 +188,7 @@ func _save() -> void:
     var output: Array = []
     for row in row_controls:
         output.append({"cell_index": row.index, "product_id": str(row.product.get_item_metadata(row.product.selected)), "price": int(row.price.value), "min_stock": int(row.min_stock.value), "supply_link_slot": int(row.source.value) if int(row.source.value) > 0 else null})
-    var result := await api.save_cells(enterprise_id, output)
+    var result: Dictionary = await api.save_cells(enterprise_id, output)
     if int(result.get("code", 0)) >= 200 and int(result.get("code", 0)) < 300:
         message.text = Words.get_text("chain.saved")
     else:
