@@ -3,16 +3,19 @@ import json
 import sqlite3
 import unittest
 import devtools
+from unittest.mock import patch
 import admin_api
 
 class DeveloperToolsTests(unittest.TestCase):
     def setUp(self):
+        self.role_patcher=patch("devtools.accounts_admin.is_developer", side_effect=lambda username: username=="dev" and self.db.execute("SELECT 1 FROM dev_roles WHERE username=?", (username,)).fetchone() is not None)
         self.db=sqlite3.connect(":memory:")
+        self.role_patcher.start()
         self.db.execute("CREATE TABLE users(username TEXT PRIMARY KEY)")
         self.db.executemany("INSERT INTO users VALUES (?)",[("dev",),("player",)])
         self.db.execute("CREATE TABLE chunks(cx INTEGER,cy INTEGER,version INTEGER,PRIMARY KEY(cx,cy))")
         self.db.execute("CREATE TABLE cells(x INTEGER,y INTEGER,object_id TEXT)")
-        self.db.execute("CREATE TABLE roads(x INTEGER,y INTEGER,owner TEXT)")
+        self.db.execute("CREATE TABLE roads(x INTEGER,y INTEGER,owner TEXT,created INTEGER,PRIMARY KEY(x,y))")
         self.db.execute("CREATE TABLE events(seq INTEGER PRIMARY KEY AUTOINCREMENT,cx INTEGER,cy INTEGER,version INTEGER,kind TEXT,payload TEXT)")
         admin_api.ensure(self.db,"?")
         devtools.ensure(self.db,"?")
@@ -20,6 +23,7 @@ class DeveloperToolsTests(unittest.TestCase):
         self.db.commit()
 
     def tearDown(self):
+        self.role_patcher.stop()
         self.db.close()
 
     def test_player_forbidden(self):
@@ -27,12 +31,23 @@ class DeveloperToolsTests(unittest.TestCase):
         self.assertEqual(devtools.terrain_set(self.db,"?","player",payload,"127.0.0.1")[0],403)
         self.assertEqual(self.db.execute("SELECT COUNT(*) FROM terrain_edits").fetchone()[0],0)
 
+    def test_roads_add_remove_and_idempotency(self):
+        add={"request_id":"c2c3ad2b-180e-4517-839c-c47e48dbd7cb","operation":"add","cells":[[11,12]]}
+        self.assertEqual(devtools.roads_set(self.db,"?","dev",add,"local")[0],200)
+        self.assertTrue(devtools.roads_set(self.db,"?","dev",add,"local")[1]["replayed"])
+        self.assertEqual(self.db.execute("SELECT COUNT(*) FROM roads").fetchone()[0],1)
+        remove=dict(add,request_id="6d1a31fd-099e-492b-a00c-feb6ce8354a5",operation="remove")
+        self.assertEqual(devtools.roads_set(self.db,"?","dev",remove,"local")[0],200)
+        self.assertEqual(self.db.execute("SELECT COUNT(*) FROM roads").fetchone()[0],0)
+        self.assertEqual(devtools.undo(self.db,"?","dev",{"request_id":"b0f1e34b-cda2-4924-a687-a421c82f581d"},"local")[0],200)
+        self.assertEqual(self.db.execute("SELECT COUNT(*) FROM roads").fetchone()[0],1)
+
     def test_cannot_paint_occupied_or_road_cell(self):
         payload={"request_id":"c2c3ad2b-180e-4517-839c-c47e48dbd7cb","kind":"water","cells":[[1,2]]}
         self.db.execute("INSERT INTO cells VALUES (1,2,'building')")
         self.assertEqual(devtools.terrain_set(self.db,"?","dev",payload,"local")[1]["error"],"occupied")
         self.db.execute("DELETE FROM cells")
-        self.db.execute("INSERT INTO roads VALUES (1,2,'city')")
+        self.db.execute("INSERT INTO roads VALUES (1,2,'city',0)")
         self.assertEqual(devtools.terrain_set(self.db,"?","dev",payload,"local")[1]["error"],"road_overlap")
 
     def test_undo_restores_prior_terrain(self):
