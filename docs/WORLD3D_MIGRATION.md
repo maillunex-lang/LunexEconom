@@ -14,3 +14,11 @@ Status: prototype, **not** active in the Android main scene. Keep existing Node2
 3. Implement incremental per-chunk updates, roads and selection ray tests including HUD touch exclusion.
 4. Add a development-only switch to render 2D or 3D; no production toggle until real-device QA.
 5. Profile Compatibility vs Mobile on actual Android devices, then decide renderer and model budgets.
+
+## Stage 2: read-only server visualization adapter
+
+- `server_visual_adapter.gd` groups server cells by authoritative object ID and tracks road cells.
+- `visual_factory.gd` draws inexpensive placeholder meshes for the existing server kinds; these are not the final GLB asset library.
+- `world3d.gd` exposes `apply_chunk_snapshot`, `apply_server_event` and `apply_server_cells`. Rebuilds an object mesh if its footprint or kind changes.
+- `tests/world3d_server_sync_smoke.gd` tests snapshot, grouping, roads and removal.
+- **Not yet connected to production networking or live Android UI**. No change to PostgreSQL, active service or published APK.
