@@ -166,7 +166,7 @@ func poll_events() -> void:
         cursor = maxi(cursor, int(event.get("version", 0)))
         if event.get("kind", "") == "city_growth":
             _apply_growth(event)
-        elif event.get("kind", "") in ["land_buy", "road_build", "occupation", "demolition"]:
+        elif event.get("kind", "") in ["land_buy", "road_build", "occupation", "demolition", "enterprise_stage"]:
             var key := Vector2i(int(event.get("cx", 0)), int(event.get("cy", 0)))
             if desired.has(key):
                 revalidate(key)

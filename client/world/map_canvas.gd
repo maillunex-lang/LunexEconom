@@ -13,6 +13,8 @@ var center := Vector2.ZERO
 var zoom := 1.0
 var selected := Vector2i(2147483647,2147483647)
 var tiles: Dictionary = {}
+var building_cells: Dictionary = {}
+var preview: Dictionary = {}
 var touches: Dictionary = {}
 var start_touch: Dictionary = {}
 var drag_distance := 0.0
@@ -98,10 +100,19 @@ func _on_chunk(key: Vector2i, snapshot: Dictionary) -> void:
                 color = Color("afab94")
             image.set_pixel(x,y,color)
     tiles[key] = ImageTexture.create_from_image(image)
+    var buildings: Array = snapshot.get("buildings", [])
+    var cells: Array = []
+    for cy in range(buildings.size()):
+        for cx in range(buildings[cy].size()):
+            var ref: Variant = buildings[cy][cx]
+            if ref != null and str(ref) != "":
+                cells.append({"x":key.x*12+cx,"y":key.y*12+cy,"ref":str(ref)})
+    building_cells[key] = cells
     queue_redraw()
 
 func _on_removed(key: Vector2i) -> void:
     tiles.erase(key)
+    building_cells.erase(key)
     queue_redraw()
 
 func _draw() -> void:
@@ -119,6 +130,16 @@ func _draw() -> void:
             var y := origin.y + i*6.0*tile
             draw_line(Vector2(x,origin.y),Vector2(x,origin.y+12.0*tile),border_color,1.0)
             draw_line(Vector2(origin.x,y),Vector2(origin.x+12.0*tile,y),border_color,1.0)
+    for chunk in building_cells:
+        for cell in building_cells[chunk]:
+            var pos := _origin_of_cell(int(cell["x"]),int(cell["y"]))
+            draw_rect(Rect2(pos,Vector2(tile,tile)),Color("dfaa61"),true)
+            draw_rect(Rect2(pos,Vector2(tile,tile)),Color("563f30"),false,maxf(1.0,zoom))
+    if not preview.is_empty():
+        var origin := _origin_of_cell(int(preview.get("x",0)),int(preview.get("y",0)))
+        var footprint := Vector2(int(preview.get("width",1)),int(preview.get("height",1)))*tile
+        draw_rect(Rect2(origin,footprint),Color("f7e2a4",0.25),true)
+        draw_rect(Rect2(origin,footprint),Color("fff2c2"),false,2.0)
     if selected.x != 2147483647:
         var p := _origin_of_cell(selected.x*6,selected.y*6)
         draw_rect(Rect2(p,Vector2(tile*6,tile*6)),Color("f5efb9"),false,maxf(2.0,zoom*2.0))
