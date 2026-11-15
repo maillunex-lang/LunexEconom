@@ -650,12 +650,14 @@ class Handler(BaseHTTPRequestHandler):
             with NPC_CONNECT() as db:
                 devtools.ensure(db,NPC_PH,os.environ.get("LUNEX_DB_ENGINE")=="postgres")
                 if not devtools.require_developer(owner,db):return self._send(403,{"error":"forbidden"})
-                if urlsplit(self.path).path!="/dev/terrain":return self._send(404,{"error":"not_found"})
+                if urlsplit(self.path).path not in ("/dev/terrain","/dev/undo"):return self._send(404,{"error":"not_found"})
                 try:
                     size=int(self.headers.get("Content-Length","0"))
                     if size<2 or size>4096:return self._send(400,{"error":"invalid_body"})
                     payload=json.loads(self.rfile.read(size))
                 except (ValueError,UnicodeError,json.JSONDecodeError):return self._send(400,{"error":"invalid_body"})
+                if urlsplit(self.path).path=="/dev/undo":
+                    return self._send(*devtools.undo(db,NPC_PH,owner,payload,self._client()))
                 return self._send(*devtools.terrain_set(db,NPC_PH,owner,payload,self._client()))
         if urlsplit(self.path).path.startswith("/admin/"):
             return self._admin("POST")
