@@ -1,0 +1,21 @@
+{
+  "schema": 1,
+  "channel": "alpha",
+  "version_name": "0.1.0",
+  "version_code": 12,
+  "released": "2026-11-15T18:00:00Z",
+  "apk_url": "https://rikagro.ru/lunexeconom/v2/download/lunex-0.1.0.apk",
+  "size": 74631872,
+  "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "notes": "Первая публичная альфа: карта Башкортостана, штаб-квартира и проверка обновления.",
+  "previous": {
+    "channel": "alpha",
+    "version_name": "0.0.9",
+    "version_code": 11,
+    "released": "2026-11-14T12:00:00Z",
+    "apk_url": "https://rikagro.ru/lunexeconom/v2/download/lunex-0.0.9.apk",
+    "size": 73000000,
+    "sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+    "notes": "Предыдущая проверенная сборка. Её можно скачать, если новая не подойдёт."
+  }
+}
