@@ -59,7 +59,12 @@ def place(conn, actor, request_id, building_id, px, py, x, y):
     wallet_balance=conn.execute('SELECT balance FROM ledger_accounts WHERE id=%s',(payer,)).fetchone()[0]
     if wallet_balance<building['build_cost']:
         return 409,{'error':'insufficient_funds'}
-    transfer_id=transfer(conn,'enterprise:build:'+request_id,payer,treasury,building['build_cost'])
+    try:
+        transfer_id=transfer(conn,'enterprise:build:'+request_id,payer,treasury,building['build_cost'])
+    except ValueError as exc:
+        if str(exc)=='insufficient balance':
+            return 409,{'error':'insufficient_funds'}
+        raise
     recipes=[r for r in catalog().data['recipes'] if r['building']==building_id]
     recipe_id=recipes[0]['id'] if recipes else None
     eid=conn.execute("""INSERT INTO enterprises(owner_id,building_id,px,py,x,y,width,height,city_id,name,build_cost,build_days,upkeep_month,jobs,storage_capacity,started_day,recipe_id,build_request_id,build_transfer_id)
