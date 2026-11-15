@@ -1,0 +1,44 @@
+name: Android debug APK
+on:
+  push:
+    branches: [main]
+    paths: ['client/**', '.github/workflows/android-build.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  apk:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: android-actions/setup-android@v3
+        with:
+          packages: 'platform-tools platforms;android-35 build-tools;35.0.0'
+      - name: Install Godot and export templates
+        run: |
+          set -euo pipefail
+          curl -fL --retry 3 https://github.com/godotengine/godot-builds/releases/download/4.7.2-stable/Godot_v4.7.2-stable_linux.x86_64.zip -o godot.zip
+          unzip -q godot.zip
+          chmod +x Godot_v4.7.2-stable_linux.x86_64
+          curl -fL --retry 3 https://github.com/godotengine/godot-builds/releases/download/4.7.2-stable/Godot_v4.7.2-stable_export_templates.tpz -o templates.tpz
+          mkdir -p /tmp/templates "$HOME/.local/share/godot/export_templates/4.7.2.stable"
+          unzip -q templates.tpz -d /tmp/templates
+          cp -a /tmp/templates/templates/. "$HOME/.local/share/godot/export_templates/4.7.2.stable/"
+      - name: Build debug APK
+        run: |
+          set -euo pipefail
+          mkdir -p build
+          ./Godot_v4.7.2-stable_linux.x86_64 --headless --path client --editor --quit
+          ./Godot_v4.7.2-stable_linux.x86_64 --headless --path client --export-debug Android "$GITHUB_WORKSPACE/build/Bashkiria-Honey-Oil-V2-debug.apk"
+          test -s build/Bashkiria-Honey-Oil-V2-debug.apk
+          unzip -t build/Bashkiria-Honey-Oil-V2-debug.apk | tail -1
+          "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --verbose build/Bashkiria-Honey-Oil-V2-debug.apk
+          sha256sum build/*.apk | tee build/SHA256SUMS
+      - uses: actions/upload-artifact@v4
+        with:
+          name: lunexeconom-v2-debug-apk
+          path: |
+            build/*.apk
+            build/SHA256SUMS
+          retention-days: 14

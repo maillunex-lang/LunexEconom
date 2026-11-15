@@ -1,0 +1,26 @@
+name: Client checks
+on:
+  push:
+    branches: [main]
+    paths: ['client/**', '.github/workflows/client-check.yml']
+  pull_request:
+    paths: ['client/**', '.github/workflows/client-check.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Godot 4.7.2
+        run: |
+          curl --fail --location --retry 3 https://github.com/godotengine/godot-builds/releases/download/4.7.2-stable/Godot_v4.7.2-stable_linux.x86_64.zip -o godot.zip
+          unzip -q godot.zip
+          mv Godot_v4.7.2-stable_linux.x86_64 godot
+          chmod +x godot
+      - name: Import and run client smoke
+        run: |
+          ./godot --headless --path client --editor --quit
+          ./godot --headless --path client -s tests/smoke.gd
