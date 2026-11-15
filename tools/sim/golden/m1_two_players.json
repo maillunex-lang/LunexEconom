@@ -46,7 +46,7 @@
       "month_closed": 0,
       "players": {
         "mira": {
-          "money": 200000,
+          "money": 600000,
           "output": {},
           "revenue": 0,
           "sales": 0,
@@ -56,7 +56,7 @@
           "wages_paid": 0
         },
         "timur": {
-          "money": 200000,
+          "money": 500000,
           "output": {},
           "revenue": 0,
           "sales": 0,
@@ -135,7 +135,7 @@
       "month_closed": 0,
       "players": {
         "mira": {
-          "money": 200000,
+          "money": 600000,
           "output": {
             "grain": 100
           },
@@ -147,7 +147,7 @@
           "wages_paid": 0
         },
         "timur": {
-          "money": 191040,
+          "money": 491040,
           "output": {},
           "revenue": 0,
           "sales": 0,
@@ -217,7 +217,7 @@
       "month_closed": 0,
       "players": {
         "mira": {
-          "money": 203600,
+          "money": 603600,
           "output": {
             "flour": 80,
             "grain": 100
@@ -230,7 +230,7 @@
           "wages_paid": 0
         },
         "timur": {
-          "money": 196440,
+          "money": 496440,
           "output": {
             "bread": 100
           },
@@ -302,7 +302,7 @@
       "month_closed": 0,
       "players": {
         "mira": {
-          "money": 207200,
+          "money": 607200,
           "output": {
             "flour": 80,
             "grain": 100
@@ -315,7 +315,7 @@
           "wages_paid": 0
         },
         "timur": {
-          "money": 201840,
+          "money": 501840,
           "output": {
             "bread": 100
           },
@@ -387,7 +387,7 @@
       "month_closed": 0,
       "players": {
         "mira": {
-          "money": 210800,
+          "money": 610800,
           "output": {
             "flour": 80,
             "grain": 100
@@ -400,7 +400,7 @@
           "wages_paid": 0
         },
         "timur": {
-          "money": 207240,
+          "money": 507240,
           "output": {
             "bread": 100
           },
@@ -472,7 +472,7 @@
       "month_closed": 0,
       "players": {
         "mira": {
-          "money": 214400,
+          "money": 614400,
           "output": {
             "flour": 80,
             "grain": 100
@@ -485,7 +485,7 @@
           "wages_paid": 0
         },
         "timur": {
-          "money": 212640,
+          "money": 512640,
           "output": {
             "bread": 100
           },
@@ -557,7 +557,7 @@
       "month_closed": 0,
       "players": {
         "mira": {
-          "money": 218000,
+          "money": 618000,
           "output": {
             "flour": 80,
             "grain": 100
@@ -570,7 +570,7 @@
           "wages_paid": 0
         },
         "timur": {
-          "money": 218040,
+          "money": 518040,
           "output": {
             "bread": 100
           },
@@ -642,7 +642,7 @@
       "month_closed": 0,
       "players": {
         "mira": {
-          "money": 221600,
+          "money": 621600,
           "output": {
             "flour": 80,
             "grain": 100
@@ -655,7 +655,7 @@
           "wages_paid": 0
         },
         "timur": {
-          "money": 223440,
+          "money": 523440,
           "output": {
             "bread": 100
           },
@@ -727,7 +727,7 @@
       "month_closed": 0,
       "players": {
         "mira": {
-          "money": 225200,
+          "money": 625200,
           "output": {
             "flour": 80,
             "grain": 100
@@ -740,7 +740,7 @@
           "wages_paid": 0
         },
         "timur": {
-          "money": 228840,
+          "money": 528840,
           "output": {
             "bread": 100
           },
@@ -812,7 +812,7 @@
       "month_closed": 0,
       "players": {
         "mira": {
-          "money": 228800,
+          "money": 628800,
           "output": {
             "flour": 80,
             "grain": 100
@@ -825,7 +825,7 @@
           "wages_paid": 0
         },
         "timur": {
-          "money": 234240,
+          "money": 534240,
           "output": {
             "bread": 100
           },
@@ -897,7 +897,7 @@
       "month_closed": 0,
       "players": {
         "mira": {
-          "money": 232400,
+          "money": 632400,
           "output": {
             "flour": 80,
             "grain": 100
@@ -910,7 +910,7 @@
           "wages_paid": 0
         },
         "timur": {
-          "money": 239640,
+          "money": 539640,
           "output": {
             "bread": 100
           },
@@ -982,7 +982,7 @@
       "month_closed": 0,
       "players": {
         "mira": {
-          "money": 236000,
+          "money": 636000,
           "output": {
             "flour": 80,
             "grain": 100
@@ -995,7 +995,7 @@
           "wages_paid": 0
         },
         "timur": {
-          "money": 245040,
+          "money": 545040,
           "output": {
             "bread": 100
           },
@@ -1067,7 +1067,7 @@
       "month_closed": 0,
       "players": {
         "mira": {
-          "money": 239600,
+          "money": 639600,
           "output": {
             "flour": 80,
             "grain": 100
@@ -1080,7 +1080,7 @@
           "wages_paid": 0
         },
         "timur": {
-          "money": 250440,
+          "money": 550440,
           "output": {
             "bread": 100
           },
@@ -1152,7 +1152,7 @@
       "month_closed": 0,
       "players": {
         "mira": {
-          "money": 243200,
+          "money": 643200,
           "output": {
             "flour": 80,
             "grain": 100
@@ -1165,7 +1165,7 @@
           "wages_paid": 0
         },
         "timur": {
-          "money": 255840,
+          "money": 555840,
           "output": {
             "bread": 100
           },
@@ -1237,7 +1237,7 @@
       "month_closed": 0,
       "players": {
         "mira": {
-          "money": 246800,
+          "money": 646800,
           "output": {
             "flour": 80,
             "grain": 100
@@ -1250,7 +1250,7 @@
           "wages_paid": 0
         },
         "timur": {
-          "money": 261240,
+          "money": 561240,
           "output": {
             "bread": 100
           },
@@ -1322,7 +1322,7 @@
       "month_closed": 0,
       "players": {
         "mira": {
-          "money": 250400,
+          "money": 650400,
           "output": {
             "flour": 80,
             "grain": 100
@@ -1335,7 +1335,7 @@
           "wages_paid": 0
         },
         "timur": {
-          "money": 266640,
+          "money": 566640,
           "output": {
             "bread": 100
           },
@@ -1407,7 +1407,7 @@
       "month_closed": 0,
       "players": {
         "mira": {
-          "money": 254000,
+          "money": 654000,
           "output": {
             "flour": 80,
             "grain": 100
@@ -1420,7 +1420,7 @@
           "wages_paid": 0
         },
         "timur": {
-          "money": 272040,
+          "money": 572040,
           "output": {
             "bread": 100
           },
@@ -1492,7 +1492,7 @@
       "month_closed": 0,
       "players": {
         "mira": {
-          "money": 257600,
+          "money": 657600,
           "output": {
             "flour": 80,
             "grain": 100
@@ -1505,7 +1505,7 @@
           "wages_paid": 0
         },
         "timur": {
-          "money": 277440,
+          "money": 577440,
           "output": {
             "bread": 100
           },
@@ -1577,7 +1577,7 @@
       "month_closed": 0,
       "players": {
         "mira": {
-          "money": 261200,
+          "money": 661200,
           "output": {
             "flour": 80,
             "grain": 100
@@ -1590,7 +1590,7 @@
           "wages_paid": 0
         },
         "timur": {
-          "money": 282840,
+          "money": 582840,
           "output": {
             "bread": 100
           },
@@ -1662,7 +1662,7 @@
       "month_closed": 0,
       "players": {
         "mira": {
-          "money": 264800,
+          "money": 664800,
           "output": {
             "flour": 80,
             "grain": 100
@@ -1675,7 +1675,7 @@
           "wages_paid": 0
         },
         "timur": {
-          "money": 288240,
+          "money": 588240,
           "output": {
             "bread": 100
           },
@@ -1747,7 +1747,7 @@
       "month_closed": 0,
       "players": {
         "mira": {
-          "money": 268400,
+          "money": 668400,
           "output": {
             "flour": 80,
             "grain": 100
@@ -1760,7 +1760,7 @@
           "wages_paid": 0
         },
         "timur": {
-          "money": 293640,
+          "money": 593640,
           "output": {
             "bread": 100
           },
@@ -1832,7 +1832,7 @@
       "month_closed": 0,
       "players": {
         "mira": {
-          "money": 272000,
+          "money": 672000,
           "output": {
             "flour": 80,
             "grain": 100
@@ -1845,7 +1845,7 @@
           "wages_paid": 0
         },
         "timur": {
-          "money": 299040,
+          "money": 599040,
           "output": {
             "bread": 100
           },
@@ -1917,7 +1917,7 @@
       "month_closed": 0,
       "players": {
         "mira": {
-          "money": 275600,
+          "money": 675600,
           "output": {
             "flour": 80,
             "grain": 100
@@ -1930,7 +1930,7 @@
           "wages_paid": 0
         },
         "timur": {
-          "money": 304440,
+          "money": 604440,
           "output": {
             "bread": 100
           },
@@ -2002,7 +2002,7 @@
       "month_closed": 0,
       "players": {
         "mira": {
-          "money": 279200,
+          "money": 679200,
           "output": {
             "flour": 80,
             "grain": 100
@@ -2015,7 +2015,7 @@
           "wages_paid": 0
         },
         "timur": {
-          "money": 309840,
+          "money": 609840,
           "output": {
             "bread": 100
           },
@@ -2087,7 +2087,7 @@
       "month_closed": 0,
       "players": {
         "mira": {
-          "money": 282800,
+          "money": 682800,
           "output": {
             "flour": 80,
             "grain": 100
@@ -2100,7 +2100,7 @@
           "wages_paid": 0
         },
         "timur": {
-          "money": 315240,
+          "money": 615240,
           "output": {
             "bread": 100
           },
@@ -2172,7 +2172,7 @@
       "month_closed": 0,
       "players": {
         "mira": {
-          "money": 286400,
+          "money": 686400,
           "output": {
             "flour": 80,
             "grain": 100
@@ -2185,7 +2185,7 @@
           "wages_paid": 0
         },
         "timur": {
-          "money": 320640,
+          "money": 620640,
           "output": {
             "bread": 100
           },
@@ -2257,7 +2257,7 @@
       "month_closed": 0,
       "players": {
         "mira": {
-          "money": 290000,
+          "money": 690000,
           "output": {
             "flour": 80,
             "grain": 100
@@ -2270,7 +2270,7 @@
           "wages_paid": 0
         },
         "timur": {
-          "money": 326040,
+          "money": 626040,
           "output": {
             "bread": 100
           },
@@ -2342,7 +2342,7 @@
       "month_closed": 0,
       "players": {
         "mira": {
-          "money": 293600,
+          "money": 693600,
           "output": {
             "flour": 80,
             "grain": 100
@@ -2355,7 +2355,7 @@
           "wages_paid": 0
         },
         "timur": {
-          "money": 331440,
+          "money": 631440,
           "output": {
             "bread": 100
           },
@@ -2427,7 +2427,7 @@
       "month_closed": 0,
       "players": {
         "mira": {
-          "money": 297200,
+          "money": 697200,
           "output": {
             "flour": 80,
             "grain": 100
@@ -2440,7 +2440,7 @@
           "wages_paid": 0
         },
         "timur": {
-          "money": 336840,
+          "money": 636840,
           "output": {
             "bread": 100
           },
@@ -2512,7 +2512,7 @@
       "month_closed": 1,
       "players": {
         "mira": {
-          "money": 287800,
+          "money": 687800,
           "output": {
             "flour": 80,
             "grain": 100
@@ -2525,7 +2525,7 @@
           "wages_paid": 13000
         },
         "timur": {
-          "money": 307808,
+          "money": 607808,
           "output": {
             "bread": 100
           },
@@ -2546,8 +2546,8 @@
   "sim_version": 1,
   "totals": {
     "mira": {
-      "min_money": 200000,
-      "money": 287800,
+      "min_money": 600000,
+      "money": 687800,
       "output": {
         "flour": 2240,
         "grain": 2900
@@ -2558,8 +2558,8 @@
       "wages_paid": 13000
     },
     "timur": {
-      "min_money": 187440,
-      "money": 307808,
+      "min_money": 487440,
+      "money": 607808,
       "output": {
         "bread": 2800
       },

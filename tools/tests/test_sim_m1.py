@@ -72,19 +72,20 @@ class UnderfundedTests(unittest.TestCase):
 
 
 class BasicAcceptanceTests(unittest.TestCase):
-    def test_m1_acceptance_is_not_reached_on_draft_costs(self):
+    def test_m1_acceptance_is_reached_on_starter_chain_costs(self):
+        # Директор снизил черновую стоимость стартового набора (поле 150000, мельница 250000, пекарня 300000,
+        # магазин 200000, итого 900000 при капитале 1000000). Раньше при 1600000 приёмка M1 не достигалась.
         catalog = Catalog()
         report = run("m1_basic")
         verdict = report["verdict"]
         self.assertIsNotNone(verdict)
-        self.assertEqual(verdict["revenue_first_window"], 0)
-        self.assertFalse(verdict["chain_operational"])
-        self.assertFalse(verdict["accepted"])
-        self.assertGreater(verdict["build_cost_sum"], verdict["starting_capital"])
-        self.assertEqual(verdict["stages"], {"field": 4, "mill": 4, "bakery": 1, "store": 0})
-        self.assertEqual(report["totals"]["mira"]["revenue"], 0)
+        self.assertTrue(verdict["accepted"])
+        self.assertTrue(verdict["chain_operational"])
+        self.assertGreater(verdict["revenue_first_window"], 0)
+        self.assertLessEqual(verdict["build_cost_sum"], verdict["starting_capital"])
+        self.assertGreater(report["totals"]["mira"]["revenue"], 0)
         self.assertGreater(report["totals"]["mira"]["output"]["flour"], 0)
-        # Мука не потребительский товар: без магазина выручки нет.
+        # Мука не потребительский товар: выручка идёт только от хлеба в магазине.
         self.assertFalse(catalog.product("flour")["consumer"])
         self.assertTrue(catalog.product("bread")["consumer"])
 
