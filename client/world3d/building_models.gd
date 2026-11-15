@@ -267,6 +267,47 @@ static func _procedural(root: Node3D, kind: String, w: int, h: int, object_id: S
 			_box(root, Vector3(1.1, 0.2, 0.3), Vector3(W * 0.18, 3.5, -D * 0.2), Color("#303d48"))
 			_cone(root, 0.9, 0.8, Vector3(W * 0.25, 0, D * 0.25), Color("#3a3533"))
 			return 3.6
+		"grain_field":
+			for i in range(5):
+				_box(root, Vector3(W * 0.92, 0.1, D * 0.15), Vector3(0, 0.05, -D * 0.4 + i * D * 0.2), Color("#d6b95a") if i % 2 == 0 else Color("#b79a3f"))
+			return 0.4
+		"elevator":
+			_box(root, Vector3(W * 0.5, 0.9, D * 0.8), Vector3(-W * 0.2, 0.45, 0), Color("#8a8f94"))
+			for i in range(3):
+				_cylinder(root, 0.7, 3.8, Vector3(W * 0.12 + i * 1.5 - 1.5 + W * 0.1, 0.0, 0.0), Color("#b9bfc4"))
+			return 3.8
+		"mill":
+			_box(root, Vector3(W * 0.7, 2.2, D * 0.8), Vector3(0, 1.1, 0), Color("#cdbb94"))
+			_roof(root, W * 0.74, D * 0.84, 0.9, 2.2, Color("#8a5a44"))
+			_cylinder(root, 0.45, 3.2, Vector3(W * 0.32, 0.0, -D * 0.25), Color("#9a9d9f"))
+			return 3.2
+		"bread_plant":
+			_box(root, Vector3(W * 0.84, 2.0, D * 0.8), Vector3(0, 1.0, 0), Color("#e6c98f"))
+			_roof(root, W * 0.88, D * 0.84, 0.6, 2.0, Color("#a35a3c"))
+			_cylinder(root, 0.28, 3.2, Vector3(W * 0.3, 0.0, -D * 0.28), Color("#6f6a66"))
+			return 3.2
+		"oil_well":
+			_box(root, Vector3(W * 0.7, 0.2, D * 0.7), Vector3(0, 0.1, 0), Color("#6f6a5c"))
+			_box(root, Vector3(0.14, 3.4, 0.14), Vector3(-0.5, 1.7, 0), Color("#4b5559"))
+			_box(root, Vector3(0.14, 3.4, 0.14), Vector3(0.5, 1.7, 0), Color("#4b5559"))
+			_box(root, Vector3(1.4, 0.16, 0.16), Vector3(0, 3.3, 0), Color("#4b5559"))
+			return 3.5
+		"gas_well":
+			_box(root, Vector3(W * 0.7, 0.2, D * 0.7), Vector3(0, 0.1, 0), Color("#7a7d80"))
+			_cylinder(root, 0.35, 1.8, Vector3(0, 0.2, 0), Color("#c0463a"))
+			_cylinder(root, 0.12, 3.0, Vector3(0.9, 0.2, 0.6), Color("#8d949a"))
+			return 3.2
+		"sand_pit":
+			_box(root, Vector3(W * 0.9, 0.12, D * 0.9), Vector3(0, 0.06, 0), Color("#d8c88f"))
+			_cone(root, 1.1, 1.3, Vector3(-0.6, 0.12, -0.5), Color("#cdb77a"))
+			_cone(root, 0.8, 1.0, Vector3(0.7, 0.12, 0.5), Color("#c4ad6d"))
+			return 1.5
+		"logging_camp":
+			_box(root, Vector3(W * 0.9, 0.08, D * 0.9), Vector3(0, 0.04, 0), Color("#7c6a4f"))
+			for i in range(4):
+				_cylinder(root, 0.22, 1.6, Vector3(-W * 0.3 + i * 0.5, 0.1, D * 0.25), Color("#7a5a3a"))
+			_box(root, Vector3(1.2, 1.1, 1.0), Vector3(W * 0.25, 0.55, -D * 0.25), Color("#9a7b52"))
+			return 1.8
 		"farm":
 			for i in range(4):
 				_box(root, Vector3(W * 0.9, 0.08, D * 0.12), Vector3(0, 0.04, -D * 0.4 + D * 0.12 + i * D * 0.16), Color("#c9ad6c") if i % 2 == 0 else Color("#8fa65e"))

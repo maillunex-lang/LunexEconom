@@ -980,7 +980,8 @@ var city_mode := false
 const LOAN_STEP := 100000
 var seen_bankruptcy_month = null
 var seen_missed := 0
-const KIND_NAMES := {"house": "Жилой дом", "farm": "Ферма", "mine": "Шахта", "factory": "Завод", "warehouse": "Склад", "shop": "Магазин", "school": "Школа", "hospital": "Больница", "park": "Парк"}
+const KIND_NAMES := {"house": "Жилой дом", "farm": "Ферма", "mine": "Шахта", "factory": "Завод", "warehouse": "Склад", "shop": "Магазин", "school": "Школа", "hospital": "Больница", "park": "Парк",
+    "grain_field": "Поле зерновых", "elevator": "Элеватор", "mill": "Мельница", "bread_plant": "Хлебозавод", "oil_well": "Нефтяная скважина", "gas_well": "Газовая скважина", "sand_pit": "Песчаный карьер", "logging_camp": "Лесосека"}
 var production := {"farm": {"product_id": "honey", "output": 100, "unit_price": 200, "upkeep": 2000, "jobs": 4}, "mine": {"product_id": "oil", "output": 40, "unit_price": 1500, "upkeep": 15000, "jobs": 10}, "factory": {"product_id": "goods", "output": 60, "unit_price": 2000, "upkeep": 26000, "jobs": 20, "inputs": {"oil": 10, "honey": 20}}, "warehouse": {"product_id": "", "output": 0, "unit_price": 0, "upkeep": 2000, "jobs": 2, "capacity": 400}, "shop": {"product_id": "", "output": 0, "unit_price": 0, "upkeep": 3000, "jobs": 5, "retail_hint": 18000}}
 var retail_view: Dictionary = {}
 

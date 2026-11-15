@@ -47,6 +47,19 @@ class ZoneGeometryTests(unittest.TestCase):
         self.assertNotIn("center", zoning.ALLOWED["farm"])
 
 
+class EveryBuildableKindHasAZoneRuleTests(unittest.TestCase):
+    def test_every_kind_the_server_can_build_has_a_rule(self):
+        import game_server
+        for kind in game_server.KINDS:
+            if kind in ("school", "hospital", "park"):
+                continue
+            self.assertIn(kind, zoning.ALLOWED, kind)                    # a kind without a rule would escape the zoning
+
+    def test_processing_plants_never_stand_in_the_city(self):
+        for kind in ("factory", "mill", "bread_plant"):
+            self.assertEqual(zoning.ALLOWED[kind], ("industrial",))
+
+
 class ZoneWorldTests(unittest.TestCase):
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory()

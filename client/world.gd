@@ -13,7 +13,9 @@ const MODELS = preload("res://world3d/building_models.gd")
 const ZONES = preload("res://zones.gd")
 const INDUSTRIAL_TINT := Color("#b0a58a")   # ground colour of the industrial zone (blended over the grass)
 ## Every building kind a server snapshot or event may carry ("house" = a city-generated dwelling, never player-built).
-const BUILDING_KINDS := ["farm", "mine", "factory", "warehouse", "shop", "school", "hospital", "park", "house"]
+## The agro chain and extraction kinds (docs/INDUSTRIES.md) are included.
+const BUILDING_KINDS := ["farm", "mine", "factory", "warehouse", "shop", "school", "hospital", "park", "house",
+	"grain_field", "elevator", "mill", "bread_plant", "oil_well", "gas_well", "sand_pit", "logging_camp"]
 const SEED := 18273
 const GRASS := [Color("#74a05e"), Color("#78a361"), Color("#7ca664")]
 const OUTSIDE_DIM := 0.82            # land beyond the explored radius is drawn darker (no building there)
@@ -579,6 +581,14 @@ func build_size(kind: String) -> Vector2i:
 		"school": return Vector2i(3, 2)
 		"hospital": return Vector2i(3, 3)
 		"park": return Vector2i(2, 2)
+		"grain_field": return Vector2i(3, 2)
+		"elevator": return Vector2i(3, 3)
+		"mill": return Vector2i(3, 2)
+		"bread_plant": return Vector2i(3, 2)
+		"oil_well": return Vector2i(2, 2)
+		"gas_well": return Vector2i(2, 2)
+		"sand_pit": return Vector2i(2, 2)
+		"logging_camp": return Vector2i(2, 3)
 	return Vector2i.ZERO
 
 func preview_build(cell: Vector2i) -> Dictionary:

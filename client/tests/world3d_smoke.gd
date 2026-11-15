@@ -82,7 +82,7 @@ func _run() -> void:
 	_check(straight.multimesh.instance_count >= 4, "the crossroads arms are straight pieces: %d" % straight.multimesh.instance_count)
 
 	# every kind gets a visual of the right footprint
-	for kind in ["farm", "mine", "factory", "warehouse", "shop", "school", "hospital", "park", "house"]:
+	for kind in ["farm", "mine", "factory", "warehouse", "shop", "school", "hospital", "park", "house", "grain_field", "elevator", "mill", "bread_plant", "oil_well", "gas_well", "sand_pit", "logging_camp"]:
 		var node: Node3D = load("res://world3d/building_models.gd").make(kind, 2, 3, "x", "")
 		_check(node.get_child_count() > 0 and float(node.get_meta("top", 0.0)) > 0.0, "a visual for " + kind)
 		node.free()
