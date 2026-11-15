@@ -76,7 +76,7 @@ def run(cmd):
 def restart():
     for service in SERVICES:
         result=run(['systemctl','restart',service])
-        if result.returncode: raise RuntimeError('Restart failed: '+service+' '+result.stderr.strip())
+        if result.returncode: raise RuntimeError('V2 service restart failed: '+service+' (systemctl output withheld)')
 
 
 def health_sha(sha, timeout=30):
