@@ -1,1 +1,602 @@
-[]
+[
+  {
+    "id": "honey",
+    "name": "Мёд",
+    "description": "Густой башкирский мёд с цветочным ароматом.",
+    "category": "food",
+    "unit": "kg",
+    "type": "raw",
+    "reference_price": 600,
+    "storage_life_factor": 100,
+    "quality_range": {
+      "min": 1,
+      "max": 100
+    },
+    "consumer": true,
+    "base_demand_per_capita": 2,
+    "elasticity": 1,
+    "rating_weights": {
+      "brand": 25,
+      "quality": 35,
+      "price": 40
+    },
+    "vat_category": "draft",
+    "balance": "draft"
+  },
+  {
+    "id": "grain",
+    "name": "Зерно",
+    "description": "Пшеница и рожь с чернозёмов юга республики.",
+    "category": "food",
+    "unit": "kg",
+    "type": "raw",
+    "reference_price": 25,
+    "storage_life_factor": 100,
+    "quality_range": {
+      "min": 1,
+      "max": 100
+    },
+    "consumer": false,
+    "base_demand_per_capita": 0,
+    "elasticity": 1,
+    "rating_weights": {
+      "brand": 25,
+      "quality": 35,
+      "price": 40
+    },
+    "vat_category": "draft",
+    "balance": "draft"
+  },
+  {
+    "id": "flour",
+    "name": "Мука",
+    "description": "Мелкая белая мука высшего помола.",
+    "category": "food",
+    "unit": "kg",
+    "type": "intermediate",
+    "reference_price": 45,
+    "storage_life_factor": 100,
+    "quality_range": {
+      "min": 1,
+      "max": 100
+    },
+    "consumer": false,
+    "base_demand_per_capita": 0,
+    "elasticity": 1,
+    "rating_weights": {
+      "brand": 25,
+      "quality": 35,
+      "price": 40
+    },
+    "vat_category": "draft",
+    "balance": "draft"
+  },
+  {
+    "id": "bread",
+    "name": "Хлеб",
+    "description": "Свежий хлеб с хрустящей корочкой.",
+    "category": "food",
+    "unit": "piece",
+    "type": "consumer",
+    "reference_price": 90,
+    "storage_life_factor": 1,
+    "quality_range": {
+      "min": 1,
+      "max": 100
+    },
+    "consumer": true,
+    "base_demand_per_capita": 2,
+    "elasticity": 1,
+    "rating_weights": {
+      "brand": 25,
+      "quality": 35,
+      "price": 40
+    },
+    "vat_category": "draft",
+    "balance": "draft"
+  },
+  {
+    "id": "milk",
+    "name": "Молоко",
+    "description": "Свежее молоко с ферм вокруг Уфы.",
+    "category": "food",
+    "unit": "kg",
+    "type": "raw",
+    "reference_price": 70,
+    "storage_life_factor": 1,
+    "quality_range": {
+      "min": 1,
+      "max": 100
+    },
+    "consumer": true,
+    "base_demand_per_capita": 2,
+    "elasticity": 1,
+    "rating_weights": {
+      "brand": 25,
+      "quality": 35,
+      "price": 40
+    },
+    "vat_category": "draft",
+    "balance": "draft"
+  },
+  {
+    "id": "meat",
+    "name": "Мясо",
+    "description": "Говядина и баранина с местных пастбищ.",
+    "category": "food",
+    "unit": "kg",
+    "type": "raw",
+    "reference_price": 550,
+    "storage_life_factor": 1,
+    "quality_range": {
+      "min": 1,
+      "max": 100
+    },
+    "consumer": true,
+    "base_demand_per_capita": 2,
+    "elasticity": 1,
+    "rating_weights": {
+      "brand": 25,
+      "quality": 35,
+      "price": 40
+    },
+    "vat_category": "draft",
+    "balance": "draft"
+  },
+  {
+    "id": "vegetables",
+    "name": "Овощи",
+    "description": "Картофель, капуста и морковь с полей.",
+    "category": "food",
+    "unit": "kg",
+    "type": "raw",
+    "reference_price": 40,
+    "storage_life_factor": 3,
+    "quality_range": {
+      "min": 1,
+      "max": 100
+    },
+    "consumer": true,
+    "base_demand_per_capita": 2,
+    "elasticity": 1,
+    "rating_weights": {
+      "brand": 25,
+      "quality": 35,
+      "price": 40
+    },
+    "vat_category": "draft",
+    "balance": "draft"
+  },
+  {
+    "id": "oil",
+    "name": "Нефть",
+    "description": "Сырая нефть с месторождений.",
+    "category": "industrial",
+    "unit": "barrel",
+    "type": "raw",
+    "reference_price": 3500,
+    "storage_life_factor": 100,
+    "quality_range": {
+      "min": 1,
+      "max": 100
+    },
+    "consumer": false,
+    "base_demand_per_capita": 0,
+    "elasticity": 1,
+    "rating_weights": {
+      "brand": 25,
+      "quality": 35,
+      "price": 40
+    },
+    "vat_category": "draft",
+    "balance": "draft"
+  },
+  {
+    "id": "gas",
+    "name": "Газ",
+    "description": "Природный газ для города и заводов.",
+    "category": "industrial",
+    "unit": "m3",
+    "type": "raw",
+    "reference_price": 40,
+    "storage_life_factor": 100,
+    "quality_range": {
+      "min": 1,
+      "max": 100
+    },
+    "consumer": false,
+    "base_demand_per_capita": 0,
+    "elasticity": 1,
+    "rating_weights": {
+      "brand": 25,
+      "quality": 35,
+      "price": 40
+    },
+    "vat_category": "draft",
+    "balance": "draft"
+  },
+  {
+    "id": "sand",
+    "name": "Песок",
+    "description": "Строительный песок с карьеров.",
+    "category": "construction",
+    "unit": "kg",
+    "type": "construction",
+    "reference_price": 30,
+    "storage_life_factor": 100,
+    "quality_range": {
+      "min": 1,
+      "max": 100
+    },
+    "consumer": false,
+    "base_demand_per_capita": 0,
+    "elasticity": 1,
+    "rating_weights": {
+      "brand": 25,
+      "quality": 35,
+      "price": 40
+    },
+    "vat_category": "draft",
+    "balance": "draft"
+  },
+  {
+    "id": "wood",
+    "name": "Лес",
+    "description": "Круглый лес с уральских склонов.",
+    "category": "construction",
+    "unit": "kg",
+    "type": "construction",
+    "reference_price": 1200,
+    "storage_life_factor": 100,
+    "quality_range": {
+      "min": 1,
+      "max": 100
+    },
+    "consumer": false,
+    "base_demand_per_capita": 0,
+    "elasticity": 1,
+    "rating_weights": {
+      "brand": 25,
+      "quality": 35,
+      "price": 40
+    },
+    "vat_category": "draft",
+    "balance": "draft"
+  },
+  {
+    "id": "stone",
+    "name": "Камень",
+    "description": "Щебень и бутовый камень.",
+    "category": "construction",
+    "unit": "kg",
+    "type": "construction",
+    "reference_price": 45,
+    "storage_life_factor": 100,
+    "quality_range": {
+      "min": 1,
+      "max": 100
+    },
+    "consumer": false,
+    "base_demand_per_capita": 0,
+    "elasticity": 1,
+    "rating_weights": {
+      "brand": 25,
+      "quality": 35,
+      "price": 40
+    },
+    "vat_category": "draft",
+    "balance": "draft"
+  },
+  {
+    "id": "cement",
+    "name": "Цемент",
+    "description": "Серый цемент для бетона.",
+    "category": "construction",
+    "unit": "kg",
+    "type": "construction",
+    "reference_price": 290,
+    "storage_life_factor": 100,
+    "quality_range": {
+      "min": 1,
+      "max": 100
+    },
+    "consumer": false,
+    "base_demand_per_capita": 0,
+    "elasticity": 1,
+    "rating_weights": {
+      "brand": 25,
+      "quality": 35,
+      "price": 40
+    },
+    "vat_category": "draft",
+    "balance": "draft"
+  },
+  {
+    "id": "steel",
+    "name": "Сталь",
+    "description": "Стальной прокат и арматура.",
+    "category": "construction",
+    "unit": "kg",
+    "type": "construction",
+    "reference_price": 650,
+    "storage_life_factor": 100,
+    "quality_range": {
+      "min": 1,
+      "max": 100
+    },
+    "consumer": false,
+    "base_demand_per_capita": 0,
+    "elasticity": 1,
+    "rating_weights": {
+      "brand": 25,
+      "quality": 35,
+      "price": 40
+    },
+    "vat_category": "draft",
+    "balance": "draft"
+  },
+  {
+    "id": "clothes",
+    "name": "Одежда",
+    "description": "Повседневная одежда местного пошива.",
+    "category": "consumer",
+    "unit": "piece",
+    "type": "consumer",
+    "reference_price": 900,
+    "storage_life_factor": 100,
+    "quality_range": {
+      "min": 1,
+      "max": 100
+    },
+    "consumer": true,
+    "base_demand_per_capita": 2,
+    "elasticity": 1,
+    "rating_weights": {
+      "brand": 25,
+      "quality": 35,
+      "price": 40
+    },
+    "vat_category": "draft",
+    "balance": "draft"
+  },
+  {
+    "id": "fabric",
+    "name": "Ткань",
+    "description": "Хлопковая и льняная ткань.",
+    "category": "materials",
+    "unit": "kg",
+    "type": "intermediate",
+    "reference_price": 200,
+    "storage_life_factor": 100,
+    "quality_range": {
+      "min": 1,
+      "max": 100
+    },
+    "consumer": false,
+    "base_demand_per_capita": 0,
+    "elasticity": 1,
+    "rating_weights": {
+      "brand": 25,
+      "quality": 35,
+      "price": 40
+    },
+    "vat_category": "draft",
+    "balance": "draft"
+  },
+  {
+    "id": "electronics",
+    "name": "Электроника",
+    "description": "Бытовая техника и гаджеты.",
+    "category": "consumer",
+    "unit": "piece",
+    "type": "consumer",
+    "reference_price": 5500,
+    "storage_life_factor": 100,
+    "quality_range": {
+      "min": 1,
+      "max": 100
+    },
+    "consumer": true,
+    "base_demand_per_capita": 2,
+    "elasticity": 1,
+    "rating_weights": {
+      "brand": 25,
+      "quality": 35,
+      "price": 40
+    },
+    "vat_category": "draft",
+    "balance": "draft"
+  },
+  {
+    "id": "fuel",
+    "name": "Топливо",
+    "description": "Бензин и дизель.",
+    "category": "industrial",
+    "unit": "liter",
+    "type": "industrial",
+    "reference_price": 70,
+    "storage_life_factor": 100,
+    "quality_range": {
+      "min": 1,
+      "max": 100
+    },
+    "consumer": false,
+    "base_demand_per_capita": 0,
+    "elasticity": 1,
+    "rating_weights": {
+      "brand": 25,
+      "quality": 35,
+      "price": 40
+    },
+    "vat_category": "draft",
+    "balance": "draft"
+  },
+  {
+    "id": "sugar",
+    "name": "Сахар",
+    "description": "Белый сахар с переработки.",
+    "category": "food",
+    "unit": "kg",
+    "type": "consumer",
+    "reference_price": 75,
+    "storage_life_factor": 100,
+    "quality_range": {
+      "min": 1,
+      "max": 100
+    },
+    "consumer": true,
+    "base_demand_per_capita": 2,
+    "elasticity": 1,
+    "rating_weights": {
+      "brand": 25,
+      "quality": 35,
+      "price": 40
+    },
+    "vat_category": "draft",
+    "balance": "draft"
+  },
+  {
+    "id": "butter",
+    "name": "Масло",
+    "description": "Сливочное масло.",
+    "category": "food",
+    "unit": "kg",
+    "type": "consumer",
+    "reference_price": 240,
+    "storage_life_factor": 3,
+    "quality_range": {
+      "min": 1,
+      "max": 100
+    },
+    "consumer": true,
+    "base_demand_per_capita": 2,
+    "elasticity": 1,
+    "rating_weights": {
+      "brand": 25,
+      "quality": 35,
+      "price": 40
+    },
+    "vat_category": "draft",
+    "balance": "draft"
+  },
+  {
+    "id": "cheese",
+    "name": "Сыр",
+    "description": "Твёрдый сыр с местных сыроварен.",
+    "category": "food",
+    "unit": "kg",
+    "type": "consumer",
+    "reference_price": 480,
+    "storage_life_factor": 3,
+    "quality_range": {
+      "min": 1,
+      "max": 100
+    },
+    "consumer": true,
+    "base_demand_per_capita": 2,
+    "elasticity": 1,
+    "rating_weights": {
+      "brand": 25,
+      "quality": 35,
+      "price": 40
+    },
+    "vat_category": "draft",
+    "balance": "draft"
+  },
+  {
+    "id": "eggs",
+    "name": "Яйца",
+    "description": "Куриные яйца с птицефабрик.",
+    "category": "food",
+    "unit": "piece",
+    "type": "raw",
+    "reference_price": 14,
+    "storage_life_factor": 3,
+    "quality_range": {
+      "min": 1,
+      "max": 100
+    },
+    "consumer": true,
+    "base_demand_per_capita": 2,
+    "elasticity": 1,
+    "rating_weights": {
+      "brand": 25,
+      "quality": 35,
+      "price": 40
+    },
+    "vat_category": "draft",
+    "balance": "draft"
+  },
+  {
+    "id": "fish",
+    "name": "Рыба",
+    "description": "Речная рыба с Белой.",
+    "category": "food",
+    "unit": "kg",
+    "type": "raw",
+    "reference_price": 320,
+    "storage_life_factor": 1,
+    "quality_range": {
+      "min": 1,
+      "max": 100
+    },
+    "consumer": true,
+    "base_demand_per_capita": 2,
+    "elasticity": 1,
+    "rating_weights": {
+      "brand": 25,
+      "quality": 35,
+      "price": 40
+    },
+    "vat_category": "draft",
+    "balance": "draft"
+  },
+  {
+    "id": "plastic",
+    "name": "Пластик",
+    "description": "Полимеры для упаковки и деталей.",
+    "category": "industrial",
+    "unit": "kg",
+    "type": "intermediate",
+    "reference_price": 300,
+    "storage_life_factor": 100,
+    "quality_range": {
+      "min": 1,
+      "max": 100
+    },
+    "consumer": false,
+    "base_demand_per_capita": 0,
+    "elasticity": 1,
+    "rating_weights": {
+      "brand": 25,
+      "quality": 35,
+      "price": 40
+    },
+    "vat_category": "draft",
+    "balance": "draft"
+  },
+  {
+    "id": "chemicals",
+    "name": "Химия",
+    "description": "Базовые химикаты для заводов.",
+    "category": "industrial",
+    "unit": "kg",
+    "type": "intermediate",
+    "reference_price": 260,
+    "storage_life_factor": 100,
+    "quality_range": {
+      "min": 1,
+      "max": 100
+    },
+    "consumer": false,
+    "base_demand_per_capita": 0,
+    "elasticity": 1,
+    "rating_weights": {
+      "brand": 25,
+      "quality": 35,
+      "price": 40
+    },
+    "vat_category": "draft",
+    "balance": "draft"
+  }
+]

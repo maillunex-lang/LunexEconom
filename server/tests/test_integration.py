@@ -29,8 +29,15 @@ class TestClockCatalog(unittest.TestCase):
         self.assertEqual(DAY_SECONDS, 48*60)
 
     def test_catalog(self):
-        for name in ('products','recipes','buildings'):
-            self.assertEqual(load(name), [])
+        from server.catalog import Catalog
+        catalog = Catalog()
+        for name in ('products', 'recipes', 'buildings'):
+            entries = load(name)
+            self.assertTrue(entries, f'{name} must not be empty')
+            self.assertEqual(entries, catalog.data[name])
+            ids = [entry['id'] for entry in entries]
+            self.assertEqual(len(ids), len(set(ids)))
+        self.assertEqual(len(catalog.version), 64)
 
 
 @unittest.skipUnless(os.getenv('LUNEX_TEST_DATABASE_URL'), 'Set an ISOLATED PostgreSQL test DSN')

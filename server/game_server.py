@@ -68,7 +68,7 @@ def create_app(dsn=None, start_tick=False):
                 return _send(start_response,400,{'error':'expected_json_object'})
             with pool.connection() as conn:
                 with conn.transaction():
-                    context={'conn':conn,'pool':pool,'registry':registry,'authorization':environ.get('HTTP_AUTHORIZATION',''),'remote_addr':environ.get('REMOTE_ADDR','127.0.0.1'),'real_ip':environ.get('HTTP_X_REAL_IP',''),'admin_token':environ.get('HTTP_X_ADMIN_TOKEN',''),'query':parse_qs(environ.get('QUERY_STRING','')),'client_version':environ.get('HTTP_X_CLIENT_VERSION','')}
+                    context={'conn':conn,'pool':pool,'registry':registry,'authorization':environ.get('HTTP_AUTHORIZATION',''),'remote_addr':environ.get('REMOTE_ADDR','127.0.0.1'),'real_ip':environ.get('HTTP_X_REAL_IP',''),'admin_token':environ.get('HTTP_X_ADMIN_TOKEN',''),'query':parse_qs(environ.get('QUERY_STRING','')),'client_version':environ.get('HTTP_X_CLIENT_VERSION',''),'if_none_match':environ.get('HTTP_IF_NONE_MATCH','')}
                     context['settings']=read_settings(conn,registry.flags,registry.flag_constraints)
                     status,payload=registry.dispatch(method,path,data,context)
         except (ValueError,UnicodeError,json.JSONDecodeError):
@@ -76,6 +76,8 @@ def create_app(dsn=None, start_tick=False):
         except Exception:
             LOGGER.exception('Platform request failure %s %s',method,path)
             return _send(start_response,503,{'error':'service_unavailable'})
+        if path == '/catalog' and method == 'GET' and status in (200,304):
+            return _send_catalog(start_response,status,payload,registry.catalog.etag)
         return _send(start_response,status,payload)
 
     def tick_loop():
@@ -96,6 +98,19 @@ def create_app(dsn=None, start_tick=False):
     if start_tick:
         threading.Thread(target=tick_loop,daemon=True,name='lunex-game-clock').start()
     return app
+
+
+
+def _send_catalog(start_response, status, payload, etag):
+    encoded = b'' if status == 304 else json.dumps(payload,ensure_ascii=False,separators=(',',':')).encode('utf-8')
+    start_response(f'{status} {HTTPStatus(status).phrase}', [
+        ('Content-Type','application/json; charset=utf-8'),
+        ('Content-Length',str(len(encoded))),
+        ('Cache-Control','public, max-age=0, must-revalidate'),
+        ('ETag',etag),
+        ('X-Content-Type-Options','nosniff'),
+    ])
+    return [encoded]
 
 
 def _send(start_response,status,payload):
