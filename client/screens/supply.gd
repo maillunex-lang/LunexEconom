@@ -65,14 +65,14 @@ func _load() -> void:
     for child in recipe_rows.get_children():
         child.queue_free()
     row_controls.clear()
-    var detail := await api.detail(enterprise_id)
+    var detail: Dictionary = await api.detail(enterprise_id)
     if int(detail.get("code", 0)) != 200:
         _fail(detail)
         _loading = false
         return
     var data: Dictionary = detail.get("data", {})
     city = str(data.get("city", data.get("city_id", "ufa")))
-    var supply := await api.supply(enterprise_id)
+    var supply: Dictionary = await api.supply(enterprise_id)
     if int(supply.get("code", 0)) != 200:
         _fail(supply)
         _loading = false
@@ -149,7 +149,7 @@ func _add_input_row(input: Dictionary, links: Array) -> void:
     max_price.value = int(current.get("max_price", 0))
     quality.value = int(current.get("min_quality", 0))
     row_controls.append({"product_id": product_id, "source": source, "priority": priority, "share": share, "max_price": max_price, "quality": quality, "market": market_label})
-    var quote := await api.market(city, product_id)
+    var quote: Dictionary = await api.market(city, product_id)
     if int(quote.get("code", 0)) == 200:
         var q: Dictionary = quote.get("data", {})
         var price := int(q.get("price", q.get("reference_price", 0)))
@@ -177,7 +177,7 @@ func _save() -> void:
             "max_price": int(row.max_price.value),
             "min_quality": int(row.quality.value)
         })
-    var result := await api.save_supply(enterprise_id, links)
+    var result: Dictionary = await api.save_supply(enterprise_id, links)
     if int(result.get("code", 0)) >= 200 and int(result.get("code", 0)) < 300:
         message.text = Words.get_text("chain.saved")
     else:
