@@ -1,10 +1,13 @@
 extends Control
 signal back_requested
 signal wallet_changed
+signal supply_requested(enterprise_id: int)
+signal store_requested(enterprise_id: int)
 const Service = preload("res://enterprises/api.gd")
 const Catalog = preload("res://enterprises/catalog.gd")
 const Words = preload("res://enterprises/strings.gd")
 const Forest = preload("res://theme/forest_glass.gd")
+const Format = preload("res://i18n/format.gd")
 var service: Node
 var catalog: Node
 var body: VBoxContainer
@@ -129,6 +132,11 @@ func show_detail(id: int) -> void:
     _label(Words.get_text("staff",{"percent":int(current.get("staffing_bp",0))/100}))
     _label(Words.get_text("load",{"percent":int(current.get("load_bp",0))/100}))
     _label(Words.get_text("wear",{"wear":current.get("wear",0)}))
+    _label(Words.get_text("salary",{"amount":Format.money(current.get("salary", current.get("salary_month", 0)))}))
+    _label(Words.get_text("upkeep",{"amount":Format.money(current.get("upkeep", current.get("upkeep_month", 0)))}))
+    var idle_reason := str(current.get("idle_reason", current.get("stop_reason", "")))
+    if not idle_reason.is_empty():
+        _label(Words.get_text("idle_reason",{"reason":Words.get_text("idle."+idle_reason)}))
     _label(Words.get_text("inventory"))
     var inventory: Dictionary = current.get("inventory", {})
     if inventory.is_empty():
@@ -167,6 +175,20 @@ func show_detail(id: int) -> void:
     save.text = Words.get_text("apply")
     save.pressed.connect(_save_settings)
     body.add_child(save)
+    var chain_actions := HBoxContainer.new()
+    body.add_child(chain_actions)
+    var supply_button := Button.new()
+    supply_button.text = Words.get_text("supply.title")
+    supply_button.custom_minimum_size = Vector2(0, 48)
+    supply_button.pressed.connect(func(): supply_requested.emit(current_id))
+    chain_actions.add_child(supply_button)
+    var is_retail := str(current.get("role", current.get("category", ""))) == "retail" or str(current.get("building_id", "")) in ["grocery_store", "supermarket", "clothing_store", "kiosk"]
+    if is_retail:
+        var store_button := Button.new()
+        store_button.text = Words.get_text("store.title")
+        store_button.custom_minimum_size = Vector2(0, 48)
+        store_button.pressed.connect(func(): store_requested.emit(current_id))
+        chain_actions.add_child(store_button)
     _label(Words.get_text("report"))
     var report: Dictionary = await service.report(id)
     if int(report.get("code", 0)) == 200:
