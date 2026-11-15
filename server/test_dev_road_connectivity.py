@@ -62,6 +62,21 @@ class RoadConnectivityTests(unittest.TestCase):
         self.assertEqual(graph.validate_building_move(self.db, "?", "shop", [(2, 0)], [(30, 30)]), "destination_road_access")
         self.assertIsNone(graph.validate_building_move(self.db, "?", "shop", [(2, 0)], [(2, 0)]))
 
+    def test_move_rejects_isolated_road_component(self):
+        self.road((30, 29))
+        self.assertEqual(graph.validate_building_move(self.db, "?", "shop", [(2, 0)], [(30, 30)]), "destination_road_disconnected")
+
+    def test_move_accepts_city_connected_road_component(self):
+        self.road((1, 0), (2, 0), (3, 0))
+        self.assertIsNone(graph.validate_building_move(self.db, "?", "shop", [(2, 1)], [(3, 1)]))
+
+    def test_large_connected_network_removal(self):
+        # 10k road vertices with one bypass. Ensure graph traversal is
+        # iterative and avoids recursion depth limits.
+        self.road(*[(x, 0) for x in range(1, 10001)])
+        self.assertIsNone(self.check((10000, 0)))
+        self.assertEqual(self.check((5000, 0)), "road_network_disconnected")
+
     def test_removing_nonexistent_road_is_noop(self):
         self.assertIsNone(self.check((44, 44)))
 
