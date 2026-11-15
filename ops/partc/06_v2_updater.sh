@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # Часть C, шаг 6: ОТДЕЛЬНЫЙ автообновитель V2 + проверка V2 через публичный адрес.
 # Обновитель V2 следит за GitHub main, выкладывает ТОЛЬКО в /opt/lunexeconom-v2 и перезапускает ТОЛЬКО lunexeconom-v2.service,
-# и только если на ТОЧНО этом коммите зелёный server-check. При сбое health откатывает. V1 он не знает и не трогает.
+# и только если на ТОЧНО этом коммите зелёный server-check. Проверяет health и SHA, при сбое откатывает. V1 не трогает.
+# Перед боевой установкой обновить ops/update_server.py вручную по docs/OPERATIONS.md.
 # Пробный запуск:  sudo DRY_RUN=1 bash 06_v2_updater.sh
 # Боевой запуск:   sudo bash 06_v2_updater.sh > step6-report.txt 2>&1
 set -euo pipefail
@@ -76,8 +77,7 @@ cat <<'NOTE'
 
 [step6] DONE. Notes:
  - The updater file /opt/lunexeconom-v2/ops/update_server.py is NOT updated automatically; copy it manually when it changes in main.
- - If server/requirements.txt changes, the new packages are NOT installed automatically: run
-     sudo -u gamedev /opt/lunexeconom-v2/venv/bin/pip install -r /opt/lunexeconom-v2/server/requirements.txt
-   (a deploy with missing packages fails the health check and is rolled back).
+ - If server/requirements.txt changes, the updater installs verified dependencies with V2 pip before restarting.
+ - Environment LUNEX_SHA is updated atomically; health must report the deployed SHA.
  - Remove this step: systemctl disable --now lunexeconom-v2-update.timer; rm /etc/systemd/system/lunexeconom-v2-update.*; systemctl daemon-reload
 NOTE
