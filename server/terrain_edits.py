@@ -10,7 +10,6 @@ _cache = {}
 
 def ensure(db):
     db.execute("CREATE TABLE IF NOT EXISTS terrain_edits (x INTEGER NOT NULL, y INTEGER NOT NULL, kind TEXT NOT NULL, editor TEXT NOT NULL, created BIGINT NOT NULL, manual INTEGER NOT NULL DEFAULT 1, PRIMARY KEY(x,y))")
-    db.commit()
 
 def chunk(db, ph, cx, cy):
     key = (db, int(cx), int(cy))
