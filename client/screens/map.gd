@@ -40,6 +40,7 @@ func _ready() -> void:
     stream.configure(api)
     stream.network_error.connect(_on_error)
     stream.city_grew.connect(_on_growth)
+    stream.enterprise_changed.connect(_refresh_enterprise_map)
     stream.land_purchased.connect(func(_data: Dictionary):
         info.text = Words.get_text("world.parcel.bought")
         wallet_changed.emit()
