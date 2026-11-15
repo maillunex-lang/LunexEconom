@@ -31,6 +31,12 @@ jobs:
           timeout 90 xvfb-run -a /tmp/Godot_v4.7.2-stable_linux.x86_64 --headless --path client --script res://tests/build_menu_smoke.gd 2>&1 | tee godot-build-menu.log
           grep -q 'BUILD_MENU_SMOKE_PASS' godot-build-menu.log
           ! grep -E 'FAIL:|ERROR:|Parse Error:' godot-build-menu.log
+      - name: GLB runtime lookup and instantiation smoke
+        run: |
+          set -o pipefail
+          timeout 90 xvfb-run -a /tmp/Godot_v4.7.2-stable_linux.x86_64 --headless --path client --script res://tests/asset_runtime_smoke.gd 2>&1 | tee godot-assets.log
+          grep -q 'ASSET_RUNTIME_SMOKE_PASS count=7' godot-assets.log
+          ! grep -E 'ERROR:|Parse Error:' godot-assets.log
       - name: Capture isolated GLB screenshot
         run: |
           set -o pipefail
