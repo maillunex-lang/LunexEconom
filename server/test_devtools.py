@@ -93,13 +93,17 @@ class DeveloperToolsTests(unittest.TestCase):
         self.db.execute("INSERT INTO cells VALUES (11,13,'b1')")
         self.db.execute("INSERT INTO roads VALUES (14,16,'dev',0)")
         self.db.execute("INSERT INTO roads VALUES (10,12,'dev',0)")
+        # A city base road anchors the destination component.
+        self.db.execute("INSERT INTO roads VALUES (14,15,'dev',0)")
         payload={"request_id":"c2c3ad2b-180e-4517-839c-c47e48dbd7cb","object_id":"b1","x":15,"y":16}
-        self.assertEqual(devtools.building_move(self.db,"?","dev",payload,"local")[0],200)
+        with patch("dev_road_connectivity._base_roads", return_value={(14, 15)}):
+            self.assertEqual(devtools.building_move(self.db,"?","dev",payload,"local")[0],200)
         self.assertEqual(self.db.execute("SELECT owner,x,y FROM buildings WHERE id='b1'").fetchone(),("player",15,16))
         self.assertEqual(devtools.building_move(self.db,"?","dev",payload,"local")[1]["replayed"],True)
         self.assertEqual(self.db.execute("SELECT COUNT(*) FROM cells WHERE object_id='b1'").fetchone()[0],2)
         undo={"request_id":"b0f1e34b-cda2-4924-a687-a421c82f581d"}
-        self.assertEqual(devtools.undo(self.db,"?","dev",undo,"local")[0],200)
+        with patch("dev_road_connectivity._base_roads", return_value={(10, 12), (14, 15)}):
+            self.assertEqual(devtools.undo(self.db,"?","dev",undo,"local")[0],200)
         self.assertEqual(self.db.execute("SELECT x,y FROM buildings WHERE id='b1'").fetchone(),(11,12))
         self.assertTrue(devtools.undo(self.db,"?","dev",undo,"local")[1]["replayed"])
         self.db.execute("INSERT INTO cells VALUES (20,20,'other')")
