@@ -61,6 +61,25 @@ def create(body,ctx):
         return 400,{'error':'invalid_coordinates'}
     return core.place(ctx['conn'],actor,request,building,px,py,x,y)
 
+def plan(body,ctx):
+    actor=authenticate(ctx)
+    if not actor:
+        return 401,{'error':'unauthorized'}
+    def arg(key):
+        values=ctx.get('query',{}).get(key)
+        return values[0] if isinstance(values,list) and len(values)==1 else None
+    building=arg('building_id')
+    if not isinstance(building,str):
+        return 400,{'error':'invalid_building'}
+    try:
+        px=core.integer(int(arg('px')),-world.MAX_REQUEST_COORD,world.MAX_REQUEST_COORD)
+        py=core.integer(int(arg('py')),-world.MAX_REQUEST_COORD,world.MAX_REQUEST_COORD)
+        x=core.integer(int(arg('x') if arg('x') is not None else px*6),-world.MAX_REQUEST_COORD,world.MAX_REQUEST_COORD)
+        y=core.integer(int(arg('y') if arg('y') is not None else py*6),-world.MAX_REQUEST_COORD,world.MAX_REQUEST_COORD)
+    except (TypeError,ValueError):
+        return 400,{'error':'invalid_coordinates'}
+    return core.plan(ctx['conn'],actor,building,px,py,x,y)
+
 def list_own(body,ctx):
     actor=authenticate(ctx)
     if not actor:

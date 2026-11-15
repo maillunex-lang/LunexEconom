@@ -8,10 +8,39 @@ CORRIDOR_HIGH_PERCENT = 250
 BRAND_M1 = 50
 DEMAND_DENOM = 1000 * 1000 * 1000 * 1000
 
-# Черновые доли стадий из предложения 08, пока D-58 не утверждён.
-# Срок: 2500/3500/3000/1000 bp. Стоимость: 3000/4000/2000/1000 bp. Сумма 10000.
+# Черновые доли стадий (D-10, D-53, D-58 не утверждён).
+# Сервер: server/enterprises/core.py — те же кортежи и то же деление.
+# Срок копится границами. Цена: первые три доли независимо, последняя — остаток.
+# Старые COST_SHARE_BP / split_by_bp — накопительные границы и на некратных
+# суммах расходятся с сервером (пример: 3 ₽ → 0/2/0/1 вместо 0/1/0/2).
+COST_SHARES_PERMILLE = (300, 400, 200, 100)
+TIME_SHARES_PERMILLE = (250, 350, 300, 100)
 TIME_SHARE_BP = (2500, 3500, 3000, 1000)
 COST_SHARE_BP = (3000, 4000, 2000, 1000)
+
+
+def stage_costs(total: int) -> list[int]:
+    """Как server.enterprises.core.stage_costs: три floor и остаток на ввод."""
+    if total < 1:
+        raise RuntimeError("стоимость стадии считается от положительной суммы")
+    parts = [total * share // 1000 for share in COST_SHARES_PERMILLE[:3]]
+    parts.append(total - sum(parts))
+    return parts
+
+
+def stage_day_lengths(days: int) -> list[int]:
+    """Как server.enterprises.core.stage_day_lengths: накопительный // 1000."""
+    if days < 1:
+        raise RuntimeError("build_days должен быть положительным")
+    previous = 0
+    result: list[int] = []
+    cumulative = 0
+    for share in TIME_SHARES_PERMILLE:
+        cumulative += share
+        end = days * cumulative // 1000
+        result.append(end - previous)
+        previous = end
+    return result
 
 
 def split_by_bp(total: int, shares: tuple[int, ...]) -> list[int]:

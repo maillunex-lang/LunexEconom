@@ -52,8 +52,8 @@ def authenticate(ctx, track=True):
     if not isinstance(auth,str) or not auth.startswith('Bearer ') or len(auth)>300:
         return None
     value = auth[7:]
-    row = ctx['conn'].execute('SELECT a.id,a.username,a.role,a.is_blocked,a.email FROM sessions s JOIN accounts a ON a.id=s.account_id WHERE s.token_hash=%s AND s.expires_at>now() AND s.revoked_at IS NULL', (token_hash(value),)).fetchone()
-    if not row or row[3]:
+    row = ctx['conn'].execute('SELECT a.id,a.username,a.role,a.is_blocked,a.email,a.blocked_until FROM sessions s JOIN accounts a ON a.id=s.account_id WHERE s.token_hash=%s AND s.expires_at>now() AND s.revoked_at IS NULL AND (a.is_blocked=false OR (a.blocked_until IS NOT NULL AND a.blocked_until<=now()))', (token_hash(value),)).fetchone()
+    if not row:
         return None
     if track:
         updated=ctx['conn'].execute("INSERT INTO presence(account_id,client_version) VALUES(%s,%s) ON CONFLICT(account_id) DO UPDATE SET seen_at=now(),client_version=excluded.client_version WHERE presence.seen_at<=now()-interval '30 seconds' RETURNING account_id", (row[0],str(ctx.get('client_version',''))[:80])).fetchone()
@@ -105,8 +105,8 @@ def login(body, ctx):
         return 400, {'error':'invalid_credentials'}
     if not _attempt(ctx['conn'],'login',identifier,_ip(ctx),8):
         return 429, {'error':'rate_limited'}
-    row = ctx['conn'].execute('SELECT id,password_hash,role,is_blocked FROM accounts WHERE lower(username)=lower(%s) OR email=%s', (identifier,identifier.lower())).fetchone()
-    if not row or row[3] or not verify_password(password,row[1]):
+    row = ctx['conn'].execute('SELECT id,password_hash,role,is_blocked,blocked_until FROM accounts WHERE (lower(username)=lower(%s) OR email=%s)', (identifier,identifier.lower())).fetchone()
+    if not row or (row[3] and not (row[4] is not None and row[4] <= __import__('datetime').datetime.now(__import__('datetime').timezone.utc))) or not verify_password(password,row[1]):
         return 401, {'error':'invalid_credentials'}
     with ctx['conn'].transaction():
         _clear_failures(ctx['conn'],'login',identifier,_ip(ctx))

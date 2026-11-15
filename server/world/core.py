@@ -397,3 +397,72 @@ def placement_valid(conn,building_id,x,y):
             ).fetchone():
                 return True,'ok'
     return False,'no_road_access'
+
+
+# balance: draft. Automatic access road for a building that has no road contact.
+AUTO_ROAD_MAX_CELLS = 12
+AUTO_ROAD_CELL_COST = 5000
+
+
+def plan_access_road(conn, actor_id, footprint):
+    """Shortest free path from the building to the nearest existing road.
+
+    Returns (cells, None) with new road cells ordered from the building to the road,
+    or (None, reason). Deterministic: BFS, 4 directions, start cells sorted by (y, x).
+    Passable: dry, unoccupied, not already road, inside no one else's parcel.
+    No database writes.
+    """
+    states = city_states(conn)
+    footprint = set(footprint)
+    parcel_cache = {}
+
+    def parcel_ok(x, y):
+        key = (x // 6, y // 6)
+        if key not in parcel_cache:
+            row = conn.execute('SELECT owner_kind,owner_ref FROM world_parcels WHERE px=%s AND py=%s',
+                               key).fetchone()
+            parcel_cache[key] = (row is None or row[0] in ('city', 'state')
+                                 or row == ('player', str(actor_id)))
+        return parcel_cache[key]
+
+    def is_road(x, y):
+        return virtual_road(x, y, states) or conn.execute(
+            'SELECT 1 FROM world_roads WHERE x=%s AND y=%s', (x, y)).fetchone() is not None
+
+    def passable(x, y):
+        if (x, y) in footprint or not parcel_ok(x, y) or terrain(SEED, x, y) == 'water':
+            return False
+        if is_road(x, y):
+            return False
+        return conn.execute('SELECT 1 FROM world_occupied_cells WHERE x=%s AND y=%s',
+                            (x, y)).fetchone() is None
+
+    def neighbours(x, y):
+        return ((x, y - 1), (x - 1, y), (x + 1, y), (x, y + 1))
+
+    starts = sorted({n for a, b in footprint for n in neighbours(a, b)
+                     if n not in footprint and passable(*n)}, key=lambda c: (c[1], c[0]))
+    previous = {}
+    queue = []
+    for c in starts:
+        previous[c] = None
+        queue.append((c, 1))
+    head = 0
+    while head < len(queue):
+        cell, length = queue[head]
+        head += 1
+        if any(is_road(*n) for n in neighbours(*cell)):
+            path = []
+            node = cell
+            while node is not None:
+                path.append(node)
+                node = previous[node]
+            path.reverse()
+            return path, None
+        if length >= AUTO_ROAD_MAX_CELLS:
+            continue
+        for n in neighbours(*cell):
+            if n not in previous and passable(*n):
+                previous[n] = cell
+                queue.append((n, length + 1))
+    return None, 'road_unreachable'

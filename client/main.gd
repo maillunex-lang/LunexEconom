@@ -70,6 +70,8 @@ func _ready() -> void:
     router.register_screen("map",map_screen)
     router.register_screen("enterprises",enterprises_screen)
     router.register_screen("build",build_screen)
+    router.register_screen("supply",supply_screen)
+    router.register_screen("store",store_screen)
     # Existing V2-01b implementation stays untouched.
     update_screen = UpdatesPanel.instantiate()
     router.register_screen("updates", update_screen)
