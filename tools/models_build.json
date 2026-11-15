@@ -1,0 +1,119 @@
+[
+  {
+    "file": "house_panel_1x1.glb",
+    "kind": "house",
+    "w": 1,
+    "h": 1,
+    "triangles": 588,
+    "height_m": 5.69,
+    "license": "Original / CC0"
+  },
+  {
+    "file": "house_brick_1x1.glb",
+    "kind": "house",
+    "w": 1,
+    "h": 1,
+    "triangles": 588,
+    "height_m": 5.69,
+    "license": "Original / CC0"
+  },
+  {
+    "file": "house_modern_1x1.glb",
+    "kind": "house",
+    "w": 1,
+    "h": 1,
+    "triangles": 588,
+    "height_m": 5.69,
+    "license": "Original / CC0"
+  },
+  {
+    "file": "house_1x2.glb",
+    "kind": "house",
+    "w": 1,
+    "h": 2,
+    "triangles": 348,
+    "height_m": 4.04,
+    "license": "Original / CC0"
+  },
+  {
+    "file": "house_1x3.glb",
+    "kind": "house",
+    "w": 1,
+    "h": 3,
+    "triangles": 288,
+    "height_m": 3.38,
+    "license": "Original / CC0"
+  },
+  {
+    "file": "shop_2x2.glb",
+    "kind": "shop",
+    "w": 2,
+    "h": 2,
+    "triangles": 96,
+    "height_m": 2.48,
+    "license": "Original / CC0"
+  },
+  {
+    "file": "warehouse_3x3.glb",
+    "kind": "warehouse",
+    "w": 3,
+    "h": 3,
+    "triangles": 120,
+    "height_m": 3.82,
+    "license": "Original / CC0"
+  },
+  {
+    "file": "school_3x2.glb",
+    "kind": "school",
+    "w": 3,
+    "h": 2,
+    "triangles": 300,
+    "height_m": 4.31,
+    "license": "Original / CC0"
+  },
+  {
+    "file": "hospital_3x3.glb",
+    "kind": "hospital",
+    "w": 3,
+    "h": 3,
+    "triangles": 300,
+    "height_m": 4.84,
+    "license": "Original / CC0"
+  },
+  {
+    "file": "park_2x2.glb",
+    "kind": "park",
+    "w": 2,
+    "h": 2,
+    "triangles": 120,
+    "height_m": 1.71,
+    "license": "Original / CC0"
+  },
+  {
+    "file": "road_straight_1x1.glb",
+    "kind": "road_straight",
+    "w": 1,
+    "h": 1,
+    "triangles": 60,
+    "height_m": 0.07,
+    "license": "Original / CC0"
+  },
+  {
+    "file": "road_cross_1x1.glb",
+    "kind": "road_cross",
+    "w": 1,
+    "h": 1,
+    "triangles": 84,
+    "height_m": 0.07,
+    "license": "Original / CC0"
+  },
+  {
+    "file": "bridge_1x1.glb",
+    "kind": "bridge",
+    "w": 1,
+    "h": 1,
+    "triangles": 132,
+    "height_m": 1.1,
+    "license": "Original / CC0"
+  }
+]

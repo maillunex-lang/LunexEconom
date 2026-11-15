@@ -32,18 +32,14 @@ func refresh() -> void:
     if not visible or host == null:
         return
     var active: Dictionary = host.world.active_chunks
-    var drawing := 0.0
-    for chunk in active.values():
-        drawing += float(chunk.last_draw_usec) / 1000.0
+    var drawing := float(host.world.last_build_usec) / 1000.0
     var city_count := 0
     if host.regional_map_panel != null and host.world.camera != null:
-        var camera: Camera2D = host.world.camera
-        var visible_half: Vector2 = host.world.get_viewport_rect().size * 0.5 / camera.zoom
+        var reach: float = host.world.camera.size / host.world.CELL       # cells from the screen centre to its edge, roughly
+        var here: Vector2i = host.world.cell_of(host.world.focus)
         for city in host.regional_map_panel.cities:
             if city is Dictionary:
-                var scene_point: Vector2 = host.world.iso(float(city.get("x", 0)), float(city.get("y", 0)))
-                var delta: Vector2 = scene_point - camera.position
-                if absf(delta.x) <= visible_half.x and absf(delta.y) <= visible_half.y:
+                if absf(float(int(city.get("x", 0)) - here.x)) <= reach and absf(float(int(city.get("y", 0)) - here.y)) <= reach:
                     city_count += 1
     var fps := Engine.get_frames_per_second()
     var frame_ms := Performance.get_monitor(Performance.TIME_PROCESS) * 1000.0

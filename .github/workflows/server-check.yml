@@ -20,7 +20,7 @@ jobs:
         working-directory: server
         run: |
           python -m py_compile *.py
-          python -m unittest test_roads test_economy test_clock test_settlement test_market test_production test_npc test_labor test_bankruptcy test_sell test_bank test_tax test_city test_election test_rating test_contracts test_owner_spend test_retail test_sqlite_util test_health_ops test_app test_auth test_stats test_postgres_stats test_geo test_ops_email test_health_deployed_sha test_postgres_migrations test_social test_exchange test_charts test_admin_api test_postgres_admin test_citygen test_postgres_citygen test_regions test_postgres_regions test_goods_catalog test_deposits test_agro_chain -v
+          python -m unittest test_roads test_economy test_clock test_settlement test_market test_production test_npc test_labor test_bankruptcy test_sell test_bank test_tax test_city test_election test_rating test_contracts test_owner_spend test_retail test_sqlite_util test_health_ops test_app test_auth test_stats test_postgres_stats test_geo test_ops_email test_health_deployed_sha test_postgres_migrations test_social test_exchange test_charts test_admin_api test_postgres_admin test_citygen test_postgres_citygen test_regions test_postgres_regions test_zoning test_postgres_zoning test_goods_catalog test_deposits test_agro_chain -v
           python -m unittest discover -s ../tools -p 'test_*.py' -v
       - name: Test admin studio (signing needs the openssl command line, present on the runner)
         run: cd admin_studio && python -m unittest discover -p 'test_*.py' -v

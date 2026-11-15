@@ -13,7 +13,7 @@ func footprint(origin: Vector2i, size: Vector2i) -> Array[Vector2i]:
             cells.append(Vector2i(x, y))
     return cells
 
-func preview(origin: Vector2i, size: Vector2i, roads: Object, world: Object) -> Dictionary:
+func preview(origin: Vector2i, size: Vector2i, roads: Object, world: Object, build_kind: String = "") -> Dictionary:
     var cells := footprint(origin, size)
     if cells.is_empty():
         return {"ok": false, "reason": "invalid_size"}
@@ -28,6 +28,9 @@ func preview(origin: Vector2i, size: Vector2i, roads: Object, world: Object) -> 
             return {"ok": false, "reason": "road_overlap"}
         if world.cell_kind(cell.x, cell.y) == 4:
             return {"ok": false, "reason": "water"}
+    var wrong_zone: String = world.zone_refusal(build_kind, cells) if world.has_method("zone_refusal") else ""
+    if wrong_zone != "":
+        return {"ok": false, "reason": "wrong_zone", "message": wrong_zone}
     var access := find_access_path(cells, roads, world)
     if access.is_empty() and not _touches_road(cells, roads):
         return {"ok": false, "reason": "no_road_access"}

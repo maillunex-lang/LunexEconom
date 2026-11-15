@@ -43,6 +43,8 @@ def _q(sql, ph):
 def ensure(db, ph):
     for statement in SCHEMA:
         db.execute(statement)
+    import zoning
+    zoning.ensure(db, ph)
 
 
 def owner_of(city_id):
@@ -67,13 +69,15 @@ def _tie(city_id, x, y):
     return hashlib.sha1(("%s:%d:%d" % (city_id, x, y)).encode()).digest()[:4]
 
 
-@lru_cache(maxsize=64)
-def _candidates(city_id, w, h):
-    """Lots (x0, y0) of a w x h house on free grass, nearest to the crossroads first."""
+@lru_cache(maxsize=256)
+def _candidates(city_id, w, h, level=0):
+    """Lots (x0, y0) of a w x h house on free grass in the city zones (never the industrial zone), nearest to the crossroads first.
+    `level`: growth level of the city (zoning.py), the radius grows with it."""
     city = geo.get_city(city_id)
     if city is None:
         raise ValueError("unknown city")
-    cx, cy, radius = city["x"], city["y"], city["radius"]
+    import zoning
+    cx, cy, radius = city["x"], city["y"], zoning.effective_radius(city["radius"], level)
     out = []
     for x0 in range(cx - radius, cx + radius + 1):
         for y0 in range(cy - radius, cy + radius + 1):
@@ -82,6 +86,8 @@ def _candidates(city_id, w, h):
             if distance > radius * RADIUS_USE or distance < MIN_DISTANCE:
                 continue
             if any(terrain(x0 + i, y0 + j) != "grass" for i in range(w) for j in range(h)):
+                continue
+            if any(zoning.zone_of(city_id, cx, cy, city["radius"], level, x0 + i, y0 + j) not in zoning.CITY_ZONES for i in range(w) for j in range(h)):
                 continue
             out.append((distance, _tie(city_id, x0, y0), x0, y0))
     out.sort()
@@ -116,7 +122,7 @@ def _count(db, ph, city_id):
 
 def _world_state(db, ph, city):
     """Occupied cells and dynamic roads around the city (access roads may run a little outside its radius)."""
-    r = city["radius"] + MAX_ACCESS + 4
+    r = int(city["radius"] * 2.6) + MAX_ACCESS + 4          # room for the highest growth level
     box = (city["x"] - r, city["x"] + r, city["y"] - r, city["y"] + r)
     occupied = {(x, y) for x, y in db.execute(_q("SELECT x,y FROM cells WHERE x BETWEEN %s AND %s AND y BETWEEN %s AND %s", ph), box).fetchall()}
     dynamic = {(x, y) for x, y in db.execute(_q("SELECT x,y FROM roads WHERE x BETWEEN %s AND %s AND y BETWEEN %s AND %s", ph), box).fetchall()}
@@ -167,6 +173,8 @@ def seed_city(db, ph, city_id, now, population=None, max_new=None, dry_run=False
         need = min(need, max_new)
     if need == 0:
         return result
+    import zoning
+    level = zoning.levels(db, ph).get(city_id, 0)
     occupied, dynamic = _world_state(db, ph, city)
     cx, cy = city["x"], city["y"]
     index = have
@@ -175,7 +183,7 @@ def seed_city(db, ph, city_id, now, population=None, max_new=None, dry_run=False
         w0, h0 = shape_of(index)
         found = None
         for w, h in ([(w0, h0)] if w0 == h0 else [(w0, h0), (h0, w0)]):
-            for x0, y0 in _candidates(city_id, w, h):
+            for x0, y0 in _candidates(city_id, w, h, level):
                 cells = [(x0 + i, y0 + j) for i in range(w) for j in range(h)]
                 if any(c in occupied or c in dynamic for c in cells):
                     continue

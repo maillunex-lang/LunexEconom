@@ -2,7 +2,7 @@ extends Node
 ## Polling-based prototype: authoritative server events, per-chunk version and gap recovery.
 signal sync_status(message: String)
 const ROOT := "https://rikagro.ru/lunexeconom/api/"
-var world: Node2D
+var world: Node
 var cursor := 0
 var busy := false
 var versions: Dictionary = {}

@@ -8,7 +8,6 @@ config/features=PackedStringArray("4.7", "GL Compatibility")
 [autoload]
 
 GameSession="*res://game_session.gd"
-AssetDownloader="*res://asset_downloader.gd"
 
 [display]
 window/size/viewport_width=1280

@@ -1,3 +1,5 @@
+> **Устарело (15.11.2026):** 2D-спрайты больше не используются клиентом — мир перешёл на 3D ([WORLD3D.md](WORLD3D.md)). Загрузчик `asset_downloader.gd` и `remote_art_catalog.gd` удалены из клиента.
+
 # Каталог графики Kenney CC0: установленная тестовая библиотека
 
 Дата: 2026-11-15. Источник: Kenney, **Isometric City** (`cityTiles_*.png`), https://kenney.nl/assets/isometric-tiles-city. Лицензия: **CC0 1.0**, оригинальная `License.txt` в ZIP, проверена на VPS.

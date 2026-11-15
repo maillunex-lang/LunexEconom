@@ -131,4 +131,6 @@ def init():
         regions.ensure(db, "%s")
         import deposits
         deposits.ensure(db, "%s")
+        import zoning
+        zoning.ensure(db, "%s")
         db.commit()

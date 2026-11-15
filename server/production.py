@@ -605,6 +605,8 @@ def step_month(db, ph, month, now):
     # Once the game city has been generated (docs/CITYGEN.md) its houses follow the population; a no-op before that.
     import citygen
     citygen.grow(db, ph, next_pop, now)
+    import zoning
+    zoning.expand_cities(db, ph, now)                 # a city that fills up grows: free land always remains (docs/ZONING.md)
     # the other active cities: their own residents, jobs and wage (no social services there yet, docs/CITY_ECONOMY.md)
     for region in active:
         if region != regions.HOME:

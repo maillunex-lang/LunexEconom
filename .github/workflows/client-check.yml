@@ -1,0 +1,49 @@
+name: Client checks (Godot headless)
+
+on:
+  push:
+    branches: [main]
+    paths: ["client/**", ".github/workflows/client-check.yml"]
+  pull_request:
+    paths: ["client/**", ".github/workflows/client-check.yml"]
+  workflow_dispatch:
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Godot 4.7.2
+        run: |
+          set -euo pipefail
+          curl -fL --retry 3 --max-time 180 "https://github.com/godotengine/godot-builds/releases/download/4.7.2-stable/Godot_v4.7.2-stable_linux.x86_64.zip" -o /tmp/godot.zip
+          mkdir -p /tmp/godot
+          unzip -q /tmp/godot.zip -d /tmp/godot
+          GODOT=$(find /tmp/godot -name 'Godot_v4.7.2-stable_linux.x86_64' -type f -print -quit)
+          test -n "$GODOT"
+          chmod +x "$GODOT"
+          echo "GODOT=$GODOT" >> "$GITHUB_ENV"
+      - name: Import and script validation
+        run: |
+          set -euo pipefail
+          "$GODOT" --headless --path client --import 2>&1 | tee /tmp/import.log
+          if grep -E 'SCRIPT ERROR|Parse Error' /tmp/import.log; then exit 1; fi
+      - name: World and interface smoke tests
+        run: |
+          set -uo pipefail
+          failed=0
+          for pair in world3d_smoke:WORLD3D_SMOKE_PASS zones_smoke:ZONES_SMOKE_PASS world_smoke:WORLD_TEST_PASS world_027_smoke:WORLD_027_TEST_PASS \
+                      world_027_integration:WORLD_027_INTEGRATION_PASS citygen_smoke:CITYGEN_SMOKE_PASS regional_map_smoke:REGIONAL_MAP_SMOKE_PASS \
+                      season_perf_smoke:SEASON_AND_PERF_SMOKE_PASS scroll_panels_smoke:SCROLL_PANELS_PASS contracts_panel_smoke:CONTRACTS_PANEL_PASS \
+                      retail_smoke:RETAIL_SMOKE_PASS livepatch_security_smoke:LIVEPATCH_SECURITY_SMOKE_PASS patch_visuals_smoke:PATCH_VISUALS_SMOKE_PASS \
+                      stats_panels_smoke:STATS_PANELS_SMOKE_PASS tutorial_smoke:TUTORIAL_SMOKE_PASS updater_smoke:UPDATER_SMOKE_PASS; do
+            test_name="${pair%%:*}"; marker="${pair##*:}"
+            timeout 120 "$GODOT" --headless --path client --script "res://tests/${test_name}.gd" > "/tmp/${test_name}.log" 2>&1
+            if grep -q "$marker" "/tmp/${test_name}.log" && ! grep -qE 'SCRIPT ERROR|Parse Error' "/tmp/${test_name}.log"; then
+              echo "PASS ${test_name}"
+            else
+              echo "FAIL ${test_name}"; tail -30 "/tmp/${test_name}.log"; failed=1
+            fi
+          done
+          exit $failed
