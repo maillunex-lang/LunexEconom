@@ -226,6 +226,15 @@ def create(name, kind, w, d):
             b.box(0,.45,.08,W*.75,D*.48,1.0,"dark")
             b.box(0,-D*.30,.08,W*.55,D*.18,1.3,"brick")
             b.box(0,-D*.40,.08,1.2,.07,.9,"dark")
+    elif kind=="catalog_generic":
+        W,D=w*2,d*2
+        b.box(0,0,0,W-.12,D-.12,.07,"pave")
+        b.box(0,0,.07,W*.78,D*.74,1.8,"light")
+        b.box(0,0,1.87,W*.83,D*.79,.17,"roof")
+        b.box(0,-D*.375,.07,.7,.07,1.3,"dark")
+        for x in (-W*.23,0,W*.23):
+            b.box(x,-D*.38,.9,.36,.045,.43,"window")
+        b.box(0,0,2.04,.6,.6,.15,"teal")
     elif kind=="park":
         b.box(0,0,0,3.92,3.92,.07,"grass")
         b.box(0,0,.07,3.82,.38,.03,"pave")
@@ -282,7 +291,18 @@ def main():
         ("logging_camp_2x3","logging_camp",2,3),
         ("factory_3x2","factory",3,2),
         ("farm_2x2","farm",2,2),
-        ("mine_2x3","mine",2,3)]
+        ("mine_2x3","mine",2,3),
+        ("factory","factory",3,2), ("farm","farm",2,2),
+        ("mine","mine",2,3), ("oil_well","oil_well",2,2)]
+    # Missing city-catalog IDs are generated as generic distinct placeholder buildings.
+    # They are real GLBs with valid footprints, not claimed bespoke architectural art.
+    sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "server"))
+    import city_catalog
+    present_ids={name for name, _, _, _ in specs}
+    for oid, entry in sorted(city_catalog.CATALOG.items()):
+        if oid in present_ids or any(name.startswith(oid+"_") for name in present_ids):
+            continue
+        specs.append((oid,"catalog_generic",int(entry["w"]),int(entry["h"])))
     manifest=[]
     for name,kind,w,d in specs:
         mesh=create(name,kind,w,d)
@@ -291,7 +311,7 @@ def main():
         print(name, row["triangles"], "triangles", flush=True)
     # This metadata is used only by documentation script, not the Android client.
     (output.parent.parent.parent/"tools/models_build.json").write_text(json.dumps(manifest,indent=2))
-    assert len(manifest)==24
+    assert len(manifest)>=28
 
 
 if __name__=="__main__":

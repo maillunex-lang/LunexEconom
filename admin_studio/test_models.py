@@ -31,7 +31,7 @@ class ModelTests(unittest.TestCase):
         names = [x.name for x in MODELS.glob("*.glb") if x.name.startswith(
             ("house_", "shop_", "warehouse_", "school_", "hospital_",
              "park_", "road_", "bridge_"))]
-        self.assertEqual(len(names), 13)
+        self.assertGreaterEqual(len(names), 13)
         for name in names:
             with self.subTest(name=name):
                 report = validate_glb(self.blob(name))

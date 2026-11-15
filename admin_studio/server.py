@@ -17,14 +17,15 @@ from art_catalog import ArtCatalog
 from model_catalog import ModelCatalog
 from world_editor import WorldDrafts
 from world_preview import Preview
-from urllib.error import URLError
+from urllib.error import URLError, HTTPError
+from urllib.request import urlopen
 
 ROOT = Path(__file__).resolve().parent
 STATIC = ROOT / "static"
 MAX_BODY = 12 * 1024 * 1024
 FAIL_LIMIT, FAIL_WINDOW = 10, 300          # failed sign-ins per client address and window
 REQUEST_TIMEOUT = 15                       # seconds a client may stall while sending a request (slow-loris guard)
-STATIC_TYPES = {"index.html": "text/html", "app.js": "text/javascript", "world.js": "text/javascript", "game.js": "text/javascript", "navigation.js": "text/javascript", "game-art.js": "text/javascript", "art-catalog.js": "text/javascript", "models.js": "text/javascript", "style.css": "text/css"}
+STATIC_TYPES = {"index.html": "text/html", "app.js": "text/javascript", "world.js": "text/javascript", "game.js": "text/javascript", "navigation.js": "text/javascript", "catalog-readonly.js": "text/javascript", "game-art.js": "text/javascript", "art-catalog.js": "text/javascript", "models.js": "text/javascript", "style.css": "text/css"}
 LOOPBACK = ("127.0.0.1", "::1")
 
 def handler_factory(store, token, game=None):
@@ -131,6 +132,31 @@ def handler_factory(store, token, game=None):
             if not self.authorized():
                 return self.deny()
             query = parse_qs(urlsplit(self.path).query)
+            if path in ("/api/catalog/goods", "/api/deposits"):
+                # Authenticated read-only relay; upstream must be loopback.
+                from urllib.parse import urlencode
+                upstream = os.environ.get("LUNEX_STUDIO_READONLY_UPSTREAM", "http://127.0.0.1:18767")
+                parsed = urlsplit(upstream)
+                if parsed.scheme != "http" or parsed.hostname not in LOOPBACK or parsed.username or parsed.password:
+                    return self.send(503, {"error": "invalid_upstream"})
+                endpoint = "/catalog/goods" if path.endswith("/goods") else "/deposits"
+                params = {}
+                if endpoint == "/deposits":
+                    try:
+                        params = {k: str(int(query[k][0])) for k in ("x0","y0","x1","y1")}
+                        if int(params["x0"]) > int(params["x1"]) or int(params["y0"]) > int(params["y1"]):
+                            raise ValueError("invalid bounds")
+                    except (ValueError, KeyError, IndexError):
+                        return self.send(400, {"error": "invalid_bounds"})
+                url = upstream.rstrip("/") + endpoint + ("?" + urlencode(params) if params else "")
+                try:
+                    with urlopen(url, timeout=3) as response:
+                        raw = response.read(1024 * 1024 + 1)
+                        if len(raw) > 1024 * 1024:
+                            return self.send(502, {"error": "response_too_large"})
+                        return self.send(200, json.loads(raw))
+                except (URLError, HTTPError, TimeoutError, ValueError, OSError):
+                    return self.send(503, {"error": "upstream_unavailable"})
             if path.startswith("/api/game/"):
                 name = "/admin/" + path.removeprefix("/api/game/")
                 return self.game_call("GET", name, {k: v[0] for k, v in query.items() if len(v) == 1})

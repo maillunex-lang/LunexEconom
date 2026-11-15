@@ -3,7 +3,7 @@
 (() => {
   const nav = document.getElementById("studio-nav");
   const panels = [...document.querySelectorAll("#studio-main > section[data-panel]")];
-  const allowed = new Set(["overview", "players", "cities", "world", "assets", "patch", "audit"]);
+  const allowed = new Set(["overview", "players", "cities", "world", "assets", "goods", "deposits", "patch", "audit"]);
   function show(view, updateHistory = true) {
     if (!allowed.has(view)) view = "overview";
     panels.forEach(panel => { panel.hidden = panel.dataset.panel !== view; });
