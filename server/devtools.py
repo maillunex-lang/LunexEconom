@@ -106,13 +106,29 @@ def undo(db, ph, owner, payload, ip):
     recent = db.execute("SELECT COUNT(*) FROM dev_actions WHERE actor=" + ph + " AND created>=" + ph, (owner, action_time - 60_000_000_000)).fetchone()[0]
     if recent >= 30:
         return 429, {"error": "rate_limited"}
-    row = db.execute("SELECT id,action,inverse_json FROM dev_actions WHERE actor=" + ph + " AND action IN ('terrain','roads') AND undone=0 ORDER BY created DESC,id DESC LIMIT 1", (owner,)).fetchone()
+    row = db.execute("SELECT id,action,inverse_json,payload_json FROM dev_actions WHERE actor=" + ph + " AND action IN ('terrain','roads') AND undone=0 ORDER BY created DESC,id DESC LIMIT 1", (owner,)).fetchone()
     if not row:
         return 409, {"error": "nothing_to_undo"}
-    action_id, action_kind, inverse = row
+    action_id, action_kind, inverse, original_payload = row
+    original = json.loads(original_payload)
     snapshot = json.loads(inverse)
     if len(snapshot) > 25:
         return 409, {"error": "invalid_history"}
+    # Reject stale undo: another operator may have modified the same cells.
+    # A failed undo must not erase their newer work.
+    for coordinate in snapshot:
+        x, y = map(int, coordinate.split(","))
+        if action_kind == "terrain":
+            current = db.execute("SELECT kind,editor FROM terrain_edits WHERE x=" + ph + " AND y=" + ph, (x, y)).fetchone()
+            if current != (original["kind"], owner):
+                return 409, {"error": "undo_conflict", "cell": [x, y]}
+        elif action_kind == "roads":
+            current = db.execute("SELECT owner FROM roads WHERE x=" + ph + " AND y=" + ph, (x, y)).fetchone()
+            old = snapshot[coordinate]
+            if original["operation"] == "add" and (current is None or old is None and current[0] != owner):
+                return 409, {"error": "undo_conflict", "cell": [x, y]}
+            if original["operation"] == "remove" and current is not None:
+                return 409, {"error": "undo_conflict", "cell": [x, y]}
     for coordinate, state in snapshot.items():
         x, y = map(int, coordinate.split(","))
         if action_kind == "roads":
@@ -181,3 +197,70 @@ def roads_set(db, ph, owner, payload, ip):
     admin_api.audit(db, ph, owner, "dev_roads", str(coords[0]), f"cells={len(coords)} operation={operation}", ip, now)
     db.commit()
     return 200, {"request_id": request_id, "changed": len(coords)}
+def building_move(db, ph, owner, payload, ip):
+    """Move an existing building's geometry without changing its economic owner."""
+    if not require_developer(owner, db):
+        return 403, {"error": "forbidden"}
+    if not isinstance(payload, dict):
+        return 400, {"error": "invalid_body"}
+    try:
+        request_id = str(uuid.UUID(payload.get("request_id")))
+    except (TypeError, ValueError, AttributeError):
+        return 400, {"error": "invalid_request_id"}
+    oid, x, y = payload.get("object_id"), payload.get("x"), payload.get("y")
+    if not isinstance(oid, str) or not 1 <= len(oid) <= 100 or type(x) is not int or type(y) is not int or abs(x) > 1000 or abs(y) > 1000:
+        return 400, {"error": "invalid_move"}
+    previous = db.execute("SELECT actor,action,payload_json FROM dev_actions WHERE id=" + ph, (request_id,)).fetchone()
+    if previous:
+        return (200, {"request_id": request_id, "replayed": True}) if previous == (owner, "move", json.dumps(payload, ensure_ascii=False)) else (409, {"error": "request_id_conflict"})
+    now = int(time.time())
+    action_time = time.time_ns()
+    count = db.execute("SELECT COUNT(*) FROM dev_actions WHERE actor=" + ph + " AND created>=" + ph, (owner, action_time - 60_000_000_000)).fetchone()[0]
+    if count >= 30:
+        return 429, {"error": "rate_limited"}
+    row = db.execute("SELECT owner,kind,x,y FROM buildings WHERE id=" + ph, (oid,)).fetchone()
+    if not row:
+        return 404, {"error": "building_not_found"}
+    building_owner, kind, old_x, old_y = row
+    if (x, y) == (old_x, old_y):
+        return 409, {"error": "same_position"}
+    # Deposits are georeferenced. Moving an extraction operation would violate
+    # resource ownership; do not silently detach it.
+    linked = db.execute("SELECT 1 FROM building_deposits WHERE object_id=" + ph, (oid,)).fetchone()
+    if linked:
+        return 409, {"error": "deposit_bound"}
+    old_cells = [tuple(r) for r in db.execute("SELECT x,y FROM cells WHERE object_id=" + ph, (oid,)).fetchall()]
+    if not old_cells or len(old_cells) > 25:
+        return 409, {"error": "invalid_footprint"}
+    new_cells = [(xx - old_x + x, yy - old_y + y) for xx, yy in old_cells]
+    import roads
+    for xx, yy in new_cells:
+        if abs(xx) > 1000 or abs(yy) > 1000:
+            return 409, {"error": "outside_world"}
+        if roads.is_base_road(xx, yy) or roads.is_water(xx, yy):
+            return 409, {"error": "blocked_terrain"}
+        occupied = db.execute("SELECT object_id FROM cells WHERE x=" + ph + " AND y=" + ph, (xx, yy)).fetchone()
+        if occupied and occupied[0] != oid:
+            return 409, {"error": "occupied"}
+        if db.execute("SELECT 1 FROM roads WHERE x=" + ph + " AND y=" + ph, (xx, yy)).fetchone():
+            return 409, {"error": "road_overlap"}
+        terrain = db.execute("SELECT kind FROM terrain_edits WHERE x=" + ph + " AND y=" + ph, (xx, yy)).fetchone()
+        if terrain == ("water",):
+            return 409, {"error": "water"}
+    db.execute("DELETE FROM cells WHERE object_id=" + ph, (oid,))
+    for xx, yy in new_cells:
+        db.execute("INSERT INTO cells(x,y,object_id) VALUES(" + ",".join([ph]*3) + ")", (xx, yy, oid))
+    db.execute("UPDATE buildings SET x=" + ph + ",y=" + ph + " WHERE id=" + ph, (x, y, oid))
+    for kind_name, coords in (("building_removed", old_cells), ("building_created", new_cells)):
+        chunks = {}
+        for xx, yy in coords:
+            chunks.setdefault((xx // 12, yy // 12), []).append([xx, yy])
+        for (cx, cy), cells in chunks.items():
+            db.execute("INSERT INTO chunks(cx,cy,version) VALUES(" + ",".join([ph]*3) + ") ON CONFLICT(cx,cy) DO UPDATE SET version=chunks.version+1", (cx, cy, 1))
+            version = db.execute("SELECT version FROM chunks WHERE cx=" + ph + " AND cy=" + ph, (cx, cy)).fetchone()[0]
+            event = {"cells": cells, "object_id": oid, "owner": building_owner, "building_kind": kind}
+            db.execute("INSERT INTO events(cx,cy,version,kind,payload) VALUES(" + ",".join([ph]*5) + ")", (cx, cy, version, kind_name, json.dumps(event)))
+    db.execute("INSERT INTO dev_actions(id,actor,action,payload_json,inverse_json,created,undone) VALUES(" + ",".join([ph]*7) + ")", (request_id, owner, "move", json.dumps(payload, ensure_ascii=False), json.dumps({"object_id": oid, "x": old_x, "y": old_y}), action_time, 0))
+    admin_api.audit(db, ph, owner, "dev_move", oid, f"from={old_x},{old_y} to={x},{y}", ip, now)
+    db.commit()
+    return 200, {"request_id": request_id, "object_id": oid, "moved": len(new_cells)}
