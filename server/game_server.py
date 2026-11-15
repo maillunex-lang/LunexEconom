@@ -11,7 +11,7 @@ from psycopg_pool import ConnectionPool
 from waitress import serve
 from server import db
 from server.registry import Registry
-from server import platform, ledger, clock, world, catalog, enterprises
+from server import platform, ledger, clock, world, catalog, enterprises, supply, market
 from server.platform.settings import read_settings
 from server.platform.admin import authorized
 
@@ -21,7 +21,7 @@ MAX_BODY=65536
 
 def build_registry():
     registry=Registry()
-    for module in (platform,ledger,clock,world,catalog,enterprises):
+    for module in (platform,ledger,clock,world,catalog,supply,market,enterprises):
         registry.add(module)
     return registry
 
