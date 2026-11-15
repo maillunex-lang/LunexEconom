@@ -8,6 +8,7 @@ on:
       - 'server/**'
       - 'tools/http_*.py'
       - 'tools/postgres_ci_concurrency.py'
+      - 'tools/postgres_ci_200_trades.py'
       - '.github/workflows/chatgpt8-integration.yml'
 
 jobs:
@@ -63,3 +64,5 @@ jobs:
         run: python server/migrate.py up
       - name: Race buyers and sellers
         run: python tools/postgres_ci_concurrency.py
+      - name: Stress 200 independent exchange actors
+        run: python tools/postgres_ci_200_trades.py
