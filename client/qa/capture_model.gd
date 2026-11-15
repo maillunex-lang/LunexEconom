@@ -1,4 +1,5 @@
 extends SceneTree
+const BuildingModels = preload("res://world3d/building_models.gd")
 # QA-only rendering; no world/server connection.
 var count := 0
 var root3d: Node3D
@@ -21,16 +22,12 @@ func _initialize() -> void:
     sun.rotation_degrees = Vector3(-55, 30, -20)
     root3d.add_child(sun)
     var camera := Camera3D.new()
-    camera.position = Vector3(10, 12, 14)
+    camera.position = Vector3(9, 8, 11)
     camera.current = true
     root3d.add_child(camera)
     camera.look_at.call_deferred(Vector3(0, 1, 0))
-    var model := load("res://world3d/models/factory.glb") as PackedScene
-    if model == null:
-        push_error("factory.glb missing")
-        quit(2)
-        return
-    root3d.add_child(model.instantiate())
+    var model := BuildingModels.make("factory", 3, 2, "qa-factory")
+    root3d.add_child(model)
 
 func _process(_delta: float) -> bool:
     count += 1
