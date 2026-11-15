@@ -1,6 +1,7 @@
 extends Node
+const PublicBase = preload("res://config/public_base.gd")
 ## Isolated HTTP adapter; tests replace transport with a callable mock.
-var base_url := "https://rikagro.ru/lunexeconom/api"
+var base_url := PublicBase.api_url()
 var token := ""
 var mock: Callable
 var refresh: Callable
@@ -23,6 +24,9 @@ func _once(path: String, method: int, payload: Dictionary, etag: String) -> Dict
     if mock.is_valid():
         var simulated: Variant = await mock.call(path, method, payload, headers)
         return simulated if simulated is Dictionary else {"code": 0, "data": {}}
+    base_url = PublicBase.api_url()
+    if base_url.is_empty():
+        return {"code": 0, "data": {"error": "service_unavailable"}}
     var request := HTTPRequest.new()
     request.timeout = 12.0
     add_child(request)
