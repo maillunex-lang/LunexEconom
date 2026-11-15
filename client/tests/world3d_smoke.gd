@@ -54,7 +54,7 @@ func _run() -> void:
 	_check(farm != null and farm.get_node_or_null("OwnerFlag") != null, "player buildings carry the owner's flag")
 	var factory: Node3D = world.building_nodes.get("fa1")
 	_check(factory != null and factory.get_child_count() > 1, "the factory has a 3D model")
-	_check(load("res://world3d/building_models.gd").model_path("factory", 3, 2).is_empty(), "untextured prototype GLBs are not used")
+	_check(not load("res://world3d/building_models.gd").model_path("factory", 3, 2).is_empty(), "factory uses a validated GLB")
 	_check(world.cell_kind(1, 2) == 3, "the access road arrived")
 	_check(world.building_info(Vector2i(6, 7)).get("kind", "") == "house", "building card data")
 	world.apply_server_event({"kind": "building_removed", "object_id": "f1", "cells": [[2, 2], [3, 2], [2, 3], [3, 3]]})
