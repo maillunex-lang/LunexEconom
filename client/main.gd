@@ -14,6 +14,11 @@ const CONFIG_CACHE_PATH := "user://platform_config.cfg"
 
 var base_url := "https://rikagro.ru/lunexeconom/api"
 var shell: MarginContainer
+var login_card: PanelContainer
+var login_card_style: StyleBoxFlat
+var login_title: Label
+var login_subtitle: Label
+var login_stack: VBoxContainer
 var form: VBoxContainer
 var headquarters: VBoxContainer
 var login_username: LineEdit
@@ -66,6 +71,26 @@ func _on_viewport_resized() -> void:
     shell.add_theme_constant_override("margin_top",top)
     shell.add_theme_constant_override("margin_right",right)
     shell.add_theme_constant_override("margin_bottom",bottom)
+    # Expand the usable game area to the physical landscape aspect ratio.
+    # Keep the card proportional, while letting narrow devices scroll/fit naturally.
+    var usable := viewport_size - Vector2(left + right, top + bottom)
+    if login_card == null:
+        return
+    var target_width := clampf(usable.x * 0.66, 550.0, 920.0)
+    var target_height := clampf(usable.y * 0.80, 440.0, 640.0)
+    login_card.custom_minimum_size = Vector2(minf(target_width, usable.x), minf(target_height, usable.y))
+    var ui_scale := clampf(minf(usable.x / 1280.0, usable.y / 720.0), 0.85, 1.5)
+    login_card_style.content_margin_left = roundi(36 * ui_scale)
+    login_card_style.content_margin_right = roundi(36 * ui_scale)
+    login_card_style.content_margin_top = roundi(20 * ui_scale)
+    login_card_style.content_margin_bottom = roundi(20 * ui_scale)
+    login_stack.add_theme_constant_override("separation", roundi(13 * ui_scale))
+    login_title.add_theme_font_size_override("font_size", roundi(24 * ui_scale))
+    login_subtitle.add_theme_font_size_override("font_size", roundi(16 * ui_scale))
+    for field in [login_username, login_email, login_password]:
+        if field != null:
+            field.custom_minimum_size.y = 45 * ui_scale
+            field.add_theme_font_size_override("font_size", roundi(16 * ui_scale))
 
 func _build_shell() -> void:
     var background := ColorRect.new()
@@ -81,8 +106,10 @@ func _build_shell() -> void:
     center.size_flags_vertical = Control.SIZE_EXPAND_FILL
     shell.add_child(center)
     var card := PanelContainer.new()
+    login_card = card
     card.custom_minimum_size = Vector2(550, 440)
     var style := StyleBoxFlat.new()
+    login_card_style = style
     style.bg_color = PANEL
     style.border_color = Color("386c57")
     style.set_border_width_all(1)
@@ -94,15 +121,18 @@ func _build_shell() -> void:
     card.add_theme_stylebox_override("panel", style)
     center.add_child(card)
     var stack := VBoxContainer.new()
+    login_stack = stack
     stack.add_theme_constant_override("separation", 13)
     card.add_child(stack)
     var title := Label.new()
+    login_title = title
     title.text = "БАШКИРИЯ: МЁД И НЕФТЬ"
     title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
     title.add_theme_font_size_override("font_size", 24)
     title.add_theme_color_override("font_color", ACCENT)
     stack.add_child(title)
     var subtitle := Label.new()
+    login_subtitle = subtitle
     subtitle.text = "Экономический тренажёр · V2.1"
     subtitle.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
     subtitle.add_theme_color_override("font_color", MUTED)
