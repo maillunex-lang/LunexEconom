@@ -263,6 +263,14 @@ def roads_set(db, ph, owner, payload, ip):
             return 409, {"error": "water"}
         row = db.execute("SELECT owner,created FROM roads WHERE x=" + ph + " AND y=" + ph, (x, y)).fetchone()
         old[f"{x},{y}"] = list(row) if row else None
+    if operation == "remove":
+        # Refuse removing a road immediately serving a building. Full
+        # network connectivity analysis is deferred; this conservative
+        # guard prevents the most direct disconnections.
+        for x, y in coords:
+            neighbors = ((x - 1, y), (x + 1, y), (x, y - 1), (x, y + 1))
+            if any(db.execute("SELECT 1 FROM cells WHERE x=" + ph + " AND y=" + ph, (nx, ny)).fetchone() for nx, ny in neighbors):
+                return 409, {"error": "building_access_road", "cell": [x, y]}
     for x, y in coords:
         if operation == "add":
             db.execute("INSERT INTO roads(x,y,owner,created) VALUES(" + ",".join([ph]*4) + ") ON CONFLICT(x,y) DO NOTHING", (x, y, owner, now))
@@ -323,6 +331,10 @@ def building_move(db, ph, owner, payload, ip):
         terrain = db.execute("SELECT kind FROM terrain_edits WHERE x=" + ph + " AND y=" + ph, (xx, yy)).fetchone()
         if terrain == ("water",):
             return 409, {"error": "water"}
+    # Preserve the same zoning restrictions used by ordinary construction.
+    import zoning
+    if zoning.check(db, ph, kind, new_cells):
+        return 409, {"error": "invalid_destination_zone"}
     db.execute("DELETE FROM cells WHERE object_id=" + ph, (oid,))
     for xx, yy in new_cells:
         db.execute("INSERT INTO cells(x,y,object_id) VALUES(" + ",".join([ph]*3) + ")", (xx, yy, oid))
