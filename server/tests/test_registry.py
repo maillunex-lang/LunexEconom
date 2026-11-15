@@ -8,6 +8,16 @@ class TestRegistry(unittest.TestCase):
         r.route('GET','/test',lambda body,ctx:(200,{}))
         with self.assertRaises(ValueError): r.route('GET','/test',lambda body,ctx:None)
 
+    def test_named_ordered_ticks(self):
+        r = Registry()
+        r.tick('daily','second',lambda conn,idx:None,order=20)
+        r.tick('daily','first',lambda conn,idx:None,order=10)
+        self.assertEqual([entry[1] for entry in sorted(r.tick_handlers['daily'])],['first','second'])
+        with self.assertRaises(ValueError):
+            r.tick('daily','first',lambda conn,idx:None,order=30)
+        with self.assertRaises(ValueError):
+            r.tick('other','x',lambda conn,idx:None)
+
     def test_module_contract(self):
         r = build_registry()
         self.assertEqual(len(r.modules),5)
