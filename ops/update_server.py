@@ -158,9 +158,8 @@ def deploy(commit,names):
         try:
             SERVER_DIR.mkdir(parents=True,exist_ok=True)
             copy_tree(stage,SERVER_DIR,names)
-            for name in prior:
-                if name not in names and (name.endswith(('.py','.json','.sql','.html')) or name=='requirements.txt'):
-                    (SERVER_DIR/name).unlink(missing_ok=True)
+            # Preserve files removed from upstream until a separately approved cleanup.
+            # This deployment only creates or replaces V2 release files.
             if requirements_changed:
                 print('Installing verified V2 requirements for', commit)
                 install_requirements()
