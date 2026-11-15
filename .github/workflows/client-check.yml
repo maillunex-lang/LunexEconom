@@ -23,4 +23,6 @@ jobs:
       - name: Import and run client smoke
         run: |
           ./godot --headless --path client --editor --quit
-          ./godot --headless --path client -s tests/smoke.gd
+          for test in smoke release_smoke pack_smoke network_smoke; do
+            ./godot --headless --path client -s "tests/${test}.gd"
+          done
