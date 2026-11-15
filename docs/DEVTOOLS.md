@@ -32,7 +32,7 @@ Actions are written to `dev_actions` with inverse snapshots and to `adm_audit`. 
 
 - `POST /dev/create`: developer-only creation of city-owned **park, school, hospital**. Body: `{"request_id":"<uuid>","kind":"park","x":11,"y":12}`. Validates zones, cells, roads and water. No ledger postings. Player-owned businesses are intentionally forbidden.
 - `POST /dev/move`: body `{"request_id":"<uuid>","object_id":"<id>","x":11,"y":12}`. Moves existing geometry, retaining owner and operating records; deposit-bound buildings cannot be moved.
-- `POST /dev/demolish`: body `{"request_id":"<uuid>","object_id":"<id>"}`. Removes a building without sale proceeds; saves an inverse snapshot of direct building-related rows.
+- `POST /dev/demolish`: body `{"request_id":"<uuid>","object_id":"<id>"}`. Removes **inactive** building geometry without sale proceeds; refuses buildings registered for production or linked to deposits; saves an inverse snapshot.
 - `POST /dev/undo`: reverses the latest eligible developer operation, including city creation, move and demolition, when destination cells are still available.
 
 All routes verify the developer role against the **authentication database**, serialize world mutations using the economy world lock, apply a 30-action/minute limit, require UUID idempotency and write an audit record.
