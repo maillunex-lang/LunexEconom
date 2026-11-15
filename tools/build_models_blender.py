@@ -229,21 +229,33 @@ def create(name, kind, w, d):
     elif kind in ("truck", "tractor", "construction_foundation", "construction_frame", "road_corner"):
         W,D=w*2,d*2
         if kind in ("truck", "tractor"):
-            # Mobile-friendly static props. Axles run along X; front is -Y.
-            body="yellow" if kind=="tractor" else "teal"
-            b.box(0,0,.34,W*.68,D*.72,.43,body)
-            b.box(0,-D*.20,.77,W*.56,D*.30,.65,"blue")
-            b.box(0,-D*.37,.98,W*.40,.045,.26,"window")
+            # Distinct silhouette: tall glazed cab, front bonnet, visible large tyres.
+            # Box-only geometry keeps the original vertex-color mobile pipeline.
+            cab_color="teal" if kind=="truck" else "yellow"
+            bonnet_color="teal" if kind=="truck" else "yellow"
+            b.box(0,0,.52,W*.63,D*.65,.32,"dark")
+            b.box(0,-D*.20,.85,W*.53,D*.29,1.04,cab_color)
+            b.box(0,-D*.355,1.04,W*.40,.045,.58,"window")
+            for x in (-W*.267,W*.267):
+                b.box(x,-D*.20,1.07,.05,D*.20,.53,"window2")
+            b.box(0,-D*.20,1.89,W*.58,D*.32,.12,"roof")
+            b.box(0,D*.16,.77,W*.57,D*.32,.49,bonnet_color)
+            b.box(0,D*.33,.89,W*.48,.06,.27,"dark")
             if kind=="truck":
-                b.box(0,D*.18,.78,W*.63,D*.35,.63,"light")
-                b.box(0,D*.18,1.41,W*.65,D*.37,.08,"roof")
+                b.box(0,D*.30,.72,W*.68,D*.28,1.15,"light")
+                b.box(0,D*.30,1.87,W*.70,D*.30,.09,"roof")
+                b.box(0,D*.46,.95,W*.50,.055,.16,"brick2")
             else:
-                b.box(0,D*.21,.77,W*.49,D*.33,.26,"yellow")
-                b.box(0,-D*.17,1.44,.09,.09,.37,"dark")
-            for x in (-W*.34,W*.34):
-                for y in (-D*.27,D*.27):
-                    b.box(x,y,0,.22,.32,.65,"dark")
-                    b.box(x+(-.018 if x<0 else .018),y,.25,.045,.16,.20,"roof")
+                b.box(0,D*.20,1.27,W*.49,D*.29,.08,"roof")
+                b.box(0,-D*.13,2.01,.10,.10,.33,"dark")
+                b.box(0,D*.34,1.06,.12,.08,.09,"window2")
+            for x in (-W*.32,W*.32):
+                for y in (-D*.26,D*.27):
+                    wheel_h=.96 if y<0 else .72
+                    b.box(x,y,0,.37,.62,wheel_h,"dark")
+                    b.box(x+(-.19 if x<0 else .19),y,wheel_h*.32,.045,.32,wheel_h*.35,"roof")
+            for x in (-W*.23,W*.23):
+                b.box(x,D*.35,.86,.12,.055,.13,"yellow")
         elif kind=="construction_foundation":
             b.box(0,0,0,W-.14,D-.14,.10,"sand")
             b.box(0,0,.10,W*.83,D*.80,.28,"light")
