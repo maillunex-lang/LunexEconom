@@ -98,20 +98,19 @@ def health_sha(sha, timeout=30):
 def atomic_sha(sha):
     if not re.fullmatch(r'[0-9a-f]{40}', sha):
         raise RuntimeError('Invalid deployment SHA')
-    lines = ENV_FILE.read_bytes().splitlines(keepends=True)
-    indices = [i for i, line in enumerate(lines) if line.startswith(b'LUNEX_SHA=')]
-    if len(indices) != 1:
+    original = ENV_FILE.read_bytes()
+    matches = list(re.finditer(rb'(?m)^LUNEX_SHA=([^\r\n]*)(?=\r?$|\n)', original))
+    if len(matches) != 1:
         raise RuntimeError('Expected exactly one LUNEX_SHA in V2 environment')
-    old = lines[indices[0]].split(b'=', 1)[1].strip().decode('ascii', errors='ignore')
-    newline = b'\r\n' if lines[indices[0]].endswith(b'\r\n') else b'\n' if lines[indices[0]].endswith(b'\n') else b''
-    lines[indices[0]] = b'LUNEX_SHA=' + sha.encode('ascii') + newline
+    old = matches[0].group(1).decode('ascii', errors='ignore')
+    updated = original[:matches[0].start()] + b'LUNEX_SHA=' + sha.encode('ascii') + original[matches[0].end():]
     metadata = ENV_FILE.stat()
     fd, tmp = tempfile.mkstemp(prefix='.v2-sha-', dir=ENV_FILE.parent)
     try:
         with os.fdopen(fd, 'wb') as out:
             os.fchmod(out.fileno(), stat.S_IMODE(metadata.st_mode))
             os.fchown(out.fileno(), metadata.st_uid, metadata.st_gid)
-            out.write(b''.join(lines))
+            out.write(updated)
             out.flush()
             os.fsync(out.fileno())
         os.replace(tmp, ENV_FILE)
