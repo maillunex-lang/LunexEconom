@@ -171,17 +171,32 @@ def deploy(commit,names):
             if not health_sha(commit):
                 raise RuntimeError('V2 health or commit SHA mismatch after restart')
         except Exception:
-            if changed_sha: atomic_sha(previous_sha)
+            rollback_errors = []
             for name in names:
-                if name not in prior: (SERVER_DIR/name).unlink(missing_ok=True)
+                if name not in prior:
+                    try: (SERVER_DIR/name).unlink(missing_ok=True)
+                    except OSError: rollback_errors.append('remove new file')
             for name in prior:
-                dest=SERVER_DIR/name
-                dest.parent.mkdir(parents=True,exist_ok=True)
-                shutil.copy2(backup_dir/name,dest)
+                try:
+                    dest=SERVER_DIR/name
+                    dest.parent.mkdir(parents=True,exist_ok=True)
+                    shutil.copy2(backup_dir/name,dest)
+                except OSError:
+                    rollback_errors.append('restore server file')
+            if changed_sha:
+                try: atomic_sha(previous_sha)
+                except (OSError, RuntimeError, ValueError):
+                    rollback_errors.append('restore environment SHA')
             if restarted:
-                restart()
-                if not health_sha(previous_sha):
-                    raise RuntimeError('V2 rollback health or SHA mismatch')
+                try:
+                    restart()
+                    if not previous_sha or not health_sha(previous_sha):
+                        rollback_errors.append('rollback health or SHA mismatch')
+                except Exception:
+                    rollback_errors.append('restart rolled-back service')
+            if rollback_errors:
+                print('V2 rollback incomplete for', commit, ':', ', '.join(sorted(set(rollback_errors))), file=sys.stderr)
+                raise RuntimeError('V2 rollback incomplete; inspect V2 service and state')
             print('V2 rollback restored files and SHA for', commit, file=sys.stderr)
             raise
         backups=sorted((STATE/'backups').iterdir())
