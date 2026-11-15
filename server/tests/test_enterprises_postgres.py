@@ -67,16 +67,16 @@ class EnterpriseDatabaseTests(unittest.TestCase):
               ('enterprise:build:'+request_id,)).fetchone()[0],1)
             # V2-04d: only the first 30% is charged at order time.
             self.assertEqual(conn.execute('SELECT balance FROM ledger_accounts WHERE id=%s',
-                                          (player,)).fetchone()[0],955000)
+                                          (player,)).fetchone()[0],988300)
             self.assertEqual(conn.execute('SELECT stage,amount FROM enterprise_stage_payments '
-                                          'WHERE enterprise_id=%s',(eid,)).fetchone(),(0,45000))
+                                          'WHERE enterprise_id=%s',(eid,)).fetchone(),(0,11700))
             start=conn.execute('SELECT started_day FROM enterprises WHERE id=%s',(eid,)).fetchone()[0]
             for day in range(start,start+11):
                 enterprises.advance_day(conn,day)
             self.assertEqual(enterprises.stock(conn,eid)['grain']['quantity'],1000)
             self.assertEqual(conn.execute('SELECT COALESCE(sum(amount),0) '
                                           'FROM enterprise_stage_payments WHERE enterprise_id=%s',
-                                          (eid,)).fetchone()[0],150000)
+                                          (eid,)).fetchone()[0],39000)
             self.assertEqual(conn.execute('SELECT stage FROM enterprises WHERE id=%s',(eid,)).fetchone()[0],4)
             # Reuse the isolated enterprise row to verify the M1 mill recipe.
             conn.execute("UPDATE enterprises SET building_id='mill',recipe_id='mill_flour' WHERE id=%s",(eid,))

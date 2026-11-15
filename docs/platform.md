@@ -54,7 +54,7 @@ python -m server.platform.accounts_admin revoke player_001
 
 Счета: `player:<имя>`, `company:<id>`, `city:<id>`, `system:treasury`, `system:market`, `system:bank`, `system:upkeep`, `system:escrow`. Системные счета созданы миграцией, могут уходить в минус; пользовательские, городские и корпоративные счета не могут. Целые игровые рубли `bigint`, никакого float. `server.ledger.api.post(conn, request_id, entries)` принимает от 2 до 128 строк `(account_id, integer_delta)`, требует `sum(delta)=0`, фиксирует уникальный `request_id`; повтор с теми же строками возвращает исходный ID без второго списания. Блокировка счетов идёт в стабильном порядке `id` под `FOR UPDATE`. `transfer()` остаётся доступной обёрткой.
 
-При регистрации счёт игрока получает **1 000 000 игровых ₽** из `system:treasury` ровно одной транзакцией `initial-capital:<account_id>`; сумма балансов всей системы остаётся нулевой. `reconcile(conn)` возвращает флаги и количество расхождений по балансу счёта, строкам и общей сумме.
+При регистрации счёт игрока получает **300 000 игровых ₽** из `system:treasury` ровно одной транзакцией `initial-capital:<account_id>`; сумма балансов всей системы остаётся нулевой. `reconcile(conn)` возвращает флаги и количество расхождений по балансу счёта, строкам и общей сумме.
 
 `GET /ledger/balance` требует access-токен, возвращает `{account_id,balance,currency:"RUB",unit:"game_ruble"}`. `GET /ledger/history?page=1&limit=25` требует токен; `limit` 1–100, упорядочено по убыванию ID проводки.
 

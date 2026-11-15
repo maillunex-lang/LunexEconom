@@ -109,7 +109,7 @@ class AutoRoadTests(unittest.TestCase):
                                            ('enterprise:road:' + request,)).fetchone()[0], 1)
 
     def test_insufficient_funds_changes_nothing(self):
-        actor, player = _new_player(self.conn, 46000)  # covers 45000 stage but not the road
+        actor, player = _new_player(self.conn, 12000)  # covers the 11700 first stage but not the road
         px, py, x, y = self.site
         _give_parcel(self.conn, px, py, actor)
         roads, balance = self._road_count(), self._balance(player)

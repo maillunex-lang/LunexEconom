@@ -16,10 +16,10 @@ DSN = os.getenv('LUNEX_TEST_DATABASE_URL')
 class StagePaymentMathTests(unittest.TestCase):
     def test_catalog_exact_cost_and_remainder(self):
         expected = {
-            'field': (150000, (45000,60000,30000,15000)),
-            'mill': (250000, (75000,100000,50000,25000)),
-            'bakery': (300000, (90000,120000,60000,30000)),
-            'grocery_store': (200000, (60000,80000,40000,20000)),
+            'field': (39000, (11700,15600,7800,3900)),
+            'mill': (65000, (19500,26000,13000,6500)),
+            'bakery': (78000, (23400,31200,15600,7800)),
+            'grocery_store': (52000, (15600,20800,10400,5200)),
         }
         for building, (total, stages) in expected.items():
             with self.subTest(building=building):
@@ -99,10 +99,10 @@ class StagePaymentPostgresTests(unittest.TestCase):
         return self.conn.execute('SELECT stage FROM enterprises WHERE id=%s',(eid,)).fetchone()[0]
 
     def test_stage_one_rejected_without_funds_then_paid_once(self):
-        owner=self.owner(45000)
+        owner=self.owner(11700)
         eid=self.fixture(owner,days=8)
         self.pay_first(owner,eid)
-        second=core.stage_costs(150000)[1]
+        second=core.stage_costs(39000)[1]
         self.assertFalse(core._pay_build_stage(self.conn,eid,owner['id'],1,second,2))
         self.assertEqual(self.stage(eid),0)
         self.assertEqual(self.conn.execute(
@@ -119,14 +119,14 @@ class StagePaymentPostgresTests(unittest.TestCase):
         self.assertTrue(reconcile(self.conn)['ok'])
 
     def test_short_build_paid_in_four_exact_stages(self):
-        owner=self.owner(150000)
+        owner=self.owner(39000)
         eid=self.fixture(owner,days=1)
         initial=self.pay_first(owner,eid)
-        self.assertEqual(initial,45000)
+        self.assertEqual(initial,11700)
         core.advance_day(self.conn,1)
         self.assertEqual(self.stage(eid),4)
         self.assertEqual(sum(r[0] for r in self.conn.execute(
-            'SELECT amount FROM enterprise_stage_payments WHERE enterprise_id=%s',(eid,))),150000)
+            'SELECT amount FROM enterprise_stage_payments WHERE enterprise_id=%s',(eid,))),39000)
         self.assertEqual(self.balance(owner),1)
         counts=self.conn.execute('SELECT count(*) FROM ledger_transfers '
                                  'WHERE request_id LIKE %s',
@@ -137,14 +137,14 @@ class StagePaymentPostgresTests(unittest.TestCase):
         self.assertTrue(reconcile(self.conn)['ok'])
 
     def test_underfunded_wait_and_delayed_resume(self):
-        owner=self.owner(45000)
+        owner=self.owner(11700)
         eid=self.fixture(owner,days=8)
         self.pay_first(owner,eid)
         core.advance_day(self.conn,1)
         core.advance_day(self.conn,2)
         self.assertEqual(self.stage(eid),0)
         self.assertEqual(self.conn.execute('SELECT stage,amount,waiting_days FROM '
-            'enterprise_build_waits WHERE enterprise_id=%s',(eid,)).fetchone(),(1,60000,1))
+            'enterprise_build_waits WHERE enterprise_id=%s',(eid,)).fetchone(),(1,15600,1))
         core.advance_day(self.conn,2)
         self.assertEqual(self.conn.execute('SELECT waiting_days FROM '
             'enterprise_build_waits WHERE enterprise_id=%s',(eid,)).fetchone()[0],1)
@@ -152,7 +152,7 @@ class StagePaymentPostgresTests(unittest.TestCase):
         self.assertEqual(self.conn.execute('SELECT waiting_days FROM '
             'enterprise_build_waits WHERE enterprise_id=%s',(eid,)).fetchone()[0],2)
         self.assertEqual(self.balance(owner),1)
-        transfer(self.conn,'stage:refill:'+uuid4().hex,self.treasury,owner['wallet'],105000)
+        transfer(self.conn,'stage:refill:'+uuid4().hex,self.treasury,owner["wallet"],27300)
         core.advance_day(self.conn,4)
         self.assertEqual(self.stage(eid),1)
         self.assertEqual(self.conn.execute('SELECT count(*) FROM enterprise_build_waits '
@@ -166,7 +166,7 @@ class StagePaymentPostgresTests(unittest.TestCase):
         self.assertTrue(reconcile(self.conn)['ok'])
 
     def test_unfinished_sale_returns_only_paid_half(self):
-        owner=self.owner(45000)
+        owner=self.owner(11700)
         eid=self.fixture(owner,days=8)
         self.pay_first(owner,eid)
         with patch('server.enterprises.api.authenticate',return_value=owner), \
@@ -174,11 +174,11 @@ class StagePaymentPostgresTests(unittest.TestCase):
             status,result=api.sell({'request_id':uuid4().hex},
                  {'conn':self.conn,'path_params':{'id':str(eid)}})
         self.assertEqual(status,200,result)
-        self.assertEqual(result['price'],22500)
-        self.assertEqual(self.balance(owner),22501)
+        self.assertEqual(result['price'],5850)
+        self.assertEqual(self.balance(owner),5851)
 
     def test_api_paid_stages_wait_and_cleanup_by_sale(self):
-        owner=self.owner(45000)
+        owner=self.owner(11700)
         eid=self.fixture(owner,days=8)
         self.pay_first(owner,eid)
         core.advance_day(self.conn,1)
@@ -188,9 +188,9 @@ class StagePaymentPostgresTests(unittest.TestCase):
             list_status,listing=api.list_own({}, {'conn':self.conn})
             self.assertEqual(status,200,detail)
             self.assertEqual(list_status,200,listing)
-            self.assertEqual(detail['paid_amount'],45000)
+            self.assertEqual(detail['paid_amount'],11700)
             self.assertEqual(detail['next_payment']['stage_index'],1)
-            self.assertEqual(detail['next_payment']['amount'],60000)
+            self.assertEqual(detail['next_payment']['amount'],15600)
             self.assertTrue(detail['waiting_for_payment'])
             self.assertEqual(detail['waiting_days'],1)
             self.assertIn(eid,listing['enterprises'])
@@ -204,7 +204,7 @@ class StagePaymentPostgresTests(unittest.TestCase):
             retry_status,retry=api.sell({'request_id':receipt},
                             {'conn':self.conn,'path_params':{'id':str(eid)}})
         self.assertEqual(status,200,sale)
-        self.assertEqual(sale['price'],22500)
+        self.assertEqual(sale['price'],5850)
         self.assertEqual(retry_status,200,retry)
         self.assertTrue(retry['idempotent'])
         self.assertEqual(self.conn.execute('SELECT count(*) FROM enterprise_build_waits '
@@ -216,7 +216,7 @@ class StagePaymentPostgresTests(unittest.TestCase):
         self.assertTrue(reconcile(self.conn)['ok'])
 
     def test_demolition_partial_refund_and_replayed_request(self):
-        owner=self.owner(45000)
+        owner=self.owner(11700)
         eid=self.fixture(owner,days=8)
         self.pay_first(owner,eid)
         request='stage:demolish:'+uuid4().hex
@@ -227,15 +227,15 @@ class StagePaymentPostgresTests(unittest.TestCase):
             again,replayed=api.demolish({'request_id':request},
                               {'conn':self.conn,'path_params':{'id':str(eid)}})
         self.assertEqual(status,200,first)
-        self.assertEqual(first['refund'],9000)
+        self.assertEqual(first['refund'],2340)
         self.assertEqual(again,200,replayed)
         self.assertTrue(replayed['idempotent'])
-        self.assertEqual(self.balance(owner),9001)
+        self.assertEqual(self.balance(owner),2341)
         self.assertTrue(reconcile(self.conn)['ok'])
 
     def test_underfunded_build_does_not_block_other_owners(self):
-        broke=self.owner(45000)
-        rich=self.owner(150000)
+        broke=self.owner(11700)
+        rich=self.owner(39000)
         a=self.fixture(broke,days=1)
         b=self.fixture(rich,days=1)
         self.pay_first(broke,a)
@@ -254,11 +254,11 @@ class StagePaymentPostgresTests(unittest.TestCase):
         # manually seed the same compatible paid-state without fake journals.
         self.conn.execute("""INSERT INTO enterprise_stage_payments
           (enterprise_id,stage,amount,legacy_prepaid)
-          SELECT %s,s.stage,CASE WHEN s.stage=0 THEN 45000
-             WHEN s.stage=1 THEN 60000 WHEN s.stage=2 THEN 30000
-             ELSE 15000 END,true FROM generate_series(0,3) AS s(stage)""",(eid,))
-        details=core.payment_status(self.conn,eid,4,150000)
-        self.assertEqual(details['paid_amount'],150000)
+          SELECT %s,s.stage,CASE WHEN s.stage=0 THEN 11700
+             WHEN s.stage=1 THEN 15600 WHEN s.stage=2 THEN 7800
+             ELSE 3900 END,true FROM generate_series(0,3) AS s(stage)""",(eid,))
+        details=core.payment_status(self.conn,eid,4,39000)
+        self.assertEqual(details['paid_amount'],39000)
         self.assertIsNone(details['next_payment'])
         core.advance_day(self.conn,1)
         self.assertEqual(self.stage(eid),4)
