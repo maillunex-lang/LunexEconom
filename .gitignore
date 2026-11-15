@@ -1,0 +1,12 @@
+__pycache__/
+*.pyc
+.venv/
+.pytest_cache/
+.env
+*.log
+client/.godot/
+client/.import/
+client/.godot/**
+*.apk
+build/
+.DS_Store
