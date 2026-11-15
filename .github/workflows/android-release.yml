@@ -61,7 +61,9 @@ jobs:
           fi
           python3 -c "import sys;sys.path.insert(0,'tools');from release_version import parse;print(parse(sys.argv[1]))" "$VERSION_TAG"
           echo "VERSION_TAG=$VERSION_TAG" >> "$GITHUB_ENV"
-          python3 tools/release_version.py "$VERSION_TAG"
+          # All existing semver tags (except this candidate itself) must have lower versionCode.
+          git tag --list 'v[0-9]*' > "$RUNNER_TEMP/previous-release-tags.txt"
+          python3 tools/release_version.py "$VERSION_TAG" --previous-tags "$RUNNER_TEMP/previous-release-tags.txt"
       - name: Download Godot 4.7.2 and templates
         run: |
           set -euo pipefail

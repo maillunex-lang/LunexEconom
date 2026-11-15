@@ -1,0 +1,146 @@
+name: Sign approved Android alpha update manifest
+on:
+  workflow_dispatch:
+    inputs:
+      release_tag:
+        description: 'Existing approved GitHub Release tag, v0.1.N'
+        required: true
+        type: string
+      min_version_code:
+        description: 'Minimum installed versionCode (0 means previous alpha code, optional update)'
+        required: true
+        default: '0'
+        type: string
+      notes:
+        description: 'Approved Russian release notes (up to 300 chars); empty uses approved notes file'
+        required: false
+        type: string
+permissions:
+  contents: write
+concurrency:
+  group: alpha-manifest-${{ inputs.release_tag }}
+  cancel-in-progress: false
+jobs:
+  sign-manifest:
+    runs-on: ubuntu-latest
+    environment: manifest-signing
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          persist-credentials: false
+      - name: Validate tag and approved published release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ inputs.release_tag }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ "$RELEASE_TAG" =~ ^v0\.1\.(0|[1-9][0-9]*)$ ]] || { echo 'Invalid alpha release tag'; exit 1; }
+          python3 -c 'import sys;sys.path.insert(0,"tools");from release_version import parse;parse(sys.argv[1])' "$RELEASE_TAG"
+          gh release view "$RELEASE_TAG" --json isDraft,tagName,assets --jq '.' > "$RUNNER_TEMP/release.json"
+          python3 - <<'PY'
+          import json,os
+          r=json.load(open(os.environ['RUNNER_TEMP']+'/release.json'))
+          if r['isDraft'] or r['tagName'] != os.environ['RELEASE_TAG'] or not any(a['name']=='lunex.apk' for a in r['assets']):
+              raise SystemExit('Missing approved published GitHub Release APK')
+          PY
+          mkdir -p dist
+          gh release download "$RELEASE_TAG" --pattern 'lunex.apk' --dir dist
+          gh release download "$RELEASE_TAG" --pattern 'SHA256SUMS' --dir dist
+          test -s dist/lunex.apk && test -s dist/SHA256SUMS
+          python3 - <<'PYHASH'
+          import hashlib
+          from pathlib import Path
+          sums = (Path('dist') / 'SHA256SUMS').read_text().splitlines()
+          entries = [line.split() for line in sums if line.strip()]
+          matches = [parts[0] for parts in entries if len(parts) == 2 and parts[1].removeprefix('*') in ('build/lunex.apk','lunex.apk')]
+          if len(matches) != 1 or len(matches[0]) != 64 or any(c not in '0123456789abcdefABCDEF' for c in matches[0]):
+              raise SystemExit('Release SHA256SUMS missing one valid lunex.apk digest')
+          digest = hashlib.sha256(Path('dist/lunex.apk').read_bytes()).hexdigest()
+          if digest.lower() != matches[0].lower():
+              raise SystemExit('Release APK hash does not match SHA256SUMS')
+          print('Release APK SHA-256 matches approved SHA256SUMS')
+          PYHASH
+          python3 tools/check_apk_size.py dist/lunex.apk
+      - uses: android-actions/setup-android@v3
+        with:
+          packages: 'platform-tools platforms;android-35 build-tools;35.0.0'
+      - name: Verify APK signature, version, package and size
+        env:
+          RELEASE_TAG: ${{ inputs.release_tag }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          APKSIGNER="$ANDROID_HOME/build-tools/35.0.0/apksigner"
+          AAPT="$ANDROID_HOME/build-tools/35.0.0/aapt"
+          "$APKSIGNER" verify --verbose --print-certs dist/lunex.apk > "$RUNNER_TEMP/apk-certificate.txt"
+          python3 tools/verify_apk_cert.py "$RUNNER_TEMP/apk-certificate.txt" ops/release_cert_sha256.txt
+          "$AAPT" dump badging dist/lunex.apk > "$RUNNER_TEMP/apk-badging.txt"
+          python3 - <<'PYAPK'
+          import os,re,sys
+          sys.path.insert(0,'tools')
+          from release_version import parse
+          code, name = parse(os.environ['RELEASE_TAG'])
+          data=open(os.environ['RUNNER_TEMP']+'/apk-badging.txt').read()
+          expected = re.search(r"package: name='([^']+)' versionCode='([^']+)' versionName='([^']+)'",data)
+          if not expected or expected.groups() != ('org.lunex.bashkiria.v2',str(code),name):
+              raise SystemExit('APK package/version does not match approved release tag')
+          if 'arm64-v8a' not in data:
+              raise SystemExit('arm64-v8a ABI missing')
+          print('APK ID, versionCode, versionName and signing certificate verified')
+          PYAPK
+      - name: Prepare alpha manifest without signing key
+        env:
+          RELEASE_TAG: ${{ inputs.release_tag }}
+          MIN_CODE: ${{ inputs.min_version_code }}
+          RELEASE_NOTES: ${{ inputs.notes }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ "$MIN_CODE" = '0' ]; then
+            MIN_ARGS=()
+          else
+            [[ "$MIN_CODE" =~ ^[1-9][0-9]*$ ]] || { echo 'Invalid min_version_code'; exit 1; }
+            MIN_ARGS=(--min-code "$MIN_CODE")
+          fi
+          if [ -n "$RELEASE_NOTES" ]; then
+            NOTE_ARGS=(--notes "$RELEASE_NOTES")
+          else
+            NOTE_ARGS=(--notes-file docs/content/release_notes.ru.md)
+          fi
+          python3 tools/prepare_alpha_release.py --tag "$RELEASE_TAG" --apk dist/lunex.apk "${MIN_ARGS[@]}" "${NOTE_ARGS[@]}" --output dist/update.json
+          test -s client/config/update_public.pem
+      - name: Sign manifest and verify owner pinned public key
+        env:
+          MANIFEST_SIGNING_KEY: ${{ secrets.MANIFEST_SIGNING_KEY }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          umask 077
+          test -n "$MANIFEST_SIGNING_KEY" || { echo 'MANIFEST_SIGNING_KEY missing'; exit 1; }
+          KEY_FILE="$RUNNER_TEMP/manifest-private.pem"
+          trap 'rm -f "$KEY_FILE"' EXIT
+          printf '%s' "$MANIFEST_SIGNING_KEY" > "$KEY_FILE"
+          chmod 600 "$KEY_FILE"
+          unset MANIFEST_SIGNING_KEY
+          python3 tools/sign_update_manifest.py dist/update.json --private-key "$KEY_FILE" --public-key client/config/update_public.pem
+          test -s dist/update.json.sig
+          python3 - <<'PY'
+          import sys
+          sys.path.insert(0,'tools')
+          from manifest_security import verify_file
+          if not verify_file('dist/update.json','dist/update.json.sig','client/config/update_public.pem'):
+              raise SystemExit('Manifest signature mismatch')
+          print('Signed manifest verified against pinned client public key')
+          PY
+      - name: Attach verified manifest and signature to existing GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ inputs.release_tag }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          gh release upload "$RELEASE_TAG" dist/update.json dist/update.json.sig
+          echo 'Signed manifest uploaded to approved GitHub Release; no VPS publication'

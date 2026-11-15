@@ -4,7 +4,7 @@
 
 ## 1. Публичный адрес и маршруты
 
-Android: единственная настройка `client/config/public_base.gd`, по умолчанию `https://rikagro.ru/lunexeconom`. Для доверенной сборки можно переопределить `ProjectSettings`-параметр `lunex/public_base_url`. Веб: единственная настройка `web/config.js`. Все пути сайта относительные (`./styles.css`, `./download/lunex.apk`), не начинаются с `/`. Проверка: `python3 tools/check_website.py`. Не устанавливать cookies на общий домен `rikagro.ru`. Токен авторизации Android хранится в зашифрованном локальном хранилище Android Keystore (AES-GCM) после регистрации/входа.
+Android: единственная настройка `client/config/public_base.gd`, по умолчанию `https://rikagro.ru/lunexeconom/v2`. Для доверенной сборки можно переопределить `ProjectSettings`-параметр `lunex/public_base_url`. Веб: единственная настройка `web/config.js`. Все пути сайта относительные (`./styles.css`, `./download/lunex.apk`), не начинаются с `/`. Проверка: `python3 tools/check_website.py`. Не устанавливать cookies на общий домен `rikagro.ru`. Токен авторизации Android хранится в зашифрованном локальном хранилище Android Keystore (AES-GCM) после регистрации/входа.
 
 | URL относительно base | Доставка |
 | --- | --- |
@@ -55,14 +55,14 @@ keytool -exportcert -rfc -keystore lunexeconom-release.p12 -alias lunexeconom-re
 
 ## 3. Отдельный ключ манифестов
 
-**Владелец отдельно** на доверенном офлайн-устройстве создаёт приватный RSA-4096 ключ, который **не совпадает** с ключом Android APK:
+**Для V2-A1 владелец использует отдельный RSA-4096 ключ, не совпадающий с Android APK ключом. Актуальный согласованный режим подписи описан ниже в разделе «Подпись манифеста в GitHub Actions».** Если ключ ещё не выпущен, создание и хранение осуществляет владелец через доверенное устройство/защищённый процесс:
 
 ```sh
 openssl genpkey -algorithm RSA -pkeyopt rsa_keygen_bits:4096 -out lunex-manifest-private.pem
 openssl pkey -in lunex-manifest-private.pem -pubout -out lunex-manifest-public.pem
 ```
 
-Приватный ключ только у владельца + две независимые резервные копии. Публичную часть положить в `client/config/update_public.pem` и зафиксировать в проекте для следующей подписанной сборки. Без неё клиент **не принимает ни update.json, ни content.json** (fail closed).
+Приватный ключ в GitHub Environment `manifest-signing` после отдельного согласования владельца и в защищённых резервных копиях, не на VPS и не в коде. Публичную часть положить в `client/config/update_public.pem` и зафиксировать в проекте для следующей подписанной сборки. Без неё клиент **не принимает ни update.json, ни content.json** (fail closed).
 
 Отдельные `update.json.sig` и `content.json.sig` это base64 RSA PKCS#1 v1.5/SHA-256 над **точными байтами** канонического JSON (`sort_keys`, compact UTF-8, завершающий newline). Скрипт:
 
@@ -77,7 +77,7 @@ python3 tools/sign_update_manifest.py build/packs/content.json \
   --public-key /offline/lunex-manifest-public.pem
 ```
 
-**Никогда не передавать приватный ключ** в CI/VPS. Подпись только владельцем локально. Каждый manifest и `.sig` публикуются атомарно парой после проверки обоих. При ошибке подписи, SHA, размера или скачивания игра удаляет повреждённый файл или сохраняет неполную `.part` для докачки; неподписанное обновление не предлагает.
+**В V2-A1 допускается только защищённый Environment Secret `MANIFEST_SIGNING_KEY` для CI с ручным одобрением; на VPS приватный ключ не передавать.** Подпись только владельцем локально. Каждый manifest и `.sig` публикуются атомарно парой после проверки обоих. При ошибке подписи, SHA, размера или скачивания игра удаляет повреждённый файл или сохраняет неполную `.part` для докачки; неподписанное обновление не предлагает.
 
 ## 4. Создание релиза и CI
 
@@ -150,3 +150,26 @@ python3 tools/make_manifest_keypair.py --output-dir "$HOME/lunex-manifest-offlin
 Проверен SHA `fea7c3c` ветки `v2/release`: Server checks [43724153755](https://github.com/maillunex-lang/LunexEconom/actions/runs/43724153755), Client checks [43724151309](https://github.com/maillunex-lang/LunexEconom/actions/runs/43724151309), Website checks [43724156099](https://github.com/maillunex-lang/LunexEconom/actions/runs/43724156099), Android debug [43724158378](https://github.com/maillunex-lang/LunexEconom/actions/runs/43724158378), Android owner-signed release candidate [43724160997](https://github.com/maillunex-lang/LunexEconom/actions/runs/43724160997): все SUCCESS. Измерения APK/AAB выше взяты из скачанного артефакта owner-signing test.
 
 Релизный кандидат помечен `OWNER-SIGNING-TEST-NOT-FOR-RELEASE`, **не опубликован**. Физическая установка и UI/обновления на Android не проверены; офлайн RSA-ключ подписи манифестов владелец ещё должен создать на доверенном устройстве и добавить только публичную часть. Деплой и публикация в production не входят в V2-01c.
+
+
+## Альфа-релиз: пошагово (V2-A1, без публикации из рабочей ветки)
+
+1. Создать тег `v0.1.N` на принятом коммите `main`. `versionName = 0.1.N`; `versionCode = 1000 + N`, проверять строгое возрастание относительно уже опубликованных версий. Не публиковать теги до согласования владельцем.
+2. **Android release candidate** запускать вручную на `main` с `pipeline_test=false`, `owner_signing_test=false` и утверждённым тегом. Окружение `android-signing` требует согласования владельца; кандидат подписывается закреплённым APK-ключом, проверяется отпечаток, arm64 и предел 99 MiB. Этот этап не публикует APK.
+3. **Publish approved Android release** запускает только владелец в окружении `production` по ID прошедшего кандидата того же SHA. Проверяет сертификат и SHA-256, публикует `lunex.apk`, AAB и SHA256SUMS в GitHub Release. Ни один workflow не обращается к VPS по SSH.
+4. После появления одобренного GitHub Release запускается **Sign approved Android alpha update manifest** (`.github/workflows/android-manifest.yml`) с `release_tag=v0.1.N`, при необходимости `min_version_code` и готовым текстом `notes`. Создаётся `update.json` с `apk_url=https://rikagro.ru/lunexeconom/v2/download/lunex-0.1.N.apk`, `size`, `sha256`, `released`, номером и заметками; ставится подпись отдельным ключом; оба файла загружаются к **тому же** Release.
+5. После отдельного одобрения части C на VPS доставляются только проверенные APK + манифест и подпись: `/var/www/rikagro-game/lunexeconom-v2/download/lunex-0.1.N.apk`, копия `download/lunex.apk`, `update.json`, `update.json.sig`. Публиковать подписанную пару атомарно, проверять HTTPS Range/206 и SHA-256. **Текущая задача V2-A1 не запускает публикацию на VPS.**
+
+Для альфы `min_version_code` по умолчанию равен коду предыдущей версии (например, для `v0.1.1`: `1000`). Это делает обновление необязательным для владельцев предыдущей версии; принудительный барьер задавать только осознанно числом выше кода установленного клиента. Для первого релиза без предшественника использовать `1`.
+
+Релизные заметки: `docs/content/release_notes.ru.md` пока содержит **шаблон и примеры**, а не утверждённый текст конкретного релиза. Workflow намеренно отказывает при попытке использовать шаблон без готовых заметок: владелец вводит русский текст `notes` или директор заменяет/подготавливает отдельный утверждённый файл.
+
+## Подпись манифеста в GitHub Actions
+
+Поскольку у владельца нет локального компьютера, отдельный RSA-ключ подписи манифестов хранится в защищённом GitHub Actions Environment `manifest-signing` вместо локального ПК. Это **не** Android APK keystore. Окружение должен создать владелец в GitHub Settings → Environments, включить required reviewers / ручное одобрение и ограничить запускаемые ветки `main`. В Environment Secrets добавить `MANIFEST_SIGNING_KEY`: полный PEM приватного ключа, соответствующего **уже закреплённому** `client/config/update_public.pem`. Секрет не добавлять в репозиторий, issue, логи, VPS или chat.
+
+Для запуска использовать Actions → **Sign approved Android alpha update manifest** → Run workflow (branch `main`), `release_tag=v0.1.N`, при необходимости `min_version_code`, `notes` (до 300 символов). После ручного одобрения workflow скачивает существующий релизный APK, проверяет SHA256SUMS, pinned Android-сертификат и лимит 99 MiB, формирует канонический JSON, подписывает его `tools/sign_update_manifest.py` и **обязательно** проверяет подпись по `client/config/update_public.pem`. Приватный PEM создаётся только во временном файле runner с правами `0600`, удаляется ловушкой `trap` по завершении шага; `set -x` запрещён. При несовпадении ключа, отсутствии релиза, APK или подписи workflow прекращается без публикации. Только затем `update.json` и `update.json.sig` прикрепляются к тому же релизу как assets. Никакого автоматического VPS-деплоя нет.
+
+**Важно о безопасности:** защищённый secret GitHub и одобрение environment являются компромиссом, а не офлайн-хранилищем; возможность запуска кода с доступом к секрету необходимо ограничить владельцем, а workflow после принятия защищать правилами изменения ветки. Подпись APK и манифеста раздельная. Смена приватного ключа манифестов без новой версии клиента приведёт к отклонению обновлений.
+
+Проверка на реальном телефоне: первый APK `0.1.0` на чистом Android в горизонтальном режиме и с safe area; регистрация, вход, карта, покупка земли/поле; затем обновление `0.1.0 → 0.1.1` без потери прогресса, системное подтверждение установки, Play Защита, корректный отказ при неверной подписи/чужом хосте/неверном SHA и возобновление загрузки по Range.
