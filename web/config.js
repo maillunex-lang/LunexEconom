@@ -1,4 +1,3 @@
-/* Public site configuration. Can be overridden before this script is loaded. */
-window.LUNEX_PUBLIC_BASE = window.LUNEX_PUBLIC_BASE || "https://rikagro.ru/lunexeconom";
-/* Only relative paths in the site itself; never set cookies on rikagro.ru. */
-window.LUNEX_DOWNLOAD = "./download/lunex.apk";
+/* Public configuration. Only absolute HTTPS URLs within this base are accepted. */
+window.LUNEX_PUBLIC_BASE = "https://rikagro.ru/lunexeconom";
+window.LUNEX_FALLBACK_RELEASE = "https://github.com/maillunex-lang/LunexEconom/releases/latest";
