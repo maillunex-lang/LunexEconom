@@ -2,9 +2,9 @@ name: Client checks
 on:
   push:
     branches: [main]
-    paths: ['client/**', '.github/workflows/client-check.yml']
+    paths: ['client/**', 'tools/build_strings.py', 'tools/tests/test_strings.py', '.github/workflows/client-check.yml']
   pull_request:
-    paths: ['client/**', '.github/workflows/client-check.yml']
+    paths: ['client/**', 'tools/build_strings.py', 'tools/tests/test_strings.py', '.github/workflows/client-check.yml']
   workflow_dispatch:
 permissions:
   contents: read
@@ -23,8 +23,23 @@ jobs:
       - name: Import and run client smoke
         run: |
           ./godot --headless --path client --editor --quit
-          for test in smoke release_smoke; do
+          python3 tools/build_strings.py --check
+          python3 -m unittest tools.tests.test_strings -v
+          for test in smoke release_smoke strings_smoke router_smoke keyboard_smoke; do
             ./godot --headless --path client -s "tests/${test}.gd"
           done
           # pack_smoke and network_smoke require generated fixtures and arguments.
           # tools/tests/test_packs.py and test_network.py invoke them correctly.
+      - name: Layout smoke and screenshots at four landscape resolutions
+        run: |
+          mkdir -p build/ui-screenshots
+          for i in 0 1 2 3; do
+            LUNEX_TEST_SIZE_INDEX="$i" LUNEX_SCREENSHOT_DIR="$GITHUB_WORKSPACE/build/ui-screenshots" \
+              xvfb-run -a ./godot --path client --rendering-driver opengl3 -s tests/scale_smoke.gd
+          done
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: client-ui-screenshots
+          path: build/ui-screenshots/*.png
+          if-no-files-found: ignore
