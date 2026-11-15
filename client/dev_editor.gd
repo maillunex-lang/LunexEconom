@@ -17,7 +17,7 @@ func _ready() -> void:
     heading.text = "Редактор мира"
     column.add_child(heading)
     var modes := OptionButton.new()
-    for kind in ["tree", "grass", "water", "clear"]:
+    for kind in ["tree", "grass", "water", "clear", "road_add", "road_remove"]:
         modes.add_item(kind)
     modes.item_selected.connect(func(index: int) -> void: mode = modes.get_item_text(index))
     column.add_child(modes)
@@ -55,7 +55,11 @@ func _uuid() -> String:
     return "%s-%s-%s-%s-%s" % [hex.substr(0,8), hex.substr(8,4), hex.substr(12,4), hex.substr(16,4), hex.substr(20,12)]
 
 func _apply() -> void:
-    _send("dev/terrain", {"request_id": _uuid(), "kind": mode, "cells": BRUSH.cells(selected, brush_size)})
+    var cells := BRUSH.cells(selected, brush_size)
+    if mode.begins_with("road_"):
+        _send("dev/roads", {"request_id": _uuid(), "operation": mode.trim_prefix("road_"), "cells": cells})
+    else:
+        _send("dev/terrain", {"request_id": _uuid(), "kind": mode, "cells": cells})
 
 func _send(endpoint: String, payload: Dictionary) -> void:
     if not GameSession.is_authenticated(): return
