@@ -1,11 +1,11 @@
 """Platform accounts, sessions, roles, health and runtime flags."""
 from pathlib import Path
-from . import api, admin
+from . import api, admin, admin_economy, admin_world, admin_server
 
 
 def migrations():
     base=Path(__file__).resolve().parents[1] / 'migrations'
-    return [base / '202611150900_platform_accounts.sql',base / '202611151000_platform_v201.sql',base / '202611160010_admin_a1.sql']
+    return [base / '202611150900_platform_accounts.sql',base / '202611151000_platform_v201.sql',base / '202611160010_admin_a1.sql',base / '202611160200_admin_a2.sql',base / '202611160201_admin_a2_production.sql']
 
 
 def register(registry):
@@ -37,3 +37,23 @@ def register(registry):
     registry.route('POST','/admin/sessions/revoke',admin.revoke_sessions)
     registry.route('POST','/admin/roles',admin.roles)
     registry.route('POST','/admin/accounts/block',admin.block)
+
+    # A2 diagnostics, sharing the A1 authentication and role rules.
+    registry.route('GET','/admin/economy',admin_economy.economy)
+    registry.route('GET','/admin/economy/history',admin_economy.history)
+    registry.route('GET','/admin/cities',admin_world.cities)
+    # Registry's {id} matcher is numeric; city identifiers are stable text slugs.
+    from server.world.core import CITIES
+    for city_id in CITIES:
+        def city_growth(body, ctx, city_id=city_id):
+            return admin_world.growth(body, dict(ctx, path_params={'id':city_id}))
+        registry.route('POST',f'/admin/cities/{city_id}/growth',city_growth)
+    registry.route('GET','/admin/world/events',admin_world.events)
+    registry.route('GET','/admin/parcels',admin_world.parcels)
+    registry.route('GET','/admin/server',admin_server.server)
+    registry.route('GET','/admin/ticks',admin_server.ticks)
+    registry.route('GET','/admin/errors',admin_server.errors)
+    registry.route('GET','/admin/alerts',admin_server.alerts)
+    registry.tick('daily','admin_production',admin_economy.capture_production,order=41)
+    registry.tick('daily','admin_daily_stats',admin_economy.snapshot,order=1000)
+    registry.tick('daily','admin_error_sync',admin_server.record_tick_errors,order=1001)
