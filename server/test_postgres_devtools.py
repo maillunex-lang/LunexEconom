@@ -1,0 +1,24 @@
+"""Developer-world schema smoke on the isolated CI PostgreSQL database only."""
+import os
+import unittest
+
+@unittest.skipUnless(os.environ.get("LUNEX_DB_ENGINE") == "postgres" and os.environ.get("LUNEX_PG_DB") == "lunex_ci", "requires isolated lunex_ci PostgreSQL")
+class DeveloperPostgresTests(unittest.TestCase):
+    def test_schema_and_terrain_events(self):
+        import postgres_db
+        import devtools
+        with postgres_db.connect() as db:
+            postgres_db.init()
+            devtools.ensure(db, "%s", postgres=True)
+            db.execute("SAVEPOINT devtools_ci")
+            try:
+                # Event writes must use the same transaction and chunk version stream.
+                cx, cy = 833, 833
+                devtools.publish_terrain_events(db, "%s", [(cx * 12, cy * 12)])
+                version = db.execute("SELECT version FROM chunks WHERE cx=%s AND cy=%s", (cx, cy)).fetchone()
+                self.assertIsNotNone(version)
+                event = db.execute("SELECT kind FROM events WHERE cx=%s AND cy=%s ORDER BY seq DESC LIMIT 1", (cx, cy)).fetchone()
+                self.assertEqual(event[0], "terrain_changed")
+            finally:
+                db.execute("ROLLBACK TO SAVEPOINT devtools_ci")
+                db.execute("RELEASE SAVEPOINT devtools_ci")
