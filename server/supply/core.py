@@ -132,21 +132,21 @@ def _shipment(conn,request_id,buyer,seller,typ,product,qty,quality,price,transpo
     if arrival==day:
         enterprise.adjust(conn,buyer,product,qty,quality)
 
-def _buy(conn,day,row,product,qty,source_type,source_id,unit_price,quality,flags,sequence):
-    """Savepoint boundary includes money, outgoing inventory and incoming goods."""
+def _buy(conn,day,row,product,qty,source_type,source_id,unit_price,min_quality,flags,sequence):
+    """One atomic goods + ledger movement. Insufficient funds do not abort the day."""
     eid,owner,_,city,_,_,capacity=row
     qty=min(qty,_free(conn,eid,capacity))
     if qty<=0:return 0
     buyer=_wallet(conn,owner)
     if buyer is None:return 0
-    seller=None
     seller_city=None
+    quality=50
     if source_type=='enterprise':
         src=conn.execute('SELECT owner_id,city_id FROM enterprises WHERE id=%s AND sold_at IS NULL FOR UPDATE',(source_id,)).fetchone()
         if not src:return 0
         seller_owner,seller_city=src
         stock=enterprise.stock(conn,source_id).get(product,{'quantity':0,'quality':0})
-        if stock['quality']<quality:return 0
+        if stock['quality']<min_quality:return 0
         qty=min(qty,stock['quantity'])
         quality=stock['quality']
         if qty<=0:return 0
@@ -154,21 +154,18 @@ def _buy(conn,day,row,product,qty,source_type,source_id,unit_price,quality,flags
         if payee is None:return 0
         seller=payee[0]
         if seller==buyer[0]:
-            # Same owner: transfer goods without a fabricated cash sale.
             unit_price=0
     else:
+        if min_quality>quality:return 0
         seller=account(conn,'system:market')
         if source_type=='port':
             seller_city=flags['supply_port_city_draft']
     days,transport=_travel(seller_city,city,qty,flags['supply_transport_rub_per_km_unit_draft'])
-    if source_type=='port':
-        days=max(1,days)
+    if source_type=='port':days=max(1,days)
     total=_int(qty*unit_price+transport)
     if total>buyer[1]:return 0
     request_id=f'supply:{eid}:{product}:{day}:{source_type}-{source_id or "system"}:{sequence}'
     if len(request_id)>128:raise ValueError('request_id too long')
-    # Money and goods commit together. Every buy has a deterministic key.
-    # Transport charges are directed to system:market, rather than to producer.
     with conn.transaction():
         if source_type=='enterprise':
             enterprise.adjust(conn,source_id,product,-qty)
