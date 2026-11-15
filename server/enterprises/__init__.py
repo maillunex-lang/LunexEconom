@@ -14,6 +14,7 @@ def register(registry):
     registry.flag('enterprise_admin_stock_draft', False)
     registry.route('POST','/enterprises',api.create)
     registry.route('GET','/enterprises',api.list_own)
+    registry.route('GET','/enterprises/plan',api.plan)
     registry.route('GET','/enterprises/{id}',api.one)
     registry.route('POST','/enterprises/{id}/settings',api.settings)
     registry.route('POST','/enterprises/{id}/sell',api.sell)
