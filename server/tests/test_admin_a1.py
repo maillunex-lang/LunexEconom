@@ -124,7 +124,11 @@ class AdminDatabaseTests(unittest.TestCase):
         self.assertEqual(request(self.app, 'POST', '/admin/logout', token=token)['status'], 200)
         new_token = self.admin_login(username, 'NewAdminPassword!456', ip='10.79.0.5')
         with db.connect(DSN) as conn:
-            row = conn.execute('SELECT token_hash FROM admin_sessions WHERE account_id=%s ORDER BY created_at DESC LIMIT 1', (account_id,)).fetchone()
+            row = conn.execute('SELECT token_hash, expires_at-created_at, absolute_expires_at-created_at FROM admin_sessions WHERE account_id=%s ORDER BY created_at DESC LIMIT 1', (account_id,)).fetchone()
+            self.assertGreaterEqual(row[1].total_seconds(), 59 * 60)
+            self.assertLessEqual(row[1].total_seconds(), 61 * 60)
+            self.assertGreaterEqual(row[2].total_seconds(), 479 * 60)
+            self.assertLessEqual(row[2].total_seconds(), 481 * 60)
             conn.execute("UPDATE admin_sessions SET expires_at=now()+interval '1 minute' WHERE token_hash=%s", (row[0],))
             conn.commit()
         self.assertEqual(request(self.app, 'GET', '/admin/overview', token=new_token)['status'], 200)
@@ -168,6 +172,8 @@ class AdminDatabaseTests(unittest.TestCase):
         self.assertEqual(request(self.app, 'GET', '/auth/me', token=player_login['body']['access_token'])['status'], 401)
         bad = request(self.app, 'POST', f'/admin/players/{player_id}/compensate', {'amount': 10, 'request_id': 'missing-reason', 'ticket': 'SUP-1'}, token=owner_token)
         self.assertEqual(bad['status'], 400)
+        negative = request(self.app, 'POST', f'/admin/players/{player_id}/compensate', {'amount': -2000000, 'request_id': 'negative-' + uuid4().hex, 'reason': 'проверка минуса', 'ticket': 'SUP-2'}, token=owner_token)
+        self.assertEqual(negative['status'], 400)
         request_id = 'comp-' + uuid4().hex
         payload = {'amount': 250, 'request_id': request_id, 'reason': 'компенсация', 'ticket': 'SUP-42'}
         first = request(self.app, 'POST', f'/admin/players/{player_id}/compensate', payload, token=owner_token)
