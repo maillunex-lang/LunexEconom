@@ -188,6 +188,19 @@ func _show_settings() -> void:
         reduce_motion = not reduce_motion
         _show_settings()
     )
+    # BEGIN ChatGPT13 update-center button
+    _button("ПРОВЕРИТЬ ОБНОВЛЕНИЕ", func() -> void:
+        var center := get_node_or_null("UpdateCenter")
+        if center == null:
+            center = load("res://update_center.gd").new()
+            center.name = "UpdateCenter"
+            add_child(center)
+            center.status_changed.connect(func(message: String) -> void:
+                if mode == "settings" and status_label != null:
+                    status_label.text = message)
+        center.check_all()
+    )
+    # END ChatGPT13 update-center button
     _label("Горизонтальный экран · безопасные поля", 13)
     if GameSession.is_authenticated():
         _button("ВЫЙТИ ИЗ АККАУНТА", func(): _send("/auth/logout", {}))

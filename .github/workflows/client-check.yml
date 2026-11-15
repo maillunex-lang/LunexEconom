@@ -2,7 +2,7 @@ name: Client checks (Godot headless)
 
 on:
   push:
-    branches: [main]
+    branches: [main, ChatGPT13]
     paths: ["client/**", ".github/workflows/client-check.yml"]
   pull_request:
     paths: ["client/**", ".github/workflows/client-check.yml"]
@@ -37,7 +37,7 @@ jobs:
                       world_027_integration:WORLD_027_INTEGRATION_PASS citygen_smoke:CITYGEN_SMOKE_PASS regional_map_smoke:REGIONAL_MAP_SMOKE_PASS \
                       season_perf_smoke:SEASON_AND_PERF_SMOKE_PASS scroll_panels_smoke:SCROLL_PANELS_PASS contracts_panel_smoke:CONTRACTS_PANEL_PASS \
                       retail_smoke:RETAIL_SMOKE_PASS livepatch_security_smoke:LIVEPATCH_SECURITY_SMOKE_PASS patch_visuals_smoke:PATCH_VISUALS_SMOKE_PASS \
-                      stats_panels_smoke:STATS_PANELS_SMOKE_PASS tutorial_smoke:TUTORIAL_SMOKE_PASS updater_smoke:UPDATER_SMOKE_PASS; do
+                      stats_panels_smoke:STATS_PANELS_SMOKE_PASS tutorial_smoke:TUTORIAL_SMOKE_PASS updater_smoke:UPDATER_SMOKE_PASS live_config_smoke:LIVE_CONFIG_SMOKE_PASS update_center_smoke:UPDATE_CENTER_SMOKE_PASS; do
             test_name="${pair%%:*}"; marker="${pair##*:}"
             timeout 120 "$GODOT" --headless --path client --script "res://tests/${test_name}.gd" > "/tmp/${test_name}.log" 2>&1
             if grep -q "$marker" "/tmp/${test_name}.log" && ! grep -qE 'SCRIPT ERROR|Parse Error' "/tmp/${test_name}.log"; then

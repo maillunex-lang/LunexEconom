@@ -21,6 +21,7 @@ MAX_ANNOUNCEMENT = 200
 FAIL_LIMIT, FAIL_WINDOW = 10, 300
 _fails = []
 _fail_lock = threading.Lock()
+SERVER_STARTED = time.monotonic()
 SYSTEM_ACCOUNTS = ("system:treasury", "system:market", "system:bank", "system:residents", "system:upkeep", "system:construction", "player:city")
 
 SCHEMA = (
@@ -117,9 +118,11 @@ def _clean_text(value, limit):
 # ---------- public ----------
 def announcement(db, ph):
     row = db.execute("SELECT text,updated FROM adm_announcement WHERE id=1").fetchone()
+    import runtime_config
+    maintenance = bool(runtime_config.values(db).get("MAINTENANCE_MODE", runtime_config._initial("MAINTENANCE_MODE")))
     if row is None or not row[0]:
-        return 200, {"text": "", "updated": 0}
-    return 200, {"text": row[0], "updated": int(row[1])}
+        return 200, {"text": "", "updated": 0, "maintenance": maintenance}
+    return 200, {"text": row[0], "updated": int(row[1]), "maintenance": maintenance}
 
 
 # ---------- read-only ----------
@@ -268,6 +271,55 @@ def handle(db, ph, method, path, args, payload, ctx, now, auth):
     """One administrative request. `auth` is the accounts module (users, bans). Returns (status, result)."""
     actor, ip = ctx.get("actor", "admin"), ctx.get("ip", "-")
     if method == "GET":
+        # BEGIN ChatGPT13 administration (loopback + token enforced by Handler)
+        if path in ("/admin/config", "/admin/revisions", "/admin/online",
+                    "/admin/status", "/admin/online/players", "/admin/config/candidate"):
+            import runtime_config, presence
+            if path == "/admin/config/candidate":
+                import live_config_api
+                return 200, {"ok": True, **live_config_api.prepare_candidate(db)}
+            if path == "/admin/config":
+                return 200, {"ok": True, **runtime_config.describe(db, now),
+                             "client": runtime_config.client_settings(db)}
+            if path == "/admin/revisions":
+                return 200, {"ok": True, "revisions": runtime_config.revisions(db)}
+            if path == "/admin/online":
+                return 200, {"ok": True, **presence.summary(db, ph, now),
+                             "history": presence.history(db, ph, now)}
+            if path == "/admin/online/players":
+                return 200, {"ok": True, "players": presence.players(db, ph, now)}
+            import os
+            import json
+            from pathlib import Path
+            state = runtime_config.snapshot(db)
+            # Do not expose paths, credentials or raw process environment.
+            import importlib.util
+            import re
+            sha_path = os.environ.get("LUNEX_DEPLOYED_SHA_FILE",
+                "/var/lib/lunexeconom-server-update/deployed-sha")
+            try:
+                sha = Path(sha_path).read_text(encoding="ascii").strip()
+                sha = sha[:12] if re.fullmatch(r"[0-9a-fA-F]{40}", sha) else None
+            except (OSError, UnicodeError, ValueError):
+                sha = None
+            releases = db.execute("SELECT revision FROM signed_live_config WHERE id=1").fetchone()
+            clock_info = db.execute("SELECT epoch,month_seconds,base_index FROM world_clock WHERE id=1").fetchone()
+            next_ms = None
+            if clock_info is not None:
+                next_ms = (int(clock_info[1]) - ((now - int(clock_info[0])) % int(clock_info[1]))) * 1000
+            return 200, {"ok": True, "version": "0.2.0", "commit": sha,
+                         "uptime_seconds": max(0, int(time.monotonic() - SERVER_STARTED)),
+                         "database": {"status": "ok"},
+                         "revision": state["revision"], "month": runtime_config.current_month(db, now),
+                         "month_next_step_ms": next_ms,
+                         "online": presence.summary(db, ph, now),
+                         "accounts": auth.admin_counts(),
+                         "errors_24h": None, "backup_age_seconds": None,
+                         "client_config_revision": int(releases[0]) if releases else None,
+                         "config": {k: v for k, v in runtime_config.values(db).items()
+                                    if k not in runtime_config.CLIENT_FLAGS},
+                         "client": runtime_config.client_settings(db)}
+        # END ChatGPT13 administration
         if path == "/admin/overview":
             return overview(db, ph, now, auth.admin_counts())
         if path == "/admin/players":
@@ -291,6 +343,30 @@ def handle(db, ph, method, path, args, payload, ctx, now, auth):
             import citygen
             return 200, {"ok": True, "cities": citygen.status(db, ph)}
         return 404, {"error": "not_found"}
+    # BEGIN ChatGPT13 protected runtime mutations
+    if path in ("/admin/config/set", "/admin/config/rollback", "/admin/config/client", "/admin/config/sign"):
+        import runtime_config
+        try:
+            if path == "/admin/config/sign":
+                import live_config_api
+                result = live_config_api.publish(db, ph, actor, ip, now, payload)
+            elif path == "/admin/config/set":
+                result = runtime_config.change(db, ph, payload.get("changes"), actor, ip, now,
+                                               payload.get("comment", ""),
+                                               payload.get("confirm") is True,
+                                               payload.get("expected_revision"))
+            elif path == "/admin/config/rollback":
+                result = runtime_config.rollback(db, ph, payload.get("revision"), actor, ip, now,
+                                                 payload.get("confirm") is True,
+                                                 payload.get("expected_revision"))
+            else:
+                result = runtime_config.client_update(db, ph, payload.get("changes"), actor, ip, now,
+                                                      payload.get("confirm") is True, payload.get("expected_revision"))
+            return 200, {"ok": True, **result}
+        except ValueError as exc:
+            error = str(exc)
+            return (409 if error == "revision_conflict" else 400), {"error": error}
+    # END ChatGPT13 protected runtime mutations
     if path == "/admin/ban":
         status, result = auth.ban_user(payload.get("username"), payload.get("reason"), payload.get("days"), actor)
         if status == 200:

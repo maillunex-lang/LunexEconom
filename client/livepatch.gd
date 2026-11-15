@@ -1,5 +1,5 @@
 extends Node
-## Opt-in, data-only patch downloader (PNG/WebP images only). Not autoloaded and never started automatically.
+## Opt-in signed data patch downloader (PNG/WebP/GLB). Never downloads executable scripts.
 ## Trust model: the manifest is accepted only with a valid RSA-SHA256 signature made OFFLINE with the administrator's private key and
 ## verified here against the public key shipped in the APK (res://livepatch_public.pem). Without that key nothing is ever activated.
 ## Every image is size-limited, hash-checked and its header dimensions are read BEFORE any decoder sees it (decompression-bomb guard).
@@ -14,6 +14,7 @@ const DIRECTORY := "user://livepatch/"
 const MAX_MANIFEST := 512 * 1024
 const MAX_SIGNATURE := 4096
 const MAX_IMAGE := 8 * 1024 * 1024
+const MAX_GLB := 20 * 1024 * 1024
 const MAX_ASSETS := 300
 const MAX_DIMENSION := 2048
 const MAX_PIXELS := 4 * 1024 * 1024
@@ -110,13 +111,8 @@ func load_verified_manifest(name: String = "manifest") -> Variant:
     return data if _valid_manifest(data) else null
 
 func current_revision() -> int:
-    var path := DIRECTORY + "manifest.json"
-    if not FileAccess.file_exists(path):
-        return 0
-    var data: Variant = JSON.parse_string(FileAccess.get_file_as_string(path))
-    if not _valid_manifest(data):
-        return 0
-    return int(data["revision"])
+    var data: Variant = load_verified_manifest()
+    return int(data["revision"]) if data is Dictionary else 0
 
 # ---------- validation ----------
 ## JSON numbers arrive as float in Godot (3 is 3.0): accept whole numbers of either type.
@@ -133,7 +129,7 @@ func _valid_asset(item: Variant) -> bool:
         if not (character in "abcdefghijklmnopqrstuvwxyz0123456789_-"):
             return false
     var extension := str(item.get("extension", ""))
-    if extension != "png" and extension != "webp":
+    if extension != "png" and extension != "webp" and extension != "glb":
         return false
     var digest := str(item.get("sha256", ""))
     if digest.length() != 64:
@@ -142,7 +138,7 @@ func _valid_asset(item: Variant) -> bool:
         if not (character in HEX):          # lower-case hexadecimal only: no signs, no "0x", nothing path-like
             return false
     var size: Variant = item.get("size", 0)
-    if not _is_whole(size) or size <= 0 or size > MAX_IMAGE:
+    if not _is_whole(size) or size <= 0 or size > (MAX_GLB if extension == "glb" else MAX_IMAGE):
         return false
     return str(item.get("url", "")) == "blobs/" + digest + "." + extension
 
@@ -257,7 +253,7 @@ func check_and_download() -> void:
         var path := DIRECTORY + filename
         if FileAccess.file_exists(path) and FileAccess.get_sha256(path) == str(asset["sha256"]):
             continue
-        var payload := await _fetch(ORIGIN + str(asset["url"]), MAX_IMAGE)
+        var payload := await _fetch(ORIGIN + str(asset["url"]), MAX_GLB if str(asset["extension"]) == "glb" else MAX_IMAGE)
         if not payload.ok:
             _fail("Ошибка загрузки ресурса")
             return
@@ -271,7 +267,11 @@ func check_and_download() -> void:
         if hash_context.finish().hex_encode() != str(asset["sha256"]):
             _fail("Контрольная сумма ресурса не совпала")
             return
-        if not bytes_dimensions_ok(str(asset["extension"]), bytes):
+        if str(asset["extension"]) == "glb":
+            if bytes.size() < 20 or bytes.slice(0, 4).get_string_from_ascii() != "glTF" or _le(bytes, 4, 4) != 2 or _le(bytes, 8, 4) != bytes.size():
+                _fail("Недопустимый формат 3D-модели")
+                return
+        elif not bytes_dimensions_ok(str(asset["extension"]), bytes):
             _fail("Недопустимый размер изображения")
             return
         if not _write_atomic(path, bytes):

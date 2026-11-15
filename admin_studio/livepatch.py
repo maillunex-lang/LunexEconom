@@ -16,6 +16,7 @@ from pathlib import Path
 CATEGORIES = {"agriculture", "industry", "housing", "municipal", "commerce", "nature", "roads", "ui"}
 MIMES = {"png": b"\x89PNG\r\n\x1a\n", "webp": b"RIFF"}
 MAX_FILE = 8 * 1024 * 1024
+MAX_GLB = 20 * 1024 * 1024
 MAX_DIMENSION = 2048                       # also enforced by the Android client before decoding
 MAX_PIXELS = 4 * 1024 * 1024
 MAX_SIGNATURE = 2048
@@ -118,13 +119,17 @@ class Store:
             raise ValueError("invalid asset id")
         if category not in CATEGORIES or not 1 <= len(title) <= 100 or len(prompt) > 4000:
             raise ValueError("invalid metadata")
-        if extension not in MIMES or not 12 <= len(payload) <= MAX_FILE:
-            raise ValueError("invalid image")
+        if extension not in (*MIMES, "glb") or not 12 <= len(payload) <= (MAX_GLB if extension == "glb" else MAX_FILE):
+            raise ValueError("invalid asset")
+        if extension == "glb":
+            # GLB 2.0 only: 12-byte header and strict total length.
+            if payload[:4] != b"glTF" or struct.unpack("<II", payload[4:12]) != (2, len(payload)):
+                raise ValueError("invalid_glb")
         if extension == "png" and not payload.startswith(MIMES["png"]):
             raise ValueError("invalid PNG")
         if extension == "webp" and not (payload.startswith(b"RIFF") and payload[8:12] == b"WEBP"):
             raise ValueError("invalid WebP")
-        image_dimensions(extension, payload)
+        if extension != "glb": image_dimensions(extension, payload)
         digest = hashlib.sha256(payload).hexdigest()
         filename = digest + "." + extension
         with LOCK:

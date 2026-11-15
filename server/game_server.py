@@ -62,6 +62,13 @@ def _prepare(db):
     for statement in economy.SCHEMA + clock.SCHEMA + social.SCHEMA:
         db.execute(statement)
     admin_api.ensure(db, "?")
+    # BEGIN ChatGPT13 schema
+    import runtime_config, presence
+    runtime_config.ensure(db, "?")
+    presence.ensure(db, "?")
+    import live_config_api
+    live_config_api.ensure(db, "?")
+    # END ChatGPT13 schema
     citygen.ensure(db, "?")
     import regions
     regions.ensure(db, "?")
@@ -549,7 +556,36 @@ class Handler(BaseHTTPRequestHandler):
         bearer=self.headers.get("Authorization","")
         if not bearer.startswith("Bearer "):return None
         status,profile=auth.profile(bearer[7:])
-        return profile["username"] if status==200 and profile["username"].lower() not in economy.RESERVED_OWNERS else None
+        owner = profile["username"] if status==200 and profile["username"].lower() not in economy.RESERVED_OWNERS else None
+        if owner:
+            self._presence(owner)
+        return owner
+    # BEGIN ChatGPT13 player presence
+    def _presence(self, owner):
+        # The authentication path has already validated this session. This
+        # separate connection avoids mixing auth DB and world DB for SQLite.
+        import presence
+        version = self.headers.get("X-Client-Version", "")[:32]
+        import re
+        if not re.fullmatch(r"[A-Za-z0-9._-]{0,32}", version):
+            version = ""
+        city = self.headers.get("X-City-ID", "")[:64]
+        if not re.fullmatch(r"[a-z0-9_-]{0,64}", city):
+            city = ""
+        try:
+            with LOCK, NPC_CONNECT() as db:
+                if NPC_PH == "?": db.execute("BEGIN IMMEDIATE")
+                # Use an atomic conditional UPSERT; >95% of reads cost one
+                # small indexed lookup and no row rewrite.
+                changed = presence.touch(db, NPC_PH, owner, version, city)
+                if changed:
+                    presence.sample(db, NPC_PH)
+                if NPC_PH == "?": db.commit()
+        except Exception:
+            # Presence must never block economy requests or disclose DB errors.
+            return
+
+    # END ChatGPT13 player presence
     def _client(self):
         return self.headers.get("X-Real-IP",self.client_address[0])[:64] if self.client_address[0] in ("127.0.0.1","::1") else self.client_address[0]
     def _economy_post(self):
@@ -636,6 +672,12 @@ class Handler(BaseHTTPRequestHandler):
                 return self._send(*devtools.terrain_chunk(db,NPC_PH,self._identity(),cx,cy))
         if url.path.startswith("/admin/"):
             return self._admin("GET")
+        # BEGIN ChatGPT13 public live configuration
+        if url.path == "/config":
+            import live_config_api
+            with NPC_CONNECT() as db:
+                return self._send(*live_config_api.public(db, NPC_PH))
+        # END ChatGPT13 public live configuration
         if url.path == "/announcement":
             return self._send(*announcement_state())
         if url.path == "/geo/zones":

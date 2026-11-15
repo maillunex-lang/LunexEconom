@@ -47,15 +47,30 @@ func _ready() -> void:
     updater.name = "Updater"
     add_child(updater)
     updater.state_changed.connect(_on_update_state)
+    # BEGIN ChatGPT13 three-channel update integration
+    var update_center: Node = load("res://update_center.gd").new()
+    update_center.name = "UpdateCenter"
+    add_child(update_center)
+    update_center.status_changed.connect(func(message: String) -> void:
+        $UIOverlay/HUD/Top/UpdateStatus.text = message)
+    update_center.patch.patch_ready.connect(func(_revision: int) -> void:
+        # Rebuild only visual nodes from the verified asset cache; authoritative
+        # server buildings, ownership, and economic state remain intact.
+        load("res://world3d/building_models.gd").clear_live_model_cache()
+        world.building_signatures.clear()
+        world._buildings_dirty = true
+        world.refresh_all()
+    )
     $UIOverlay/HUD/Top/Update.pressed.connect(func() -> void:
-        if not updater.downloaded_apk.is_empty():
+        if updater.downloaded_apk != "":
             updater.install_apk()
         elif not updater.manifest.is_empty() and int(updater.manifest["apk"]["version_code"]) > updater.local_version:
             updater.download_apk()
         else:
-            updater.check()
+            update_center.check_all()
     )
     updater.check()
+    # END ChatGPT13 three-channel update integration
 var developer_editor: Control
 var developer_editor_insets := Vector4(20, 20, 20, 20)
 

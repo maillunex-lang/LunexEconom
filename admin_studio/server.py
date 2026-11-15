@@ -25,7 +25,7 @@ STATIC = ROOT / "static"
 MAX_BODY = 12 * 1024 * 1024
 FAIL_LIMIT, FAIL_WINDOW = 10, 300          # failed sign-ins per client address and window
 REQUEST_TIMEOUT = 15                       # seconds a client may stall while sending a request (slow-loris guard)
-STATIC_TYPES = {"index.html": "text/html", "app.js": "text/javascript", "world.js": "text/javascript", "game.js": "text/javascript", "navigation.js": "text/javascript", "catalog-readonly.js": "text/javascript", "game-art.js": "text/javascript", "art-catalog.js": "text/javascript", "models.js": "text/javascript", "style.css": "text/css"}
+STATIC_TYPES = {"index.html": "text/html", "app.js": "text/javascript", "world.js": "text/javascript", "game.js": "text/javascript", "admin-panel.js": "text/javascript", "navigation.js": "text/javascript", "catalog-readonly.js": "text/javascript", "game-art.js": "text/javascript", "art-catalog.js": "text/javascript", "models.js": "text/javascript", "style.css": "text/css"}
 LOOPBACK = ("127.0.0.1", "::1")
 
 def handler_factory(store, token, game=None):
@@ -101,14 +101,14 @@ def handler_factory(store, token, game=None):
                 return
             if path.startswith("/patch/blobs/"):
                 filename = path.removeprefix("/patch/blobs/")
-                if not re.fullmatch(r"[0-9a-f]{64}\.(png|webp)", filename):
+                if not re.fullmatch(r"[0-9a-f]{64}\.(png|webp|glb)", filename):
                     return self.send(404, {"error": "not_found"})
                 target = store.root / "blobs" / filename
                 if not target.is_file():
                     return self.send(404, {"error": "not_found"})
                 data = target.read_bytes()
                 self.send_response(200)
-                self.send_header("Content-Type", "image/png" if filename.endswith(".png") else "image/webp")
+                self.send_header("Content-Type", "model/gltf-binary" if filename.endswith(".glb") else "image/png" if filename.endswith(".png") else "image/webp")
                 self.send_header("Content-Length", str(len(data)))
                 self.send_header("Cache-Control", "public, max-age=31536000, immutable")
                 self.send_header("X-Content-Type-Options", "nosniff")

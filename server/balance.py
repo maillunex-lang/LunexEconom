@@ -220,7 +220,10 @@ PARAMS = load()
 
 
 def get(name):
-    return PARAMS[name]
+    # Runtime settings are read only through a processing context created by
+    # production.step_month. Without one, preserve the original registry.
+    import runtime_config
+    return runtime_config.get(name, PARAMS[name])
 
 
 def reload():

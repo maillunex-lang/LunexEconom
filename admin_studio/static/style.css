@@ -14,3 +14,15 @@ header{padding-top:max(18px,env(safe-area-inset-top,0px));backdrop-filter:blur(1
 button{min-height:44px}button:focus-visible,.studio-nav button:focus-visible{outline:3px solid #c5ffcd;outline-offset:2px}
 @media(max-width:600px){header{padding-left:16px;padding-right:16px}h1{font-size:1.3rem}#studio-main>section{padding:15px}input,textarea,select{font-size:16px}.mapnav{flex-wrap:wrap}}
 @media(prefers-reduced-motion:reduce){*,*::before,*::after{scroll-behavior:auto!important;transition:none!important;animation:none!important}}
+
+/* ChatGPT13 runtime administration: compact Russian labels and landscape layout. */
+.runtime-row{display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:13px 0;border-bottom:1px solid #365b47}
+.runtime-row>strong{min-width:180px;word-break:break-word}
+.runtime-row>p{flex:1 1 250px;margin:4px 0;color:#b7d2c1}
+.runtime-row>input[type=number]{max-width:170px;margin:0}
+.runtime-row>input[type=checkbox]{width:24px;height:24px;accent-color:#79c99a;margin:0}
+.runtime-row>button{flex:0 0 auto}
+#dashboardcards .card{min-height:90px}
+#dashboardcards .card strong{overflow-wrap:anywhere}
+#onlinechart{max-width:100%;height:auto;display:block;border:1px solid #365b47;border-radius:10px;background:#10241a}
+@media(max-width:700px){.runtime-row{align-items:flex-start}.runtime-row>p{flex-basis:100%}#dashboardcards{grid-template-columns:repeat(2,minmax(0,1fr))}}

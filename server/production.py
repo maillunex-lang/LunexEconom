@@ -286,6 +286,10 @@ def step_month(db, ph, month, now):
     import quality as product_grade
     import households
     import banking
+    # BEGIN ChatGPT13 monthly configuration
+    import runtime_config
+    runtime_config.synchronize(db, month)
+    # END ChatGPT13 monthly configuration
     company_research.advance(db, ph, month)
     trucks.release_arrived(db, ph, month)
     active = regions.active_regions(db, ph)                      # the game city, cities with company buildings, generated cities
@@ -724,7 +728,11 @@ def advance(db, ph, clk, now):
     done = int(row[0])
     last = min(clk["month_index"] - 1, done + economy.MAX_SETTLE_MONTHS)
     for month in range(done + 1, last + 1):
-        step_month(db, ph, month, now)
+        try:
+            step_month(db, ph, month, now)
+        finally:
+            import runtime_config
+            runtime_config.release()
     if last > done:
         db.execute(_q("UPDATE world_state SET processed_through=%s WHERE id=1", ph), (last,))
     return max(0, last - done)

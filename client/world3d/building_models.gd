@@ -116,6 +116,38 @@ static func make(kind: String, w: int, h: int, object_id: String = "", owner: St
 ## of identical 1x1 houses looks mixed, and a given house always keeps its look.
 const VARIANTS := {"house": ["panel", "brick", "modern"]}
 
+# BEGIN ChatGPT13 signed 3D content override. Never load arbitrary user paths.
+static func _signed_glb(name: String) -> String:
+		if not name.ends_with(".glb"):
+			return ""
+		var verifier = load("res://livepatch.gd").new()
+		var manifest: Variant = verifier.load_verified_manifest()
+		verifier.free()
+		if not manifest is Dictionary:
+			return ""
+		var ident := name.trim_suffix(".glb")
+		for asset in manifest["assets"]:
+			if str(asset.get("id", "")) != ident or asset.get("extension") != "glb":
+				continue
+			var hash_value := str(asset.get("sha256", ""))
+			var path := "user://livepatch/" + hash_value + ".glb"
+			if FileAccess.file_exists(path) and FileAccess.get_sha256(path) == hash_value:
+				return path
+		return ""
+
+static func _live_scene(path: String) -> Node3D:
+		# Godot imports GLB from user:// through GLTFDocument at runtime.
+		var state := GLTFState.new()
+		var gltf := GLTFDocument.new()
+		if gltf.append_from_file(ProjectSettings.globalize_path(path), state) != OK:
+			return null
+		return gltf.generate_scene(state) as Node3D
+
+static func clear_live_model_cache() -> void:
+		_model_cache.clear()
+		_piece_cache.clear()
+# END ChatGPT13 signed 3D content override
+
 static func model_path(kind: String, w: int, h: int, object_id: String = "") -> Dictionary:
 	var names: Array = []
 	if VARIANTS.has(kind):
@@ -131,6 +163,9 @@ static func model_path(kind: String, w: int, h: int, object_id: String = "") -> 
 	names.append(["%s_%dx%d.glb" % [kind, h, w], true])
 	for item in names:
 		var path: String = MODEL_DIR + str(item[0])
+		var remote_path := _signed_glb(str(item[0]))
+		if not remote_path.is_empty():
+			return {"path": remote_path, "rotate": bool(item[1]) and w != h}
 		if ResourceLoader.exists(path):
 			return {"path": path, "rotate": bool(item[1]) and w != h}
 	return {}
@@ -170,6 +205,11 @@ static func _model_for(kind: String, w: int, h: int, object_id: String = "") -> 
 	if found.is_empty():
 		return null
 	var path: String = found["path"]
+	if path.begins_with("user://livepatch/"):
+		var live_instance := _live_scene(path)
+		if live_instance == null:
+			return null
+		return _fit_model_instance(live_instance, bool(found["rotate"]), w, h)
 	if not _model_cache.has(path):
 		_model_cache[path] = load(path)
 	var scene = _model_cache[path]
@@ -178,12 +218,14 @@ static func _model_for(kind: String, w: int, h: int, object_id: String = "") -> 
 	var instance: Node3D = (scene as PackedScene).instantiate() as Node3D
 	if instance == null:
 		return null
+	return _fit_model_instance(instance, bool(found["rotate"]), w, h)
+
+static func _fit_model_instance(instance: Node3D, rotate: bool, w: int, h: int) -> Node3D:
 	_paint(instance)
 	var box := _aabb(instance, Transform3D.IDENTITY)
 	if box.size.x <= 0.001 or box.size.z <= 0.001:
 		instance.free()
 		return null
-	var rotate: bool = found["rotate"]
 	var span_x := (h if rotate else w) * CELL * FILL
 	var span_z := (w if rotate else h) * CELL * FILL
 	var s := minf(span_x / box.size.x, span_z / box.size.z)

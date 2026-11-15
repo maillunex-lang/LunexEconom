@@ -139,6 +139,13 @@ def init():
         social.ensure(db, "%s")
         import admin_api
         admin_api.ensure(db, "%s", postgres=True)
+        # BEGIN ChatGPT13 schema
+        import runtime_config, presence
+        runtime_config.ensure(db, "%s")
+        presence.ensure(db, "%s")
+        import live_config_api
+        live_config_api.ensure(db, "%s")
+        # END ChatGPT13 schema
         import citygen
         citygen.ensure(db, "%s")
         import regions
