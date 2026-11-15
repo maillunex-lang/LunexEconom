@@ -56,16 +56,22 @@ class DeveloperPostgresTests(unittest.TestCase):
                 import geo
                 import roads
                 import zoning
+                import building_dimensions
+                width, height = building_dimensions.footprint("park")
                 payload = None
                 for city in geo.cities():
                     cx, cy = int(city["x"]), int(city["y"])
                     for dx in range(-12, 13):
                         for dy in range(-12, 13):
                             x, y = cx + dx, cy + dy
-                            cells = [(x+i, y+j) for i in range(2) for j in range(2)]
+                            cells = [(x+i, y+j) for i in range(width) for j in range(height)]
                             if any(roads.is_base_road(a,b) or roads.is_water(a,b) for a,b in cells):
                                 continue
                             if any(db.execute("SELECT 1 FROM cells WHERE x=%s AND y=%s", (a,b)).fetchone() for a,b in cells):
+                                continue
+                            if any(db.execute("SELECT 1 FROM roads WHERE x=%s AND y=%s", (a,b)).fetchone() for a,b in cells):
+                                continue
+                            if any(db.execute("SELECT kind FROM terrain_edits WHERE x=%s AND y=%s", (a,b)).fetchone() == ("water",) for a,b in cells):
                                 continue
                             if zoning.check(db, "%s", "park", cells):
                                 continue
