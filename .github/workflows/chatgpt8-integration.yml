@@ -38,7 +38,7 @@ jobs:
           POSTGRES_USER: lunex_ci
           POSTGRES_PASSWORD: ci_ephemeral_password
         ports:
-          - 127.0.0.1:15499:5432
+          - 15499:5432
         options: >-
           --health-cmd "pg_isready -U lunex_ci -d lunex_ci"
           --health-interval 5s
