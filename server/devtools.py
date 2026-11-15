@@ -53,6 +53,9 @@ def terrain_set(db, ph, owner, payload, ip):
         if not isinstance(cell,(list,tuple)) or len(cell)!=2 or any(type(v) is not int or abs(v)>1000 for v in cell):
             return 400, {"error":"invalid_coordinates"}
         coords.append(tuple(cell))
+    import roads
+    if any(roads.is_base_road(x,y) for x,y in coords):
+        return 409, {"error": "base_road_overlap"}
     if len(set(coords))!=len(coords):
         return 400, {"error":"duplicate_cell"}
     existing=db.execute("SELECT payload_json FROM dev_actions WHERE id="+ph,(request_id,)).fetchone()
