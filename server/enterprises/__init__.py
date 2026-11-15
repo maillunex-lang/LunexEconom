@@ -17,6 +17,7 @@ def register(registry):
     registry.route('GET','/enterprises/{id}',api.one)
     registry.route('POST','/enterprises/{id}/settings',api.settings)
     registry.route('POST','/enterprises/{id}/sell',api.sell)
+    registry.route('POST','/enterprises/{id}/demolish',api.demolish)
     registry.route('GET','/enterprises/{id}/report',api.report)
     registry.route('POST','/admin/enterprises/{id}/inventory',api.admin_stock)
     def daily(conn,day):
