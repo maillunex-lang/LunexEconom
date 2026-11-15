@@ -33,7 +33,18 @@ class Registry:
         self.modules.append(module)
 
     def dispatch(self, method, path, body, context):
-        handler = self.routes.get((method.upper(), path))
+        handler = self.routes.get((method.upper(),path))
+        if handler is None and (path.startswith('/enterprises/') or path.startswith('/admin/enterprises/')):
+            import re
+            for (verb, template), candidate in self.routes.items():
+                if verb != method.upper() or '{id}' not in template:
+                    continue
+                regex = '^' + re.escape(template).replace(re.escape('{id}'), '(?P<id>[1-9][0-9]*)') + '$'
+                match = re.fullmatch(regex,path)
+                if match:
+                    context['path_params'] = match.groupdict()
+                    handler = candidate
+                    break
         if handler is None:
-            return 404, {'error': 'not_found'}
-        return handler(body, context)
+            return 404, {'error':'not_found'}
+        return handler(body,context)
