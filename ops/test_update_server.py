@@ -41,6 +41,32 @@ class TestUpdater(unittest.TestCase):
                 self.assertEqual((target/'platform'/'api.py').read_text(),'old nested')
                 self.assertEqual((target/'game_server.py').read_text(),'old')
 
+    def test_rollback_keeps_new_files_and_restores_old(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root=Path(temp)
+            target=root/'target'
+            target.mkdir()
+            (target/'game_server.py').write_text('old')
+            (root/'env').write_text('LUNEX_SHA='+'b'*40+'\n')
+            with patch.object(updater,'STATE',root/'state'),patch.object(updater,'SERVER_DIR',target),patch.object(updater,'stage_tree') as stage,patch.object(updater,'restart',side_effect=RuntimeError('restart failed')),patch.object(updater,'ENV_FILE',root/'env'):
+                def populate(sha,names,folder):
+                    (folder/'game_server.py').write_text('new')
+                    (folder/'migration.sql').write_text('select 1;')
+                stage.side_effect=populate
+                with self.assertRaises(RuntimeError): updater.deploy('a'*40,['game_server.py','migration.sql'])
+                self.assertEqual((target/'game_server.py').read_text(),'old')
+                self.assertTrue((target/'migration.sql').exists())
+
+    def test_api_budget_guard(self):
+        with patch.object(updater,'fetch',return_value=b'{"resources":{"core":{"remaining":100}}}'):
+            self.assertTrue(updater.api_budget_ok())
+        with patch.object(updater,'fetch',return_value=b'{"resources":{"core":{"remaining":20}}}'):
+            self.assertFalse(updater.api_budget_ok())
+        with patch.object(updater,'fetch',side_effect=OSError('network')):
+            self.assertFalse(updater.api_budget_ok())
+        with patch.object(updater,'fetch',return_value=b'not json'):
+            self.assertFalse(updater.api_budget_ok())
+
     def test_atomic_sha_preserves_secrets_order_permissions(self):
         with tempfile.TemporaryDirectory() as t:
             env=Path(t)/'v2.env'

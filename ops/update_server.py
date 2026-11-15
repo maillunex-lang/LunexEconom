@@ -171,10 +171,8 @@ def deploy(commit,names):
                 raise RuntimeError('V2 health or commit SHA mismatch after restart')
         except Exception:
             rollback_errors = []
-            for name in names:
-                if name not in prior:
-                    try: (SERVER_DIR/name).unlink(missing_ok=True)
-                    except OSError: rollback_errors.append('remove new file')
+            # Safety policy: retain newly staged V2 files on rollback (an applied migration file must never
+            # disappear). Restore prior files and SHA; no file deletion is performed here.
             for name in prior:
                 try:
                     dest=SERVER_DIR/name
@@ -202,7 +200,20 @@ def deploy(commit,names):
         for old in backups[:-KEEP_BACKUPS]: shutil.rmtree(old)
 
 
+def api_budget_ok(minimum=20):
+    """Never consume the GitHub API quota below the safety margin. /rate_limit does not count against the core quota."""
+    try:
+        limit = json.loads(fetch('https://api.github.com/rate_limit', 30000))
+        remaining = limit.get('resources', {}).get('core', {}).get('remaining', 0)
+    except (ValueError, OSError):
+        return False
+    return isinstance(remaining, int) and remaining > minimum
+
+
 def main():
+    if not api_budget_ok():
+        print('V2 update deferred: GitHub API remaining <= 20')
+        return 0
     sha=api('/commits/main')['sha']
     if not re.fullmatch('[0-9a-f]{40}',sha): raise ValueError('Invalid SHA')
     STATE.mkdir(parents=True,exist_ok=True)
