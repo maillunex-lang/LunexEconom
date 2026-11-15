@@ -104,7 +104,14 @@ def settings(body,ctx):
 
 def sell(body,ctx):
     actor,row,error=_mine(ctx)
-    if error:return error
+    if error:
+        # Replayed sale requests must remain idempotent after the asset is retired.
+        req=body.get('request_id') if isinstance(body,dict) else None
+        if actor and isinstance(req,str) and REQUEST.fullmatch(req):
+            previous=ctx['conn'].execute('SELECT enterprise_id,owner_id,price,transfer_id FROM enterprise_sale_requests WHERE request_id=%s',(req,)).fetchone()
+            if previous and previous[1]==actor['id'] and previous[0]==_id(ctx):
+                return 200,{'id':previous[0],'price':previous[2],'transfer_id':previous[3],'idempotent':True}
+        return error
     req=body.get('request_id') if isinstance(body,dict) else None
     if not isinstance(req,str) or not REQUEST.fullmatch(req):
         return 400,{'error':'invalid_request_id'}
