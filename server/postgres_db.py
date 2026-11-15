@@ -129,4 +129,6 @@ def init():
         citygen.ensure(db, "%s")
         import regions
         regions.ensure(db, "%s")
+        import deposits
+        deposits.ensure(db, "%s")
         db.commit()

@@ -262,8 +262,7 @@ def ensure_candidates(db, ph, month):
 
 
 def jobs_of(db, ph, owner):
-    return sum(economy.PRODUCTION[k]["jobs"] for k, in db.execute(_q("SELECT kind FROM building_ops WHERE owner=%s", ph), (owner,)).fetchall()
-               if k in economy.PRODUCTION)
+    return sum(economy.kind_jobs(k) for k, in db.execute(_q("SELECT kind FROM building_ops WHERE owner=%s", ph), (owner,)).fetchall())
 
 
 def vote_weight(db, ph, owner):

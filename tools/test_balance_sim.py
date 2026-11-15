@@ -110,6 +110,20 @@ class ScenarioTests(unittest.TestCase):
         self.assertGreaterEqual(by_name["lon02"]["built"], 1)
         self.assertGreaterEqual(loan["buildings"] + loan["bankruptcies"], 1)
 
+    def test_agro_and_extract_keep_the_books_and_the_npcs(self):
+        agro = balance_sim.run_scenario(months=8, seed=20261115, npc_on=True, strategies=("agro",), build_cap=5)
+        extract = balance_sim.run_scenario(months=6, seed=20261115, npc_on=True, strategies=("extract",), build_cap=4)
+        for run in (agro, extract):
+            self.assertEqual(run["invariants"], [])
+            self.assertGreater(run["builds_ok"], 0)
+            last = run["rows"][-1]
+            self.assertEqual(last["wallet_sum"], 0)
+            self.assertGreater(last["npc_buildings"], 0)
+            self.assertLess(last["npc_broke"], len(balance_sim.npc.PERSONAS))
+            self.assertLess(last["player_money"], balance_sim.economy.START_CAPITAL * 5)
+        self.assertGreaterEqual(agro["bots"][0]["built"], 1)
+        self.assertGreaterEqual(extract["bots"][0]["built"], 1)
+
     def test_month_length_does_not_change_boundary_economy(self):
         common = dict(months=12, seed=20261114, npc_on=True, strategies=())
         day = balance_sim.run_scenario(month_seconds=86400, **common)
