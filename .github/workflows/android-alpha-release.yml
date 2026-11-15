@@ -1,0 +1,311 @@
+name: Android alpha release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Alpha version 0.1.N (without v)'
+        required: true
+        type: string
+      notes:
+        description: 'Approved Russian release notes (1..300 characters)'
+        required: true
+        type: string
+      min_version_code:
+        description: 'Optional, defaults to previous published alpha versionCode'
+        required: false
+        default: ''
+        type: string
+      pipeline_test:
+        description: 'TEST ONLY: disposable keys, artifacts only, never publish a Release'
+        required: false
+        type: boolean
+        default: false
+  push:
+    branches: [v2/alpha-release-orchestrator]
+    paths:
+      - '.github/workflows/android-alpha-release.yml'
+      - '.github/workflows/android-release.yml'
+      - 'tools/alpha_release_plan.py'
+      - 'tools/verify_alpha_assets.py'
+      - 'tools/tests/test_release_orchestrator.py'
+
+# This lock covers all versions. Another release must not pass while one is in flight.
+concurrency:
+  group: android-alpha-release-${{ github.repository }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  preflight:
+    name: Check tag, version, previous release and notes
+    if: >-
+      github.ref == 'refs/heads/main' ||
+      (github.ref == 'refs/heads/v2/alpha-release-orchestrator' &&
+       (github.event_name == 'push' || inputs.pipeline_test == true))
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    outputs:
+      version_tag: ${{ steps.plan.outputs.version_tag }}
+      version_name: ${{ steps.plan.outputs.version_name }}
+      version_code: ${{ steps.plan.outputs.version_code }}
+      min_version_code: ${{ steps.plan.outputs.min_version_code }}
+      test_mode: ${{ steps.plan.outputs.test_mode }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Validate proposed release against published releases and all reserved tags
+        id: plan
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_VERSION: ${{ github.event_name == 'push' && 'auto' || inputs.version }}
+          RELEASE_NOTES: ${{ github.event_name == 'push' && 'Проверка тестового конвейера без публикации релиза.' || inputs.notes }}
+          MIN_CODE: ${{ github.event_name == 'push' && '' || inputs.min_version_code }}
+          TEST_MODE: ${{ github.event_name == 'push' || inputs.pipeline_test == true }}
+        run: |
+          set -euo pipefail
+          if [[ "$GITHUB_REF" != "refs/heads/main" && "$TEST_MODE" != "true" ]]; then
+            echo 'Production release is permitted only from main'
+            exit 1
+          fi
+          git tag --list 'v0.1.*' > "$RUNNER_TEMP/reserved-alpha-tags.txt"
+          gh api --paginate "repos/$GITHUB_REPOSITORY/releases?per_page=100" \
+            --jq '.[] | select(.draft == false and .prerelease == false) | .tag_name' \
+            > "$RUNNER_TEMP/published-alpha-tags.txt"
+          gh api --paginate "repos/$GITHUB_REPOSITORY/releases?per_page=100" \
+            --jq '.[].tag_name' >> "$RUNNER_TEMP/reserved-alpha-tags.txt"
+          FLAGS=()
+          if [[ "$TEST_MODE" == "true" ]]; then FLAGS+=(--test-only); fi
+          python3 tools/alpha_release_plan.py \
+            --version "$RELEASE_VERSION" \
+            --notes "$RELEASE_NOTES" \
+            --min-version-code "$MIN_CODE" \
+            --published-tags "$RUNNER_TEMP/published-alpha-tags.txt" \
+            --reserved-tags "$RUNNER_TEMP/reserved-alpha-tags.txt" \
+            --github-output "$GITHUB_OUTPUT" \
+            "${FLAGS[@]}"
+          echo "test_mode=$TEST_MODE" >> "$GITHUB_OUTPUT"
+
+  candidate:
+    name: Build signed Android candidate (owner key or isolated CI key)
+    needs: preflight
+    permissions:
+      contents: read
+    uses: ./.github/workflows/android-release.yml
+    with:
+      version_tag: ${{ needs.preflight.outputs.version_tag }}
+      verify_signing_only: false
+      owner_signing_test: false
+      pipeline_test: ${{ needs.preflight.outputs.test_mode == 'true' }}
+    secrets: inherit
+
+  manifest:
+    name: Verify APK and create signed update.json before publication
+    needs: [preflight, candidate]
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    environment: ${{ needs.preflight.outputs.test_mode == 'true' && 'ci-test' || 'manifest-signing' }}
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/download-artifact@v4
+        with:
+          name: signed-candidate-${{ needs.preflight.outputs.version_tag }}-${{ needs.preflight.outputs.test_mode == 'true' && 'TEST-NOT-FOR-RELEASE' || 'release' }}
+          path: dist
+      - uses: android-actions/setup-android@v3
+        with:
+          packages: 'platform-tools platforms;android-35 build-tools;35.0.0'
+      - name: Recheck candidate certificate, APK metadata, hashes, AAB and size
+        shell: bash
+        env:
+          RELEASE_TAG: ${{ needs.preflight.outputs.version_tag }}
+          TEST_MODE: ${{ needs.preflight.outputs.test_mode }}
+        run: |
+          set -euo pipefail
+          test -s dist/build/lunex.apk && test -s dist/build/lunex.aab
+          "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --verbose --print-certs \
+            dist/build/lunex.apk > "$RUNNER_TEMP/alpha-cert-report.txt"
+          "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging \
+            dist/build/lunex.apk > "$RUNNER_TEMP/alpha-badging.txt"
+          jarsigner -verify dist/build/lunex.aab > /dev/null
+          FLAGS=()
+          if [[ "$TEST_MODE" == 'true' ]]; then
+            FLAGS+=(--test-only)
+          else
+            FLAGS+=(--expected-cert ops/release_cert_sha256.txt)
+          fi
+          python3 tools/verify_alpha_assets.py --tag "$RELEASE_TAG" \
+            --apk dist/build/lunex.apk --aab dist/build/lunex.aab \
+            --sums dist/build/SHA256SUMS \
+            --badging "$RUNNER_TEMP/alpha-badging.txt" \
+            --cert-report "$RUNNER_TEMP/alpha-cert-report.txt" "${FLAGS[@]}"
+      - name: Prepare canonical release manifest
+        shell: bash
+        env:
+          RELEASE_TAG: ${{ needs.preflight.outputs.version_tag }}
+          RELEASE_NOTES: ${{ github.event_name == 'push' && 'Проверка тестового конвейера без публикации релиза.' || inputs.notes }}
+          MIN_CODE: ${{ needs.preflight.outputs.min_version_code }}
+        run: |
+          set -euo pipefail
+          python3 tools/prepare_alpha_release.py \
+            --tag "$RELEASE_TAG" --apk dist/build/lunex.apk \
+            --min-code "$MIN_CODE" --notes "$RELEASE_NOTES" \
+            --output dist/update.json
+      - name: Sign RSA-4096 manifest and reject invalid signature
+        shell: bash
+        env:
+          MANIFEST_SIGNING_KEY: ${{ needs.preflight.outputs.test_mode == 'false' && secrets.MANIFEST_SIGNING_KEY || '' }}
+          TEST_MODE: ${{ needs.preflight.outputs.test_mode }}
+          RELEASE_TAG: ${{ needs.preflight.outputs.version_tag }}
+          MIN_CODE: ${{ needs.preflight.outputs.min_version_code }}
+        run: |
+          set -euo pipefail
+          umask 077
+          python3 -m pip install --disable-pip-version-check cryptography
+          KEY_FILE="$RUNNER_TEMP/alpha-manifest-private.pem"
+          PUBLIC_FILE="$RUNNER_TEMP/alpha-manifest-public.pem"
+          trap 'rm -f "$KEY_FILE" "$PUBLIC_FILE"' EXIT
+          if [[ "$TEST_MODE" == 'true' ]]; then
+            python3 - "$KEY_FILE" "$PUBLIC_FILE" <<'PY'
+          import sys
+          from pathlib import Path
+          from cryptography.hazmat.primitives import serialization
+          from cryptography.hazmat.primitives.asymmetric import rsa
+          key = rsa.generate_private_key(public_exponent=65537, key_size=4096)
+          Path(sys.argv[1]).write_bytes(key.private_bytes(serialization.Encoding.PEM,
+              serialization.PrivateFormat.PKCS8, serialization.NoEncryption()))
+          Path(sys.argv[2]).write_bytes(key.public_key().public_bytes(
+              serialization.Encoding.PEM, serialization.PublicFormat.SubjectPublicKeyInfo))
+          PY
+          else
+            test -n "$MANIFEST_SIGNING_KEY" || { echo 'Manifest signing secret unavailable'; exit 1; }
+            printf '%s' "$MANIFEST_SIGNING_KEY" > "$KEY_FILE"
+            cp client/config/update_public.pem "$PUBLIC_FILE"
+          fi
+          chmod 600 "$KEY_FILE" "$PUBLIC_FILE"
+          unset MANIFEST_SIGNING_KEY
+          python3 tools/sign_update_manifest.py dist/update.json \
+            --private-key "$KEY_FILE" --public-key "$PUBLIC_FILE"
+          FLAGS=()
+          if [[ "$TEST_MODE" == 'true' ]]; then
+            FLAGS+=(--test-only)
+          else
+            FLAGS+=(--expected-cert ops/release_cert_sha256.txt)
+          fi
+          python3 tools/verify_alpha_assets.py --tag "$RELEASE_TAG" \
+            --apk dist/build/lunex.apk --aab dist/build/lunex.aab \
+            --sums dist/build/SHA256SUMS \
+            --badging "$RUNNER_TEMP/alpha-badging.txt" \
+            --cert-report "$RUNNER_TEMP/alpha-cert-report.txt" \
+            --manifest dist/update.json --signature dist/update.json.sig \
+            --public-key "$PUBLIC_FILE" --minimum "$MIN_CODE" "${FLAGS[@]}"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: alpha-signed-manifest-${{ needs.preflight.outputs.version_tag }}-${{ needs.preflight.outputs.test_mode }}
+          path: |
+            dist/update.json
+            dist/update.json.sig
+          retention-days: 14
+          if-no-files-found: error
+
+  publish:
+    name: Publish complete verified Release (never a partial public release)
+    needs: [preflight, candidate, manifest]
+    if: ${{ needs.preflight.outputs.test_mode == 'false' && github.ref == 'refs/heads/main' }}
+    environment: production
+    permissions:
+      contents: write
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/download-artifact@v4
+        with:
+          name: signed-candidate-${{ needs.preflight.outputs.version_tag }}-release
+          path: dist
+      - uses: actions/download-artifact@v4
+        with:
+          name: alpha-signed-manifest-${{ needs.preflight.outputs.version_tag }}-false
+          path: signed
+      - uses: android-actions/setup-android@v3
+        with:
+          packages: 'platform-tools platforms;android-35 build-tools;35.0.0'
+      - name: Reverify all five release assets immediately before publication
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ needs.preflight.outputs.version_tag }}
+          MIN_CODE: ${{ needs.preflight.outputs.min_version_code }}
+        run: |
+          set -euo pipefail
+          CURRENT_MAIN="$(gh api "repos/$GITHUB_REPOSITORY/git/ref/heads/main" --jq '.object.sha')"
+          test "$CURRENT_MAIN" = "$GITHUB_SHA" || { echo 'main moved during build; restart release'; exit 1; }
+          if gh release view "$RELEASE_TAG" --json tagName > /dev/null 2>&1; then
+            echo 'A Release with this tag already exists'
+            exit 1
+          fi
+          "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --verbose --print-certs \
+            dist/build/lunex.apk > "$RUNNER_TEMP/alpha-cert-report.txt"
+          "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging \
+            dist/build/lunex.apk > "$RUNNER_TEMP/alpha-badging.txt"
+          jarsigner -verify dist/build/lunex.aab > /dev/null
+          python3 -m pip install --disable-pip-version-check cryptography
+          python3 tools/verify_alpha_assets.py --tag "$RELEASE_TAG" \
+            --apk dist/build/lunex.apk --aab dist/build/lunex.aab \
+            --sums dist/build/SHA256SUMS \
+            --badging "$RUNNER_TEMP/alpha-badging.txt" \
+            --cert-report "$RUNNER_TEMP/alpha-cert-report.txt" \
+            --expected-cert ops/release_cert_sha256.txt \
+            --manifest signed/update.json --signature signed/update.json.sig \
+            --public-key client/config/update_public.pem --minimum "$MIN_CODE"
+      - name: Create draft containing APK, AAB, hashes and signed manifest, then publish
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ needs.preflight.outputs.version_tag }}
+          RELEASE_NAME: ${{ needs.preflight.outputs.version_name }}
+          RELEASE_NOTES: ${{ inputs.notes }}
+        run: |
+          set -euo pipefail
+          printf '%s\n' 'НЕПОЛНЫЙ ВЫПУСК: не публиковать; автоматическая проверка и загрузка ещё не завершены.' > "$RUNNER_TEMP/alpha-draft-notes.txt"
+          gh release create "$RELEASE_TAG" \
+            dist/build/lunex.apk#lunex.apk \
+            dist/build/lunex.aab#lunex.aab \
+            dist/build/SHA256SUMS#SHA256SUMS \
+            signed/update.json#update.json \
+            signed/update.json.sig#update.json.sig \
+            --target "$GITHUB_SHA" --draft \
+            --title "Башкирия: Мёд и Нефть $RELEASE_TAG" \
+            --notes-file "$RUNNER_TEMP/alpha-draft-notes.txt"
+          gh release view "$RELEASE_TAG" --json assets,isDraft,isPrerelease,tagName > "$RUNNER_TEMP/alpha-release-assets.json"
+          python3 - <<'PY'
+          import json, os
+          from pathlib import Path
+          payload=json.loads((Path(os.environ["RUNNER_TEMP"])/"alpha-release-assets.json").read_text())
+          paths={"lunex.apk":Path("dist/build/lunex.apk"),
+                 "lunex.aab":Path("dist/build/lunex.aab"),
+                 "SHA256SUMS":Path("dist/build/SHA256SUMS"),
+                 "update.json":Path("signed/update.json"),
+                 "update.json.sig":Path("signed/update.json.sig")}
+          actual={a["name"]:a["size"] for a in payload["assets"]}
+          expected={name:p.stat().st_size for name,p in paths.items()}
+          if payload["tagName"] != os.environ["RELEASE_TAG"] or not payload["isDraft"] or payload["isPrerelease"] or actual != expected:
+              raise SystemExit("Draft release assets not complete; leaving unpublished draft")
+          print("Five assets verified in GitHub draft; safe to publish")
+          PY
+          printf '%s\n' "$RELEASE_NOTES" > "$RUNNER_TEMP/alpha-published-notes.txt"
+          gh release edit "$RELEASE_TAG" --draft=false --prerelease=false \
+            --notes-file "$RUNNER_TEMP/alpha-published-notes.txt"
+          test "$(gh release view "$RELEASE_TAG" --json isDraft,isPrerelease --jq '.isDraft')" = false
+          test "$(gh release view "$RELEASE_TAG" --json isDraft,isPrerelease --jq '.isPrerelease')" = false
+          echo 'Published five verified release assets without VPS deployment'
