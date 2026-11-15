@@ -545,6 +545,16 @@ class Handler(BaseHTTPRequestHandler):
         return True
     def do_GET(self):
         url=urlsplit(self.path)
+        if url.path == "/terrain/chunk":
+            import devtools
+            try:
+                q=parse_qs(url.query)
+                cx=int(q["cx"][0]); cy=int(q["cy"][0])
+            except (ValueError,KeyError,IndexError):
+                return self._send(400,{"error":"invalid_query"})
+            with NPC_CONNECT() as db:
+                devtools.ensure(db,NPC_PH,os.environ.get("LUNEX_DB_ENGINE")=="postgres")
+                return self._send(*devtools.terrain_chunk(db,NPC_PH,self._identity(),cx,cy))
         if url.path.startswith("/admin/"):
             return self._admin("GET")
         if url.path == "/announcement":
@@ -633,6 +643,20 @@ class Handler(BaseHTTPRequestHandler):
             return self._send(*result)
         return self._send(404,{"error":"not_found"})
     def do_POST(self):
+        if urlsplit(self.path).path.startswith("/dev/"):
+            import devtools
+            owner=self._identity()
+            if not owner:return self._send(403,{"error":"forbidden"})
+            with NPC_CONNECT() as db:
+                devtools.ensure(db,NPC_PH,os.environ.get("LUNEX_DB_ENGINE")=="postgres")
+                if not devtools.require_developer(owner,db):return self._send(403,{"error":"forbidden"})
+                if urlsplit(self.path).path!="/dev/terrain":return self._send(404,{"error":"not_found"})
+                try:
+                    size=int(self.headers.get("Content-Length","0"))
+                    if size<2 or size>4096:return self._send(400,{"error":"invalid_body"})
+                    payload=json.loads(self.rfile.read(size))
+                except (ValueError,UnicodeError,json.JSONDecodeError):return self._send(400,{"error":"invalid_body"})
+                return self._send(*devtools.terrain_set(db,NPC_PH,owner,payload,self._client()))
         if urlsplit(self.path).path.startswith("/admin/"):
             return self._admin("POST")
         if self._soc_post():return
