@@ -15,6 +15,7 @@ permissions:
   contents: write
 jobs:
   publish:
+    if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     environment: production
     steps:
@@ -57,3 +58,13 @@ jobs:
           set -euo pipefail
           gh release create "$VERSION_TAG" dist/build/lunex.apk dist/build/lunex.aab dist/build/SHA256SUMS --target "$GITHUB_SHA" --title "Башкирия: Мёд и Нефть $VERSION_TAG" --notes "Подписанный релиз Android. Развёртывание на VPS и публикация подписанных манифестов выполняются отдельно владельцем."
           echo "No VPS deployment is performed by GitHub Actions."
+  sign-approved-manifest:
+    name: Automatically sign approved release manifest
+    needs: publish
+    if: ${{ needs.publish.result == 'success' && github.ref == 'refs/heads/main' }}
+    uses: ./.github/workflows/android-manifest.yml
+    with:
+      release_tag: ${{ inputs.version_tag }}
+      min_version_code: '0'
+      notes: ''
+    secrets: inherit
