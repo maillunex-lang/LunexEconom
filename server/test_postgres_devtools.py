@@ -107,11 +107,12 @@ class DeveloperPostgresTests(unittest.TestCase):
                 # base anchor to make this graph deterministic.
                 anchor = (800, 800)
                 points = [(801, 800), (802, 800), (803, 800)]
-                db.executemany(
-                    "INSERT INTO roads(x,y,owner,created) VALUES(%s,%s,%s,%s) "
-                    "ON CONFLICT(x,y) DO UPDATE SET owner=excluded.owner",
-                    [(x, y, "ci_operator", 0) for x, y in points],
-                )
+                for x, y in points:
+                    db.execute(
+                        "INSERT INTO roads(x,y,owner,created) VALUES(%s,%s,%s,%s) "
+                        "ON CONFLICT(x,y) DO UPDATE SET owner=excluded.owner",
+                        (x, y, "ci_operator", 0),
+                    )
                 with patch("dev_road_connectivity._base_roads", return_value={anchor}), \
                      patch("roads.is_base_road", return_value=False), \
                      patch("devtools.require_developer", return_value=True):
