@@ -13,7 +13,8 @@ def ensure(db, ph, postgres=False):
     db.commit()
 
 def require_developer(owner, db):
-    return bool(owner) and accounts_admin.is_developer(owner, db)
+    # Auth identities and world cells may live in separate SQLite databases.
+    return bool(owner) and accounts_admin.is_developer(owner)
 
 def terrain_chunk(db, ph, owner, cx, cy):
     if not owner:
@@ -105,16 +106,21 @@ def undo(db, ph, owner, payload, ip):
     recent = db.execute("SELECT COUNT(*) FROM dev_actions WHERE actor=" + ph + " AND created>=" + ph, (owner, action_time - 60_000_000_000)).fetchone()[0]
     if recent >= 30:
         return 429, {"error": "rate_limited"}
-    row = db.execute("SELECT id,inverse_json FROM dev_actions WHERE actor=" + ph + " AND action='terrain' AND undone=0 ORDER BY created DESC,id DESC LIMIT 1", (owner,)).fetchone()
+    row = db.execute("SELECT id,action,inverse_json FROM dev_actions WHERE actor=" + ph + " AND action IN ('terrain','roads') AND undone=0 ORDER BY created DESC,id DESC LIMIT 1", (owner,)).fetchone()
     if not row:
         return 409, {"error": "nothing_to_undo"}
-    action_id, inverse = row
+    action_id, action_kind, inverse = row
     snapshot = json.loads(inverse)
     if len(snapshot) > 25:
         return 409, {"error": "invalid_history"}
     for coordinate, state in snapshot.items():
         x, y = map(int, coordinate.split(","))
-        if state is None:
+        if action_kind == "roads":
+            if state is None:
+                db.execute("DELETE FROM roads WHERE x=" + ph + " AND y=" + ph, (x, y))
+            else:
+                db.execute("INSERT INTO roads(x,y,owner,created) VALUES(" + ",".join([ph]*4) + ") ON CONFLICT(x,y) DO UPDATE SET owner=excluded.owner,created=excluded.created", (x, y, *state))
+        elif state is None:
             db.execute("DELETE FROM terrain_edits WHERE x=" + ph + " AND y=" + ph, (x, y))
         else:
             db.execute("INSERT INTO terrain_edits(x,y,kind,editor,created,manual) VALUES(" + ",".join([ph]*6) + ") ON CONFLICT(x,y) DO UPDATE SET kind=excluded.kind,editor=excluded.editor,created=excluded.created,manual=excluded.manual", (x, y, *state))
@@ -125,3 +131,53 @@ def undo(db, ph, owner, payload, ip):
     db.commit()
     terrain_edits.invalidate()
     return 200, {"request_id": request_id, "undone": action_id, "changed": len(snapshot)}
+def roads_set(db, ph, owner, payload, ip):
+    """Paint or remove dynamic roads without touching any economic balances."""
+    if not require_developer(owner, db):
+        return 403, {"error": "forbidden"}
+    if not isinstance(payload, dict):
+        return 400, {"error": "invalid_body"}
+    try:
+        request_id = str(uuid.UUID(payload.get("request_id")))
+    except (TypeError, ValueError, AttributeError):
+        return 400, {"error": "invalid_request_id"}
+    cells = payload.get("cells")
+    operation = payload.get("operation")
+    if operation not in ("add", "remove") or not isinstance(cells, list) or not 1 <= len(cells) <= 25:
+        return 400, {"error": "invalid_road_action"}
+    coords = []
+    for cell in cells:
+        if not isinstance(cell, list) or len(cell) != 2 or any(type(v) is not int or abs(v) > 1000 for v in cell):
+            return 400, {"error": "invalid_coordinates"}
+        coords.append(tuple(cell))
+    if len(set(coords)) != len(coords):
+        return 400, {"error": "duplicate_cell"}
+    previous = db.execute("SELECT action,actor,payload_json FROM dev_actions WHERE id=" + ph, (request_id,)).fetchone()
+    if previous:
+        return (200, {"request_id": request_id, "replayed": True}) if previous == ("roads", owner, json.dumps(payload, ensure_ascii=False)) else (409, {"error": "request_id_conflict"})
+    now = int(time.time())
+    action_time = time.time_ns()
+    recent = db.execute("SELECT COUNT(*) FROM dev_actions WHERE actor=" + ph + " AND created>=" + ph, (owner, action_time - 60_000_000_000)).fetchone()[0]
+    if recent >= 30:
+        return 429, {"error": "rate_limited"}
+    import roads
+    old = {}
+    for x, y in coords:
+        if roads.is_base_road(x, y):
+            return 409, {"error": "base_road"}
+        if db.execute("SELECT 1 FROM cells WHERE x=" + ph + " AND y=" + ph, (x, y)).fetchone():
+            return 409, {"error": "occupied"}
+        if operation == "add" and (roads.is_water(x, y) or db.execute("SELECT kind FROM terrain_edits WHERE x=" + ph + " AND y=" + ph, (x, y)).fetchone() == ("water",)):
+            return 409, {"error": "water"}
+        row = db.execute("SELECT owner,created FROM roads WHERE x=" + ph + " AND y=" + ph, (x, y)).fetchone()
+        old[f"{x},{y}"] = list(row) if row else None
+    for x, y in coords:
+        if operation == "add":
+            db.execute("INSERT INTO roads(x,y,owner,created) VALUES(" + ",".join([ph]*4) + ") ON CONFLICT(x,y) DO NOTHING", (x, y, owner, now))
+        else:
+            db.execute("DELETE FROM roads WHERE x=" + ph + " AND y=" + ph, (x, y))
+    db.execute("INSERT INTO dev_actions(id,actor,action,payload_json,inverse_json,created,undone) VALUES(" + ",".join([ph]*7) + ")", (request_id, owner, "roads", json.dumps(payload, ensure_ascii=False), json.dumps(old), action_time, 0))
+    publish_terrain_events(db, ph, coords)
+    admin_api.audit(db, ph, owner, "dev_roads", str(coords[0]), f"cells={len(coords)} operation={operation}", ip, now)
+    db.commit()
+    return 200, {"request_id": request_id, "changed": len(coords)}
