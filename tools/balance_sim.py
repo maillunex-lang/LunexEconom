@@ -240,7 +240,7 @@ class Bot:
 class World:
     """Один прогон на своей SQLite. Время — подмена game_server.time.time."""
 
-    def __init__(self, db_path, month_seconds, t0, seed, npc_on, strategies, build_cap, months):
+    def __init__(self, db_path, month_seconds, t0, seed, npc_on, strategies, build_cap, months, scenario_flags=None):
         self.db_path = db_path
         self.month_seconds = max(int(month_seconds), clock.MIN_MONTH_SECONDS)
         self.t0 = int(t0)
@@ -255,6 +255,8 @@ class World:
         self.builds_fail = 0
         self.bots = []
         self.npc_new_kinds = "npc_builders" in strategies
+        self.scenario_flags = dict(scenario_flags or {})
+        self._env_prev = {}
         for index, strategy in enumerate(strategies):
             if strategy not in STRATEGIES:
                 raise ValueError("неизвестная стратегия: %s" % strategy)
@@ -271,19 +273,48 @@ class World:
         try:
             game_server.DB = self.db_path
             os.environ["LUNEX_MONTH_SECONDS"] = str(self.month_seconds)
-            if self.npc_new_kinds:
-                os.environ["LUNEX_BAL_NPC_NEW_KINDS"] = "1"
-                balance_registry.reload()
             # The road matrix is computed once per process. Counting it as a monthly step
             # flags the first multi-city month (~2s) even though later months are cheap.
             import regions
             others = [r for r in regions.region_ids() if r != regions.HOME]
             if others:
                 regions.road_km(regions.HOME, others[0])
+            self._apply_scenario_flags()
         except BaseException:
             self._patch.stop()
+            self._restore_scenario_flags()
             raise
         return self
+
+    def _apply_scenario_flags(self):
+        if self.npc_new_kinds:
+            self._push_env("LUNEX_BAL_NPC_NEW_KINDS", "1")
+        for key, value in self.scenario_flags.items():
+            if value is True:
+                text = "1"
+            elif value is False:
+                text = "0"
+            else:
+                text = str(value)
+            self._push_env("LUNEX_BAL_" + key, text)
+        if self._env_prev:
+            balance_registry.reload()
+
+    def _push_env(self, key, value):
+        if key not in self._env_prev:
+            self._env_prev[key] = os.environ.get(key)
+        os.environ[key] = value
+
+    def _restore_scenario_flags(self):
+        if not self._env_prev:
+            return
+        for key, previous in self._env_prev.items():
+            if previous is None:
+                os.environ.pop(key, None)
+            else:
+                os.environ[key] = previous
+        self._env_prev = {}
+        balance_registry.reload()
 
     def __exit__(self, exc_type, exc, tb):
         if self._patch is not None:
@@ -294,9 +325,7 @@ class World:
             os.environ.pop("LUNEX_MONTH_SECONDS", None)
         else:
             os.environ["LUNEX_MONTH_SECONDS"] = self._old_env
-        if self.npc_new_kinds:
-            os.environ.pop("LUNEX_BAL_NPC_NEW_KINDS", None)
-            balance_registry.reload()
+        self._restore_scenario_flags()
         return False
 
     def request_id(self, owner, month, salt):
@@ -689,7 +718,7 @@ def analyze(rows, pin_months=DEFAULT_PIN_MONTHS, step_budget_ms=DEFAULT_STEP_BUD
 
 def run_scenario(months=24, seed=20261114, strategies=(), npc_on=True, month_seconds=86400,
                  build_cap=16, t0=T0, pin_months=DEFAULT_PIN_MONTHS, step_budget_ms=DEFAULT_STEP_BUDGET_MS,
-                 pop_cap=DEFAULT_POP_CAP, db_path=None):
+                 pop_cap=DEFAULT_POP_CAP, db_path=None, scenario_flags=None):
     """Прогон. db_path=None — временный файл, который будет удалён."""
     if os.environ.get("LUNEX_DB_ENGINE") == "postgres" and os.environ.get("LUNEX_PG_DB") != "lunex_ci":
         raise RuntimeError("PostgreSQL разрешён только для одноразовой базы lunex_ci; симулятор её сам не открывает")
@@ -700,9 +729,10 @@ def run_scenario(months=24, seed=20261114, strategies=(), npc_on=True, month_sec
         "months": int(months), "seed": int(seed), "strategies": tuple(strategies), "npc": bool(npc_on),
         "month_seconds": max(int(month_seconds), clock.MIN_MONTH_SECONDS), "build_cap": int(build_cap), "t0": int(t0),
         "pin_months": int(pin_months), "step_budget_ms": float(step_budget_ms), "pop_cap": int(pop_cap),
+        "scenario_flags": dict(scenario_flags or {}),
     }
     try:
-        with World(path, config["month_seconds"], t0, seed, npc_on, tuple(strategies), build_cap, months) as world:
+        with World(path, config["month_seconds"], t0, seed, npc_on, tuple(strategies), build_cap, months, scenario_flags) as world:
             payload = world.run()
     finally:
         if tmp is not None:
@@ -825,6 +855,9 @@ def render_report(runs, perf, compares):
     lines.append("исследование качества и NPC на новых видах. Без грузовиков межгородский тариф прежний.")
     lines.append("Те же четыре сценария на зёрнах 1…5 по 6 месяцев (NPC включены) держат инварианты в нуле и не дают")
     lines.append("красных флагов: `tools/test_balance_sim.py`, `test_new_scenarios_keep_invariants_on_five_seeds`.")
+    lines.append("EX-05/EX-09 (`housing_shortage`, `credit_boom`, `recession`, `inflation_shock`) включают свои флаги")
+    lines.append("только внутри прогона. При выключенных флагах отпечаток прежних сценариев не меняется: домохозяйства,")
+    lines.append("аренда, NPC-банки и индекс цен в месяц не пишут.")
     lines.append("")
     lines.append("## Сценарии")
     lines.append("")
@@ -1081,6 +1114,14 @@ def _suite(args):
         ("trucking_12", dict(months=12, seed=20261115, strategies=("trucking",), npc_on=True, build_cap=2)),
         ("quality_12", dict(months=12, seed=20261115, strategies=("quality",), npc_on=True, build_cap=2)),
         ("npc_builders_12", dict(months=12, seed=20261115, strategies=("npc_builders",), npc_on=True, build_cap=2)),
+        ("housing_shortage", dict(months=12, seed=20261114, strategies=(), npc_on=True,
+                                  scenario_flags={"HOUSEHOLDS_ENABLED": True, "HH_HOUSING_STRESS": 1})),
+        ("credit_boom", dict(months=12, seed=20261114, strategies=(), npc_on=True,
+                             scenario_flags={"BANKS_ENABLED": True, "CREDIT_BOOM": 1})),
+        ("recession", dict(months=12, seed=20261114, strategies=(), npc_on=True,
+                           scenario_flags={"HOUSEHOLDS_ENABLED": True, "HH_RECESSION": 1})),
+        ("inflation_shock", dict(months=12, seed=20261114, strategies=(), npc_on=True,
+                                 scenario_flags={"INFLATION_ENABLED": True, "INFLATION_SHOCK": 1})),
     ]
     runs = []
     for name, spec in specs:

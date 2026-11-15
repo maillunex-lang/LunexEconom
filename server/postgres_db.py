@@ -147,4 +147,6 @@ def init():
         deposits.ensure(db, "%s")
         import zoning
         zoning.ensure(db, "%s")
+        import households
+        households.ensure(db, "%s")
         db.commit()

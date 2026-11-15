@@ -138,6 +138,19 @@ class ScenarioTests(unittest.TestCase):
                 self.assertEqual(run["flags"], [], (strategy, seed))
                 self.assertEqual(run["rows"][-1]["wallet_sum"], 0)
 
+    def test_population_and_finance_scenarios_keep_invariants(self):
+        specs = (
+            {"HOUSEHOLDS_ENABLED": True, "HH_HOUSING_STRESS": 1},
+            {"BANKS_ENABLED": True, "CREDIT_BOOM": 1},
+            {"HOUSEHOLDS_ENABLED": True, "HH_RECESSION": 1},
+            {"INFLATION_ENABLED": True, "INFLATION_SHOCK": 1},
+        )
+        for flags in specs:
+            run = balance_sim.run_scenario(months=6, seed=20261114, npc_on=True, strategies=(), scenario_flags=flags)
+            self.assertEqual(run["invariants"], [], (flags, run["invariants"][:2]))
+            self.assertEqual(run["flags"], [], (flags, run["flags"]))
+            self.assertEqual(run["rows"][-1]["wallet_sum"], 0)
+
     def test_month_length_does_not_change_boundary_economy(self):
         common = dict(months=12, seed=20261114, npc_on=True, strategies=())
         day = balance_sim.run_scenario(month_seconds=86400, **common)
