@@ -191,7 +191,8 @@ def close_month(conn,month,salary_per_worker=100,monthly_wear=1):
                 expenses=upkeep+jobs*salary_per_worker*staff//BP
                 prior=conn.execute('SELECT COALESCE(sum(amount),0),COALESCE(max(consecutive_months),0) FROM enterprise_arrears WHERE enterprise_id=%s AND paid_at IS NULL',(eid,)).fetchone()
                 debt,streak=prior
-                due=integer(debt+expenses)
+                # PostgreSQL SUM(bigint) returns NUMERIC (Decimal), not int.
+                due=integer(int(debt)+expenses)
                 payer=conn.execute("SELECT l.id,l.balance FROM ledger_accounts l JOIN accounts a ON l.account_key='player:'||lower(a.username) WHERE a.id=%s FOR UPDATE",(owner,)).fetchone()
                 if due and payer is not None and payer[1]>=due:
                     destination=account(conn,'system:upkeep')
