@@ -8,7 +8,6 @@ import terrain_edits
 
 def ensure(db, ph, postgres=False):
     terrain_edits.ensure(db)
-    accounts_admin.ensure(db)
     db.execute("CREATE TABLE IF NOT EXISTS dev_actions (id TEXT PRIMARY KEY, actor TEXT NOT NULL, action TEXT NOT NULL, payload_json TEXT NOT NULL, inverse_json TEXT NOT NULL, created BIGINT NOT NULL, undone INTEGER NOT NULL DEFAULT 0)")
     db.commit()
 
@@ -59,10 +58,10 @@ def terrain_set(db, ph, owner, payload, ip):
         return 409, {"error": "base_road_overlap"}
     if len(set(coords))!=len(coords):
         return 400, {"error":"duplicate_cell"}
-    existing=db.execute("SELECT payload_json FROM dev_actions WHERE id="+ph,(request_id,)).fetchone()
+    existing=db.execute("SELECT actor,action,payload_json FROM dev_actions WHERE id="+ph,(request_id,)).fetchone()
     if existing:
-        old=json.loads(existing[0])
-        return (200,{"request_id":request_id,"replayed":True}) if old==payload else (409,{"error":"request_id_conflict"})
+        old_actor, old_action, old_json = existing
+        return (200,{"request_id":request_id,"replayed":True}) if old_actor == owner and old_action == "terrain" and json.loads(old_json)==payload else (409,{"error":"request_id_conflict"})
     now=int(time.time())
     action_time=time.time_ns()
     count=db.execute("SELECT COUNT(*) FROM dev_actions WHERE actor="+ph+" AND created>="+ph,(owner,action_time-60_000_000_000)).fetchone()[0]
