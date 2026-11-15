@@ -1,0 +1,245 @@
+"""Create original, single-material low-poly GLB assets for the 2.5D Android world.
+
+Run: blender --background --python tools/build_models_blender.py -- --output client/world3d/models
+Blender Z-up -> glTF Y-up; Blender front -Y -> glTF facade +Z.
+All units are metres, footprints are centered, grounded, with 2m per tile.
+"""
+import argparse
+import json
+import math
+import sys
+from pathlib import Path
+
+import bpy
+
+PALETTE = {
+    "beige": (.69, .64, .55, 1),
+    "sand": (.76, .69, .57, 1),
+    "light": (.81, .81, .77, 1),
+    "brick": (.61, .39, .31, 1),
+    "brick2": (.71, .48, .37, 1),
+    "blue": (.21, .38, .47, 1),
+    "window": (.17, .32, .43, 1),
+    "window2": (.25, .43, .55, 1),
+    "teal": (.25, .47, .44, 1),
+    "green": (.24, .47, .33, 1),
+    "grass": (.33, .47, .30, 1),
+    "canopy": (.23, .38, .29, 1),
+    "leaves2": (.35, .52, .34, 1),
+    "wood": (.42, .32, .23, 1),
+    "dark": (.26, .29, .28, 1),
+    "asphalt": (.24, .27, .29, 1),
+    "pave": (.55, .57, .54, 1),
+    "roof": (.37, .39, .38, 1),
+    "yellow": (.86, .72, .35, 1),
+    "white": (.87, .87, .81, 1),
+    "red": (.72, .27, .28, 1),
+}
+
+
+class Geometry:
+    def __init__(self):
+        self.verts = []
+        self.faces = []
+        self.colors = []
+        self.face_colors = []
+
+    def polygon(self, vertices, color):
+        start = len(self.verts)
+        self.verts.extend(vertices)
+        self.faces.append(tuple(range(start, start + len(vertices))))
+        self.face_colors.append(PALETTE[color])
+
+    def box(self, x, y, z, w, d, h, color, roof=None):
+        x0, x1 = x-w/2, x+w/2
+        y0, y1 = y-d/2, y+d/2
+        z0, z1 = z, z+h
+        v = ((x0,y0,z0), (x1,y0,z0), (x1,y1,z0), (x0,y1,z0),
+             (x0,y0,z1), (x1,y0,z1), (x1,y1,z1), (x0,y1,z1))
+        for face in ((0,3,2,1),(0,1,5,4),(1,2,6,5),(2,3,7,6),(3,0,4,7)):
+            self.polygon([v[i] for i in face], color)
+        self.polygon([v[i] for i in (4,5,6,7)], roof or color)
+
+    def pyramid(self, x,y,z,w,d,h,color):
+        p=[(x-w/2,y-d/2,z),(x+w/2,y-d/2,z),(x+w/2,y+d/2,z),(x-w/2,y+d/2,z)]
+        self.polygon([p[3],p[2],p[1],p[0]],color)
+        for i in range(4):
+            self.polygon([p[i],p[(i+1)%4],(x,y,z+h)],color)
+
+    def facade(self, w, d, floors, window_pairs, wall, accent):
+        body_w = w*2-.35
+        body_d = d*2-.35
+        floor_h = .55 if floors > 6 else .66
+        height=floors*floor_h + .42
+        self.box(0,0,0,body_w,body_d,height,wall)
+        self.box(0,0,height,body_w+.12,body_d+.1,.19,"roof")
+        front=-body_d/2-.016
+        back=body_d/2+.016
+        # Distinct floor bands and a front door, safely inside the footprint.
+        for floor in range(floors):
+            z=.22+floor*floor_h
+            if floor:
+                self.box(0,front+.025,z-.045,body_w-.03,.035,.06,accent)
+            for ix in range(window_pairs):
+                cx=(ix-(window_pairs-1)/2)*(body_w*.68/max(1,window_pairs))
+                width=min(.27,body_w/(window_pairs*2.4))
+                self.box(cx,front-.005,z+.12,width,.025,.27,"window2" if floor%2 else "window")
+                self.box(cx,back+.005,z+.12,width,.025,.27,"window")
+        self.box(-body_w*.28, front-.028, 0, .32,.06,.55, "dark")
+        self.box(-body_w*.28, front-.09, .54, .52,.20,.08,accent)
+        self.box(0, 0, height+.19, .37,.38,.13,accent)
+        return height
+
+    def finish(self, name, out):
+        # Keep doors, awnings and railings within the authoritative tile footprint.
+        sx=max(abs(v[0]) for v in self.verts)
+        sy=max(abs(v[1]) for v in self.verts)
+        scale=min(1.0, (self.width-.015)/sx if sx else 1.0,
+                  (self.depth-.015)/sy if sy else 1.0)
+        if scale < 1.0:
+            self.verts=[(x*scale,y*scale,z) for x,y,z in self.verts]
+        bpy.ops.object.select_all(action="SELECT")
+        bpy.ops.object.delete(use_global=False)
+        mesh=bpy.data.meshes.new(name+"Mesh")
+        mesh.from_pydata(self.verts,[],self.faces)
+        mesh.update()
+        color=mesh.color_attributes.new(name="Color", type="FLOAT_COLOR", domain="CORNER")
+        for polygon, shade in zip(mesh.polygons,self.face_colors):
+            for loop_idx in polygon.loop_indices:
+                color.data[loop_idx].color=shade
+        obj=bpy.data.objects.new(name,mesh)
+        bpy.context.collection.objects.link(obj)
+        bpy.context.view_layer.objects.active=obj
+        obj.select_set(True)
+        material=bpy.data.materials.get("LunexAtlas")
+        if material is None:
+            material=bpy.data.materials.new("LunexAtlas")
+            material.use_nodes=True
+            nodes=material.node_tree.nodes
+            bsdf=nodes.get("Principled BSDF")
+            bsdf.inputs["Roughness"].default_value=.92
+            attr=nodes.new("ShaderNodeVertexColor")
+            attr.layer_name="Color"
+            material.node_tree.links.new(attr.outputs["Color"],bsdf.inputs["Base Color"])
+        mesh.materials.append(material)
+        # Exporter triangulates ngons; faces here are quads and triangles.
+        triangles=sum(len(f)-2 for f in self.faces)
+        assert triangles<=3000, (name,triangles)
+        ys=[v[2] for v in self.verts]
+        xs=[v[0] for v in self.verts]
+        depths=[v[1] for v in self.verts]
+        assert min(ys)>=-1e-6 and max(xs)-min(xs)<=self.width*2+1e-6
+        assert max(depths)-min(depths)<=self.depth*2+1e-6
+        filepath=out/(name+".glb")
+        bpy.ops.export_scene.gltf(filepath=str(filepath), export_format="GLB", use_selection=True,
+                                  export_yup=True, export_normals=True,
+                                  export_texcoords=False, export_animations=False, export_extras=False)
+        return {"file":filepath.name,"kind":self.kind,"w":self.width,"h":self.depth,
+                "triangles":triangles,"height_m":round(max(ys),2),"license":"Original / CC0"}
+
+
+def create(name, kind, w, d):
+    b=Geometry()
+    b.width,b.depth,b.kind=w,d,kind
+    if kind=="house":
+        if w==1 and d==1:
+            palette={"house_panel":("beige","teal"),"house_brick":("brick2","sand"),
+                     "house_modern":("light","blue")}
+            wall,accent=palette[name.rsplit("_",1)[0]]
+            b.facade(w,d,9,2,wall,accent)
+        else:
+            b.facade(w,d,5 if d==2 else 4,2,"sand","brick")
+    elif kind=="shop":
+        b.box(0,0,0,3.72,3.73,2.12,"light")
+        b.box(0,0,2.12,3.86,3.84,.18,"roof")
+        b.box(0,-1.87,.18,2.9,.055,1.3,"window")
+        b.box(0,-1.98,1.75,3.5,.25,.26,"teal")
+        b.box(-.52,-1.92,.02,.5,.06,1.25,"dark")
+        for x in (-1.3,1.3):
+            b.box(x,-1.93,.08,.12,.07,1.42,"white")
+        b.box(0,0,2.30,.7,.45,.18,"yellow")
+    elif kind=="warehouse":
+        b.box(0,0,0,5.7,5.65,3.6,"sand")
+        b.box(0,0,3.6,5.84,5.78,.22,"roof")
+        for x in (-1.6,0,1.6):
+            b.box(x,-2.85,.10,1.1,.065,2.3,"dark")
+            b.box(x,-2.92,1.15,1.14,.035,.08,"light")
+        b.box(0,2.83,2.7,3.1,.035,.45,"window")
+        b.box(0,-2.92,3.25,4.7,.12,.18,"teal")
+    elif kind=="school":
+        b.box(0,0,0,5.64,3.68,4.13,"sand")
+        b.box(0,0,4.13,5.78,3.82,.18,"roof")
+        for floor in range(3):
+            for x in (-2.1,-1.35,-.55,.5,1.3,2.08):
+                b.box(x,-1.85,.6+floor*1.12,.45,.05,.65,"window")
+            b.box(0,-1.88,1.4+floor*1.12,5.46,.04,.09,"teal")
+        b.box(0,-1.89,0,.8,.07,1.1,"dark")
+        b.box(0,-1.90,1.13,1.3,.19,.11,"brick")
+    elif kind=="hospital":
+        b.box(0,0,0,5.65,5.65,4.6,"light")
+        b.box(0,0,4.6,5.82,5.82,.16,"roof")
+        for floor in range(4):
+            for x in (-2.15,-1.3,.85,1.7,2.25):
+                b.box(x,-2.85,.55+floor*.99,.4,.04,.55,"window2")
+        b.box(-.25,-2.89,0,.8,.06,1.25,"dark")
+        b.box(0,-2.96,3.93,.98,.10,.16,"red")
+        b.box(0,-2.97,3.93,.16,.11,.91,"red")
+    elif kind=="park":
+        b.box(0,0,0,3.92,3.92,.07,"grass")
+        b.box(0,0,.07,3.82,.38,.03,"pave")
+        b.box(0,0,.07,.36,3.82,.03,"pave")
+        for x,y,hh in ((-1.3,-1.3,1.15),(1.32,-1.25,.99),(-1.23,1.27,.90),(1.27,1.27,1.19)):
+            b.box(x,y,.1,.20,.20,.46,"wood")
+            b.pyramid(x,y,.52,.87,.81,hh,"canopy" if x<0 else "leaves2")
+        b.box(.6,.6,.08,.7,.19,.26,"wood")
+    elif kind in ("road_straight","road_cross"):
+        b.box(0,0,0,1.94,1.94,.04,"pave")
+        b.box(0,0,.04,1.47,1.94,.015,"asphalt")
+        if kind=="road_cross":
+            b.box(0,0,.04,1.94,1.47,.015,"asphalt")
+            for x in (-.7,.7):
+                for y in (-.7,.7):
+                    b.box(x,y,.058,.10,.12,.008,"white")
+        else:
+            for y in (-.64,0,.64):
+                b.box(0,y,.06,.035,.25,.009,"yellow")
+    elif kind=="bridge":
+        b.box(0,0,0,1.6,1.8,.32,"dark")
+        b.box(0,0,.32,1.85,1.99,.12,"asphalt")
+        for x in (-.85,.85):
+            b.box(x,0,.43,.09,1.9,.22,"light")
+            for y in (-.66,.66):
+                b.box(x,y,.61,.08,.09,.45,"light")
+            b.box(x,0,1.03,.09,1.9,.07,"teal")
+        b.box(0,0,.45,.04,.34,.01,"yellow")
+    return b
+
+
+def main():
+    parser=argparse.ArgumentParser()
+    parser.add_argument("--output",required=True)
+    args=parser.parse_args(sys.argv[sys.argv.index("--")+1:] if "--" in sys.argv else [])
+    output=Path(args.output).resolve()
+    output.mkdir(parents=True,exist_ok=True)
+    specs=[
+        ("house_panel_1x1","house",1,1), ("house_brick_1x1","house",1,1),
+        ("house_modern_1x1","house",1,1), ("house_1x2","house",1,2),
+        ("house_1x3","house",1,3), ("shop_2x2","shop",2,2),
+        ("warehouse_3x3","warehouse",3,3), ("school_3x2","school",3,2),
+        ("hospital_3x3","hospital",3,3), ("park_2x2","park",2,2),
+        ("road_straight_1x1","road_straight",1,1),
+        ("road_cross_1x1","road_cross",1,1),
+        ("bridge_1x1","bridge",1,1)]
+    manifest=[]
+    for name,kind,w,d in specs:
+        mesh=create(name,kind,w,d)
+        row=mesh.finish(name,output)
+        manifest.append(row)
+        print(name, row["triangles"], "triangles", flush=True)
+    # This metadata is used only by documentation script, not the Android client.
+    (output.parent.parent.parent/"tools/models_build.json").write_text(json.dumps(manifest,indent=2))
+    assert len(manifest)==13
+
+
+if __name__=="__main__":
+    main()

@@ -14,6 +14,7 @@ from game_client import GameAdminError, GameClient
 from livepatch import Store
 from game_asset_upload import AssetPublisher, NAMES
 from art_catalog import ArtCatalog
+from model_catalog import ModelCatalog
 from world_editor import WorldDrafts
 from world_preview import Preview
 from urllib.error import URLError
@@ -23,7 +24,7 @@ STATIC = ROOT / "static"
 MAX_BODY = 12 * 1024 * 1024
 FAIL_LIMIT, FAIL_WINDOW = 10, 300          # failed sign-ins per client address and window
 REQUEST_TIMEOUT = 15                       # seconds a client may stall while sending a request (slow-loris guard)
-STATIC_TYPES = {"index.html": "text/html", "app.js": "text/javascript", "world.js": "text/javascript", "game.js": "text/javascript", "navigation.js": "text/javascript", "game-art.js": "text/javascript", "art-catalog.js": "text/javascript", "style.css": "text/css"}
+STATIC_TYPES = {"index.html": "text/html", "app.js": "text/javascript", "world.js": "text/javascript", "game.js": "text/javascript", "navigation.js": "text/javascript", "game-art.js": "text/javascript", "art-catalog.js": "text/javascript", "models.js": "text/javascript", "style.css": "text/css"}
 LOOPBACK = ("127.0.0.1", "::1")
 
 def handler_factory(store, token, game=None):
@@ -34,6 +35,7 @@ def handler_factory(store, token, game=None):
     expected = hashlib.sha256(("Bearer " + token).encode("utf-8")).digest()
     game_art = AssetPublisher(os.environ.get("LUNEX_GAME_ASSETS", "/var/www/rikagro-game/lunexeconom/assets"))
     art_catalog = ArtCatalog(os.environ.get("LUNEX_ART_CATALOG", "/var/www/rikagro-game/lunexeconom/assets/art-catalog"))
+    models = ModelCatalog(os.environ.get("LUNEX_STUDIO_MODELS", str(store.root / "models")))
     preview = Preview(os.environ.get("LUNEX_WORLD_PREVIEW_UPSTREAM", "http://127.0.0.1:18767"))
     class Handler(BaseHTTPRequestHandler):
         timeout = REQUEST_TIMEOUT
@@ -163,6 +165,8 @@ def handler_factory(store, token, game=None):
                     return self.send(404, {"error": "city_not_found"})
             if path == "/api/releases":
                 return self.send(200, {"releases": store.releases()})
+            if path == "/api/models":
+                return self.send(200, models.manifest())
             if path == "/api/game-art":
                 return self.send(200, game_art.manifest())
             if path == "/api/art-catalog":
@@ -206,6 +210,8 @@ def handler_factory(store, token, game=None):
                     return self.send(200, store.rollback(body["revision"], self.client_ip()))
                 if path == "/api/publish":
                     return self.send(200, store.publish(self.client_ip()))
+                if path == "/api/models":
+                    return self.send(201, models.upload(body["name"], body["data_base64"]))
                 if path == "/api/game-art":
                     return self.send(201, game_art.publish(body["name"], body["data_base64"]))
                 if path == "/api/art-catalog/upload":
