@@ -1,0 +1,2573 @@
+{
+  "city": "ufa",
+  "days": [
+    {
+      "day": 1,
+      "enterprises": {
+        "bakery": {
+          "arrears": 0,
+          "building": "bakery",
+          "load_bp": 0,
+          "player": "timur",
+          "stage": 4,
+          "stalled": false,
+          "stock": {}
+        },
+        "field": {
+          "arrears": 0,
+          "building": "field",
+          "load_bp": 0,
+          "player": "mira",
+          "stage": 4,
+          "stalled": false,
+          "stock": {}
+        },
+        "mill": {
+          "arrears": 0,
+          "building": "mill",
+          "load_bp": 0,
+          "player": "mira",
+          "stage": 4,
+          "stalled": false,
+          "stock": {}
+        },
+        "store": {
+          "arrears": 0,
+          "building": "grocery_store",
+          "load_bp": 0,
+          "player": "timur",
+          "stage": 4,
+          "stalled": false,
+          "stock": {}
+        }
+      },
+      "ledger_sum": 0,
+      "market": [],
+      "month_closed": 0,
+      "players": {
+        "mira": {
+          "money": 200000,
+          "output": {},
+          "revenue": 0,
+          "sales": 0,
+          "tax": 0,
+          "tax_due": 0,
+          "tax_paid": 0,
+          "wages_paid": 0
+        },
+        "timur": {
+          "money": 200000,
+          "output": {},
+          "revenue": 0,
+          "sales": 0,
+          "tax": 0,
+          "tax_due": 0,
+          "tax_paid": 0,
+          "wages_paid": 0
+        }
+      }
+    },
+    {
+      "day": 2,
+      "enterprises": {
+        "bakery": {
+          "arrears": 0,
+          "building": "bakery",
+          "load_bp": 0,
+          "player": "timur",
+          "stage": 4,
+          "stalled": false,
+          "stock": {
+            "flour": 80
+          }
+        },
+        "field": {
+          "arrears": 0,
+          "building": "field",
+          "load_bp": 10000,
+          "player": "mira",
+          "stage": 4,
+          "stalled": false,
+          "stock": {}
+        },
+        "mill": {
+          "arrears": 0,
+          "building": "mill",
+          "load_bp": 0,
+          "player": "mira",
+          "stage": 4,
+          "stalled": false,
+          "stock": {
+            "grain": 100
+          }
+        },
+        "store": {
+          "arrears": 0,
+          "building": "grocery_store",
+          "load_bp": 0,
+          "player": "timur",
+          "stage": 4,
+          "stalled": false,
+          "stock": {}
+        }
+      },
+      "ledger_sum": 0,
+      "market": [
+        {
+          "bought": 0,
+          "demand": 100,
+          "from_city": 0,
+          "from_players": 0,
+          "player_supply": 0,
+          "price": 225,
+          "product": "bread"
+        },
+        {
+          "bought": 80,
+          "demand": 80,
+          "from_city": 80,
+          "from_players": 0,
+          "player_supply": 0,
+          "price": 112,
+          "product": "flour"
+        }
+      ],
+      "month_closed": 0,
+      "players": {
+        "mira": {
+          "money": 200000,
+          "output": {
+            "grain": 100
+          },
+          "revenue": 0,
+          "sales": 0,
+          "tax": 0,
+          "tax_due": 0,
+          "tax_paid": 0,
+          "wages_paid": 0
+        },
+        "timur": {
+          "money": 191040,
+          "output": {},
+          "revenue": 0,
+          "sales": 0,
+          "tax": 0,
+          "tax_due": 0,
+          "tax_paid": 0,
+          "wages_paid": 0
+        }
+      }
+    },
+    {
+      "day": 3,
+      "enterprises": {
+        "bakery": {
+          "arrears": 0,
+          "building": "bakery",
+          "load_bp": 10000,
+          "player": "timur",
+          "stage": 4,
+          "stalled": false,
+          "stock": {
+            "flour": 80
+          }
+        },
+        "field": {
+          "arrears": 0,
+          "building": "field",
+          "load_bp": 10000,
+          "player": "mira",
+          "stage": 4,
+          "stalled": false,
+          "stock": {}
+        },
+        "mill": {
+          "arrears": 0,
+          "building": "mill",
+          "load_bp": 10000,
+          "player": "mira",
+          "stage": 4,
+          "stalled": false,
+          "stock": {
+            "grain": 100
+          }
+        },
+        "store": {
+          "arrears": 0,
+          "building": "grocery_store",
+          "load_bp": 0,
+          "player": "timur",
+          "stage": 4,
+          "stalled": false,
+          "stock": {}
+        }
+      },
+      "ledger_sum": 0,
+      "market": [
+        {
+          "bought": 80,
+          "demand": 80,
+          "from_city": 0,
+          "from_players": 80,
+          "player_supply": 80,
+          "price": 45,
+          "product": "flour"
+        }
+      ],
+      "month_closed": 0,
+      "players": {
+        "mira": {
+          "money": 203600,
+          "output": {
+            "flour": 80,
+            "grain": 100
+          },
+          "revenue": 0,
+          "sales": 0,
+          "tax": 0,
+          "tax_due": 0,
+          "tax_paid": 0,
+          "wages_paid": 0
+        },
+        "timur": {
+          "money": 196440,
+          "output": {
+            "bread": 100
+          },
+          "revenue": 9000,
+          "sales": 100,
+          "tax": 819,
+          "tax_due": 0,
+          "tax_paid": 0,
+          "wages_paid": 0
+        }
+      }
+    },
+    {
+      "day": 4,
+      "enterprises": {
+        "bakery": {
+          "arrears": 0,
+          "building": "bakery",
+          "load_bp": 10000,
+          "player": "timur",
+          "stage": 4,
+          "stalled": false,
+          "stock": {
+            "flour": 80
+          }
+        },
+        "field": {
+          "arrears": 0,
+          "building": "field",
+          "load_bp": 10000,
+          "player": "mira",
+          "stage": 4,
+          "stalled": false,
+          "stock": {}
+        },
+        "mill": {
+          "arrears": 0,
+          "building": "mill",
+          "load_bp": 10000,
+          "player": "mira",
+          "stage": 4,
+          "stalled": false,
+          "stock": {
+            "grain": 100
+          }
+        },
+        "store": {
+          "arrears": 0,
+          "building": "grocery_store",
+          "load_bp": 0,
+          "player": "timur",
+          "stage": 4,
+          "stalled": false,
+          "stock": {}
+        }
+      },
+      "ledger_sum": 0,
+      "market": [
+        {
+          "bought": 80,
+          "demand": 80,
+          "from_city": 0,
+          "from_players": 80,
+          "player_supply": 80,
+          "price": 45,
+          "product": "flour"
+        }
+      ],
+      "month_closed": 0,
+      "players": {
+        "mira": {
+          "money": 207200,
+          "output": {
+            "flour": 80,
+            "grain": 100
+          },
+          "revenue": 0,
+          "sales": 0,
+          "tax": 0,
+          "tax_due": 0,
+          "tax_paid": 0,
+          "wages_paid": 0
+        },
+        "timur": {
+          "money": 201840,
+          "output": {
+            "bread": 100
+          },
+          "revenue": 9000,
+          "sales": 100,
+          "tax": 819,
+          "tax_due": 0,
+          "tax_paid": 0,
+          "wages_paid": 0
+        }
+      }
+    },
+    {
+      "day": 5,
+      "enterprises": {
+        "bakery": {
+          "arrears": 0,
+          "building": "bakery",
+          "load_bp": 10000,
+          "player": "timur",
+          "stage": 4,
+          "stalled": false,
+          "stock": {
+            "flour": 80
+          }
+        },
+        "field": {
+          "arrears": 0,
+          "building": "field",
+          "load_bp": 10000,
+          "player": "mira",
+          "stage": 4,
+          "stalled": false,
+          "stock": {}
+        },
+        "mill": {
+          "arrears": 0,
+          "building": "mill",
+          "load_bp": 10000,
+          "player": "mira",
+          "stage": 4,
+          "stalled": false,
+          "stock": {
+            "grain": 100
+          }
+        },
+        "store": {
+          "arrears": 0,
+          "building": "grocery_store",
+          "load_bp": 0,
+          "player": "timur",
+          "stage": 4,
+          "stalled": false,
+          "stock": {}
+        }
+      },
+      "ledger_sum": 0,
+      "market": [
+        {
+          "bought": 80,
+          "demand": 80,
+          "from_city": 0,
+          "from_players": 80,
+          "player_supply": 80,
+          "price": 45,
+          "product": "flour"
+        }
+      ],
+      "month_closed": 0,
+      "players": {
+        "mira": {
+          "money": 210800,
+          "output": {
+            "flour": 80,
+            "grain": 100
+          },
+          "revenue": 0,
+          "sales": 0,
+          "tax": 0,
+          "tax_due": 0,
+          "tax_paid": 0,
+          "wages_paid": 0
+        },
+        "timur": {
+          "money": 207240,
+          "output": {
+            "bread": 100
+          },
+          "revenue": 9000,
+          "sales": 100,
+          "tax": 819,
+          "tax_due": 0,
+          "tax_paid": 0,
+          "wages_paid": 0
+        }
+      }
+    },
+    {
+      "day": 6,
+      "enterprises": {
+        "bakery": {
+          "arrears": 0,
+          "building": "bakery",
+          "load_bp": 10000,
+          "player": "timur",
+          "stage": 4,
+          "stalled": false,
+          "stock": {
+            "flour": 80
+          }
+        },
+        "field": {
+          "arrears": 0,
+          "building": "field",
+          "load_bp": 10000,
+          "player": "mira",
+          "stage": 4,
+          "stalled": false,
+          "stock": {}
+        },
+        "mill": {
+          "arrears": 0,
+          "building": "mill",
+          "load_bp": 10000,
+          "player": "mira",
+          "stage": 4,
+          "stalled": false,
+          "stock": {
+            "grain": 100
+          }
+        },
+        "store": {
+          "arrears": 0,
+          "building": "grocery_store",
+          "load_bp": 0,
+          "player": "timur",
+          "stage": 4,
+          "stalled": false,
+          "stock": {}
+        }
+      },
+      "ledger_sum": 0,
+      "market": [
+        {
+          "bought": 80,
+          "demand": 80,
+          "from_city": 0,
+          "from_players": 80,
+          "player_supply": 80,
+          "price": 45,
+          "product": "flour"
+        }
+      ],
+      "month_closed": 0,
+      "players": {
+        "mira": {
+          "money": 214400,
+          "output": {
+            "flour": 80,
+            "grain": 100
+          },
+          "revenue": 0,
+          "sales": 0,
+          "tax": 0,
+          "tax_due": 0,
+          "tax_paid": 0,
+          "wages_paid": 0
+        },
+        "timur": {
+          "money": 212640,
+          "output": {
+            "bread": 100
+          },
+          "revenue": 9000,
+          "sales": 100,
+          "tax": 819,
+          "tax_due": 0,
+          "tax_paid": 0,
+          "wages_paid": 0
+        }
+      }
+    },
+    {
+      "day": 7,
+      "enterprises": {
+        "bakery": {
+          "arrears": 0,
+          "building": "bakery",
+          "load_bp": 10000,
+          "player": "timur",
+          "stage": 4,
+          "stalled": false,
+          "stock": {
+            "flour": 80
+          }
+        },
+        "field": {
+          "arrears": 0,
+          "building": "field",
+          "load_bp": 10000,
+          "player": "mira",
+          "stage": 4,
+          "stalled": false,
+          "stock": {}
+        },
+        "mill": {
+          "arrears": 0,
+          "building": "mill",
+          "load_bp": 10000,
+          "player": "mira",
+          "stage": 4,
+          "stalled": false,
+          "stock": {
+            "grain": 100
+          }
+        },
+        "store": {
+          "arrears": 0,
+          "building": "grocery_store",
+          "load_bp": 0,
+          "player": "timur",
+          "stage": 4,
+          "stalled": false,
+          "stock": {}
+        }
+      },
+      "ledger_sum": 0,
+      "market": [
+        {
+          "bought": 80,
+          "demand": 80,
+          "from_city": 0,
+          "from_players": 80,
+          "player_supply": 80,
+          "price": 45,
+          "product": "flour"
+        }
+      ],
+      "month_closed": 0,
+      "players": {
+        "mira": {
+          "money": 218000,
+          "output": {
+            "flour": 80,
+            "grain": 100
+          },
+          "revenue": 0,
+          "sales": 0,
+          "tax": 0,
+          "tax_due": 0,
+          "tax_paid": 0,
+          "wages_paid": 0
+        },
+        "timur": {
+          "money": 218040,
+          "output": {
+            "bread": 100
+          },
+          "revenue": 9000,
+          "sales": 100,
+          "tax": 819,
+          "tax_due": 0,
+          "tax_paid": 0,
+          "wages_paid": 0
+        }
+      }
+    },
+    {
+      "day": 8,
+      "enterprises": {
+        "bakery": {
+          "arrears": 0,
+          "building": "bakery",
+          "load_bp": 10000,
+          "player": "timur",
+          "stage": 4,
+          "stalled": false,
+          "stock": {
+            "flour": 80
+          }
+        },
+        "field": {
+          "arrears": 0,
+          "building": "field",
+          "load_bp": 10000,
+          "player": "mira",
+          "stage": 4,
+          "stalled": false,
+          "stock": {}
+        },
+        "mill": {
+          "arrears": 0,
+          "building": "mill",
+          "load_bp": 10000,
+          "player": "mira",
+          "stage": 4,
+          "stalled": false,
+          "stock": {
+            "grain": 100
+          }
+        },
+        "store": {
+          "arrears": 0,
+          "building": "grocery_store",
+          "load_bp": 0,
+          "player": "timur",
+          "stage": 4,
+          "stalled": false,
+          "stock": {}
+        }
+      },
+      "ledger_sum": 0,
+      "market": [
+        {
+          "bought": 80,
+          "demand": 80,
+          "from_city": 0,
+          "from_players": 80,
+          "player_supply": 80,
+          "price": 45,
+          "product": "flour"
+        }
+      ],
+      "month_closed": 0,
+      "players": {
+        "mira": {
+          "money": 221600,
+          "output": {
+            "flour": 80,
+            "grain": 100
+          },
+          "revenue": 0,
+          "sales": 0,
+          "tax": 0,
+          "tax_due": 0,
+          "tax_paid": 0,
+          "wages_paid": 0
+        },
+        "timur": {
+          "money": 223440,
+          "output": {
+            "bread": 100
+          },
+          "revenue": 9000,
+          "sales": 100,
+          "tax": 819,
+          "tax_due": 0,
+          "tax_paid": 0,
+          "wages_paid": 0
+        }
+      }
+    },
+    {
+      "day": 9,
+      "enterprises": {
+        "bakery": {
+          "arrears": 0,
+          "building": "bakery",
+          "load_bp": 10000,
+          "player": "timur",
+          "stage": 4,
+          "stalled": false,
+          "stock": {
+            "flour": 80
+          }
+        },
+        "field": {
+          "arrears": 0,
+          "building": "field",
+          "load_bp": 10000,
+          "player": "mira",
+          "stage": 4,
+          "stalled": false,
+          "stock": {}
+        },
+        "mill": {
+          "arrears": 0,
+          "building": "mill",
+          "load_bp": 10000,
+          "player": "mira",
+          "stage": 4,
+          "stalled": false,
+          "stock": {
+            "grain": 100
+          }
+        },
+        "store": {
+          "arrears": 0,
+          "building": "grocery_store",
+          "load_bp": 0,
+          "player": "timur",
+          "stage": 4,
+          "stalled": false,
+          "stock": {}
+        }
+      },
+      "ledger_sum": 0,
+      "market": [
+        {
+          "bought": 80,
+          "demand": 80,
+          "from_city": 0,
+          "from_players": 80,
+          "player_supply": 80,
+          "price": 45,
+          "product": "flour"
+        }
+      ],
+      "month_closed": 0,
+      "players": {
+        "mira": {
+          "money": 225200,
+          "output": {
+            "flour": 80,
+            "grain": 100
+          },
+          "revenue": 0,
+          "sales": 0,
+          "tax": 0,
+          "tax_due": 0,
+          "tax_paid": 0,
+          "wages_paid": 0
+        },
+        "timur": {
+          "money": 228840,
+          "output": {
+            "bread": 100
+          },
+          "revenue": 9000,
+          "sales": 100,
+          "tax": 819,
+          "tax_due": 0,
+          "tax_paid": 0,
+          "wages_paid": 0
+        }
+      }
+    },
+    {
+      "day": 10,
+      "enterprises": {
+        "bakery": {
+          "arrears": 0,
+          "building": "bakery",
+          "load_bp": 10000,
+          "player": "timur",
+          "stage": 4,
+          "stalled": false,
+          "stock": {
+            "flour": 80
+          }
+        },
+        "field": {
+          "arrears": 0,
+          "building": "field",
+          "load_bp": 10000,
+          "player": "mira",
+          "stage": 4,
+          "stalled": false,
+          "stock": {}
+        },
+        "mill": {
+          "arrears": 0,
+          "building": "mill",
+          "load_bp": 10000,
+          "player": "mira",
+          "stage": 4,
+          "stalled": false,
+          "stock": {
+            "grain": 100
+          }
+        },
+        "store": {
+          "arrears": 0,
+          "building": "grocery_store",
+          "load_bp": 0,
+          "player": "timur",
+          "stage": 4,
+          "stalled": false,
+          "stock": {}
+        }
+      },
+      "ledger_sum": 0,
+      "market": [
+        {
+          "bought": 80,
+          "demand": 80,
+          "from_city": 0,
+          "from_players": 80,
+          "player_supply": 80,
+          "price": 45,
+          "product": "flour"
+        }
+      ],
+      "month_closed": 0,
+      "players": {
+        "mira": {
+          "money": 228800,
+          "output": {
+            "flour": 80,
+            "grain": 100
+          },
+          "revenue": 0,
+          "sales": 0,
+          "tax": 0,
+          "tax_due": 0,
+          "tax_paid": 0,
+          "wages_paid": 0
+        },
+        "timur": {
+          "money": 234240,
+          "output": {
+            "bread": 100
+          },
+          "revenue": 9000,
+          "sales": 100,
+          "tax": 819,
+          "tax_due": 0,
+          "tax_paid": 0,
+          "wages_paid": 0
+        }
+      }
+    },
+    {
+      "day": 11,
+      "enterprises": {
+        "bakery": {
+          "arrears": 0,
+          "building": "bakery",
+          "load_bp": 10000,
+          "player": "timur",
+          "stage": 4,
+          "stalled": false,
+          "stock": {
+            "flour": 80
+          }
+        },
+        "field": {
+          "arrears": 0,
+          "building": "field",
+          "load_bp": 10000,
+          "player": "mira",
+          "stage": 4,
+          "stalled": false,
+          "stock": {}
+        },
+        "mill": {
+          "arrears": 0,
+          "building": "mill",
+          "load_bp": 10000,
+          "player": "mira",
+          "stage": 4,
+          "stalled": false,
+          "stock": {
+            "grain": 100
+          }
+        },
+        "store": {
+          "arrears": 0,
+          "building": "grocery_store",
+          "load_bp": 0,
+          "player": "timur",
+          "stage": 4,
+          "stalled": false,
+          "stock": {}
+        }
+      },
+      "ledger_sum": 0,
+      "market": [
+        {
+          "bought": 80,
+          "demand": 80,
+          "from_city": 0,
+          "from_players": 80,
+          "player_supply": 80,
+          "price": 45,
+          "product": "flour"
+        }
+      ],
+      "month_closed": 0,
+      "players": {
+        "mira": {
+          "money": 232400,
+          "output": {
+            "flour": 80,
+            "grain": 100
+          },
+          "revenue": 0,
+          "sales": 0,
+          "tax": 0,
+          "tax_due": 0,
+          "tax_paid": 0,
+          "wages_paid": 0
+        },
+        "timur": {
+          "money": 239640,
+          "output": {
+            "bread": 100
+          },
+          "revenue": 9000,
+          "sales": 100,
+          "tax": 819,
+          "tax_due": 0,
+          "tax_paid": 0,
+          "wages_paid": 0
+        }
+      }
+    },
+    {
+      "day": 12,
+      "enterprises": {
+        "bakery": {
+          "arrears": 0,
+          "building": "bakery",
+          "load_bp": 10000,
+          "player": "timur",
+          "stage": 4,
+          "stalled": false,
+          "stock": {
+            "flour": 80
+          }
+        },
+        "field": {
+          "arrears": 0,
+          "building": "field",
+          "load_bp": 10000,
+          "player": "mira",
+          "stage": 4,
+          "stalled": false,
+          "stock": {}
+        },
+        "mill": {
+          "arrears": 0,
+          "building": "mill",
+          "load_bp": 10000,
+          "player": "mira",
+          "stage": 4,
+          "stalled": false,
+          "stock": {
+            "grain": 100
+          }
+        },
+        "store": {
+          "arrears": 0,
+          "building": "grocery_store",
+          "load_bp": 0,
+          "player": "timur",
+          "stage": 4,
+          "stalled": false,
+          "stock": {}
+        }
+      },
+      "ledger_sum": 0,
+      "market": [
+        {
+          "bought": 80,
+          "demand": 80,
+          "from_city": 0,
+          "from_players": 80,
+          "player_supply": 80,
+          "price": 45,
+          "product": "flour"
+        }
+      ],
+      "month_closed": 0,
+      "players": {
+        "mira": {
+          "money": 236000,
+          "output": {
+            "flour": 80,
+            "grain": 100
+          },
+          "revenue": 0,
+          "sales": 0,
+          "tax": 0,
+          "tax_due": 0,
+          "tax_paid": 0,
+          "wages_paid": 0
+        },
+        "timur": {
+          "money": 245040,
+          "output": {
+            "bread": 100
+          },
+          "revenue": 9000,
+          "sales": 100,
+          "tax": 819,
+          "tax_due": 0,
+          "tax_paid": 0,
+          "wages_paid": 0
+        }
+      }
+    },
+    {
+      "day": 13,
+      "enterprises": {
+        "bakery": {
+          "arrears": 0,
+          "building": "bakery",
+          "load_bp": 10000,
+          "player": "timur",
+          "stage": 4,
+          "stalled": false,
+          "stock": {
+            "flour": 80
+          }
+        },
+        "field": {
+          "arrears": 0,
+          "building": "field",
+          "load_bp": 10000,
+          "player": "mira",
+          "stage": 4,
+          "stalled": false,
+          "stock": {}
+        },
+        "mill": {
+          "arrears": 0,
+          "building": "mill",
+          "load_bp": 10000,
+          "player": "mira",
+          "stage": 4,
+          "stalled": false,
+          "stock": {
+            "grain": 100
+          }
+        },
+        "store": {
+          "arrears": 0,
+          "building": "grocery_store",
+          "load_bp": 0,
+          "player": "timur",
+          "stage": 4,
+          "stalled": false,
+          "stock": {}
+        }
+      },
+      "ledger_sum": 0,
+      "market": [
+        {
+          "bought": 80,
+          "demand": 80,
+          "from_city": 0,
+          "from_players": 80,
+          "player_supply": 80,
+          "price": 45,
+          "product": "flour"
+        }
+      ],
+      "month_closed": 0,
+      "players": {
+        "mira": {
+          "money": 239600,
+          "output": {
+            "flour": 80,
+            "grain": 100
+          },
+          "revenue": 0,
+          "sales": 0,
+          "tax": 0,
+          "tax_due": 0,
+          "tax_paid": 0,
+          "wages_paid": 0
+        },
+        "timur": {
+          "money": 250440,
+          "output": {
+            "bread": 100
+          },
+          "revenue": 9000,
+          "sales": 100,
+          "tax": 819,
+          "tax_due": 0,
+          "tax_paid": 0,
+          "wages_paid": 0
+        }
+      }
+    },
+    {
+      "day": 14,
+      "enterprises": {
+        "bakery": {
+          "arrears": 0,
+          "building": "bakery",
+          "load_bp": 10000,
+          "player": "timur",
+          "stage": 4,
+          "stalled": false,
+          "stock": {
+            "flour": 80
+          }
+        },
+        "field": {
+          "arrears": 0,
+          "building": "field",
+          "load_bp": 10000,
+          "player": "mira",
+          "stage": 4,
+          "stalled": false,
+          "stock": {}
+        },
+        "mill": {
+          "arrears": 0,
+          "building": "mill",
+          "load_bp": 10000,
+          "player": "mira",
+          "stage": 4,
+          "stalled": false,
+          "stock": {
+            "grain": 100
+          }
+        },
+        "store": {
+          "arrears": 0,
+          "building": "grocery_store",
+          "load_bp": 0,
+          "player": "timur",
+          "stage": 4,
+          "stalled": false,
+          "stock": {}
+        }
+      },
+      "ledger_sum": 0,
+      "market": [
+        {
+          "bought": 80,
+          "demand": 80,
+          "from_city": 0,
+          "from_players": 80,
+          "player_supply": 80,
+          "price": 45,
+          "product": "flour"
+        }
+      ],
+      "month_closed": 0,
+      "players": {
+        "mira": {
+          "money": 243200,
+          "output": {
+            "flour": 80,
+            "grain": 100
+          },
+          "revenue": 0,
+          "sales": 0,
+          "tax": 0,
+          "tax_due": 0,
+          "tax_paid": 0,
+          "wages_paid": 0
+        },
+        "timur": {
+          "money": 255840,
+          "output": {
+            "bread": 100
+          },
+          "revenue": 9000,
+          "sales": 100,
+          "tax": 819,
+          "tax_due": 0,
+          "tax_paid": 0,
+          "wages_paid": 0
+        }
+      }
+    },
+    {
+      "day": 15,
+      "enterprises": {
+        "bakery": {
+          "arrears": 0,
+          "building": "bakery",
+          "load_bp": 10000,
+          "player": "timur",
+          "stage": 4,
+          "stalled": false,
+          "stock": {
+            "flour": 80
+          }
+        },
+        "field": {
+          "arrears": 0,
+          "building": "field",
+          "load_bp": 10000,
+          "player": "mira",
+          "stage": 4,
+          "stalled": false,
+          "stock": {}
+        },
+        "mill": {
+          "arrears": 0,
+          "building": "mill",
+          "load_bp": 10000,
+          "player": "mira",
+          "stage": 4,
+          "stalled": false,
+          "stock": {
+            "grain": 100
+          }
+        },
+        "store": {
+          "arrears": 0,
+          "building": "grocery_store",
+          "load_bp": 0,
+          "player": "timur",
+          "stage": 4,
+          "stalled": false,
+          "stock": {}
+        }
+      },
+      "ledger_sum": 0,
+      "market": [
+        {
+          "bought": 80,
+          "demand": 80,
+          "from_city": 0,
+          "from_players": 80,
+          "player_supply": 80,
+          "price": 45,
+          "product": "flour"
+        }
+      ],
+      "month_closed": 0,
+      "players": {
+        "mira": {
+          "money": 246800,
+          "output": {
+            "flour": 80,
+            "grain": 100
+          },
+          "revenue": 0,
+          "sales": 0,
+          "tax": 0,
+          "tax_due": 0,
+          "tax_paid": 0,
+          "wages_paid": 0
+        },
+        "timur": {
+          "money": 261240,
+          "output": {
+            "bread": 100
+          },
+          "revenue": 9000,
+          "sales": 100,
+          "tax": 819,
+          "tax_due": 0,
+          "tax_paid": 0,
+          "wages_paid": 0
+        }
+      }
+    },
+    {
+      "day": 16,
+      "enterprises": {
+        "bakery": {
+          "arrears": 0,
+          "building": "bakery",
+          "load_bp": 10000,
+          "player": "timur",
+          "stage": 4,
+          "stalled": false,
+          "stock": {
+            "flour": 80
+          }
+        },
+        "field": {
+          "arrears": 0,
+          "building": "field",
+          "load_bp": 10000,
+          "player": "mira",
+          "stage": 4,
+          "stalled": false,
+          "stock": {}
+        },
+        "mill": {
+          "arrears": 0,
+          "building": "mill",
+          "load_bp": 10000,
+          "player": "mira",
+          "stage": 4,
+          "stalled": false,
+          "stock": {
+            "grain": 100
+          }
+        },
+        "store": {
+          "arrears": 0,
+          "building": "grocery_store",
+          "load_bp": 0,
+          "player": "timur",
+          "stage": 4,
+          "stalled": false,
+          "stock": {}
+        }
+      },
+      "ledger_sum": 0,
+      "market": [
+        {
+          "bought": 80,
+          "demand": 80,
+          "from_city": 0,
+          "from_players": 80,
+          "player_supply": 80,
+          "price": 45,
+          "product": "flour"
+        }
+      ],
+      "month_closed": 0,
+      "players": {
+        "mira": {
+          "money": 250400,
+          "output": {
+            "flour": 80,
+            "grain": 100
+          },
+          "revenue": 0,
+          "sales": 0,
+          "tax": 0,
+          "tax_due": 0,
+          "tax_paid": 0,
+          "wages_paid": 0
+        },
+        "timur": {
+          "money": 266640,
+          "output": {
+            "bread": 100
+          },
+          "revenue": 9000,
+          "sales": 100,
+          "tax": 819,
+          "tax_due": 0,
+          "tax_paid": 0,
+          "wages_paid": 0
+        }
+      }
+    },
+    {
+      "day": 17,
+      "enterprises": {
+        "bakery": {
+          "arrears": 0,
+          "building": "bakery",
+          "load_bp": 10000,
+          "player": "timur",
+          "stage": 4,
+          "stalled": false,
+          "stock": {
+            "flour": 80
+          }
+        },
+        "field": {
+          "arrears": 0,
+          "building": "field",
+          "load_bp": 10000,
+          "player": "mira",
+          "stage": 4,
+          "stalled": false,
+          "stock": {}
+        },
+        "mill": {
+          "arrears": 0,
+          "building": "mill",
+          "load_bp": 10000,
+          "player": "mira",
+          "stage": 4,
+          "stalled": false,
+          "stock": {
+            "grain": 100
+          }
+        },
+        "store": {
+          "arrears": 0,
+          "building": "grocery_store",
+          "load_bp": 0,
+          "player": "timur",
+          "stage": 4,
+          "stalled": false,
+          "stock": {}
+        }
+      },
+      "ledger_sum": 0,
+      "market": [
+        {
+          "bought": 80,
+          "demand": 80,
+          "from_city": 0,
+          "from_players": 80,
+          "player_supply": 80,
+          "price": 45,
+          "product": "flour"
+        }
+      ],
+      "month_closed": 0,
+      "players": {
+        "mira": {
+          "money": 254000,
+          "output": {
+            "flour": 80,
+            "grain": 100
+          },
+          "revenue": 0,
+          "sales": 0,
+          "tax": 0,
+          "tax_due": 0,
+          "tax_paid": 0,
+          "wages_paid": 0
+        },
+        "timur": {
+          "money": 272040,
+          "output": {
+            "bread": 100
+          },
+          "revenue": 9000,
+          "sales": 100,
+          "tax": 819,
+          "tax_due": 0,
+          "tax_paid": 0,
+          "wages_paid": 0
+        }
+      }
+    },
+    {
+      "day": 18,
+      "enterprises": {
+        "bakery": {
+          "arrears": 0,
+          "building": "bakery",
+          "load_bp": 10000,
+          "player": "timur",
+          "stage": 4,
+          "stalled": false,
+          "stock": {
+            "flour": 80
+          }
+        },
+        "field": {
+          "arrears": 0,
+          "building": "field",
+          "load_bp": 10000,
+          "player": "mira",
+          "stage": 4,
+          "stalled": false,
+          "stock": {}
+        },
+        "mill": {
+          "arrears": 0,
+          "building": "mill",
+          "load_bp": 10000,
+          "player": "mira",
+          "stage": 4,
+          "stalled": false,
+          "stock": {
+            "grain": 100
+          }
+        },
+        "store": {
+          "arrears": 0,
+          "building": "grocery_store",
+          "load_bp": 0,
+          "player": "timur",
+          "stage": 4,
+          "stalled": false,
+          "stock": {}
+        }
+      },
+      "ledger_sum": 0,
+      "market": [
+        {
+          "bought": 80,
+          "demand": 80,
+          "from_city": 0,
+          "from_players": 80,
+          "player_supply": 80,
+          "price": 45,
+          "product": "flour"
+        }
+      ],
+      "month_closed": 0,
+      "players": {
+        "mira": {
+          "money": 257600,
+          "output": {
+            "flour": 80,
+            "grain": 100
+          },
+          "revenue": 0,
+          "sales": 0,
+          "tax": 0,
+          "tax_due": 0,
+          "tax_paid": 0,
+          "wages_paid": 0
+        },
+        "timur": {
+          "money": 277440,
+          "output": {
+            "bread": 100
+          },
+          "revenue": 9000,
+          "sales": 100,
+          "tax": 819,
+          "tax_due": 0,
+          "tax_paid": 0,
+          "wages_paid": 0
+        }
+      }
+    },
+    {
+      "day": 19,
+      "enterprises": {
+        "bakery": {
+          "arrears": 0,
+          "building": "bakery",
+          "load_bp": 10000,
+          "player": "timur",
+          "stage": 4,
+          "stalled": false,
+          "stock": {
+            "flour": 80
+          }
+        },
+        "field": {
+          "arrears": 0,
+          "building": "field",
+          "load_bp": 10000,
+          "player": "mira",
+          "stage": 4,
+          "stalled": false,
+          "stock": {}
+        },
+        "mill": {
+          "arrears": 0,
+          "building": "mill",
+          "load_bp": 10000,
+          "player": "mira",
+          "stage": 4,
+          "stalled": false,
+          "stock": {
+            "grain": 100
+          }
+        },
+        "store": {
+          "arrears": 0,
+          "building": "grocery_store",
+          "load_bp": 0,
+          "player": "timur",
+          "stage": 4,
+          "stalled": false,
+          "stock": {}
+        }
+      },
+      "ledger_sum": 0,
+      "market": [
+        {
+          "bought": 80,
+          "demand": 80,
+          "from_city": 0,
+          "from_players": 80,
+          "player_supply": 80,
+          "price": 45,
+          "product": "flour"
+        }
+      ],
+      "month_closed": 0,
+      "players": {
+        "mira": {
+          "money": 261200,
+          "output": {
+            "flour": 80,
+            "grain": 100
+          },
+          "revenue": 0,
+          "sales": 0,
+          "tax": 0,
+          "tax_due": 0,
+          "tax_paid": 0,
+          "wages_paid": 0
+        },
+        "timur": {
+          "money": 282840,
+          "output": {
+            "bread": 100
+          },
+          "revenue": 9000,
+          "sales": 100,
+          "tax": 819,
+          "tax_due": 0,
+          "tax_paid": 0,
+          "wages_paid": 0
+        }
+      }
+    },
+    {
+      "day": 20,
+      "enterprises": {
+        "bakery": {
+          "arrears": 0,
+          "building": "bakery",
+          "load_bp": 10000,
+          "player": "timur",
+          "stage": 4,
+          "stalled": false,
+          "stock": {
+            "flour": 80
+          }
+        },
+        "field": {
+          "arrears": 0,
+          "building": "field",
+          "load_bp": 10000,
+          "player": "mira",
+          "stage": 4,
+          "stalled": false,
+          "stock": {}
+        },
+        "mill": {
+          "arrears": 0,
+          "building": "mill",
+          "load_bp": 10000,
+          "player": "mira",
+          "stage": 4,
+          "stalled": false,
+          "stock": {
+            "grain": 100
+          }
+        },
+        "store": {
+          "arrears": 0,
+          "building": "grocery_store",
+          "load_bp": 0,
+          "player": "timur",
+          "stage": 4,
+          "stalled": false,
+          "stock": {}
+        }
+      },
+      "ledger_sum": 0,
+      "market": [
+        {
+          "bought": 80,
+          "demand": 80,
+          "from_city": 0,
+          "from_players": 80,
+          "player_supply": 80,
+          "price": 45,
+          "product": "flour"
+        }
+      ],
+      "month_closed": 0,
+      "players": {
+        "mira": {
+          "money": 264800,
+          "output": {
+            "flour": 80,
+            "grain": 100
+          },
+          "revenue": 0,
+          "sales": 0,
+          "tax": 0,
+          "tax_due": 0,
+          "tax_paid": 0,
+          "wages_paid": 0
+        },
+        "timur": {
+          "money": 288240,
+          "output": {
+            "bread": 100
+          },
+          "revenue": 9000,
+          "sales": 100,
+          "tax": 819,
+          "tax_due": 0,
+          "tax_paid": 0,
+          "wages_paid": 0
+        }
+      }
+    },
+    {
+      "day": 21,
+      "enterprises": {
+        "bakery": {
+          "arrears": 0,
+          "building": "bakery",
+          "load_bp": 10000,
+          "player": "timur",
+          "stage": 4,
+          "stalled": false,
+          "stock": {
+            "flour": 80
+          }
+        },
+        "field": {
+          "arrears": 0,
+          "building": "field",
+          "load_bp": 10000,
+          "player": "mira",
+          "stage": 4,
+          "stalled": false,
+          "stock": {}
+        },
+        "mill": {
+          "arrears": 0,
+          "building": "mill",
+          "load_bp": 10000,
+          "player": "mira",
+          "stage": 4,
+          "stalled": false,
+          "stock": {
+            "grain": 100
+          }
+        },
+        "store": {
+          "arrears": 0,
+          "building": "grocery_store",
+          "load_bp": 0,
+          "player": "timur",
+          "stage": 4,
+          "stalled": false,
+          "stock": {}
+        }
+      },
+      "ledger_sum": 0,
+      "market": [
+        {
+          "bought": 80,
+          "demand": 80,
+          "from_city": 0,
+          "from_players": 80,
+          "player_supply": 80,
+          "price": 45,
+          "product": "flour"
+        }
+      ],
+      "month_closed": 0,
+      "players": {
+        "mira": {
+          "money": 268400,
+          "output": {
+            "flour": 80,
+            "grain": 100
+          },
+          "revenue": 0,
+          "sales": 0,
+          "tax": 0,
+          "tax_due": 0,
+          "tax_paid": 0,
+          "wages_paid": 0
+        },
+        "timur": {
+          "money": 293640,
+          "output": {
+            "bread": 100
+          },
+          "revenue": 9000,
+          "sales": 100,
+          "tax": 819,
+          "tax_due": 0,
+          "tax_paid": 0,
+          "wages_paid": 0
+        }
+      }
+    },
+    {
+      "day": 22,
+      "enterprises": {
+        "bakery": {
+          "arrears": 0,
+          "building": "bakery",
+          "load_bp": 10000,
+          "player": "timur",
+          "stage": 4,
+          "stalled": false,
+          "stock": {
+            "flour": 80
+          }
+        },
+        "field": {
+          "arrears": 0,
+          "building": "field",
+          "load_bp": 10000,
+          "player": "mira",
+          "stage": 4,
+          "stalled": false,
+          "stock": {}
+        },
+        "mill": {
+          "arrears": 0,
+          "building": "mill",
+          "load_bp": 10000,
+          "player": "mira",
+          "stage": 4,
+          "stalled": false,
+          "stock": {
+            "grain": 100
+          }
+        },
+        "store": {
+          "arrears": 0,
+          "building": "grocery_store",
+          "load_bp": 0,
+          "player": "timur",
+          "stage": 4,
+          "stalled": false,
+          "stock": {}
+        }
+      },
+      "ledger_sum": 0,
+      "market": [
+        {
+          "bought": 80,
+          "demand": 80,
+          "from_city": 0,
+          "from_players": 80,
+          "player_supply": 80,
+          "price": 45,
+          "product": "flour"
+        }
+      ],
+      "month_closed": 0,
+      "players": {
+        "mira": {
+          "money": 272000,
+          "output": {
+            "flour": 80,
+            "grain": 100
+          },
+          "revenue": 0,
+          "sales": 0,
+          "tax": 0,
+          "tax_due": 0,
+          "tax_paid": 0,
+          "wages_paid": 0
+        },
+        "timur": {
+          "money": 299040,
+          "output": {
+            "bread": 100
+          },
+          "revenue": 9000,
+          "sales": 100,
+          "tax": 819,
+          "tax_due": 0,
+          "tax_paid": 0,
+          "wages_paid": 0
+        }
+      }
+    },
+    {
+      "day": 23,
+      "enterprises": {
+        "bakery": {
+          "arrears": 0,
+          "building": "bakery",
+          "load_bp": 10000,
+          "player": "timur",
+          "stage": 4,
+          "stalled": false,
+          "stock": {
+            "flour": 80
+          }
+        },
+        "field": {
+          "arrears": 0,
+          "building": "field",
+          "load_bp": 10000,
+          "player": "mira",
+          "stage": 4,
+          "stalled": false,
+          "stock": {}
+        },
+        "mill": {
+          "arrears": 0,
+          "building": "mill",
+          "load_bp": 10000,
+          "player": "mira",
+          "stage": 4,
+          "stalled": false,
+          "stock": {
+            "grain": 100
+          }
+        },
+        "store": {
+          "arrears": 0,
+          "building": "grocery_store",
+          "load_bp": 0,
+          "player": "timur",
+          "stage": 4,
+          "stalled": false,
+          "stock": {}
+        }
+      },
+      "ledger_sum": 0,
+      "market": [
+        {
+          "bought": 80,
+          "demand": 80,
+          "from_city": 0,
+          "from_players": 80,
+          "player_supply": 80,
+          "price": 45,
+          "product": "flour"
+        }
+      ],
+      "month_closed": 0,
+      "players": {
+        "mira": {
+          "money": 275600,
+          "output": {
+            "flour": 80,
+            "grain": 100
+          },
+          "revenue": 0,
+          "sales": 0,
+          "tax": 0,
+          "tax_due": 0,
+          "tax_paid": 0,
+          "wages_paid": 0
+        },
+        "timur": {
+          "money": 304440,
+          "output": {
+            "bread": 100
+          },
+          "revenue": 9000,
+          "sales": 100,
+          "tax": 819,
+          "tax_due": 0,
+          "tax_paid": 0,
+          "wages_paid": 0
+        }
+      }
+    },
+    {
+      "day": 24,
+      "enterprises": {
+        "bakery": {
+          "arrears": 0,
+          "building": "bakery",
+          "load_bp": 10000,
+          "player": "timur",
+          "stage": 4,
+          "stalled": false,
+          "stock": {
+            "flour": 80
+          }
+        },
+        "field": {
+          "arrears": 0,
+          "building": "field",
+          "load_bp": 10000,
+          "player": "mira",
+          "stage": 4,
+          "stalled": false,
+          "stock": {}
+        },
+        "mill": {
+          "arrears": 0,
+          "building": "mill",
+          "load_bp": 10000,
+          "player": "mira",
+          "stage": 4,
+          "stalled": false,
+          "stock": {
+            "grain": 100
+          }
+        },
+        "store": {
+          "arrears": 0,
+          "building": "grocery_store",
+          "load_bp": 0,
+          "player": "timur",
+          "stage": 4,
+          "stalled": false,
+          "stock": {}
+        }
+      },
+      "ledger_sum": 0,
+      "market": [
+        {
+          "bought": 80,
+          "demand": 80,
+          "from_city": 0,
+          "from_players": 80,
+          "player_supply": 80,
+          "price": 45,
+          "product": "flour"
+        }
+      ],
+      "month_closed": 0,
+      "players": {
+        "mira": {
+          "money": 279200,
+          "output": {
+            "flour": 80,
+            "grain": 100
+          },
+          "revenue": 0,
+          "sales": 0,
+          "tax": 0,
+          "tax_due": 0,
+          "tax_paid": 0,
+          "wages_paid": 0
+        },
+        "timur": {
+          "money": 309840,
+          "output": {
+            "bread": 100
+          },
+          "revenue": 9000,
+          "sales": 100,
+          "tax": 819,
+          "tax_due": 0,
+          "tax_paid": 0,
+          "wages_paid": 0
+        }
+      }
+    },
+    {
+      "day": 25,
+      "enterprises": {
+        "bakery": {
+          "arrears": 0,
+          "building": "bakery",
+          "load_bp": 10000,
+          "player": "timur",
+          "stage": 4,
+          "stalled": false,
+          "stock": {
+            "flour": 80
+          }
+        },
+        "field": {
+          "arrears": 0,
+          "building": "field",
+          "load_bp": 10000,
+          "player": "mira",
+          "stage": 4,
+          "stalled": false,
+          "stock": {}
+        },
+        "mill": {
+          "arrears": 0,
+          "building": "mill",
+          "load_bp": 10000,
+          "player": "mira",
+          "stage": 4,
+          "stalled": false,
+          "stock": {
+            "grain": 100
+          }
+        },
+        "store": {
+          "arrears": 0,
+          "building": "grocery_store",
+          "load_bp": 0,
+          "player": "timur",
+          "stage": 4,
+          "stalled": false,
+          "stock": {}
+        }
+      },
+      "ledger_sum": 0,
+      "market": [
+        {
+          "bought": 80,
+          "demand": 80,
+          "from_city": 0,
+          "from_players": 80,
+          "player_supply": 80,
+          "price": 45,
+          "product": "flour"
+        }
+      ],
+      "month_closed": 0,
+      "players": {
+        "mira": {
+          "money": 282800,
+          "output": {
+            "flour": 80,
+            "grain": 100
+          },
+          "revenue": 0,
+          "sales": 0,
+          "tax": 0,
+          "tax_due": 0,
+          "tax_paid": 0,
+          "wages_paid": 0
+        },
+        "timur": {
+          "money": 315240,
+          "output": {
+            "bread": 100
+          },
+          "revenue": 9000,
+          "sales": 100,
+          "tax": 819,
+          "tax_due": 0,
+          "tax_paid": 0,
+          "wages_paid": 0
+        }
+      }
+    },
+    {
+      "day": 26,
+      "enterprises": {
+        "bakery": {
+          "arrears": 0,
+          "building": "bakery",
+          "load_bp": 10000,
+          "player": "timur",
+          "stage": 4,
+          "stalled": false,
+          "stock": {
+            "flour": 80
+          }
+        },
+        "field": {
+          "arrears": 0,
+          "building": "field",
+          "load_bp": 10000,
+          "player": "mira",
+          "stage": 4,
+          "stalled": false,
+          "stock": {}
+        },
+        "mill": {
+          "arrears": 0,
+          "building": "mill",
+          "load_bp": 10000,
+          "player": "mira",
+          "stage": 4,
+          "stalled": false,
+          "stock": {
+            "grain": 100
+          }
+        },
+        "store": {
+          "arrears": 0,
+          "building": "grocery_store",
+          "load_bp": 0,
+          "player": "timur",
+          "stage": 4,
+          "stalled": false,
+          "stock": {}
+        }
+      },
+      "ledger_sum": 0,
+      "market": [
+        {
+          "bought": 80,
+          "demand": 80,
+          "from_city": 0,
+          "from_players": 80,
+          "player_supply": 80,
+          "price": 45,
+          "product": "flour"
+        }
+      ],
+      "month_closed": 0,
+      "players": {
+        "mira": {
+          "money": 286400,
+          "output": {
+            "flour": 80,
+            "grain": 100
+          },
+          "revenue": 0,
+          "sales": 0,
+          "tax": 0,
+          "tax_due": 0,
+          "tax_paid": 0,
+          "wages_paid": 0
+        },
+        "timur": {
+          "money": 320640,
+          "output": {
+            "bread": 100
+          },
+          "revenue": 9000,
+          "sales": 100,
+          "tax": 819,
+          "tax_due": 0,
+          "tax_paid": 0,
+          "wages_paid": 0
+        }
+      }
+    },
+    {
+      "day": 27,
+      "enterprises": {
+        "bakery": {
+          "arrears": 0,
+          "building": "bakery",
+          "load_bp": 10000,
+          "player": "timur",
+          "stage": 4,
+          "stalled": false,
+          "stock": {
+            "flour": 80
+          }
+        },
+        "field": {
+          "arrears": 0,
+          "building": "field",
+          "load_bp": 10000,
+          "player": "mira",
+          "stage": 4,
+          "stalled": false,
+          "stock": {}
+        },
+        "mill": {
+          "arrears": 0,
+          "building": "mill",
+          "load_bp": 10000,
+          "player": "mira",
+          "stage": 4,
+          "stalled": false,
+          "stock": {
+            "grain": 100
+          }
+        },
+        "store": {
+          "arrears": 0,
+          "building": "grocery_store",
+          "load_bp": 0,
+          "player": "timur",
+          "stage": 4,
+          "stalled": false,
+          "stock": {}
+        }
+      },
+      "ledger_sum": 0,
+      "market": [
+        {
+          "bought": 80,
+          "demand": 80,
+          "from_city": 0,
+          "from_players": 80,
+          "player_supply": 80,
+          "price": 45,
+          "product": "flour"
+        }
+      ],
+      "month_closed": 0,
+      "players": {
+        "mira": {
+          "money": 290000,
+          "output": {
+            "flour": 80,
+            "grain": 100
+          },
+          "revenue": 0,
+          "sales": 0,
+          "tax": 0,
+          "tax_due": 0,
+          "tax_paid": 0,
+          "wages_paid": 0
+        },
+        "timur": {
+          "money": 326040,
+          "output": {
+            "bread": 100
+          },
+          "revenue": 9000,
+          "sales": 100,
+          "tax": 819,
+          "tax_due": 0,
+          "tax_paid": 0,
+          "wages_paid": 0
+        }
+      }
+    },
+    {
+      "day": 28,
+      "enterprises": {
+        "bakery": {
+          "arrears": 0,
+          "building": "bakery",
+          "load_bp": 10000,
+          "player": "timur",
+          "stage": 4,
+          "stalled": false,
+          "stock": {
+            "flour": 80
+          }
+        },
+        "field": {
+          "arrears": 0,
+          "building": "field",
+          "load_bp": 10000,
+          "player": "mira",
+          "stage": 4,
+          "stalled": false,
+          "stock": {}
+        },
+        "mill": {
+          "arrears": 0,
+          "building": "mill",
+          "load_bp": 10000,
+          "player": "mira",
+          "stage": 4,
+          "stalled": false,
+          "stock": {
+            "grain": 100
+          }
+        },
+        "store": {
+          "arrears": 0,
+          "building": "grocery_store",
+          "load_bp": 0,
+          "player": "timur",
+          "stage": 4,
+          "stalled": false,
+          "stock": {}
+        }
+      },
+      "ledger_sum": 0,
+      "market": [
+        {
+          "bought": 80,
+          "demand": 80,
+          "from_city": 0,
+          "from_players": 80,
+          "player_supply": 80,
+          "price": 45,
+          "product": "flour"
+        }
+      ],
+      "month_closed": 0,
+      "players": {
+        "mira": {
+          "money": 293600,
+          "output": {
+            "flour": 80,
+            "grain": 100
+          },
+          "revenue": 0,
+          "sales": 0,
+          "tax": 0,
+          "tax_due": 0,
+          "tax_paid": 0,
+          "wages_paid": 0
+        },
+        "timur": {
+          "money": 331440,
+          "output": {
+            "bread": 100
+          },
+          "revenue": 9000,
+          "sales": 100,
+          "tax": 819,
+          "tax_due": 0,
+          "tax_paid": 0,
+          "wages_paid": 0
+        }
+      }
+    },
+    {
+      "day": 29,
+      "enterprises": {
+        "bakery": {
+          "arrears": 0,
+          "building": "bakery",
+          "load_bp": 10000,
+          "player": "timur",
+          "stage": 4,
+          "stalled": false,
+          "stock": {
+            "flour": 80
+          }
+        },
+        "field": {
+          "arrears": 0,
+          "building": "field",
+          "load_bp": 10000,
+          "player": "mira",
+          "stage": 4,
+          "stalled": false,
+          "stock": {}
+        },
+        "mill": {
+          "arrears": 0,
+          "building": "mill",
+          "load_bp": 10000,
+          "player": "mira",
+          "stage": 4,
+          "stalled": false,
+          "stock": {
+            "grain": 100
+          }
+        },
+        "store": {
+          "arrears": 0,
+          "building": "grocery_store",
+          "load_bp": 0,
+          "player": "timur",
+          "stage": 4,
+          "stalled": false,
+          "stock": {}
+        }
+      },
+      "ledger_sum": 0,
+      "market": [
+        {
+          "bought": 80,
+          "demand": 80,
+          "from_city": 0,
+          "from_players": 80,
+          "player_supply": 80,
+          "price": 45,
+          "product": "flour"
+        }
+      ],
+      "month_closed": 0,
+      "players": {
+        "mira": {
+          "money": 297200,
+          "output": {
+            "flour": 80,
+            "grain": 100
+          },
+          "revenue": 0,
+          "sales": 0,
+          "tax": 0,
+          "tax_due": 0,
+          "tax_paid": 0,
+          "wages_paid": 0
+        },
+        "timur": {
+          "money": 336840,
+          "output": {
+            "bread": 100
+          },
+          "revenue": 9000,
+          "sales": 100,
+          "tax": 819,
+          "tax_due": 0,
+          "tax_paid": 0,
+          "wages_paid": 0
+        }
+      }
+    },
+    {
+      "day": 30,
+      "enterprises": {
+        "bakery": {
+          "arrears": 0,
+          "building": "bakery",
+          "load_bp": 10000,
+          "player": "timur",
+          "stage": 4,
+          "stalled": false,
+          "stock": {
+            "flour": 80
+          }
+        },
+        "field": {
+          "arrears": 0,
+          "building": "field",
+          "load_bp": 10000,
+          "player": "mira",
+          "stage": 4,
+          "stalled": false,
+          "stock": {}
+        },
+        "mill": {
+          "arrears": 0,
+          "building": "mill",
+          "load_bp": 10000,
+          "player": "mira",
+          "stage": 4,
+          "stalled": false,
+          "stock": {
+            "grain": 100
+          }
+        },
+        "store": {
+          "arrears": 0,
+          "building": "grocery_store",
+          "load_bp": 0,
+          "player": "timur",
+          "stage": 4,
+          "stalled": false,
+          "stock": {}
+        }
+      },
+      "ledger_sum": 0,
+      "market": [
+        {
+          "bought": 80,
+          "demand": 80,
+          "from_city": 0,
+          "from_players": 80,
+          "player_supply": 80,
+          "price": 45,
+          "product": "flour"
+        }
+      ],
+      "month_closed": 1,
+      "players": {
+        "mira": {
+          "money": 287800,
+          "output": {
+            "flour": 80,
+            "grain": 100
+          },
+          "revenue": 0,
+          "sales": 0,
+          "tax": 0,
+          "tax_due": 0,
+          "tax_paid": 0,
+          "wages_paid": 13000
+        },
+        "timur": {
+          "money": 307808,
+          "output": {
+            "bread": 100
+          },
+          "revenue": 9000,
+          "sales": 100,
+          "tax": 819,
+          "tax_due": 0,
+          "tax_paid": 22932,
+          "wages_paid": 11500
+        }
+      }
+    }
+  ],
+  "days_run": 30,
+  "salary_index_bp": 10000,
+  "salary_worker": 100,
+  "scenario": "m1_two_players",
+  "sim_version": 1,
+  "totals": {
+    "mira": {
+      "min_money": 200000,
+      "money": 287800,
+      "output": {
+        "flour": 2240,
+        "grain": 2900
+      },
+      "revenue": 0,
+      "sales": 0,
+      "tax_paid": 0,
+      "wages_paid": 13000
+    },
+    "timur": {
+      "min_money": 187440,
+      "money": 307808,
+      "output": {
+        "bread": 2800
+      },
+      "revenue": 252000,
+      "sales": 2800,
+      "tax_paid": 22932,
+      "wages_paid": 11500
+    }
+  },
+  "verdict": null
+}

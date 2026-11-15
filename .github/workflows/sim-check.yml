@@ -1,0 +1,26 @@
+name: Sim checks
+on:
+  push:
+    paths:
+      - "tools/sim/**"
+      - "tools/tests/test_sim_*.py"
+      - "server/data/**"
+  pull_request:
+    paths:
+      - "tools/sim/**"
+      - "tools/tests/test_sim_*.py"
+      - "server/data/**"
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: M1 simulator tests
+        run: python -m unittest discover -s tools/tests -p "test_sim_*.py" -v
