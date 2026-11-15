@@ -1,0 +1,43 @@
+{
+  "id": "m1_two_players",
+  "days": 30,
+  "city": "ufa",
+  "district": {
+    "pop_permille": 1000,
+    "layer_share_permille": 1000,
+    "income_index": 1000,
+    "traffic": 0,
+    "appeal_permille": 1000,
+    "competition_s": 1
+  },
+  "players": [
+    {"id": "mira", "capital": 1000000},
+    {"id": "timur", "capital": 1000000}
+  ],
+  "orders": [
+    {"day": 1, "player": "mira", "enterprise": "field", "building": "field", "recipe": "field_grain"},
+    {"day": 1, "player": "mira", "enterprise": "mill", "building": "mill", "recipe": "mill_flour", "sell_to_market": true},
+    {"day": 1, "player": "timur", "enterprise": "bakery", "building": "bakery", "recipe": "bakery_bread"},
+    {"day": 1, "player": "timur", "enterprise": "store", "building": "grocery_store"}
+  ],
+  "links": [
+    {
+      "buyer": "mill",
+      "product": "grain",
+      "suppliers": [
+        {"enterprise": "field", "priority": 1, "share": 100, "min_quality": 1}
+      ]
+    },
+    {
+      "buyer": "store",
+      "product": "bread",
+      "max_price": "reference",
+      "suppliers": [
+        {"enterprise": "bakery", "priority": 1, "share": 100, "min_quality": 1}
+      ]
+    }
+  ],
+  "cells": [
+    {"enterprise": "store", "slot": 1, "product": "bread", "price": "reference"}
+  ]
+}
