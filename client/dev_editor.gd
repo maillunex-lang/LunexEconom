@@ -13,8 +13,13 @@ var building_kind_input: OptionButton
 func _ready() -> void:
     name = "DeveloperEditor"
     custom_minimum_size = Vector2(330, 0)
+    var scroll := ScrollContainer.new()
+    scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+    scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+    add_child(scroll)
     var column := VBoxContainer.new()
-    add_child(column)
+    column.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+    scroll.add_child(column)
     var heading := Label.new()
     heading.text = "Редактор мира"
     column.add_child(heading)
