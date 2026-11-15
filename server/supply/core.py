@@ -167,7 +167,7 @@ def _buy(conn,day,row,product,qty,source_type,source_id,unit_price,quality,flags
     if total>buyer[1]:return 0
     request_id=f'supply:{eid}:{product}:{day}:{source_type}-{source_id or "system"}:{sequence}'
     if len(request_id)>128:raise ValueError('request_id too long')
-    # Internal transfers are paid between wallets; no fabricated profit.
+    # Money and goods commit together. Every buy has a deterministic key.
     # Transport charges are directed to system:market, rather than to producer.
     with conn.transaction():
         if source_type=='enterprise':
