@@ -10,6 +10,7 @@ const PLANNER_SCRIPT = preload("res://construction_planner.gd")
 const TOPOLOGY = preload("res://road_topology.gd")
 const SEASONS = preload("res://season_visual.gd")
 const MODELS = preload("res://world3d/building_models.gd")
+const TRAFFIC = preload("res://world3d/road_traffic.gd")
 const ZONES = preload("res://zones.gd")
 const INDUSTRIAL_TINT := Color("#b0a58a")   # ground colour of the industrial zone (blended over the grass)
 ## Every building kind a server snapshot or event may carry ("house" = a city-generated dwelling, never player-built).
@@ -43,6 +44,9 @@ var build_square_size := 0
 var expansion_radius := 48
 var selected := Vector2i(-1, -1)
 var active_chunks: Dictionary = {}             # Vector2i chunk -> Node3D
+var traffic: Node3D
+var _traffic_center := Vector2i(2147483647, 2147483647)
+var _traffic_refresh_pending := true
 var building_nodes: Dictionary = {}            # object id -> Node3D
 var building_signatures: Dictionary = {}
 var camera: Camera3D
@@ -133,6 +137,10 @@ func _ready() -> void:
 	_overlay.add_child(_preview_node)
 	_sync_camera()
 	_update_visible_chunks()
+	traffic = TRAFFIC.new()
+	traffic.name = "DecorativeRoadTraffic"
+	traffic.configure(roads)
+	add_child(traffic)
 
 # ---------- coordinates ----------
 static func cell_center(cell: Vector2i) -> Vector3:
@@ -213,6 +221,7 @@ func apply_server_event(event: Dictionary) -> void:
 		if not cell is Array or cell.size() != 2: continue
 		var coord := Vector2i(int(cell[0]), int(cell[1]))
 		if kind == "road_changed":
+			_traffic_refresh_pending = true
 			roads.segments[coord] = true
 			_mark_cell(coord, true)
 			continue
@@ -700,6 +709,7 @@ func commit_access_road(site: Vector2i) -> bool:
 	var path: Array[Vector2i] = preview_access_road(site)
 	var accepted: bool = roads.add_path(path)
 	if accepted:
+		_traffic_refresh_pending = true
 		for cell in path: _mark_cell(cell, true)
 	return accepted
 
@@ -721,6 +731,12 @@ func _process(delta: float) -> void:
 		_update_visible_chunks()
 	_read_season()
 	_flush()
+	if traffic != null:
+		var center := cell_of(focus)
+		if _traffic_refresh_pending or absi(center.x - _traffic_center.x) + absi(center.y - _traffic_center.y) >= 12:
+			_traffic_center = center
+			_traffic_refresh_pending = false
+			traffic.refresh_around(center)
 
 ## Apply pending changes now (chunk meshes and buildings). Called every frame; tests call it directly.
 func _flush(limit: int = CHUNK_BUILDS_PER_FRAME) -> void:
