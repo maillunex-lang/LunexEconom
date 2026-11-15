@@ -1,7 +1,5 @@
 """HTTP handlers share a request-scoped PostgreSQL transaction."""
-import json
 import os
-from datetime import datetime, timezone
 from .security import hash_password, verify_password, new_token, token_hash
 
 

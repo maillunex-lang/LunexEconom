@@ -1,7 +1,7 @@
 """Each transfer has one record and exactly two entries summing to zero."""
 
 def transfer(conn, request_id, from_id, to_id, amount):
-    if not isinstance(amount, int) or isinstance(amount, bool) or amount <= 0 or from_id == to_id or not isinstance(request_id, str) or not request_id:
+    if not isinstance(amount, int) or isinstance(amount, bool) or amount <= 0 or amount > 2**63-1 or from_id == to_id or not isinstance(request_id, str) or not request_id or len(request_id) > 128:
         raise ValueError('Invalid transfer')
     with conn.transaction():
         # Serialize by request ID, then lock both account rows in stable order.
