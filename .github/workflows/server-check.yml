@@ -19,7 +19,7 @@ jobs:
           POSTGRES_DB: lunex_v2_ci
         ports: ['5432:5432']
         options: >-
-          --health-cmd 'pg_isready -U lunex_ci -d lunex_v2_ci'
+          --health-cmd=pg_isready
           --health-interval 5s --health-timeout 3s --health-retries 12
     env:
       LUNEX_TEST_DATABASE_URL: postgresql://lunex_ci:ci-only-no-real-secret@127.0.0.1:5432/lunex_v2_ci
