@@ -1,0 +1,54 @@
+name: Verify owner Android signing certificate (no release)
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  verify-owner-certificate:
+    runs-on: ubuntu-latest
+    environment: android-signing
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Verify private keystore, alias, passwords and pinned certificate
+        env:
+          KEYSTORE_B64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          STORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$KEYSTORE_B64" && test -n "$STORE_PASSWORD" && test -n "$KEY_ALIAS" && test -n "$KEY_PASSWORD"
+          test "$STORE_PASSWORD" = "$KEY_PASSWORD" || { echo 'Key/store passwords must match for Godot'; exit 1; }
+          umask 077
+          KEYSTORE_FILE="$RUNNER_TEMP/owner-release.p12"
+          trap 'rm -f "$KEYSTORE_FILE"' EXIT
+          printf '%s' "$KEYSTORE_B64" | base64 --decode > "$KEYSTORE_FILE"
+          test -s "$KEYSTORE_FILE"
+          # Avoid exposing passwords in command-line arguments, stdout or the workflow log.
+          export STORE_PASSWORD KEY_ALIAS KEYSTORE_FILE
+          python3 - <<'PY'
+          import os, subprocess
+          from pathlib import Path
+          store = os.environ['KEYSTORE_FILE']
+          alias = os.environ['KEY_ALIAS']
+          password = os.environ['STORE_PASSWORD']
+          result = subprocess.run(['keytool', '-exportcert', '-rfc', '-keystore', store,
+                                   '-storetype', 'PKCS12', '-alias', alias],
+                                  input=password+'\n', capture_output=True, text=True)
+          if result.returncode:
+              raise SystemExit('Keystore password or alias invalid')
+          import re
+          expected = re.sub('[^0-9a-f]', '', Path('ops/release_cert_sha256.txt').read_text().lower())
+          fingerprint = subprocess.run(['openssl','x509','-noout','-fingerprint','-sha256'],
+                                       input=result.stdout, capture_output=True, text=True, check=True).stdout
+          actual = re.sub('[^0-9a-f]', '', fingerprint.split('=', 1)[1].lower())
+          if len(expected) != 64 or actual != expected:
+              raise SystemExit('Certificate does not match owner-approved SHA-256 fingerprint')
+          print('Owner Android release certificate matches pinned SHA-256; keystore password and alias valid')
+          PY
