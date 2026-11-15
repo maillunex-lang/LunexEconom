@@ -66,7 +66,7 @@ class TestAuthAndAdmin(unittest.TestCase):
             current_seen=conn.execute('SELECT seen_at FROM presence WHERE account_id=%s',(profile['id'],)).fetchone()[0]
         self.assertEqual(previous_seen,current_seen)  # <=30s presence throttle
         status,wallet=request(type(self).app,'GET','/ledger/balance',token=login['access_token'])
-        self.assertEqual((status,wallet['balance']),(200,1000000))
+        self.assertEqual((status,wallet['balance']),(200,300000))
         status,history=request(type(self).app,'GET','/ledger/history',token=login['access_token'],query='page=1&limit=1')
         self.assertEqual(status,200)
         self.assertEqual(len(history['items']),1)

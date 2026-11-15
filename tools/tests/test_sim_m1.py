@@ -73,8 +73,8 @@ class UnderfundedTests(unittest.TestCase):
 
 class BasicAcceptanceTests(unittest.TestCase):
     def test_m1_acceptance_is_reached_on_starter_chain_costs(self):
-        # Директор снизил черновую стоимость стартового набора (поле 150000, мельница 250000, пекарня 300000,
-        # магазин 200000, итого 900000 при капитале 1000000). Раньше при 1600000 приёмка M1 не достигалась.
+        # Владелец утвердил черновую стоимость стартового набора (поле 39000, мельница 65000, пекарня 78000,
+        # магазин 52000, итого 234000 при капитале 1000000 в сценарии). Раньше при 1600000 приёмка M1 не достигалась.
         catalog = Catalog()
         report = run("m1_basic")
         verdict = report["verdict"]

@@ -66,7 +66,7 @@ def transfer(conn, request_id, from_id, to_id, amount):
     return post(conn, request_id, [(from_id, -amount), (to_id, amount)])
 
 
-def initial_capital(conn, owner_id, username, amount=1000000):
+def initial_capital(conn, owner_id, username, amount=300000):
     wallet = account(conn, 'player:' + username.lower(), 'player', owner_id)
     treasury = account(conn, 'system:treasury')
     transfer(conn, 'initial-capital:' + str(owner_id), treasury, wallet, amount)

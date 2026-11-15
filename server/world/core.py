@@ -401,7 +401,7 @@ def placement_valid(conn,building_id,x,y):
 
 # balance: draft. Automatic access road for a building that has no road contact.
 AUTO_ROAD_MAX_CELLS = 12
-AUTO_ROAD_CELL_COST = 5000
+AUTO_ROAD_CELL_COST = 1000
 
 
 def plan_access_road(conn, actor_id, footprint):

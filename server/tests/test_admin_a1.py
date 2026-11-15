@@ -183,7 +183,7 @@ class AdminDatabaseTests(unittest.TestCase):
         self.assertEqual(first['body']['transfer_id'], repeat['body']['transfer_id'])
         with db.connect(DSN) as conn:
             wallet = conn.execute("SELECT balance FROM ledger_accounts WHERE account_key=%s", ('player:' + player.lower(),)).fetchone()[0]
-            self.assertEqual(wallet, 1000250)
+            self.assertEqual(wallet, 300250)
             self.assertTrue(__import__('server.ledger.api', fromlist=['reconcile']).reconcile(conn)['ok'])
 
     def test_support_limit_settings_revisions_rollback_and_audit(self):
