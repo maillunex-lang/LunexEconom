@@ -12,15 +12,11 @@ def ensure(db):
     db.execute("CREATE TABLE IF NOT EXISTS terrain_edits (x INTEGER NOT NULL, y INTEGER NOT NULL, kind TEXT NOT NULL, editor TEXT NOT NULL, created BIGINT NOT NULL, manual INTEGER NOT NULL DEFAULT 1, PRIMARY KEY(x,y))")
 
 def chunk(db, ph, cx, cy):
-    key = (db, int(cx), int(cy))
-    # Global invalidation occurs on every successful write.
-    if key not in _cache:
-        x, y = int(cx) * CHUNK, int(cy) * CHUNK
-        rows = db.execute("SELECT x,y,kind,manual FROM terrain_edits WHERE x >= " + ph + " AND x < " + ph + " AND y >= " + ph + " AND y < " + ph, (x, x + CHUNK, y, y + CHUNK)).fetchall()
-        if len(_cache) >= 128:
-            _cache.clear()
-        _cache[key] = {(int(a), int(b)): {"kind": k, "manual": bool(m)} for a,b,k,m in rows}
-    return dict(_cache[key])
+    # Query the active connection. Global caching would leak state across
+    # independent SQLite fixtures and PostgreSQL transactions.
+    x, y = int(cx) * CHUNK, int(cy) * CHUNK
+    rows = db.execute("SELECT x,y,kind,manual FROM terrain_edits WHERE x >= " + ph + " AND x < " + ph + " AND y >= " + ph + " AND y < " + ph, (x, x + CHUNK, y, y + CHUNK)).fetchall()
+    return {(int(a), int(b)): {"kind": k, "manual": bool(m)} for a,b,k,m in rows}
 
 def invalidate():
     _cache.clear()
