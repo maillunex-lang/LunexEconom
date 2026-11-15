@@ -558,6 +558,9 @@ class Handler(BaseHTTPRequestHandler):
             return self._send(*contracts_state(owner))
         if url.path=="/city":return self._send(*city_state(self._identity()))
         if url.path=="/construction/catalog":return self._send(200,construction_catalog.view())
+        if url.path=="/catalog/city":
+            import city_catalog
+            return self._send(200,city_catalog.view())
         if url.path=="/health":return self._send(200,health_details())
         if url.path in ("/leaderboard", "/feed"):
             owner = self._identity()
