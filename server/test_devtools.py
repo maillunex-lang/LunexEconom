@@ -46,6 +46,20 @@ class DeveloperToolsTests(unittest.TestCase):
         self.assertEqual(devtools.terrain_set(self.db,"?","player",payload,"127.0.0.1")[0],403)
         self.assertEqual(self.db.execute("SELECT COUNT(*) FROM terrain_edits").fetchone()[0],0)
 
+    def test_create_city_social_building_without_ledger(self):
+        import economy
+        payload={"request_id":"c2c3ad2b-180e-4517-839c-c47e48dbd7cb","kind":"park","x":11,"y":12}
+        status,result=devtools.building_create(self.db,"?","dev",payload,"local")
+        self.assertEqual(status,200,result)
+        self.assertEqual(self.db.execute("SELECT owner,kind FROM buildings WHERE id=?", (result["object_id"],)).fetchone(),(economy.CITY,"park"))
+        self.assertEqual(self.db.execute("SELECT COUNT(*) FROM ledger_entries").fetchone()[0],0)
+        self.assertTrue(devtools.building_create(self.db,"?","dev",payload,"local")[1]["replayed"])
+        undo={"request_id":"b0f1e34b-cda2-4924-a687-a421c82f581d"}
+        self.assertEqual(devtools.undo(self.db,"?","dev",undo,"local")[0],200)
+        self.assertIsNone(self.db.execute("SELECT id FROM buildings WHERE id=?", (result["object_id"],)).fetchone())
+        forbidden=dict(payload,request_id="6d1a31fd-099e-492b-a00c-feb6ce8354a5",owner="player")
+        self.assertEqual(devtools.building_create(self.db,"?","dev",forbidden,"local")[1]["error"],"city_only")
+
     def test_demolish_removes_building_without_ledger(self):
         self.db.execute("INSERT INTO buildings VALUES ('b1','player','shop',11,12,0)")
         self.db.execute("INSERT INTO cells VALUES (11,12,'b1')")
