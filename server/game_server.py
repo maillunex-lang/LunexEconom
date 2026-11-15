@@ -136,7 +136,9 @@ def build(owner, payload):
                 db.execute("INSERT INTO chunks VALUES(?,?,1) ON CONFLICT(cx,cy) DO UPDATE SET version=version+1",(cx,cy))
                 version=db.execute("SELECT version FROM chunks WHERE cx=? AND cy=?",(cx,cy)).fetchone()[0]
                 data={"object_id":object_id,"owner":owner,"cells":coords}
-                if kind_name=="building_created":data["building_kind"]=kind
+                if kind_name=="building_created":
+                    data["building_kind"]=kind
+                    data["construction_stage"]="complete"
                 payload=json.dumps(data)
                 seq=db.execute("INSERT INTO events(cx,cy,version,kind,payload) VALUES(?,?,?,?,?)",(cx,cy,version,kind_name,payload)).lastrowid
                 events.append({"seq":seq,"cx":cx,"cy":cy,"version":version,"kind":kind_name,**data})
@@ -347,7 +349,7 @@ def chunk(cx,cy):
         cells=db.execute("""SELECT c.x,c.y,b.kind,b.id,b.owner FROM cells c JOIN buildings b ON c.object_id=b.id
             WHERE c.x>=? AND c.x<? AND c.y>=? AND c.y<? ORDER BY c.x,c.y""",(cx*CHUNK,(cx+1)*CHUNK,cy*CHUNK,(cy+1)*CHUNK)).fetchall()
         rds=db.execute("SELECT x,y,owner FROM roads WHERE x>=? AND x<? AND y>=? AND y<? ORDER BY x,y",(cx*CHUNK,(cx+1)*CHUNK,cy*CHUNK,(cy+1)*CHUNK)).fetchall()
-    items=[{"x":x,"y":y,"kind":"building_created","building_kind":kind,"object_id":oid,"owner":owner} for x,y,kind,oid,owner in cells]
+    items=[{"x":x,"y":y,"kind":"building_created","building_kind":kind,"object_id":oid,"owner":owner,"construction_stage":"complete"} for x,y,kind,oid,owner in cells]
     items+=[{"x":x,"y":y,"kind":"road_changed","object_id":"","owner":owner} for x,y,owner in rds]
     return 200,{"cx":cx,"cy":cy,"version":row[0] if row else 0,"cells":items}
 
