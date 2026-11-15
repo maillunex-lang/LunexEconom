@@ -1,5 +1,19 @@
 name: Android release candidate
 on:
+  workflow_call:
+    inputs:
+      version_tag:
+        required: true
+        type: string
+      verify_signing_only:
+        type: boolean
+        default: false
+      owner_signing_test:
+        type: boolean
+        default: false
+      pipeline_test:
+        type: boolean
+        default: false
   workflow_dispatch:
     inputs:
       version_tag:
@@ -62,7 +76,11 @@ jobs:
           python3 -c "import sys;sys.path.insert(0,'tools');from release_version import parse;print(parse(sys.argv[1]))" "$VERSION_TAG"
           echo "VERSION_TAG=$VERSION_TAG" >> "$GITHUB_ENV"
           # All existing semver tags (except this candidate itself) must have lower versionCode.
-          git tag --list 'v[0-9]*' > "$RUNNER_TEMP/previous-release-tags.txt"
+          if [[ "$VERSION_TAG" == v0.1.* ]]; then
+            git tag --list 'v0.1.*' > "$RUNNER_TEMP/previous-release-tags.txt"
+          else
+            git tag --list 'v[0-9]*' > "$RUNNER_TEMP/previous-release-tags.txt"
+          fi
           python3 tools/release_version.py "$VERSION_TAG" --previous-tags "$RUNNER_TEMP/previous-release-tags.txt"
       - name: Download Godot 4.7.2 and templates
         run: |
@@ -98,6 +116,7 @@ jobs:
           KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
         run: |
           set -euo pipefail
+          umask 077
           KEYSTORE_FILE="$RUNNER_TEMP/release-key.p12"
           if [[ "$TEST_MODE" == "true" ]]; then
             ALIAS="ci-test-throwaway"
@@ -152,7 +171,10 @@ jobs:
           python3 tools/check_apk_size.py build/lunex.apk | tee build/apk-size.json
           "$AAPT" dump badging build/lunex.apk | tee build/apk-badging.txt
           CODE="$(python3 -c 'import json;print(json.load(open("client/build_info.json"))["version_code"])')"
+          NAME="$(python3 -c 'import json;print(json.load(open("client/build_info.json"))["version_name"])')"
+          grep -q "package: name='org.lunex.bashkiria.v2'" build/apk-badging.txt
           grep -q "versionCode='$CODE'" build/apk-badging.txt
+          grep -q "versionName='$NAME'" build/apk-badging.txt
           grep -q "'arm64-v8a'" build/apk-badging.txt
           if grep -qE "'x86_64'|'armeabi-v7a'|'x86'" build/apk-badging.txt; then echo 'Unexpected non-arm64 ABI'; exit 1; fi
           jarsigner -verify build/lunex.aab
@@ -169,3 +191,7 @@ jobs:
             client/build_info.json
           retention-days: 14
           if-no-files-found: error
+      - name: Remove temporary Android signing keystore
+        if: always()
+        run: |
+          rm -f "$RUNNER_TEMP/release-key.p12"
