@@ -9,7 +9,7 @@
 | Файлы `.p12`, `.jks`, `.keystore`, `.pfx`, `.env` в репозитории и истории | не найдены |
 | `.pem` в репозитории | только публичные: `client/config/update_public.pem` (ключ манифестов), `client/security/config_public.pem` (подпись конфига игры), `client/livepatch_public.pem` в истории (V1) |
 | Отпечаток сертификата APK закреплён в `ops/release_cert_sha256.txt` | `9C:B4:27:81:91:73:3D:08:32:A4:A5:B6:41:95:83:D3:12:4C:64:12:B6:7D:F8:48:14:B6:A1:9F:5C:9A:7E:A4`, сверен с владельцем |
-| Отпечаток публичного ключа манифестов (SHA-256 DER) | `2c929db68d45ccb3d4af9c4b72ef5cb3c27071344bc70dbd363a0335df000344`, сверен с владельцем |
+| Отпечаток публичного ключа манифестов (SHA-256 DER) | `280770e34e420e87bc44c7d8018efd2127690027afc290c020cec9c9d37d97dd` (ключ заменён 2026-11-15 до первого релиза; прежний `2c929db6…` выведен из обращения, приватный новый ключ только секретом GitHub `manifest-signing`) |
 | Секреты подписи APK | в GitHub Environment `android-signing` (требует одобрения), в репозитории нет |
 | Права workflow | `android-build`, `android-release`, `android-verify-signing`: `contents: read`; `android-publish`: `actions: read`, `contents: write` и environment `production` с одобрением |
 | Отладочная сборка (`android-build.yml`) | подписывается отладочным ключом, как Release не публикуется |
