@@ -60,6 +60,8 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument('--dry-run', action='store_true')
     ap.add_argument('--rotate', action='store_true')
+    ap.add_argument('--remove-approvals', action='store_true',
+                    help='also remove manual reviewers from environments android-signing and production and restrict them to branch main (owner decision: fully automatic releases)')
     args = ap.parse_args()
     tok = token()
     base = '/repos/%s' % REPO
@@ -71,12 +73,20 @@ def main():
     if already and not args.rotate:
         raise SystemExit('secret %s already exists in environment %s: refusing to overwrite (use --rotate only by director instruction)' % (SECRET_NAME, ENV_NAME))
     if args.dry_run:
+        if args.remove_approvals:
+            print('DRY RUN: would also remove manual reviewers from android-signing and production and restrict them to branch main')
         print('DRY RUN: would create environment %s restricted to branch main, generate a new RSA-4096 key in memory, upload it as secret %s and write the public key to %s' % (ENV_NAME, SECRET_NAME, PUBLIC_OUT))
         return 0
     # 1. environment restricted to the main branch, no manual reviewers (director decision: automatic, guarded by release checks)
     call('PUT', env_path, {'deployment_branch_policy': {'protected_branches': False, 'custom_branch_policies': True}}, tok=tok)
     code, _ = call('POST', env_path + '/deployment-branch-policies', {'name': 'main', 'type': 'branch'}, ok=(200, 201, 422), tok=tok)
     print('environment %s ready, branch policy main (HTTP %s)' % (ENV_NAME, code))
+    if args.remove_approvals:
+        for other in ('android-signing', 'production'):
+            path = '%s/environments/%s' % (base, other)
+            call('PUT', path, {'reviewers': [], 'deployment_branch_policy': {'protected_branches': False, 'custom_branch_policies': True}}, tok=tok)
+            c, _ = call('POST', path + '/deployment-branch-policies', {'name': 'main', 'type': 'branch'}, ok=(200, 201, 422), tok=tok)
+            print('environment %s: manual reviewers removed, restricted to branch main (HTTP %s)' % (other, c))
     # 2. key pair in memory only
     from cryptography.hazmat.primitives import serialization
     from cryptography.hazmat.primitives.asymmetric import rsa
