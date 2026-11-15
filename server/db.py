@@ -17,8 +17,8 @@ def connect(dsn=None):
 
 def migrate(conn, modules):
     with conn.transaction():
-        conn.execute('CREATE TABLE IF NOT EXISTS schema_migrations (name text PRIMARY KEY, sha256 text NOT NULL, applied_at timestamptz NOT NULL DEFAULT now())')
         conn.execute('SELECT pg_advisory_xact_lock(2026111500)')
+        conn.execute('CREATE TABLE IF NOT EXISTS schema_migrations (name text PRIMARY KEY, sha256 text NOT NULL, applied_at timestamptz NOT NULL DEFAULT now())')
         paths = sorted({Path(p) for mod in modules for p in mod.migrations()})
         for path in paths:
             if not path.name[:12].isdigit() or not path.name.endswith('.sql'):
