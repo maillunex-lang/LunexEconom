@@ -226,6 +226,44 @@ def create(name, kind, w, d):
             b.box(0,.45,.08,W*.75,D*.48,1.0,"dark")
             b.box(0,-D*.30,.08,W*.55,D*.18,1.3,"brick")
             b.box(0,-D*.40,.08,1.2,.07,.9,"dark")
+    elif kind in ("truck", "tractor", "construction_foundation", "construction_frame", "road_corner"):
+        W,D=w*2,d*2
+        if kind in ("truck", "tractor"):
+            # Mobile-friendly static props. Axles run along X; front is -Y.
+            body="yellow" if kind=="tractor" else "teal"
+            b.box(0,0,.34,W*.68,D*.72,.43,body)
+            b.box(0,-D*.20,.77,W*.56,D*.30,.65,"blue")
+            b.box(0,-D*.37,.98,W*.40,.045,.26,"window")
+            if kind=="truck":
+                b.box(0,D*.18,.78,W*.63,D*.35,.63,"light")
+                b.box(0,D*.18,1.41,W*.65,D*.37,.08,"roof")
+            else:
+                b.box(0,D*.21,.77,W*.49,D*.33,.26,"yellow")
+                b.box(0,-D*.17,1.44,.09,.09,.37,"dark")
+            for x in (-W*.34,W*.34):
+                for y in (-D*.27,D*.27):
+                    b.box(x,y,0,.22,.32,.65,"dark")
+                    b.box(x+(-.018 if x<0 else .018),y,.25,.045,.16,.20,"roof")
+        elif kind=="construction_foundation":
+            b.box(0,0,0,W-.14,D-.14,.10,"sand")
+            b.box(0,0,.10,W*.83,D*.80,.28,"light")
+            for x in (-W*.33,W*.33):
+                for y in (-D*.30,D*.30):
+                    b.box(x,y,.38,.12,.12,.32,"dark")
+        elif kind=="construction_frame":
+            b.box(0,0,0,W-.14,D-.14,.10,"sand")
+            for z in (.12,1.45,2.78):
+                b.box(0,0,z,W*.82,D*.80,.12,"light")
+            for x in (-W*.36,W*.36):
+                for y in (-D*.34,D*.34):
+                    b.box(x,y,.12,.15,.15,2.78,"brick2")
+            b.box(0,-D*.39,1.54,W*.66,.07,.06,"yellow")
+        else:
+            b.box(0,0,0,1.94,1.94,.04,"pave")
+            b.box(0,-.27,.04,1.47,1.40,.015,"asphalt")
+            b.box(.27,0,.04,1.40,1.47,.015,"asphalt")
+            b.box(-.15,-.55,.06,.04,.24,.009,"yellow")
+            b.box(.55,.15,.06,.24,.04,.009,"yellow")
     elif kind=="catalog_generic":
         W,D=w*2,d*2
         b.box(0,0,0,W-.12,D-.12,.07,"pave")
@@ -281,6 +319,11 @@ def main():
         ("road_straight_1x1","road_straight",1,1),
         ("road_cross_1x1","road_cross",1,1),
         ("bridge_1x1","bridge",1,1),
+        ("road_corner_1x1","road_corner",1,1),
+        ("truck_2x3","truck",2,3),
+        ("tractor_2x2","tractor",2,2),
+        ("construction_foundation_3x2","construction_foundation",3,2),
+        ("construction_frame_3x2","construction_frame",3,2),
         ("grain_field_3x2","grain_field",3,2),
         ("elevator_3x3","elevator",3,3),
         ("mill_3x2","mill",3,2),
