@@ -122,8 +122,8 @@ def build(owner, payload):
         if not paid:
             return 402,{"error":"insufficient_funds","cost":cost,"balance":balance}
         db.execute("INSERT INTO buildings VALUES(?,?,?,?,?,?)",(object_id,owner,kind,x,y,now))
-        production.register_building(db,"?",owner,object_id,kind,clk)
         construction_stages.register(db,"?",object_id,now)
+        production.register_building(db,"?",owner,object_id,kind,clk)
         if decision and decision.get("deposit_id"):
             deposits.link(db, "?", object_id, decision["deposit_id"], decision["resource"])
         if payload.get("size") is not None:

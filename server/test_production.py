@@ -1,4 +1,5 @@
 import os
+from construction_test_fixtures import fast_construction
 import tempfile
 import unittest
 import uuid
@@ -73,6 +74,7 @@ class ConfigTests(unittest.TestCase):
 
 
 class FactoryChainTests(ChainBase):
+    @fast_construction
     def test_factory_without_any_supplier_in_the_world_idles(self):
         self.build("alice", "factory", 8, 10)
         r = self.month("alice")["reports"][0]
@@ -98,6 +100,8 @@ class FactoryChainTests(ChainBase):
         self.assertEqual(r["buildings"], 3)
         self.assert_ledger_balanced()
 
+    @fast_construction
+
     def test_integrated_producer_sells_less_raw_than_it_makes(self):
         for kind in ("farm", "mine", "factory"):
             self.build("alice", kind)
@@ -117,6 +121,8 @@ class FactoryChainTests(ChainBase):
             oil_supply = db.execute("SELECT supply FROM market_prices WHERE product='oil' AND month_index=0").fetchone()[0]
         self.assertEqual(oil_supply, 0)
         self.assertEqual(goods_supply, 0)                  # no oil at all: the factory cannot produce
+
+    @fast_construction
 
     def test_forecast_includes_input_costs(self):
         self.build("alice", "factory", 8, 10)
@@ -229,6 +235,8 @@ class WarehouseTests(ChainBase):
         w = self.month("alice", 3)
         self.assertEqual(w["inventory"]["used"], 0)         # no runway for costs: production is sold, not stored
         self.assertGreaterEqual(w["balance"], 0)
+
+    @fast_construction
 
     def test_warehouse_costs_upkeep(self):
         self.build("alice", "warehouse", 8, 10)

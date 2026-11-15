@@ -70,8 +70,8 @@ def build(owner,payload):
         paid,cost,balance=economy.charge_build(db,"%s",owner,kind,len(new_roads),now,payload.get("size"))
         if not paid:return 402,{"error":"insufficient_funds","cost":cost,"balance":balance}
         db.execute("INSERT INTO buildings(id,owner,kind,x,y,created) VALUES(%s,%s,%s,%s,%s,%s)",(oid,owner,kind,x,y,now))
-        production.register_building(db,"%s",owner,oid,kind,clk)
         construction_stages.register(db,"%s",oid,now)
+        production.register_building(db,"%s",owner,oid,kind,clk)
         if decision and decision.get("deposit_id"):
             deposits.link(db, "%s", oid, decision["deposit_id"], decision["resource"])
         if payload.get("size") is not None:

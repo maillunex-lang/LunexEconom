@@ -64,6 +64,8 @@ CREATE TABLE IF NOT EXISTS ledger_entries (
 );
 CREATE TABLE IF NOT EXISTS world_clock (id INTEGER PRIMARY KEY, epoch BIGINT NOT NULL, month_seconds BIGINT NOT NULL, base_index BIGINT NOT NULL);
 CREATE TABLE IF NOT EXISTS building_ops (object_id TEXT PRIMARY KEY, owner TEXT NOT NULL, kind TEXT NOT NULL, start_month BIGINT NOT NULL, start_permille INTEGER NOT NULL);
+CREATE TABLE IF NOT EXISTS construction_stages (object_id TEXT PRIMARY KEY REFERENCES buildings(id) ON DELETE CASCADE, stage TEXT NOT NULL CHECK(stage IN ('foundation','frame','complete')), next_at BIGINT NOT NULL);
+CREATE INDEX IF NOT EXISTS construction_stages_due ON construction_stages(next_at) WHERE stage != 'complete';
 CREATE TABLE IF NOT EXISTS market_prices (product TEXT NOT NULL, month_index BIGINT NOT NULL, price BIGINT NOT NULL, supply BIGINT NOT NULL, demand BIGINT NOT NULL, PRIMARY KEY(product, month_index));
 CREATE TABLE IF NOT EXISTS world_state (id INTEGER PRIMARY KEY, processed_through BIGINT NOT NULL);
 CREATE TABLE IF NOT EXISTS inventory (owner TEXT NOT NULL, product TEXT NOT NULL, qty BIGINT NOT NULL, PRIMARY KEY(owner, product));

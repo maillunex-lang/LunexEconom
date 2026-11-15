@@ -1,4 +1,5 @@
 import os
+from construction_test_fixtures import fast_construction
 import tempfile
 import unittest
 import uuid
@@ -120,6 +121,8 @@ class SellTests(unittest.TestCase):
         self.assertEqual(game_server.wallet("alice")[1]["inventory"]["used"], 0)
         self.assertGreater(out["balance"], before)
         self.ledger_ok()
+
+    @fast_construction
 
     def test_stock_stays_when_capacity_remains(self):
         a = self.build("alice", "warehouse")

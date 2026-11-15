@@ -10,24 +10,24 @@ DEFAULT_STEP_SECONDS = 14 * 3600 // 6
 
 def step_seconds():
     raw = os.environ.get('LUNEX_CONSTRUCTION_STEP_SECONDS', str(DEFAULT_STEP_SECONDS))
-    value = int(raw)
-    if not 1 <= value <= 86400:
-        raise ValueError('construction step outside 1..86400 seconds')
-    return value
+    try:
+        value = int(raw)
+    except (TypeError, ValueError):
+        return DEFAULT_STEP_SECONDS
+    return value if 1 <= value <= 86400 else DEFAULT_STEP_SECONDS
 
 
 def ensure(db, marker):
     db.execute('CREATE TABLE IF NOT EXISTS construction_stages (object_id TEXT PRIMARY KEY REFERENCES buildings(id) ON DELETE CASCADE, stage TEXT NOT NULL CHECK(stage IN (\'foundation\',\'frame\',\'complete\')), next_at BIGINT NOT NULL)')
+    db.execute("CREATE INDEX IF NOT EXISTS construction_stages_due ON construction_stages(next_at) WHERE stage != 'complete'")
 
 
 def register(db, marker, object_id, now):
-    ensure(db, marker)
     db.execute(f'INSERT INTO construction_stages(object_id,stage,next_at) VALUES({marker},{marker},{marker})', (object_id, 'foundation', now + step_seconds()))
 
 
 def advance(db, marker, now, chunk_size=12):
     """Advance due stages atomically; append chunk-versioned events only on change."""
-    ensure(db, marker)
     due = db.execute(f"SELECT object_id,stage,next_at FROM construction_stages WHERE stage!='complete' AND next_at<={marker} ORDER BY object_id", (now,)).fetchall()
     emitted = 0
     for oid, old_stage, next_at in due:

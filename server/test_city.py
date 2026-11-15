@@ -1,4 +1,5 @@
 import os
+from construction_test_fixtures import fast_construction
 import tempfile
 import unittest
 import uuid
@@ -131,6 +132,8 @@ class MayorAndTaxTests(CityBase):
         v = self.view()["taxes"]
         self.assertEqual((v["vat"]["honey"], v["vat"]["oil"], v["vat"]["goods"]), (0.10, 0.22, 0.22))
 
+    @fast_construction
+
     def test_companies_pay_the_mayors_rates(self):
         self.make_mayor("alice")
         self.taxes("alice", 0.05, 0.0)
@@ -203,6 +206,8 @@ class SocialBuildingTests(CityBase):
         self.assertEqual(self.view()["labor"]["jobs"] if "labor" in self.view() else 6, 6)
         self.ledger_ok()
 
+    @fast_construction
+
     def test_the_city_has_jobs_for_residents(self):
         self.make_mayor("alice")
         self.fund(2_000_000)
@@ -246,6 +251,7 @@ class SocialBuildingTests(CityBase):
 
 
 class EffectTests(CityBase):
+    @fast_construction
     def test_quality_raises_output(self):
         with mock.patch.object(economy, "price_for", side_effect=lambda p, s, d: economy.MARKET[p]["reference_price"]):
             self.build("bob", "farm")

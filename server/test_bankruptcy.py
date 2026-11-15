@@ -1,4 +1,5 @@
 import os
+from construction_test_fixtures import fast_construction
 import tempfile
 import unittest
 import uuid
@@ -95,6 +96,8 @@ class ArrearsTests(BankruptcyBase):
         w = self.month("alice", 1)
         self.assertEqual(w["company"]["missed"], 0)
         self.assertEqual(w["company"]["arrears"], 0)           # fully repaid from cash
+
+    @fast_construction
 
     def test_distress_halves_output(self):
         self.build("alice", "farm")
