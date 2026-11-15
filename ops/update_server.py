@@ -21,7 +21,7 @@ WORKFLOW = 'server-check.yml'
 UA = {'User-Agent':'LunexEconom-V2-Updater/1', 'Accept':'application/vnd.github+json'}
 MAX_FILE = 2_000_000
 KEEP_BACKUPS = 5
-PATH = re.compile(r'server/(?:[A-Za-z_][A-Za-z0-9_]*/)*[A-Za-z_][A-Za-z0-9_]*\.py$|server/(?:data|migrations)/(?:[A-Za-z0-9_\-]+\.)?(?:json|sql)$|server/requirements\.txt$')
+PATH = re.compile(r'server/(?:[A-Za-z_][A-Za-z0-9_]*/)*[A-Za-z_][A-Za-z0-9_]*\.py$|server/(?:data|migrations)/(?:[A-Za-z0-9_\-]+\.)?(?:json|sql)$|server/platform/admin_ui\.html$|server/requirements\.txt$')
 
 
 def safe_path(name):
@@ -111,7 +111,7 @@ def deploy(commit,names):
             SERVER_DIR.mkdir(parents=True,exist_ok=True)
             copy_tree(stage,SERVER_DIR,names)
             for name in prior:
-                if name not in names and (name.endswith(('.py','.json','.sql')) or name=='requirements.txt'):
+                if name not in names and (name.endswith(('.py','.json','.sql','.html')) or name=='requirements.txt'):
                     (SERVER_DIR/name).unlink(missing_ok=True)
             restart()
             if not healthy(): raise RuntimeError('V2 health check failed')

@@ -1,0 +1,8 @@
+{
+  "android_version": "2.1.0",
+  "features": {
+    "world_enabled": false,
+    "client_content_patch": false
+  },
+  "api_schema": 1
+}
