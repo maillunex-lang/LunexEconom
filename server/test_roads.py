@@ -93,6 +93,7 @@ class BuildRoadTests(unittest.TestCase):
         self.assertIn("road_changed", kinds)
         building = next(e for e in res["events"] if e["kind"] == "building_created")
         self.assertEqual(building["building_kind"], "factory")
+        self.assertEqual(building["construction_stage"], "complete")
         # chunk versions increase by one per event within a chunk
         seen = {}
         for e in res["events"]:
@@ -105,7 +106,7 @@ class BuildRoadTests(unittest.TestCase):
             for cy in range(-1, 2):
                 found += game_server.chunk(cx, cy)[1]["cells"]
         self.assertEqual(sum(1 for c in found if c["kind"] == "road_changed"), res["road_cells"])
-        self.assertTrue(any(c["kind"] == "building_created" and c["building_kind"] == "factory" for c in found))
+        self.assertTrue(any(c["kind"] == "building_created" and c["building_kind"] == "factory" and c["construction_stage"] == "complete" for c in found))
 
     def test_idempotent_request(self):
         r = rid()
