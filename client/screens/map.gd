@@ -27,6 +27,7 @@ var home_city := "ufa"
 var _started := false
 var _panel_visible := false
 var _city_data: Dictionary = {}
+var _enterprise_refresh_busy := false
 
 func _ready() -> void:
     set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
@@ -148,6 +149,7 @@ func open(url: String, access_token: String, preferred_city: String = "ufa") -> 
     if not preferred_city.is_empty():
         home_city = preferred_city
     stream.start()
+    _refresh_enterprise_map()
     if not _started:
         _started = true
         _load_world()
@@ -280,3 +282,18 @@ func _build_selected() -> void:
     parcel["px"] = selected.x
     parcel["py"] = selected.y
     build_requested.emit(parcel, cell)
+
+func _refresh_enterprise_map() -> void:
+    if _enterprise_refresh_busy:
+        return
+    _enterprise_refresh_busy = true
+    var response: Dictionary = await api.fetch("/enterprises")
+    if int(response.get("code",0)) == 200:
+        var metadata := {}
+        for id in response.get("data",{}).get("enterprises",[]):
+            var detail: Dictionary = await api.fetch("/enterprises/%d" % int(id))
+            if int(detail.get("code",0)) == 200:
+                metadata["enterprise:%d" % int(id)] = detail.get("data",{})
+        canvas.enterprise_info = metadata
+        canvas.queue_redraw()
+    _enterprise_refresh_busy = false
