@@ -24,6 +24,7 @@ import social
 import admin_api
 import citygen
 import construction_catalog
+import goods_catalog
 if os.environ.get('LUNEX_DB_ENGINE') == 'postgres':
     import postgres_world
     import postgres_db
@@ -32,6 +33,7 @@ DB = os.environ.get("LUNEX_WORLD_DB", "/home/gamedev/projects/LunexEconom-server
 CHUNK = 12
 MAX_COORD = 10000
 KINDS = {"farm":(2,2), "mine":(2,3), "factory":(3,2), "warehouse":(3,3), "shop":(2,2), "school":(3,2), "hospital":(3,3), "park":(2,2)}
+KINDS.update(goods_catalog.extra_footprints())
 LOCK = threading.RLock()
 
 def connect():
@@ -61,6 +63,8 @@ def _prepare(db):
     citygen.ensure(db, "?")
     import regions
     regions.ensure(db, "?")
+    import deposits
+    deposits.ensure(db, "?")
     zoning.ensure(db, "?")
     db.commit()
 
@@ -103,6 +107,10 @@ def build(owner, payload):
         error,path=road_rules.plan_access(footprint,dynamic,occupied,MAX_COORD)
         if error:
             return 409,{"error":error}
+        import deposits
+        decision = deposits.gate(db, "?", kind, footprint)
+        if decision and decision.get("error"):
+            return 409, decision
         new_roads=[c for c in path if not road_rules.is_base_road(*c) and c not in dynamic]
         object_id=uuid.uuid4().hex
         now=int(time.time())
@@ -113,6 +121,8 @@ def build(owner, payload):
             return 402,{"error":"insufficient_funds","cost":cost,"balance":balance}
         db.execute("INSERT INTO buildings VALUES(?,?,?,?,?,?)",(object_id,owner,kind,x,y,now))
         production.register_building(db,"?",owner,object_id,kind,clk)
+        if decision and decision.get("deposit_id"):
+            deposits.link(db, "?", object_id, decision["deposit_id"], decision["resource"])
         if payload.get("size") is not None:
             db.execute("INSERT INTO building_dimensions(object_id,width,height) VALUES(?,?,?)",(object_id,w,h))
         db.executemany("INSERT INTO cells VALUES(?,?,?)",[(xx,yy,object_id) for xx,yy in footprint])
@@ -446,6 +456,15 @@ class Handler(BaseHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(raw)
 
+    def _send_cached(self, data, max_age):
+        raw = json.dumps(data, ensure_ascii=False).encode("utf-8")
+        self.send_response(200)
+        self.send_header("Content-Type", "application/json; charset=utf-8")
+        self.send_header("Cache-Control", "public, max-age=%d" % max_age)
+        self.send_header("Content-Length", str(len(raw)))
+        self.end_headers()
+        self.wfile.write(raw)
+
     def _send(self,status,data):
         raw=json.dumps(data,ensure_ascii=False).encode()
         self.send_response(status)
@@ -561,6 +580,21 @@ class Handler(BaseHTTPRequestHandler):
         if url.path=="/catalog/city":
             import city_catalog
             return self._send(200,city_catalog.view())
+        if url.path=="/catalog/goods":return self._send_cached(goods_catalog.public_view(), 86400)
+        if url.path=="/deposits":
+            import deposits
+            box = deposits.parse_bbox(parse_qs(url.query))
+            if box is None:
+                return self._send(400, {"error": "invalid_query"})
+            if os.environ.get("LUNEX_DB_ENGINE") == "postgres":
+                import postgres_db
+                with postgres_db.connect() as db:
+                    deposits.ensure(db, "%s")
+                    payload = deposits.query(db, "%s", *box)
+            else:
+                with connect() as db:
+                    payload = deposits.query(db, "?", *box)
+            return self._send_cached(payload, 300)
         if url.path=="/health":return self._send(200,health_details())
         if url.path in ("/leaderboard", "/feed"):
             owner = self._identity()

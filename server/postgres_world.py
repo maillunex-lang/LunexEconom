@@ -13,10 +13,13 @@ import taxes
 import city
 import clock
 import contracts
+import deposits
+import goods_catalog
 
 CHUNK = 12
 MAX_COORD = 10000
 KINDS = {"farm":(2,2),"mine":(2,3),"factory":(3,2),"warehouse":(3,3),"shop":(2,2),"school":(3,2),"hospital":(3,3),"park":(2,2)}
+KINDS.update(goods_catalog.extra_footprints())
 
 def build(owner,payload):
     kind=payload.get("kind")
@@ -54,6 +57,10 @@ def build(owner,payload):
         occupied={(a_,b_) for a_,b_ in db.execute("SELECT x,y FROM cells WHERE x BETWEEN %s AND %s AND y BETWEEN %s AND %s",(x0,x1,y0,y1)).fetchall()}
         error,path=road_rules.plan_access(footprint,dynamic,occupied,MAX_COORD)
         if error:return 409,{"error":error}
+        deposits.ensure(db, "%s")
+        decision = deposits.gate(db, "%s", kind, footprint)
+        if decision and decision.get("error"):
+            return 409, decision
         new_roads=[c for c in path if not road_rules.is_base_road(*c) and c not in dynamic]
         oid=uuid.uuid4().hex
         now=int(time.time())
@@ -63,6 +70,8 @@ def build(owner,payload):
         if not paid:return 402,{"error":"insufficient_funds","cost":cost,"balance":balance}
         db.execute("INSERT INTO buildings(id,owner,kind,x,y,created) VALUES(%s,%s,%s,%s,%s,%s)",(oid,owner,kind,x,y,now))
         production.register_building(db,"%s",owner,oid,kind,clk)
+        if decision and decision.get("deposit_id"):
+            deposits.link(db, "%s", oid, decision["deposit_id"], decision["resource"])
         if payload.get("size") is not None:
             db.execute("INSERT INTO building_dimensions(object_id,width,height) VALUES(%s,%s,%s)",(oid,w,h))
         with db.cursor() as cursor:

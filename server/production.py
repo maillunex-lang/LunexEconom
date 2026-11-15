@@ -18,6 +18,7 @@ import json
 import bank
 import city
 import economy
+import goods_catalog
 import taxes
 
 
@@ -26,7 +27,10 @@ def _q(sql, ph):
 
 
 def _spec(kind):
-    return economy.PRODUCTION.get(kind)
+    spec = economy.PRODUCTION.get(kind)
+    if spec is not None:
+        return spec
+    return goods_catalog.production_spec(kind)
 
 
 def _factor(start_month, permille, month):
@@ -43,6 +47,30 @@ def product_order():
 
 def input_products():
     return {p for s in economy.PRODUCTION.values() for p in s.get("inputs", {})}
+
+
+def _month_products(companies):
+    """Legacy clearing order, plus catalog goods that somebody actually produces, consumes or stores.
+
+    With no agro or extraction buildings this is exactly ``product_order()`` (honey, oil, goods).
+    """
+    order = list(product_order())
+    seen = set(order)
+    live = set()
+    for company in companies.values():
+        for product, qty in company.get("stock", {}).items():
+            if qty and product not in seen and goods_catalog.has_good(product):
+                live.add(product)
+        for reg in company.get("regional", {}).values():
+            for kind, _factor in reg.get("buildings", ()):
+                spec = _spec(kind) or {}
+                product = spec.get("product")
+                if product and product not in seen:
+                    live.add(product)
+                for raw in spec.get("inputs", {}):
+                    if raw not in seen:
+                        live.add(raw)
+    return order + [product for product in goods_catalog.product_order() if product in live and product not in seen]
 
 
 def register_building(db, ph, owner, object_id, kind, clk):
@@ -117,6 +145,8 @@ def _remove_building(db, ph, object_id, owner):
     db.execute(_q("DELETE FROM cells WHERE object_id=%s", ph), (object_id,))
     db.execute(_q("DELETE FROM buildings WHERE id=%s", ph), (object_id,))
     db.execute(_q("DELETE FROM building_ops WHERE object_id=%s", ph), (object_id,))
+    import deposits
+    deposits.release(db, ph, object_id)
     grouped = {}
     for x, y in cells:
         grouped.setdefault((x // CHUNK, y // CHUNK), []).append([x, y])
@@ -142,7 +172,7 @@ def liquidate(db, ph, owner, month, now):
     stock_value = 0
     for product, qty in db.execute(_q("SELECT product,qty FROM inventory WHERE owner=%s", ph), (owner,)).fetchall():
         row = db.execute(_q("SELECT price FROM market_prices WHERE product=%s ORDER BY month_index DESC LIMIT 1", ph), (product,)).fetchone()
-        stock_value += int(qty * (row[0] if row else economy.MARKET.get(product, {}).get("reference_price", 0)) * economy.INVENTORY_LIQUIDATION_RATE)
+        stock_value += int(qty * (row[0] if row else economy.reference_price(product)) * economy.INVENTORY_LIQUIDATION_RATE)
     db.execute(_q("DELETE FROM inventory WHERE owner=%s", ph), (owner,))
     if proceeds:
         economy.post(db, ph, "liquidation", "Банкротство: продажа зданий", [(economy.CONSTRUCTION, -proceeds), (account, proceeds)], now)
@@ -197,7 +227,7 @@ def sell_building(db, ph, owner, object_id, now):
         take = min(stock[product], excess)
         excess -= take
         last = db.execute(_q("SELECT price FROM market_prices WHERE product=%s ORDER BY month_index DESC LIMIT 1", ph), (product,)).fetchone()
-        sold_value += int(take * (last[0] if last else economy.MARKET[product]["reference_price"]) * economy.INVENTORY_LIQUIDATION_RATE)
+        sold_value += int(take * (last[0] if last else economy.reference_price(product)) * economy.INVENTORY_LIQUIDATION_RATE)
         db.execute(_q("UPDATE inventory SET qty=%s WHERE owner=%s AND product=%s", ph), (stock[product] - take, owner, product))
     if sold_value:
         economy.post(db, ph, "sale", "Продажа лишних запасов", [(economy.MARKET_ACCOUNT, -sold_value), (account, sold_value)], now)
@@ -254,6 +284,8 @@ def step_month(db, ph, month, now):
         reg = c["regional"].setdefault(region, {"buildings": [], "jobs": 0, "needs": {}, "got": {}, "need_ext": {}})
         c["buildings"].append((kind, factor))
         reg["buildings"].append((kind, factor))
+        if goods_catalog.deposit_resource(kind):
+            reg.setdefault("wells", []).append((object_id, kind, factor))
         c["maint"] += spec["upkeep"] * factor // 1000
         c["jobs"] += spec["jobs"] * factor // 1000
         reg["jobs"] += spec["jobs"] * factor // 1000
@@ -293,15 +325,17 @@ def step_month(db, ph, month, now):
                 c["needs"][product] = c["needs"].get(product, 0) + amount
         c["wage_bill"] = sum(reg["jobs"] * lab_r[region]["wage"] for region, reg in c["regional"].items())
 
-    consumed = input_products()
+    consumed = input_products() | goods_catalog.all_inputs()
     prices = {}
     import contracts as trade_contracts
+    import deposits
+    well_left = deposits.load_remaining(db, ph)
     contract_deliveries = []
     spend_r = {region: 0 for region in active}       # value of what each city's residents bought (consumer demand x fill x price)
     units_r = {region: 0 for region in active}       # units of consumer goods behind that value (shops serve these)
     consumer_spend = 0
-    for product in product_order():
-        ref = economy.MARKET[product]["reference_price"]
+    for product in _month_products(companies):
+        ref = economy.market_of(product)["reference_price"]
         hold_share = _hold_share(db, ph, product, month, ref)
         previous = _price_row(db, ph, product, month - 1)
         release_all = previous is not None and previous >= ref       # price above the reference: the warehouse sells everything
@@ -313,12 +347,23 @@ def step_month(db, ph, month, now):
                 produced = 0
                 for kind, factor in reg["buildings"]:
                     spec = _spec(kind)
-                    if spec["product"] != product:
+                    if not spec or spec.get("product") != product:
+                        continue
+                    if goods_catalog.deposit_resource(kind):
                         continue
                     out = spec["output"] * factor // 1000
-                    out = int(out * staffing_r[region] * (_input_fraction(reg) if spec.get("inputs") else 1.0) * (economy.DISTRESS_OUTPUT if c["distress"] else 1.0)
+                    scale = _input_fraction_for(reg, spec["inputs"]) if spec.get("inputs") else 1.0
+                    out = int(out * staffing_r[region] * scale * (economy.DISTRESS_OUTPUT if c["distress"] else 1.0)
                               * (1 + economy.SOCIAL_PRODUCTIVITY * quality_r[region]))
                     produced += out
+                for object_id, kind, factor in reg.get("wells", ()):
+                    spec = _spec(kind)
+                    if not spec or spec.get("product") != product:
+                        continue
+                    out = spec["output"] * factor // 1000
+                    out = int(out * staffing_r[region] * (economy.DISTRESS_OUTPUT if c["distress"] else 1.0)
+                              * (1 + economy.SOCIAL_PRODUCTIVITY * quality_r[region]))
+                    produced += deposits.draw(well_left, object_id, out)
                 by_region[region] = produced
             produced_by[owner] = by_region
             produced_map[owner] = sum(by_region.values())
@@ -417,7 +462,7 @@ def step_month(db, ph, month, now):
             consumer_part = demand - need_ext_r[region]
             spend_r[region] += int(consumer_part * fill * price)
             consumer_spend += int(consumer_part * fill * price)
-            if economy.MARKET[product].get("consumer"):
+            if economy.market_of(product).get("consumer"):
                 units_r[region] += int(consumer_part * fill)
             for owner, c in companies.items():
                 sold = offers_r[region].get(owner, 0) + transport_by.get((owner, region), 0)       # shipped goods are paid at the home price
@@ -567,6 +612,7 @@ def step_month(db, ph, month, now):
         if region != regions.HOME:
             nxt = next_population(pop_r[region], jobs_r[region], lab_r[region]["labor_force"], 0.0)
             regions.save_population(db, ph, region, month, lab_r[region], staffing_r[region], nxt)
+    deposits.store_remaining(db, ph, well_left)
 
 
 def _split_units(offers, qty):
@@ -589,6 +635,21 @@ def _input_fraction(c):
     for product, need in c["needs"].items():
         if need > 0:
             fraction = min(fraction, c["got"].get(product, 0) / need)
+    return fraction
+
+
+def _input_fraction_for(reg, inputs):
+    """Same ratio as ``_input_fraction``, but only for this building's own inputs.
+
+    A mill's missing grain must not throttle a factory that shares the region: the
+    legacy factory only depends on oil and honey, and those are the only keys in
+    ``reg["needs"]`` when no other input-using building is present.
+    """
+    fraction = 1.0
+    for product in inputs:
+        need = reg["needs"].get(product, 0)
+        if need > 0:
+            fraction = min(fraction, reg["got"].get(product, 0) / need)
     return fraction
 
 
@@ -617,7 +678,7 @@ def _ops(db, ph):
 
 def _current_labor(db, ph, month, ops):
     """Provisional labour market of the running month (all buildings at full capacity)."""
-    jobs = sum(economy.PRODUCTION[k]["jobs"] for _o, k, sm, _p in ops if k in economy.PRODUCTION and sm <= month)
+    jobs = sum(economy.kind_jobs(k) for _o, k, sm, _p in ops if sm <= month)
     population = _population_at(db, ph, month)
     lab = labor_market(population, jobs)
     lab["social"] = city.social(db, ph, month, population, funded=_arrears(_status(db, ph, economy.CITY)) == 0)
@@ -641,11 +702,37 @@ def quote(db, ph, clk):
     for product in product_order():
         producing_kind = next(k for k, s in economy.PRODUCTION.items() if s.get("product") == product)
         output = economy.PRODUCTION[producing_kind]["output"]
-        supply = int(sum(economy.PRODUCTION[k]["output"] for _, k, sm, _p in ops if k in economy.PRODUCTION and economy.PRODUCTION[k].get("product") == product and sm <= month)
-                     * lab["staffing"] * (1 + economy.SOCIAL_PRODUCTIVITY * lab["quality"]))
-        need = int(sum(n for _, k, sm, _p in ops if sm <= month for p, n in economy.PRODUCTION.get(k, {}).get("inputs", {}).items() if p == product) * lab["staffing"])
+        base = sum(economy.PRODUCTION[k]["output"] for _, k, sm, _p in ops if k in economy.PRODUCTION and economy.PRODUCTION[k].get("product") == product and sm <= month)
+        extra = sum((_spec(k) or {}).get("output", 0) for _, k, sm, _p in ops if k not in economy.PRODUCTION and sm <= month and (_spec(k) or {}).get("product") == product)
+        supply = int((base + extra) * lab["staffing"] * (1 + economy.SOCIAL_PRODUCTIVITY * lab["quality"]))
+        need_base = sum(n for _, k, sm, _p in ops if k in economy.PRODUCTION and sm <= month for p, n in economy.PRODUCTION.get(k, {}).get("inputs", {}).items() if p == product)
+        need_extra = sum(n for _, k, sm, _p in ops if k not in economy.PRODUCTION and sm <= month for p, n in (_spec(k) or {}).get("inputs", {}).items() if p == product)
+        need = int((need_base + need_extra) * lab["staffing"])
         demand = economy.demand_for(product, month, lab["scale"]) + need
         m = economy.MARKET[product]
+        out[product] = {"kind": producing_kind, "name": m["name"], "reference_price": m["reference_price"], "supply": supply, "demand": demand,
+                        "price": economy.price_for(product, supply, demand), "price_if_added": economy.price_for(product, supply + output, demand),
+                        "previous_price": _price_row(db, ph, product, month - 1)}
+    live = set()
+    for _o, k, sm, _p in ops:
+        if sm > month:
+            continue
+        spec = _spec(k) or {}
+        if k in economy.PRODUCTION:
+            continue
+        if spec.get("product"):
+            live.add(spec["product"])
+        live.update(spec.get("inputs", ()))
+    for product in goods_catalog.product_order():
+        if product not in live or product in out:
+            continue
+        producing_kind = goods_catalog.producer_kind(product)
+        output = goods_catalog.recipe(producing_kind).capacity
+        made = sum((_spec(k) or {}).get("output", 0) for _, k, sm, _p in ops if sm <= month and (_spec(k) or {}).get("product") == product)
+        need = sum(n for _, k, sm, _p in ops if sm <= month for p, n in (_spec(k) or {}).get("inputs", {}).items() if p == product)
+        supply = int(made * lab["staffing"] * (1 + economy.SOCIAL_PRODUCTIVITY * lab["quality"]))
+        demand = economy.demand_for(product, month, lab["scale"]) + int(need * lab["staffing"])
+        m = economy.market_of(product)
         out[product] = {"kind": producing_kind, "name": m["name"], "reference_price": m["reference_price"], "supply": supply, "demand": demand,
                         "price": economy.price_for(product, supply, demand), "price_if_added": economy.price_for(product, supply + output, demand),
                         "previous_price": _price_row(db, ph, product, month - 1)}
@@ -663,11 +750,13 @@ def forecast(db, ph, owner, quotes, labor):
         if not spec:
             continue
         if spec.get("product"):
-            revenue += int(spec["output"] * staffing * quotes[spec["product"]]["price"])
+            price = quotes[spec["product"]]["price"] if spec["product"] in quotes else economy.market_of(spec["product"])["reference_price"]
+            revenue += int(spec["output"] * staffing * price)
         for product, amount in spec.get("inputs", {}).items():
-            inputs += int(amount * staffing * quotes[product]["price"])
+            price = quotes[product]["price"] if product in quotes else economy.market_of(product)["reference_price"]
+            inputs += int(amount * staffing * price)
         maint += spec["upkeep"]
-        wages += economy.wage_cost(kind, labor["wage"], staffing)
+        wages += int(economy.kind_jobs(kind) * staffing * labor["wage"])
         count += 1
     interest = bank.monthly_interest(bank.balance(db, ph, owner))
     profit = revenue - inputs - maint - wages - interest
@@ -684,7 +773,17 @@ def inventory_view(db, ph, owner):
     rows = db.execute(_q("SELECT product,qty FROM inventory WHERE owner=%s ORDER BY product", ph), (owner,)).fetchall()
     capacity = sum(_spec(k)["capacity"] for k, in db.execute(_q("SELECT kind FROM building_ops WHERE owner=%s", ph), (owner,)).fetchall()
                    if _spec(k) and _spec(k).get("capacity"))
-    items = [{"product": p, "name": economy.MARKET[p]["name"], "qty": int(q)} for p, q in rows if p in economy.MARKET and q > 0]
+    items = []
+    for p, q in rows:
+        if q <= 0:
+            continue
+        if p in economy.MARKET:
+            name = economy.MARKET[p]["name"]
+        elif goods_catalog.has_good(p):
+            name = goods_catalog.good(p).name
+        else:
+            continue
+        items.append({"product": p, "name": name, "qty": int(q)})
     return {"items": items, "used": sum(i["qty"] for i in items), "capacity": capacity}
 
 

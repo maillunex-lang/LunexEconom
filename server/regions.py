@@ -116,7 +116,7 @@ def transit_months(a, b):
 
 def unit_cost(product, a, b):
     """Transport cost of one unit between two cities, in roubles."""
-    ref = economy.MARKET[product]["reference_price"]
+    ref = economy.market_of(product)["reference_price"]
     return int(round(ref * TRANSPORT_COST_PER_KM * road_km(a, b)))
 
 
@@ -158,9 +158,8 @@ def home_region(db, ph, owner):
     jobs = {}
     rows = db.execute(_q("SELECT o.kind,b.x,b.y FROM building_ops o LEFT JOIN buildings b ON b.id=o.object_id WHERE o.owner=%s", ph), (owner,)).fetchall()
     for kind, x, y in rows:
-        spec = economy.PRODUCTION.get(kind) or {}
         region = HOME if x is None else region_of(int(x), int(y))
-        jobs[region] = jobs.get(region, 0) + int(spec.get("jobs", 0)) + 1
+        jobs[region] = jobs.get(region, 0) + economy.kind_jobs(kind) + 1
     if not jobs:
         return HOME
     return sorted(jobs, key=lambda r: (-jobs[r], region_ids().index(r)))[0]
@@ -229,7 +228,7 @@ def plan_exports(product, regions, offers, local_demand, arriving, previous, in_
     beyond its own demand); a lane is used only when the destination's price beats the origin's by more than the transport cost,
     and never more than the destination still lacks after counting what is already on the road to it. Returns [(origin, destination, qty)].
     """
-    ref = economy.MARKET[product]["reference_price"]
+    ref = economy.market_of(product)["reference_price"]
     surplus = {r: int(max(0, offers.get(r, 0) + arriving.get(r, 0) - local_demand.get(r, 0)) * SURPLUS_SHARE) for r in regions}
     lacking = {r: max(0, local_demand.get(r, 0) - offers.get(r, 0) - arriving.get(r, 0) - in_transit.get(r, 0)) for r in regions}
     lanes = []

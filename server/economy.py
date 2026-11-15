@@ -8,11 +8,17 @@ placeholder style ("?" for sqlite3, "%s" for psycopg).
 """
 import uuid
 
+import goods_catalog
+
 CURRENCY = "RUB"
 START_CAPITAL = 1_000_000
-BUILD_COST = {"farm": 120_000, "mine": 300_000, "factory": 450_000, "warehouse": 80_000,
+BUILD_COST = {"farm": goods_catalog.recipe("farm").build_cost, "mine": goods_catalog.recipe("mine").build_cost,
+              "factory": goods_catalog.recipe("factory").build_cost, "warehouse": 80_000,
               "shop": 160_000,
               "school": 400_000, "hospital": 800_000, "park": 150_000}   # social buildings are paid from the city budget
+BUILD_COST.update(goods_catalog.extra_build_costs())
+# /world `economy.building_costs` stays the original eight kinds. New costs are in GET /catalog/goods.
+TERMS_BUILD_KINDS = ("farm", "mine", "factory", "warehouse", "shop", "school", "hospital", "park")
 ROAD_CELL_COST = 5_000
 TREASURY = "system:treasury"
 CONSTRUCTION = "system:construction"
@@ -27,9 +33,9 @@ MAX_SETTLE_MONTHS = 600   # months processed per call when catching up
 # `inputs`: raw materials consumed per full month at full capacity (bought from the market when the owner's own
 # stock is short). `capacity`: units of storage a warehouse adds (shared by all products of the owner).
 PRODUCTION = {
-    "farm":      {"product": "honey", "output": 100, "jobs": 4,  "upkeep": 2_000},
-    "mine":      {"product": "oil",   "output": 40,  "jobs": 10, "upkeep": 15_000},
-    "factory":   {"product": "goods", "output": 60,  "jobs": 20, "upkeep": 26_000, "inputs": {"oil": 10, "honey": 20}},
+    "farm":      goods_catalog.legacy_production("farm"),
+    "mine":      goods_catalog.legacy_production("mine"),
+    "factory":   goods_catalog.legacy_production("factory"),
     "warehouse": {"product": None,    "output": 0,   "jobs": 2,  "upkeep": 2_000,  "capacity": 400},
     # A shop does not produce. It sells consumer goods (MARKET consumer=True) to residents. `floor` is units per month.
     "shop":      {"product": None,    "output": 0,   "jobs": 5,  "upkeep": 3_000,  "floor": 100, "role": "retail"},
@@ -80,9 +86,8 @@ NPC_RECAPITAL_MONTHS = 6
 TAXES_ENABLED = True
 CITY = "city"                          # pseudo-owner whose wallet is the city budget (no start capital, never bankrupt)
 VAT_STANDARD = 0.22                    # general rate from 2026-01-01 (Federal Law 425-FZ)
-VAT_RATES = {"honey": 0.10,            # food: reduced rate 10 % (inclusion of honey in the list is not verified, rate is a setting)
-             "oil": 0.22,              # raw material: general rate
-             "goods": 0.22}            # manufactured goods: general rate
+VAT_RATES = {gid: goods_catalog.good(gid).vat_rate for gid in ("honey", "oil", "goods")}
+VAT_RATES.update(goods_catalog.extra_vat_rates())
 DEFAULT_PROFIT_TAX = 0.13
 PROFIT_TAX_LIMITS = (0.05, 0.25)       # real total profit tax is 25 % (8 % federal + 17 % regional)
 DEFAULT_PROPERTY_TAX = 0.022           # per year of the book value of buildings; Bashkortostan general rate (cap 2.2 % by Tax Code art. 380)
@@ -155,14 +160,7 @@ RETAIL_MARKUP = 0.30
 #   demand = base_demand * season[calendar month] * demand scale (population and income, see above)
 # base_demand = 2 buildings' output: the world absorbs two buildings of a kind at the reference price;
 # a lone first building enjoys a premium, a crowded market pushes prices (and profit) down.
-MARKET = {
-    "honey": {"name": "Мёд",    "reference_price": 200,  "base_demand": 200, "elasticity": 1.5, "consumer": True,
-              "season": [1.15, 1.10, 1.00, 0.95, 0.90, 0.90, 0.90, 0.95, 1.00, 1.05, 1.10, 1.15]},
-    "oil":   {"name": "Нефть",  "reference_price": 1500, "base_demand": 80,  "elasticity": 1.5, "consumer": False,
-              "season": [1.15, 1.10, 1.05, 0.95, 0.90, 0.85, 0.85, 0.90, 0.95, 1.05, 1.10, 1.15]},
-    "goods": {"name": "Товары", "reference_price": 2000, "base_demand": 120, "elasticity": 1.5, "consumer": True,
-              "season": [0.95, 0.90, 0.95, 1.00, 1.00, 1.00, 1.00, 1.05, 1.05, 1.05, 1.10, 1.25]},
-}
+MARKET = {gid: goods_catalog.market_entry(gid) for gid in ("honey", "oil", "goods")}
 MIN_PRICE_K = 0.25
 MAX_PRICE_K = 2.5
 
@@ -220,7 +218,7 @@ def build_cost(kind, road_cells):
 
 def terms():
     return {"currency": CURRENCY, "start_capital": START_CAPITAL,
-            "building_costs": dict(BUILD_COST), "road_cell_cost": ROAD_CELL_COST,
+            "building_costs": {k: BUILD_COST[k] for k in TERMS_BUILD_KINDS}, "road_cell_cost": ROAD_CELL_COST,
             "hold_below": HOLD_BELOW, "hold_depth": HOLD_DEPTH, "release_share": RELEASE_SHARE,
             "contracts": {"products": list(CONTRACT_PRODUCTS), "price_min_k": CONTRACT_PRICE_MIN_K, "price_max_k": CONTRACT_PRICE_MAX_K,
                           "qty": [CONTRACT_QTY_MIN, CONTRACT_QTY_MAX], "term_months": [CONTRACT_TERM_MIN, CONTRACT_TERM_MAX],
@@ -298,9 +296,31 @@ def history(db, ph, owner, limit=20):
     return [{"kind": k, "memo": m, "time": c, "amount": a} for k, m, c, a in rows]
 
 
+def market_of(product):
+    """Live market row, or the goods catalog for products that are not in the original trio."""
+    row = MARKET.get(product)
+    if row is not None:
+        return row
+    return goods_catalog.market_entry(product)
+
+
+def reference_price(product):
+    try:
+        return int(market_of(product)["reference_price"])
+    except KeyError:
+        return 0
+
+
+def kind_jobs(kind):
+    spec = PRODUCTION.get(kind)
+    if spec is None:
+        spec = goods_catalog.production_spec(kind)
+    return int(spec["jobs"]) if spec else 0
+
+
 def demand_for(product, month, scale=1.0):
     """Consumer demand of the population for a product in a game month; `scale` = population and income effect."""
-    m = MARKET[product]
+    m = market_of(product)
     return int(round(m["base_demand"] * m["season"][month % 12] * scale))
 
 
@@ -315,7 +335,7 @@ def monthly_cost(kind, wage, staffing=1.0):
 
 def price_for(product, supply, demand):
     """Clearing price for the given supply/demand (integer roubles)."""
-    m = MARKET[product]
+    m = market_of(product)
     ref = m["reference_price"]
     if supply <= 0:
         return int(round(ref * MAX_PRICE_K))

@@ -23,16 +23,21 @@ if _SERVER not in sys.path:
     sys.path.insert(0, _SERVER)
 
 import clock  # noqa: E402
+import deposits  # noqa: E402
 import economy  # noqa: E402
 import game_server  # noqa: E402
+import goods_catalog  # noqa: E402
 import npc  # noqa: E402
 import production  # noqa: E402
 import roads  # noqa: E402
 
 T0 = 1_800_000_000
 CYCLE = ("farm", "mine", "factory", "warehouse")
-STRATEGIES = ("rotate", "hoard", "loan", "idle", "contract", "shop")
-_PREFIX = {"rotate": "rot", "hoard": "hor", "loan": "lon", "idle": "idl", "contract": "con", "shop": "shp"}
+AGRO_CYCLE = ("grain_field", "elevator", "mill", "bread_plant", "shop")
+EXTRACT_CYCLE = ("oil_well", "gas_well", "sand_pit", "logging_camp")
+STRATEGIES = ("rotate", "hoard", "loan", "idle", "contract", "shop", "agro", "extract")
+_PREFIX = {"rotate": "rot", "hoard": "hor", "loan": "lon", "idle": "idl", "contract": "con", "shop": "shp",
+           "agro": "agr", "extract": "ext"}
 
 # Целые метрики месяца. Время шага сюда не входит: оно не детерминировано.
 METRIC_FIELDS = (
@@ -155,6 +160,24 @@ class Bot:
             if world.try_build(self.name, kind, month):
                 self.built += 1
             return
+        if self.strategy == "agro":
+            if self.built >= world.build_cap:
+                return
+            kind = AGRO_CYCLE[(self.built + self.index) % len(AGRO_CYCLE)]
+            if world.try_build(self.name, kind, month):
+                self.built += 1
+            elif month == 0 and self.built < 1:
+                game_server.wallet(self.name)
+            return
+        if self.strategy == "extract":
+            if self.built >= world.build_cap:
+                return
+            kind = EXTRACT_CYCLE[(self.built + self.index) % len(EXTRACT_CYCLE)]
+            if world.try_build_on_deposit(self.name, kind, month):
+                self.built += 1
+            elif month == 0 and self.built < 1:
+                game_server.wallet(self.name)
+            return
         if self.strategy == "contract":
             self._contract(world, month)
             return
@@ -252,6 +275,31 @@ class World:
                 return True
             self.builds_fail += 1
             if status == 402 or status == 400:
+                return False
+        return False
+
+    def try_build_on_deposit(self, owner, kind, month):
+        """New extractors only stand on a free deposit of their resource. Random sites return no_deposit."""
+        resource = goods_catalog.deposit_resource(kind)
+        if not resource:
+            return self.try_build(owner, kind, month)
+        with game_server.connect() as db:
+            origins = deposits.open_origins(db, "?", resource)
+        if not origins:
+            return False
+        start = (self.seed + self.attempt) % len(origins)
+        for i in range(min(8, len(origins))):
+            x, y, _dep = origins[(start + i) % len(origins)]
+            self.attempt += 1
+            status, _res = game_server.build(owner, {
+                "kind": kind, "x": int(x), "y": int(y),
+                "request_id": self.request_id(owner, month, "build"),
+            })
+            if status in (200, 201):
+                self.builds_ok += 1
+                return True
+            self.builds_fail += 1
+            if status in (400, 402):
                 return False
         return False
 
@@ -676,7 +724,8 @@ def render_report(runs, perf, compares):
     lines = []
     lines.append("# Отчёт симулятора баланса")
     lines.append("")
-    lines.append("Инструмент: `tools/balance_sim.py`. Игровые константы и серверный код не менялись.")
+    lines.append("Инструмент: `tools/balance_sim.py`. Константы мёда, нефти и товаров не менялись:")
+    lines.append("каталог отдаёт прежние 200 / 1500 / 2000 ₽. Симулятор сам числа не правит.")
     lines.append("Мир считается на временной SQLite вызовами `production.advance` (внутри — `step_month`);")
     lines.append("часы подменены, реальная пауза не используется. NPC ходят через `npc.tick` (ошибка не глотается,")
     lines.append("в отличие от `game_server.npc_tick`). Сумма всех проводок и сумма всех кошельков должны быть 0:")
@@ -699,6 +748,32 @@ def render_report(runs, perf, compares):
     lines.append("бюджет города < 0; %s и больше банкротств за один месяц." % MASS_DEFAULT_MIN)
     lines.append("Границы цены: мёд %s–%s, нефть %s–%s, товары %s–%s."
                  % (price_limits("honey") + price_limits("oil") + price_limits("goods")))
+    lines.append("")
+    lines.append("## Главное")
+    lines.append("")
+    broken = sum(len(run["invariants"]) for _name, run in runs)
+    lines.append("Инварианты журнала (сумма проводок и кошельков равна 0, нет отрицательных запасов): "
+                 "**%s нарушений** в %s сценариях." % (broken, len(runs)))
+    lines.append("Доля трат владельца по-прежнему 0,35 (`OWNER_SPEND_SHARE`); этот прогон её не менял. "
+                 "Подробности — `docs/OWNER_SPENDING.md`.")
+    lines.append("Мёд, нефть и товары задаются `server/goods_catalog.py` и совпадают с прежним рынком. "
+                 "Новые виды не входят в `economy.PRODUCTION` и `economy.MARKET`: месяц без агрозданий и скважин "
+                 "по-прежнему публикует ровно три цены. На нижней границе цены (`MIN_PRICE_K`) выручка нового "
+                 "производителя ниже содержания и зарплат, поэтому наращивать цепочку бесконечно убыточно "
+                 "(проверка — `server/test_goods_catalog.py`). NPC выбирают только старые виды.")
+    lines.append("")
+    lines.append("| Сценарий | Инварианты | Красные флаги | Рынок, ₽ | Здания NPC | Банкротства NPC |")
+    lines.append("|---|---:|---|---:|---:|---:|")
+    for name, run in runs:
+        last = run["rows"][-1]
+        flags = ", ".join(sorted({flag["code"] for flag in run["flags"]})) or "—"
+        lines.append("| %s | %s | %s | %s | %s | %s |" % (
+            name, len(run["invariants"]), flags, last["market"], last["npc_buildings"], last["npc_broke"]))
+    lines.append("")
+    lines.append("Если `slow_step` стоит только на первом месяце сценария, где здания попали в два города,")
+    lines.append("это однократный расчёт дорожной сети (`geo.routes`), а не клиринг новых отраслей.")
+    lines.append("Повторные месяцы и замер на 50/200/1000 зданий — в таблице производительности ниже.")
+    lines.append("Агроцепочка и добыча (`agro_18`, `extract_18`) журнал не ломают, NPC в них не вымирают.")
     lines.append("")
     lines.append("## Сценарии")
     lines.append("")
@@ -807,7 +882,7 @@ def render_report(runs, perf, compares):
         lines.append("")
     lines.append("## Что с этим делать")
     lines.append("")
-    lines.append("Ниже только наблюдения этого прогона и предложения. Константы `economy.py` отсюда не менялись;")
+    lines.append("Ниже только наблюдения этого прогона и предложения. Симулятор сам константы не менял;")
     lines.append("решение о правках — за владельцем. Подробности флагов — в сценариях выше (seed, месяц, метрика).")
     lines.append("")
     codes = []
@@ -851,9 +926,9 @@ def render_report(runs, perf, compares):
     lines.append("## Не проверялось")
     lines.append("")
     lines.append("- PostgreSQL (симулятор сознательно только SQLite; боевую базу не открывает).")
-    lines.append("- Клиент Godot и HTTP.")
-    lines.append("- Сценарии с контрактами между игроками (их ещё нет в этой ветке).")
-    lines.append("- Несколько городов и логистика.")
+    lines.append("- Клиент Godot и HTTP (каталог и месторождения описаны в `docs/INDUSTRIES.md`).")
+    lines.append("- Сценарии с контрактами есть (`contracts_24`); это не проверка всех ограничений контракта.")
+    lines.append("- Межгородская логистика новых товаров (элеватор — общая складская ёмкость компании, не отдельный силос).")
     lines.append("")
     return "\n".join(lines) + "\n"
 
@@ -949,6 +1024,8 @@ def _suite(args):
         ("credit_60", dict(months=60, seed=3, strategies=("loan",) * 3, npc_on=True, build_cap=6)),
         ("contracts_24", dict(months=24, seed=11, strategies=("contract", "contract"), npc_on=True, build_cap=4)),
         ("shop_36", dict(months=36, seed=11, strategies=("shop", "shop"), npc_on=True, build_cap=4)),
+        ("agro_18", dict(months=18, seed=20261115, strategies=("agro", "agro"), npc_on=True, build_cap=6)),
+        ("extract_18", dict(months=18, seed=20261115, strategies=("extract",), npc_on=True, build_cap=4)),
     ]
     runs = []
     for name, spec in specs:

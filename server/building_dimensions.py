@@ -4,11 +4,14 @@ Legacy buildings keep their original footprints. New 1x1/2x2/3x3 choices
 are opt-in, and must be enabled only when both world backends and the Android
 placement preview use the same authoritative footprint.
 """
+import goods_catalog
+
 LEGACY_FOOTPRINTS = {
     "farm": (2, 2), "mine": (2, 3), "factory": (3, 2),
     "warehouse": (3, 3), "shop": (2, 2),
     "school": (3, 2), "hospital": (3, 3), "park": (2, 2),
 }
+LEGACY_FOOTPRINTS.update(goods_catalog.extra_footprints())
 SIZE_CHOICES = {
     "farm": (1, 2, 3), "mine": (1, 2, 3),
     "factory": (1, 2, 3), "warehouse": (1, 2, 3),
