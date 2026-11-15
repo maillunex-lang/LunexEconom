@@ -91,6 +91,8 @@ class DeveloperToolsTests(unittest.TestCase):
         self.db.execute("INSERT INTO buildings VALUES ('b1','player','shop',11,12,0)")
         self.db.execute("INSERT INTO cells VALUES (11,12,'b1')")
         self.db.execute("INSERT INTO cells VALUES (11,13,'b1')")
+        self.db.execute("INSERT INTO roads VALUES (14,16,'dev',0)")
+        self.db.execute("INSERT INTO roads VALUES (10,12,'dev',0)")
         payload={"request_id":"c2c3ad2b-180e-4517-839c-c47e48dbd7cb","object_id":"b1","x":15,"y":16}
         self.assertEqual(devtools.building_move(self.db,"?","dev",payload,"local")[0],200)
         self.assertEqual(self.db.execute("SELECT owner,x,y FROM buildings WHERE id='b1'").fetchone(),("player",15,16))
@@ -103,6 +105,15 @@ class DeveloperToolsTests(unittest.TestCase):
         self.db.execute("INSERT INTO cells VALUES (20,20,'other')")
         blocked=dict(payload,request_id="6d1a31fd-099e-492b-a00c-feb6ce8354a5",x=20,y=20)
         self.assertEqual(devtools.building_move(self.db,"?","dev",blocked,"local")[1]["error"],"occupied")
+
+    def test_move_requires_destination_road_access(self):
+        self.db.execute("INSERT INTO buildings VALUES ('b1','player','shop',11,12,0)")
+        self.db.execute("INSERT INTO cells VALUES (11,12,'b1')")
+        payload={"request_id":"c2c3ad2b-180e-4517-839c-c47e48dbd7cb","object_id":"b1","x":30,"y":30}
+        status,result=devtools.building_move(self.db,"?","dev",payload,"local")
+        self.assertEqual(status,409,result)
+        self.assertEqual(result["error"],"destination_road_access")
+        self.assertEqual(self.db.execute("SELECT x,y FROM buildings WHERE id='b1'").fetchone(),(11,12))
 
     def test_move_rejects_incompatible_zone(self):
         self.db.execute("INSERT INTO buildings VALUES ('b1','player','shop',11,12,0)")
