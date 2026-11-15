@@ -101,16 +101,24 @@ func _render() -> void:
         var width := int(size.get("width", 0))
         var height := int(size.get("height", 0))
         var allowed: bool = catalog.eligible(item, zone, available_width, available_height)
+        var card := PanelContainer.new()
+        rows.add_child(card)
+        var content := VBoxContainer.new()
+        card.add_child(content)
+        var description := Label.new()
+        description.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+        description.text = "%s. %s" % [str(item.get("name", item.get("id", ""))),str(item.get("description", ""))]
+        content.add_child(description)
+        var specs := Label.new()
+        specs.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+        specs.text = "%s  •  %s  •  %s" % [Words.get_text("size", {"width":width,"height":height}), Words.get_text("cost", {"cost":item.get("build_cost", 0)}), Words.get_text("duration", {"days":item.get("build_days", 0)})]
+        content.add_child(specs)
         var button := Button.new()
-        button.alignment = HORIZONTAL_ALIGNMENT_LEFT
-        button.text = "%s  |  %s  |  %s  |  %s" % [str(item.get("name", item.get("id", ""))), Words.get_text("size", {"width":width,"height":height}), Words.get_text("cost", {"cost":item.get("build_cost", 0)}), Words.get_text("duration", {"days":item.get("build_days", 0)})]
-        button.tooltip_text = str(item.get("description", ""))
-        if not allowed:
-            button.disabled = true
-            button.tooltip_text += "\n" + Words.get_text("reason.zone" if zone not in item.get("zones", []) else "reason.size")
-        else:
+        button.text = Words.get_text("build") if allowed else Words.get_text("reason.zone" if zone not in item.get("zones", []) else "reason.size")
+        button.disabled = not allowed
+        if allowed:
             button.pressed.connect(_choose.bind(item))
-        rows.add_child(button)
+        content.add_child(button)
 
 func _choose(item: Dictionary) -> void:
     if _busy:
