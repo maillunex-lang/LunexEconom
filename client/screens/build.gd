@@ -85,7 +85,7 @@ func _load() -> void:
             categories.append(kind)
     categories.sort()
     for kind in categories:
-        category.add_item(kind)
+        category.add_item(Words.get_text("category."+kind))
         category.set_item_metadata(category.item_count-1, kind)
     _render()
 
