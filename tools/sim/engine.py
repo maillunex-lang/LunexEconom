@@ -7,16 +7,15 @@ from pathlib import Path
 from tools.sim.catalog import Catalog, read_flag, salary_worker_draft
 from tools.sim.formulas import (
     BRAND_M1,
-    COST_SHARE_BP,
     LOAD_FULL_BP,
-    TIME_SHARE_BP,
     clearing_price,
     demand_units,
     load_bp,
     monthly_expense,
     price_attractiveness,
     rating,
-    split_by_bp,
+    stage_costs,
+    stage_day_lengths,
     vat_on_gross,
 )
 from tools.sim.ledger import Ledger
@@ -43,8 +42,13 @@ class Engine:
         self.city_id = str(scenario["city"])
         self.city = catalog.city(self.city_id)
         self.salary = salary_worker_draft(catalog.root)
+        if "salary_worker" in scenario:
+            self.salary = _int(scenario["salary_worker"], "salary_worker")
+            if self.salary < 0:
+                raise RuntimeError("ставка зарплаты отрицательная")
         self.wear_step = read_flag("enterprise_wear_month_draft", catalog.root)
         self.default_staff = read_flag("enterprise_staffing_bp_draft", catalog.root)
+        self.scenario_staff = self._staffing_value(scenario.get("staffing_bp", self.default_staff))
         self.ledger = Ledger()
         self.players: dict[str, dict] = {}
         self.enterprises: dict[str, dict] = {}
@@ -121,6 +125,21 @@ class Engine:
         if raw == "reference":
             return int(self.catalog.product(product)["reference_price"])
         return _int(raw, "max_price")
+
+    def _staffing_value(self, raw) -> int:
+        value = _int(raw, "staffing_bp")
+        if value < 0 or value > LOAD_FULL_BP:
+            raise RuntimeError("staffing_bp вне 0..10000")
+        if value > self.default_staff:
+            return self.default_staff
+        return value
+
+    def _build_cost_of(self, building: dict) -> int:
+        overrides = self.scenario.get("build_cost_overrides") or {}
+        building_id = str(building["id"])
+        if building_id in overrides:
+            return _int(overrides[building_id], "build_cost")
+        return int(building["build_cost"])
 
     def _capital(self, raw, pid: str) -> int:
         if isinstance(raw, dict):
@@ -267,11 +286,13 @@ class Engine:
             ent["load_bp"] = load
             ent["loads"].append(load)
             qualities = {product: self.quality_of(ent, product) for product in recipe["inputs"]}
+            input_value = 0
             for product, volume in recipe["inputs"].items():
                 slot = self.ensure(ent, product)
                 used, carry = divmod(volume * load + slot["input_carry"], LOAD_FULL_BP)
                 if used:
                     self.take_goods(ent, product, used)
+                    input_value += used * int(self.catalog.product(product)["reference_price"])
                 slot["input_carry"] = carry
             weight_sum = 0
             weighted = 0
@@ -279,6 +300,7 @@ class Engine:
                 weight_sum += volume
                 weighted += qualities[product] * volume
             quality = weighted // weight_sum if weight_sum else 50
+            output_value = 0
             for product, volume in recipe["outputs"].items():
                 slot = self.ensure(ent, product)
                 made, carry = divmod(volume * load + slot["output_carry"], LOAD_FULL_BP)
@@ -286,8 +308,10 @@ class Engine:
                 if made:
                     self.add_goods(ent, product, made, quality)
                     ent["made"][product] = made
+                    output_value += made * int(self.catalog.product(product)["reference_price"])
                     bucket = self.players[ent["player"]]["output"]
                     bucket[product] = bucket.get(product, 0) + made
+            ent["va"] += output_value - input_value
             if self.occupied(ent) > ent["storage_capacity"]:
                 raise RuntimeError("склад переполнен после выпуска")
 
@@ -600,19 +624,80 @@ class Engine:
                 tax = vat_on_gross(gross)
                 player["tax"] += tax
                 player["vat_month"] += tax
+                ent["retail_gross"] += gross
+                ent["retail_vat"] += tax
+                reference = int(self.catalog.product(cell["product"])["reference_price"])
+                ent["va"] += sold * (self._shelf_price(cell) - reference) - tax
 
     def _projects(self, day: int) -> None:
+        # Сервер: POST списывает только фундамент и отказывает, если денег нет.
+        # Здесь отказ не теряет намерение сценария: заказ остаётся в очереди
+        # и пробуется в каждый следующий день. Уже стоящие здания в этот
+        # момент не доплачивают следующие стадии — сначала все фундаменты дня.
+        deferred: list[dict] = []
         for row in self.orders:
-            if _int(row["day"], "день заказа") != day:
+            if _int(row["day"], "день заказа") > day:
+                deferred.append(row)
                 continue
-            self._open_order(row)
+            if not self._try_place(row):
+                deferred.append(row)
+        self.orders = deferred
         for eid in self.enterprises:
             self._advance_build(self.enterprises[eid])
 
-    def _open_order(self, row: dict) -> None:
+    def _blank_enterprise(self, row: dict, building: dict, recipe_id, build_cost: int) -> dict:
+        build_days = int(building["build_days"])
+        staffing_raw = row["staffing_bp"] if "staffing_bp" in row else self.scenario_staff
+        return {
+            "id": str(row["enterprise"]),
+            "player": str(row["player"]),
+            "building_id": building["id"],
+            "recipe_id": None if recipe_id is None else str(recipe_id),
+            "stage": 0,
+            "days_in_stage": 0,
+            "running": True,
+            "staffing_bp": self._staffing_value(staffing_raw),
+            "storage_capacity": int(building["storage_capacity"]),
+            "jobs": int(building["jobs"]),
+            "upkeep_month": int(building["upkeep_month"]),
+            "build_cost": build_cost,
+            "stage_days": stage_day_lengths(build_days),
+            "stage_costs": stage_costs(build_cost),
+            "stock": {},
+            "load_bp": 0,
+            "loads": [],
+            "arrears_due": 0,
+            "arrears_months": 0,
+            "wear": 0,
+            "sell_to_market": bool(row.get("sell_to_market", False)),
+            "made": {},
+            "stalled": False,
+            "retail_gross": 0,
+            "retail_vat": 0,
+            "wage_charged": 0,
+            "va": 0,
+            "invested": 0,
+        }
+
+    def _pay_build_stage(self, ent: dict, stage: int, cost: int) -> bool:
+        if cost <= 0:
+            return True
+        if self.money(ent["player"]) < cost:
+            return False
+        posted = self.ledger.post(
+            f"enterprise:build:{ent['id']}:{stage}",
+            [(self.account(ent["player"]), -cost), ("system:treasury", cost)],
+        )
+        if posted is None:
+            return False
+        ent["invested"] += cost
+        return True
+
+    def _try_place(self, row: dict) -> bool:
+        """Вход в стадию 0. False — только нехватка фундамента, заказ повторно встанет в очередь."""
         eid = str(row["enterprise"])
         if eid in self.enterprises:
-            return
+            return True
         building = self.catalog.building(str(row["building"]))
         recipe_id = row.get("recipe")
         if recipe_id is not None:
@@ -632,62 +717,37 @@ class Engine:
         build_days = int(building["build_days"])
         if build_days <= 0:
             raise RuntimeError("build_days должен быть положительным")
-        self.enterprises[eid] = {
-            "id": eid,
-            "player": str(row["player"]),
-            "building_id": building["id"],
-            "recipe_id": None if recipe_id is None else str(recipe_id),
-            "stage": 0,
-            "stage_paid": False,
-            "days_in_stage": 0,
-            "running": True,
-            "staffing_bp": self.default_staff,
-            "storage_capacity": int(building["storage_capacity"]),
-            "jobs": int(building["jobs"]),
-            "upkeep_month": int(building["upkeep_month"]),
-            "build_cost": int(building["build_cost"]),
-            "stage_days": split_by_bp(build_days, TIME_SHARE_BP),
-            "stage_costs": split_by_bp(int(building["build_cost"]), COST_SHARE_BP),
-            "stock": {},
-            "load_bp": 0,
-            "loads": [],
-            "arrears_due": 0,
-            "arrears_months": 0,
-            "wear": 0,
-            "sell_to_market": bool(row.get("sell_to_market", False)),
-            "made": {},
-            "stalled": False,
-        }
+        build_cost = self._build_cost_of(building)
+        if build_cost < 1:
+            raise RuntimeError("build_cost должен быть положительным")
+        ent = self._blank_enterprise(row, building, recipe_id, build_cost)
+        if not self._pay_build_stage(ent, 0, ent["stage_costs"][0]):
+            return False
+        self.enterprises[eid] = ent
+        return True
 
     def _advance_build(self, ent: dict) -> None:
+        """Как server.enterprises.core._advance_build: платёж при входе в следующую стадию."""
         guard = 0
         while ent["stage"] < STAGE_OPERATIONAL and guard < 8:
             guard += 1
-            if not ent["stage_paid"]:
-                cost = ent["stage_costs"][ent["stage"]]
-                if cost > 0 and self.money(ent["player"]) < cost:
-                    ent["stalled"] = True
-                    return
-                if cost > 0:
-                    posted = self.ledger.post(
-                        f"enterprise:build:{ent['id']}:{ent['stage']}",
-                        [(self.account(ent["player"]), -cost), ("system:treasury", cost)],
-                    )
-                    if posted is None:
-                        ent["stalled"] = True
-                        return
-                ent["stage_paid"] = True
-                ent["days_in_stage"] = 0
-                ent["stalled"] = False
             duration = ent["stage_days"][ent["stage"]]
-            if duration > 0:
-                ent["days_in_stage"] += 1
+            if duration:
+                if ent["days_in_stage"] < duration:
+                    ent["days_in_stage"] += 1
                 if ent["days_in_stage"] < duration:
                     ent["stalled"] = False
                     return
-            ent["stage"] += 1
-            ent["stage_paid"] = False
+            new_stage = ent["stage"] + 1
+            if new_stage < STAGE_OPERATIONAL:
+                cost = ent["stage_costs"][new_stage]
+                if not self._pay_build_stage(ent, new_stage, cost):
+                    ent["days_in_stage"] = duration
+                    ent["stalled"] = True
+                    return
+            ent["stage"] = new_stage
             ent["days_in_stage"] = 0
+            ent["stalled"] = False
         ent["stalled"] = ent["stage"] < STAGE_OPERATIONAL
 
     def _close_month(self, month: int) -> None:
@@ -707,6 +767,7 @@ class Engine:
                 int(self.city["indices_bp"]["salary"]),
             )
             due = ent["arrears_due"] + expense
+            ent["wage_charged"] += expense
             if due > 0 and self.money(ent["player"]) >= due:
                 posted = self.ledger.post(
                     f"enterprise:upkeep:{eid}:{month}",
