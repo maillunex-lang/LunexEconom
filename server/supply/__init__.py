@@ -3,7 +3,7 @@ from pathlib import Path
 from . import core, api
 
 def migrations():
-    return [Path(__file__).resolve().parents[1] / 'migrations' / '202611152200_supply_core.sql']
+    return [Path(__file__).resolve().parents[1] / 'migrations' / filename for filename in ('202611152200_supply_core.sql', '202611152210_supply_seller_policy.sql')]
 
 def register(registry):
     registry.flag('supply_enabled', True)
@@ -14,6 +14,8 @@ def register(registry):
     registry.flag('supply_port_fallback_draft', False)
     registry.route('GET','/enterprises/{id}/supply',api.get)
     registry.route('PUT','/enterprises/{id}/supply',api.put)
+    registry.route('GET','/enterprises/{id}/supply/policy',api.policy_get)
+    registry.route('PUT','/enterprises/{id}/supply/policy',api.policy_put)
     def links(conn,day):
         from server.platform.settings import read_settings
         flags=read_settings(conn,registry.flags,registry.flag_constraints)
