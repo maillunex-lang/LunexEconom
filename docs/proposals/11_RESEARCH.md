@@ -47,7 +47,7 @@ base_cost = 100000 ₽ (для уровня 2, balance: draft)
 cost = base_cost * target_level
 days_total = (base_days * target_level * 1000) // (researchers_bonus_‰)
 base_days = 30
-researchers_bonus_‰ = 1000 + (tech_manager_skill - 5) * 30   // из модуля 10, максимум 1300
+researchers_bonus_‰ = 1000 + (tech_manager_skill - 5) * 30   // из модуля 10, максимум 1120 при навыке 9
 days_total минимум 1
 
 **Пример 1. Повышение рецепта хлеба с 1 до 2**
