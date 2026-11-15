@@ -45,37 +45,37 @@ class WorldDatabaseTests(unittest.TestCase):
         username='w'+uuid4().hex[:12]
         ip='10.91.'+str(int(uuid4().hex[:2],16)%240+1)+'.'+str(int(uuid4().hex[:2],16)%240+1)
         data={'username':username,'email':username+'@example.com','password':'StrongWorldPass123!'}
-        registered=request(self.app,'POST','/auth/register',data,ip=ip)
+        registered=request(type(self).app,'POST','/auth/register',data,ip=ip)
         self.assertEqual(registered['status'],201,registered)
-        login=request(self.app,'POST','/auth/login',
+        login=request(type(self).app,'POST','/auth/login',
                       {'username':username,'password':data['password']},ip=ip)
         self.assertEqual(login['status'],200,login)
         return login['body']['access_token'],registered['body']['id']
 
     def test_cities_and_routes(self):
-        payload=request(self.app,'GET','/world/cities')
+        payload=request(type(self).app,'GET','/world/cities')
         self.assertEqual(payload['status'],200,payload)
         self.assertEqual(len(payload['body']['cities']),20)
-        ufa=request(self.app,'GET','/world/cities/ufa')
+        ufa=request(type(self).app,'GET','/world/cities/ufa')
         self.assertEqual(ufa['body']['level'],1)
         self.assertIn('next_radius',ufa['body'])
-        routes=request(self.app,'GET','/world/routes',query='from=ufa&to=salavat')
+        routes=request(type(self).app,'GET','/world/routes',query='from=ufa&to=salavat')
         self.assertEqual(routes['status'],200,routes)
         self.assertGreater(routes['body']['distance_meters'],0)
-        self.assertEqual(request(self.app,'GET','/world/routes',query='from=ufa&to=phantom')['status'],404)
+        self.assertEqual(request(type(self).app,'GET','/world/routes',query='from=ufa&to=phantom')['status'],404)
 
     def test_chunk_etag_and_events(self):
-        first=request(self.app,'GET','/world/chunk',query='cx=-3&cy=2')
+        first=request(type(self).app,'GET','/world/chunk',query='cx=-3&cy=2')
         self.assertEqual(first['status'],200,first)
         self.assertEqual(len(first['body']['terrain']),12)
         self.assertEqual(first['body']['cell_meters'],20)
         etag=first['headers']['ETag']
-        cached=request(self.app,'GET','/world/chunk',query='cx=-3&cy=2',etag=etag)
+        cached=request(type(self).app,'GET','/world/chunk',query='cx=-3&cy=2',etag=etag)
         self.assertEqual(cached['status'],304,cached)
         self.assertEqual(cached['headers']['ETag'],etag)
         self.assertIsNone(cached['body'])
-        self.assertEqual(request(self.app,'GET','/world/chunk',query='cx=NaN&cy=2')['status'],400)
-        events=request(self.app,'GET','/world/events',query='after=0')
+        self.assertEqual(request(type(self).app,'GET','/world/chunk',query='cx=NaN&cy=2')['status'],400)
+        events=request(type(self).app,'GET','/world/events',query='after=0')
         self.assertEqual(events['status'],200,events)
 
     def test_growth_strict_threshold_idempotent_and_receipts(self):
@@ -135,7 +135,7 @@ class WorldDatabaseTests(unittest.TestCase):
             self.assertEqual(event['new_radius'],15)
             self.assertEqual(event['reason']['building_count'],11)
             # Monthly handler must also remain idempotent.
-            handler=next(fn for _,name,fn in self.app.registry.tick_handlers['monthly']
+            handler=next(fn for _,name,fn in type(self).app.registry.tick_handlers['monthly']
                          if name=='world_growth')
             handler(conn,40)
             self.assertEqual(core.growth_stats(conn,city_id)['level'],2)
@@ -152,7 +152,7 @@ class WorldDatabaseTests(unittest.TestCase):
         req_a='land-'+uuid4().hex
         req_b='land-'+uuid4().hex
         def buy(token,req):
-            return request(self.app,'POST','/land/buy',
+            return request(type(self).app,'POST','/land/buy',
                            {'px':px,'py':py,'request_id':req},token=token)
         with ThreadPoolExecutor(max_workers=2) as pool:
             a,b=list(pool.map(lambda v: buy(*v),[(token_a,req_a),(token_b,req_b)]))
@@ -175,10 +175,10 @@ class WorldDatabaseTests(unittest.TestCase):
     def test_state_parcel_purchase_and_preservation(self):
         token,buyer=self.user()
         px,py=3,3  # 21..26 from Ufa, free land at level one.
-        order=request(self.app,'POST','/land/buy',
+        order=request(type(self).app,'POST','/land/buy',
                       {'px':px,'py':py,'request_id':'land-'+uuid4().hex},token=token)
         self.assertEqual(order['status'],201,order)
-        parcel=request(self.app,'GET','/land/parcels',query='chunk=1,1')
+        parcel=request(type(self).app,'GET','/land/parcels',query='chunk=1,1')
         self.assertEqual(parcel['status'],200,parcel)
         bought=next(p for p in parcel['body']['parcels'] if p['px']==px and p['py']==py)
         self.assertEqual(bought['owner_kind'],'player')
@@ -187,16 +187,16 @@ class WorldDatabaseTests(unittest.TestCase):
             self.assertTrue(reconcile(conn)['ok'])
 
     def test_admin_growth_restricted(self):
-        self.assertEqual(request(self.app,'GET','/admin/world/growth',query='city=ufa')['status'],403)
+        self.assertEqual(request(type(self).app,'GET','/admin/world/growth',query='city=ufa')['status'],403)
 
     def test_chunk_benchmark_1000_requests(self):
         # Version-only 304 avoids full 144-cell rendering and demonstrates cache.
-        first=request(self.app,'GET','/world/chunk',query='cx=100&cy=-100')
+        first=request(type(self).app,'GET','/world/chunk',query='cx=100&cy=-100')
         self.assertEqual(first['status'],200)
         etag=first['headers']['ETag']
         started=time.monotonic()
         for _ in range(1000):
-            got=request(self.app,'GET','/world/chunk',query='cx=100&cy=-100',etag=etag)
+            got=request(type(self).app,'GET','/world/chunk',query='cx=100&cy=-100',etag=etag)
             self.assertEqual(got['status'],304,got)
         self.assertLess(time.monotonic()-started,120)
 
