@@ -93,8 +93,8 @@
       "id": "enterprises",
       "milestone": "m1",
       "title": "Предприятия и карта",
-      "status": "wip",
-      "progress": 90,
+      "status": "done",
+      "progress": 100,
       "items": [
         {
           "title": "Стройка по стадиям и производство",
@@ -118,19 +118,23 @@
       "id": "supply",
       "milestone": "m1",
       "title": "Поставки и рынок",
-      "status": "planned",
-      "progress": 0,
+      "status": "wip",
+      "progress": 60,
       "items": [
         {
           "title": "До трёх поставщиков на каждый вход",
-          "status": "planned"
+          "status": "done"
         },
         {
           "title": "Городской рынок и внешний порт",
-          "status": "planned"
+          "status": "done"
         },
         {
           "title": "Рынок меняет цены каждый день",
+          "status": "done"
+        },
+        {
+          "title": "Массовая смена поставщиков и договоры",
           "status": "planned"
         }
       ]
