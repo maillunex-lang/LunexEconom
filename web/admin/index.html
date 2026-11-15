@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#081b18">
+  <title>Админка · LunexEconom</title>
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+  <main class="shell">
+    <header class="topbar">
+      <div>
+        <p class="eyebrow">LUNEXECONOM · УПРАВЛЕНИЕ</p>
+        <h1>Панель администратора</h1>
+      </div>
+      <button id="logout" class="button ghost hidden" type="button">Выйти</button>
+    </header>
+
+    <section id="login" class="card login-card" aria-labelledby="login-title">
+      <h2 id="login-title">Вход</h2>
+      <p class="muted">Используйте аккаунт с ролью администратора.</p>
+      <form id="login-form" class="form">
+        <label>Логин или почта
+          <input name="username" autocomplete="username" required>
+        </label>
+        <label>Пароль
+          <input name="password" type="password" autocomplete="current-password" required>
+        </label>
+        <button class="button primary" type="submit">Войти</button>
+        <p id="login-error" class="error" role="alert"></p>
+      </form>
+    </section>
+
+    <section id="app" class="hidden" aria-live="polite">
+      <nav class="tabs" aria-label="Разделы панели">
+        <button class="tab active" data-tab="overview" type="button">Обзор</button>
+        <button class="tab" data-tab="players" type="button">Игроки</button>
+        <button class="tab" data-tab="settings" type="button">Настройки</button>
+        <button class="tab" data-tab="audit" type="button">Аудит</button>
+      </nav>
+      <div id="content"></div>
+    </section>
+  </main>
+  <script src="./config.js"></script>
+  <script src="./app.js"></script>
+</body>
+</html>
