@@ -8,7 +8,7 @@ import admin_api
 
 class DeveloperToolsTests(unittest.TestCase):
     def setUp(self):
-        self.role_patcher=patch("devtools.accounts_admin.is_developer", side_effect=lambda username: username=="dev" and self.db.execute("SELECT 1 FROM dev_roles WHERE username=?", (username,)).fetchone() is not None)
+        self.role_patcher=patch("devtools.accounts_admin.is_developer", side_effect=lambda username: self.db.execute("SELECT 1 FROM dev_roles WHERE username=?", (username,)).fetchone() is not None)
         self.db=sqlite3.connect(":memory:")
         self.role_patcher.start()
         self.db.execute("CREATE TABLE users(username TEXT PRIMARY KEY)")
@@ -21,12 +21,21 @@ class DeveloperToolsTests(unittest.TestCase):
         self.db.execute("CREATE TABLE events(seq INTEGER PRIMARY KEY AUTOINCREMENT,cx INTEGER,cy INTEGER,version INTEGER,kind TEXT,payload TEXT)")
         admin_api.ensure(self.db,"?")
         devtools.ensure(self.db,"?")
+        self.db.execute("CREATE TABLE dev_roles(username TEXT PRIMARY KEY, granted_at INTEGER)")
         self.db.execute("INSERT INTO dev_roles(username,granted_at) VALUES ('dev',0)")
         self.db.commit()
 
     def tearDown(self):
         self.role_patcher.stop()
         self.db.close()
+
+    def test_replay_must_match_actor_and_action(self):
+        request_id="c2c3ad2b-180e-4517-839c-c47e48dbd7cb"
+        payload={"request_id":request_id,"kind":"tree","cells":[[1,2]]}
+        self.assertEqual(devtools.terrain_set(self.db,"?","dev",payload,"local")[0],200)
+        self.db.execute("INSERT INTO dev_roles VALUES ('other',0)")
+        self.assertEqual(devtools.terrain_set(self.db,"?","other",payload,"local")[1]["error"],"request_id_conflict")
+        self.assertEqual(devtools.terrain_set(self.db,"?","dev",payload,"local")[1]["replayed"],True)
 
     def test_player_forbidden(self):
         payload={"request_id":"c2c3ad2b-180e-4517-839c-c47e48dbd7cb","kind":"water","cells":[[1,2]]}
