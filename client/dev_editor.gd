@@ -8,6 +8,7 @@ var brush_size := 1
 var status: Label
 var send_button: Button
 var object_id_input: LineEdit
+var building_kind_input: OptionButton
 
 func _ready() -> void:
     name = "DeveloperEditor"
@@ -30,6 +31,14 @@ func _ready() -> void:
     object_id_input = LineEdit.new()
     object_id_input.placeholder_text = "ID здания для перемещения"
     column.add_child(object_id_input)
+    building_kind_input = OptionButton.new()
+    for kind in ["park", "school", "hospital"]:
+        building_kind_input.add_item(kind)
+    column.add_child(building_kind_input)
+    var create_button := Button.new()
+    create_button.text = "Создать городской объект"
+    create_button.pressed.connect(_create_building)
+    column.add_child(create_button)
     var move_button := Button.new()
     move_button.text = "Переместить здание в выбранную клетку"
     move_button.pressed.connect(_move_building)
@@ -72,6 +81,10 @@ func _apply() -> void:
         _send("dev/roads", {"request_id": _uuid(), "operation": mode.trim_prefix("road_"), "cells": cells})
     else:
         _send("dev/terrain", {"request_id": _uuid(), "kind": mode, "cells": cells})
+
+func _create_building() -> void:
+    var kind := building_kind_input.get_item_text(building_kind_input.selected)
+    _send("dev/create", {"request_id": _uuid(), "kind": kind, "x": selected.x, "y": selected.y})
 
 func _demolish_building() -> void:
     var oid := object_id_input.text.strip_edges()
