@@ -7,6 +7,8 @@ const PublicBase = preload("res://config/public_base.gd")
 const CHUNK := 512 * 1024
 const MAX_RETRIES := 4
 var busy := false
+## Optional pinned HTTPS certificate for isolated integration tests.
+var tls_options: TLSOptions = null
 
 func download(file_url: String, destination: String, expected_size: int, digest: String, wifi_only: bool = false) -> void:
     if busy:
@@ -34,6 +36,8 @@ func download(file_url: String, destination: String, expected_size: int, digest:
         request.timeout = 30
         request.max_redirects = 0
         request.body_size_limit = CHUNK + 512
+        if tls_options != null:
+            request.set_tls_options(tls_options)
         add_child(request)
         var err := request.request(file_url, PackedStringArray(["Range: bytes=%d-%d" % [offset, end], "Accept-Encoding: identity"]))
         var result: Array = []

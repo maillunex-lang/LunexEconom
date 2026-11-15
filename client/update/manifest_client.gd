@@ -6,6 +6,10 @@ signal failed(kind: String, reason: String)
 const PublicBase = preload("res://config/public_base.gd")
 const Verifier = preload("res://update/manifest_verifier.gd")
 var busy := false
+## Optional trusted TLS certificate bundle provided only by a test harness.
+## Production uses the OS / Mozilla trust store by default.
+var tls_options: TLSOptions = null
+var public_key_path := Verifier.PUBLIC_KEY
 
 func fetch(kind: String) -> void:
     if busy or not kind in ["update", "content"]:
@@ -18,7 +22,7 @@ func fetch(kind: String) -> void:
         return
     var signature := await _get_bytes(PublicBase.url(kind + ".json.sig"), 4096)
     busy = false
-    if not Verifier.verify(raw, signature.get_string_from_utf8()):
+    if not Verifier.verify(raw, signature.get_string_from_utf8(), public_key_path):
         failed.emit(kind, "Подпись манифеста не прошла проверку")
         return
     var data = JSON.parse_string(raw.get_string_from_utf8())
@@ -34,6 +38,8 @@ func _get_bytes(url: String, maximum: int) -> PackedByteArray:
     request.timeout = 20
     request.max_redirects = 0
     request.body_size_limit = maximum
+    if tls_options != null:
+        request.set_tls_options(tls_options)
     add_child(request)
     var error := request.request(url)
     if error != OK:
