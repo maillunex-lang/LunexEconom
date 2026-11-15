@@ -41,8 +41,11 @@ jobs:
         run: |
           set -o pipefail
           mkdir -p qa-artifacts
-          LUNEX_QA_SCREENSHOT="$PWD/qa-artifacts/factory.png" timeout 90 xvfb-run -a /tmp/Godot_v4.7.2-stable_linux.x86_64 --audio-driver Dummy --path client --script res://qa/capture_model.gd 2>&1 | tee godot-render.log
-          test -s qa-artifacts/factory.png
+          for spec in "factory 3 2" "truck 2 3" "tractor 2 2" "construction_foundation 3 2" "construction_frame 3 2" "road_corner 1 1"; do
+            read -r kind width height <<< "$spec"
+            LUNEX_QA_KIND="$kind" LUNEX_QA_WIDTH="$width" LUNEX_QA_HEIGHT="$height" LUNEX_QA_SCREENSHOT="$PWD/qa-artifacts/$kind.png" timeout 90 xvfb-run -a /tmp/Godot_v4.7.2-stable_linux.x86_64 --audio-driver Dummy --path client --script res://qa/capture_model.gd 2>&1 | tee -a godot-render.log
+            test -s "qa-artifacts/$kind.png"
+          done
           ! grep -E 'ERROR:|Parse Error:' godot-render.log
       - name: Upload screenshot
         if: always()
@@ -50,7 +53,7 @@ jobs:
         with:
           name: godot-render-screenshot
           path: |
-            qa-artifacts/factory.png
+            qa-artifacts/*.png
             godot-render.log
       - name: Upload diagnostic log
         if: always()
