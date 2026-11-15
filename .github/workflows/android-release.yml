@@ -11,6 +11,10 @@ on:
         description: "Verify owner certificate without building or publishing"
         type: boolean
         default: false
+      owner_signing_test:
+        description: "Build with real owner certificate on v2/release; no publication"
+        type: boolean
+        default: false
       pipeline_test:
         description: "TEST-ONLY: ephemeral Android signing key; never publish"
         type: boolean
@@ -27,10 +31,10 @@ jobs:
     uses: ./.github/workflows/android-verify-signing.yml
     secrets: inherit
   signed-candidate:
-    if: ${{ inputs.verify_signing_only != true }}
+    if: ${{ inputs.verify_signing_only != true && (inputs.owner_signing_test != true || (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/v2/release' && inputs.pipeline_test == false)) }}
     runs-on: ubuntu-latest
     timeout-minutes: 65
-    environment: ${{ (inputs.pipeline_test == true || github.ref == 'refs/heads/v2/release') && 'ci-test' || 'android-signing' }}
+    environment: ${{ (inputs.owner_signing_test == true || (inputs.pipeline_test != true && github.ref != 'refs/heads/v2/release')) && 'android-signing' || 'ci-test' }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -85,7 +89,7 @@ jobs:
           cp client/android_plugin/plugin/build/outputs/aar/plugin-release.aar client/addons/lunex_installer/bin/release/LunexInstaller-release.aar
       - name: Configure temporary TEST key or approved production secret
         env:
-          TEST_MODE: ${{ (inputs.pipeline_test == true || github.ref == 'refs/heads/v2/release') && 'true' || 'false' }}
+          TEST_MODE: ${{ (inputs.owner_signing_test != true && (inputs.pipeline_test == true || github.ref == 'refs/heads/v2/release')) && 'true' || 'false' }}
           KEYSTORE_B64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
           KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
           KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
@@ -100,8 +104,10 @@ jobs:
             keytool -exportcert -rfc -keystore "$KEYSTORE_FILE" -alias "$ALIAS" -storepass "$PASS" | openssl x509 -noout -fingerprint -sha256 | cut -d= -f2 > "$RUNNER_TEMP/ci-test-cert.sha256"
             EXPECTED_CERT="$RUNNER_TEMP/ci-test-cert.sha256"
           else
-            test -s client/config/update_public.pem || { echo 'Owner manifest public key missing'; exit 1; }
-            grep -q 'BEGIN PUBLIC KEY' client/config/update_public.pem
+            if [[ '${{ inputs.owner_signing_test }}' != 'true' ]]; then
+              test -s client/config/update_public.pem || { echo 'Owner manifest public key missing'; exit 1; }
+              grep -q 'BEGIN PUBLIC KEY' client/config/update_public.pem
+            fi
             test -n "$KEYSTORE_B64" && test -n "$KEYSTORE_PASSWORD" && test -n "$KEY_ALIAS"
             test "$KEYSTORE_PASSWORD" = "$KEY_PASSWORD" || { echo 'Godot requires equal key/store passwords'; exit 1; }
             printf '%s' "$KEYSTORE_B64" | base64 --decode > "$KEYSTORE_FILE"
@@ -151,7 +157,7 @@ jobs:
           sha256sum build/lunex.apk build/lunex.aab > build/SHA256SUMS
       - uses: actions/upload-artifact@v4
         with:
-          name: signed-candidate-${{ env.VERSION_TAG }}-${{ (inputs.pipeline_test == true || github.ref == 'refs/heads/v2/release') && 'TEST-NOT-FOR-RELEASE' || 'release' }}
+          name: signed-candidate-${{ env.VERSION_TAG }}-${{ inputs.owner_signing_test == true && 'OWNER-SIGNING-TEST-NOT-FOR-RELEASE' || ((inputs.pipeline_test == true || github.ref == 'refs/heads/v2/release') && 'TEST-NOT-FOR-RELEASE' || 'release') }}
           path: |
             build/lunex.apk
             build/lunex.aab
