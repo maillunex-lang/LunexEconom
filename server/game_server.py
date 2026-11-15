@@ -646,7 +646,7 @@ class Handler(BaseHTTPRequestHandler):
         if urlsplit(self.path).path.startswith("/dev/"):
             import devtools
             path = urlsplit(self.path).path
-            if path not in ("/dev/terrain", "/dev/undo", "/dev/roads", "/dev/move", "/dev/demolish"):
+            if path not in ("/dev/terrain", "/dev/undo", "/dev/roads", "/dev/move", "/dev/demolish", "/dev/create"):
                 return self._send(404, {"error": "not_found"})
             owner = self._identity()
             if not owner or not devtools.require_developer(owner, None):
@@ -676,6 +676,7 @@ class Handler(BaseHTTPRequestHandler):
                     handler = {
                         "/dev/move": devtools.building_move,
                         "/dev/demolish": devtools.building_demolish,
+                        "/dev/create": devtools.building_create,
                         "/dev/roads": devtools.roads_set,
                         "/dev/undo": devtools.undo,
                         "/dev/terrain": devtools.terrain_set,
