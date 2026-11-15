@@ -44,14 +44,14 @@ class TestUpdater(unittest.TestCase):
     def test_atomic_sha_preserves_secrets_order_permissions(self):
         with tempfile.TemporaryDirectory() as t:
             env=Path(t)/'v2.env'
-            env.write_bytes(b'# comment\\nPASSWORD=FAKE_PRIVATE_SECRET\\nLUNEX_SHA=' + b'a'*40 + b'\\nFLAG=yes\\n')
+            env.write_bytes(b'# comment\nPASSWORD=FAKE_PRIVATE_SECRET\nLUNEX_SHA=' + b'a'*40 + b'\nFLAG=yes\n')
             env.chmod(0o640)
             with patch.object(updater,'ENV_FILE',env):
                 with contextlib.redirect_stdout(io.StringIO()) as output:
                     old=updater.atomic_sha('b'*40)
             self.assertEqual(old,'a'*40)
             self.assertEqual(stat.S_IMODE(env.stat().st_mode),0o640)
-            self.assertEqual(env.read_bytes(),b'# comment\\nPASSWORD=FAKE_PRIVATE_SECRET\\nLUNEX_SHA='+b'b'*40+b'\\nFLAG=yes\\n')
+            self.assertEqual(env.read_bytes(),b'# comment\nPASSWORD=FAKE_PRIVATE_SECRET\nLUNEX_SHA='+b'b'*40+b'\nFLAG=yes\n')
             self.assertNotIn('FAKE_PRIVATE_SECRET',output.getvalue())
 
     def test_deploy_success_sha_and_pip(self):
@@ -59,7 +59,7 @@ class TestUpdater(unittest.TestCase):
             root=Path(t); target=root/'server'; target.mkdir()
             (target/'game_server.py').write_text('old')
             (target/'requirements.txt').write_text('old-package==1')
-            env=root/'env'; env.write_text('PASSWORD=FAKE_PRIVATE_SECRET\\nLUNEX_SHA='+'a'*40+'\\n')
+            env=root/'env'; env.write_text('PASSWORD=FAKE_PRIVATE_SECRET\nLUNEX_SHA='+'a'*40+'\n')
             def stage(sha,names,folder):
                 (folder/'game_server.py').write_text('new')
                 (folder/'requirements.txt').write_text('new-package==2')
@@ -75,7 +75,7 @@ class TestUpdater(unittest.TestCase):
         with tempfile.TemporaryDirectory() as t:
             root=Path(t); target=root/'server'; target.mkdir()
             (target/'game_server.py').write_text('old')
-            env=root/'env'; env.write_text('PASSWORD=FAKE_PRIVATE_SECRET\\nLUNEX_SHA='+'a'*40+'\\n')
+            env=root/'env'; env.write_text('PASSWORD=FAKE_PRIVATE_SECRET\nLUNEX_SHA='+'a'*40+'\n')
             def stage(sha,names,folder): (folder/'game_server.py').write_text('new')
             output=io.StringIO()
             with patch.object(updater,'STATE',root/'state'),patch.object(updater,'SERVER_DIR',target),patch.object(updater,'ENV_FILE',env),patch.object(updater,'stage_tree',side_effect=stage),patch.object(updater,'restart') as restart,patch.object(updater,'health_sha',side_effect=[False,True]),contextlib.redirect_stderr(output):
@@ -99,7 +99,7 @@ class TestUpdater(unittest.TestCase):
             root=Path(t); target=root/'server'; target.mkdir()
             (target/'game_server.py').write_text('old')
             (target/'requirements.txt').write_text('old')
-            env=root/'env'; env.write_text('PASSWORD=FAKE_PRIVATE_SECRET\\nLUNEX_SHA='+'a'*40+'\\n')
+            env=root/'env'; env.write_text('PASSWORD=FAKE_PRIVATE_SECRET\nLUNEX_SHA='+'a'*40+'\n')
             def stage(sha,names,folder):
                 (folder/'game_server.py').write_text('new')
                 (folder/'requirements.txt').write_text('new')
