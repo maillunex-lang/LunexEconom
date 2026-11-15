@@ -161,6 +161,8 @@ def _buy(conn,day,row,product,qty,source_type,source_id,unit_price,quality,flags
         if source_type=='port':
             seller_city=flags['supply_port_city_draft']
     days,transport=_travel(seller_city,city,qty,flags['supply_transport_rub_per_km_unit_draft'])
+    if source_type=='port':
+        days=max(1,days)
     total=_int(qty*unit_price+transport)
     if total>buyer[1]:return 0
     request_id=f'supply:{eid}:{product}:{day}:{source_type}-{source_id or "system"}:{sequence}'
@@ -269,6 +271,7 @@ def market_day(conn,day,flags):
                         if str(exc)=='insufficient balance':filled=0
                         else:raise
                     offer[1]-=filled;market_limit-=filled;remaining-=filled;volume+=filled
+            market_filled=requested-remaining
             # Unsold or unfunded residual can route to the port, explicitly only.
             port_links=[l for l in links if l[0]=='port']
             if remaining>0 and (port_links or flags['supply_port_fallback_draft']):
@@ -287,7 +290,7 @@ def market_day(conn,day,flags):
                         remaining-=bought
                         conn.execute("UPDATE supply_daily_needs SET port_ordered=port_ordered+%s WHERE enterprise_id=%s AND product_id=%s AND day_index=%s",(bought,eid,product,day))
             conn.execute("""UPDATE supply_daily_needs SET market_filled=%s,unfilled=%s WHERE enterprise_id=%s AND product_id=%s AND day_index=%s""",
-                (requested-remaining-(conn.execute('SELECT port_ordered FROM supply_daily_needs WHERE enterprise_id=%s AND product_id=%s AND day_index=%s',(eid,product,day)).fetchone()[0]),remaining,eid,product,day))
+                (market_filled,remaining,eid,product,day))
         conn.execute("""INSERT INTO market_prices(city_id,product_id,day_index,price,demand,supply,volume)
             VALUES(%s,%s,%s,%s,%s,%s,%s) ON CONFLICT DO NOTHING""",(city,product,day,price,demand,supply,volume))
     conn.execute("INSERT INTO supply_receipts(day_index,phase) VALUES(%s,'market')",(day,))
