@@ -356,8 +356,8 @@ def building_move(db, ph, owner, payload, ip):
 def building_demolish(db, ph, actor, payload, ip):
     """Developer demolition without sale proceeds or ledger mutations.
 
-    This removes the building's operational registration using the same
-    internal cleanup as regular sales, but deliberately does not run a sale.
+    Refuses economically active buildings and deposit-linked extraction
+    sites. Uses the same map/event cleanup as regular sales, without payment.
     """
     if not require_developer(actor, db):
         return 403, {"error": "forbidden"}
@@ -379,6 +379,12 @@ def building_demolish(db, ph, actor, payload, ip):
     cells = db.execute("SELECT x,y FROM cells WHERE object_id=" + ph, (oid,)).fetchall()
     if not cells or len(cells) > 25:
         return 409, {"error": "invalid_footprint"}
+    # Active production and extraction rights are part of the economy. A
+    # developer may remove inert geometry, never erase those obligations.
+    if db.execute("SELECT 1 FROM building_ops WHERE object_id=" + ph, (oid,)).fetchone():
+        return 409, {"error": "active_economic_building"}
+    if db.execute("SELECT 1 FROM building_deposits WHERE object_id=" + ph, (oid,)).fetchone():
+        return 409, {"error": "deposit_bound"}
     action_time = time.time_ns()
     recent = db.execute("SELECT COUNT(*) FROM dev_actions WHERE actor=" + ph + " AND created>=" + ph, (actor, action_time - 60_000_000_000)).fetchone()[0]
     if recent >= 30:
