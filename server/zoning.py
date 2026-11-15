@@ -28,6 +28,11 @@ ALLOWED = {
     # kinds of the agro chain and of extraction (docs/INDUSTRIES.md): processing plants are industrial, fields, storage and deposits may also use open land
     "mill": ("industrial",), "bread_plant": ("industrial",), "grain_field": ("industrial", "open"), "elevator": ("industrial", "open"),
     "oil_well": ("industrial", "open"), "gas_well": ("industrial", "open"), "sand_pit": ("industrial", "open"), "logging_camp": ("industrial", "open"),
+    # building materials, metallurgy, machinery, light industry, electronics (docs/INDUSTRIES.md): plants are industrial-only, extraction may use open land
+    "cement_plant": ("industrial",), "steel_plant": ("industrial",), "brick_yard": ("industrial",), "sawmill": ("industrial",), "refinery": ("industrial",),
+    "machine_plant": ("industrial",), "metalworks": ("industrial",), "textile_mill": ("industrial",), "garment_plant": ("industrial",),
+    "electronics_plant": ("industrial",),
+    "stone_pit": ("industrial", "open"), "iron_mine": ("industrial", "open"), "coal_mine": ("industrial", "open"), "flax_camp": ("industrial", "open"),
 }
 ZONE_NAMES = {"center": "центр города", "suburb": "жилой район", "industrial": "промзона", "open": "свободная земля"}
 

@@ -334,5 +334,8 @@ static func _procedural(root: Node3D, kind: String, w: int, h: int, object_id: S
 				_cylinder(root, 0.1, 0.5, p, Color("#6b4f37"))
 				_cone(root, 0.6, 1.4, p + Vector3(0, 0.45, 0), Color("#3f7a4a"))
 			return 1.9
-	_box(root, Vector3(W * 0.8, 1.6, D * 0.8), Vector3(0, 0.8, 0), Color("#b1a67c"))
-	return 1.6
+	# any other plant or pit of the catalogue: a plain industrial shed with a chimney (the real model arrives as a GLB of the same name)
+	_box(root, Vector3(W * 0.84, 1.9, D * 0.8), Vector3(0, 0.95, 0), Color("#9aa4a8"))
+	_roof(root, W * 0.88, D * 0.84, 0.5, 1.9, Color("#6d767b"))
+	_cylinder(root, 0.28, 3.2, Vector3(W * 0.3, 0.0, -D * 0.28), Color("#5d5a57"))
+	return 3.2

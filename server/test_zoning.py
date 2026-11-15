@@ -1,5 +1,6 @@
 """City zones, production zones and dynamic city growth (docs/ZONING.md)."""
 import math
+import re
 import os
 import tempfile
 import unittest
@@ -48,23 +49,21 @@ class ZoneGeometryTests(unittest.TestCase):
 
 
 class EveryBuildableKindHasAZoneRuleTests(unittest.TestCase):
-    # New Grok6 kinds are intentionally absent from zoning.ALLOWED until client/zones.gd
-    # gains the same lists (docs/INDUSTRIES.md). An unknown kind is allowed everywhere on
-    # both sides; adding the server rule alone would reject builds the client still previews.
-    PENDING_WITH_CLIENT = {
-        "stone_pit", "iron_mine", "coal_mine", "flax_camp",
-        "cement_plant", "steel_plant", "brick_yard", "sawmill", "refinery",
-        "machine_plant", "metalworks", "textile_mill", "garment_plant", "electronics_plant",
-    }
-
     def test_every_kind_the_server_can_build_has_a_rule(self):
         import game_server
         for kind in game_server.KINDS:
-            if kind in ("school", "hospital", "park") or kind in self.PENDING_WITH_CLIENT:
+            if kind in ("school", "hospital", "park"):
                 continue
             self.assertIn(kind, zoning.ALLOWED, kind)                    # a kind without a rule would escape the zoning
-        for kind in self.PENDING_WITH_CLIENT:
-            self.assertNotIn(kind, zoning.ALLOWED, kind)
+
+    def test_the_client_has_exactly_the_same_rules(self):
+        import os
+        text = open(os.path.join(os.path.dirname(__file__), "..", "client", "zones.gd"), encoding="utf-8").read()
+        block = text.split("const ALLOWED := {", 1)[1].split("\n}\n", 1)[0]
+        client = {}
+        for kind, zones in re.findall(r'"(\w+)": \[([^\]]*)\]', block):
+            client[kind] = tuple(z.strip().strip('"') for z in zones.split(","))
+        self.assertEqual(client, {k: tuple(v) for k, v in zoning.ALLOWED.items()})
 
     def test_processing_plants_never_stand_in_the_city(self):
         for kind in ("factory", "mill", "bread_plant"):

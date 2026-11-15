@@ -37,7 +37,7 @@ func _run() -> void:
 	menu.show_page("root")
 	_check(menu.pages["root"].visible and not menu.pages["agri"].visible, "root page only")
 	# all kinds are reachable and priced from the catalogue
-	for kind in ["farm", "grain_field", "mine", "oil_well", "gas_well", "sand_pit", "logging_camp", "mill", "bread_plant", "factory", "shop", "warehouse", "elevator"]:
+	for kind in ["farm", "grain_field", "flax_camp", "mine", "oil_well", "gas_well", "sand_pit", "logging_camp", "stone_pit", "iron_mine", "coal_mine", "mill", "bread_plant", "cement_plant", "brick_yard", "sawmill", "steel_plant", "metalworks", "machine_plant", "textile_mill", "garment_plant", "refinery", "electronics_plant", "factory", "shop", "warehouse", "elevator"]:
 		var button := _find(menu.content, "Kind_" + kind) as Button
 		_check(button != null, "a button for " + kind)
 		if button != null:
@@ -47,6 +47,8 @@ func _run() -> void:
 	var well := _find(menu.content, "Kind_oil_well") as Button
 	_check(well != null and well.text.contains("месторождении"), "a well mentions its deposit")
 	_check(int(host.building_costs.get("mill", 0)) == 180000, "the mill price comes from the catalogue")
+	_check(not menu.pages.has("other"), "no kind is left in Other")
+	_check(host.world.build_size("steel_plant") != Vector2i.ZERO, "a catalogue-only kind has a footprint")
 	# navigation: Production -> Food -> back -> back
 	menu.show_page("industry")
 	_check(menu.pages["industry"].visible and not menu.pages["root"].visible, "opened a sector")

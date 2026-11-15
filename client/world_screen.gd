@@ -748,6 +748,12 @@ func apply_goods_catalog(data: Dictionary) -> void:
         if goods_recipes[kind].get("deposit", null) != null:
             rules[kind] = str(goods_recipes[kind]["deposit"])
     world.set_deposit_rules(rules)
+    var sizes: Dictionary = {}
+    for kind in goods_recipes:
+        var recipe: Dictionary = goods_recipes[kind]
+        if int(recipe.get("width", 0)) > 0 and int(recipe.get("height", 0)) > 0:
+            sizes[kind] = Vector2i(int(recipe["width"]), int(recipe["height"]))
+    world.set_recipe_sizes(sizes)
     if build_menu != null:
         build_menu.rebuild()
 

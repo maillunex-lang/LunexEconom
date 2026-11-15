@@ -10,6 +10,10 @@ const ALLOWED := {
 	"factory": ["industrial"], "warehouse": ["industrial", "open"], "mine": ["industrial", "open"], "farm": ["industrial", "open"],
 	"mill": ["industrial"], "bread_plant": ["industrial"], "grain_field": ["industrial", "open"], "elevator": ["industrial", "open"],
 	"oil_well": ["industrial", "open"], "gas_well": ["industrial", "open"], "sand_pit": ["industrial", "open"], "logging_camp": ["industrial", "open"],
+	"cement_plant": ["industrial"], "steel_plant": ["industrial"], "brick_yard": ["industrial"], "sawmill": ["industrial"], "refinery": ["industrial"],
+	"machine_plant": ["industrial"], "metalworks": ["industrial"], "textile_mill": ["industrial"], "garment_plant": ["industrial"],
+	"electronics_plant": ["industrial"],
+	"stone_pit": ["industrial", "open"], "iron_mine": ["industrial", "open"], "coal_mine": ["industrial", "open"], "flax_camp": ["industrial", "open"],
 }
 const NAMES := {"center": "центр города", "suburb": "жилой район", "industrial": "промзона", "open": "свободная земля"}
 var enabled := false

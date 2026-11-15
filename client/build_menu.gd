@@ -4,12 +4,17 @@ extends RefCounted
 ## Data of a building (size, cost, product, inputs, deposit) comes from the host: server catalogue GET /catalog/goods when loaded, else the
 ## old constants. The zone and deposit rules are shown here and checked again by the server (docs/ZONING.md, docs/INDUSTRIES.md).
 const TREE := [
-	{"id": "agri", "title": "Сельское хозяйство", "hint": "пасеки и поля", "children": [{"kind": "farm"}, {"kind": "grain_field"}]},
+	{"id": "agri", "title": "Сельское хозяйство", "hint": "пасеки, поля, лён", "children": [{"kind": "farm"}, {"kind": "grain_field"}, {"kind": "flax_camp"}]},
 	{"id": "extract", "title": "Добыча", "hint": "нефть, газ, песок, лес", "children": [
-		{"kind": "mine"}, {"kind": "oil_well"}, {"kind": "gas_well"}, {"kind": "sand_pit"}, {"kind": "logging_camp"}]},
+		{"kind": "mine"}, {"kind": "oil_well"}, {"kind": "gas_well"}, {"kind": "sand_pit"}, {"kind": "logging_camp"},
+		{"kind": "stone_pit"}, {"kind": "iron_mine"}, {"kind": "coal_mine"}]},
 	{"id": "industry", "title": "Производство", "hint": "заводы и фабрики", "children": [
 		{"id": "food", "title": "Пищевая промышленность", "hint": "мука и хлеб", "children": [{"kind": "mill"}, {"kind": "bread_plant"}]},
-		{"id": "goods", "title": "Товары и промышленность", "hint": "заводы товаров", "children": [{"kind": "factory"}]}]},
+		{"id": "materials", "title": "Стройматериалы", "hint": "цемент, кирпич, пиломатериалы", "children": [{"kind": "cement_plant"}, {"kind": "brick_yard"}, {"kind": "sawmill"}]},
+		{"id": "metal", "title": "Металлургия и машины", "hint": "сталь, металлоизделия, станки", "children": [{"kind": "steel_plant"}, {"kind": "metalworks"}, {"kind": "machine_plant"}]},
+		{"id": "light", "title": "Лёгкая промышленность", "hint": "ткань и одежда", "children": [{"kind": "textile_mill"}, {"kind": "garment_plant"}]},
+		{"id": "chem", "title": "Нефтепереработка и электроника", "hint": "топливо, электроника", "children": [{"kind": "refinery"}, {"kind": "electronics_plant"}]},
+		{"id": "goods", "title": "Товары", "hint": "заводы товаров", "children": [{"kind": "factory"}]}]},
 	{"id": "trade", "title": "Торговля", "hint": "магазины", "children": [{"kind": "shop"}], "extra": "trade_catalog"},
 	{"id": "storage", "title": "Склады и логистика", "hint": "хранение зерна и товаров", "children": [{"kind": "warehouse"}, {"kind": "elevator"}]},
 ]
@@ -19,6 +24,10 @@ const ZONE_TEXT := {
 	"mine": "промзона или свободная земля", "warehouse": "промзона или свободная земля",
 	"oil_well": "на месторождении нефти", "gas_well": "на месторождении газа", "sand_pit": "на месторождении песка", "logging_camp": "в лесу (месторождение)",
 	"shop": "в городе",
+	"cement_plant": "только в промзоне", "steel_plant": "только в промзоне", "brick_yard": "только в промзоне", "sawmill": "только в промзоне",
+	"refinery": "только в промзоне", "machine_plant": "только в промзоне", "metalworks": "только в промзоне", "textile_mill": "только в промзоне",
+	"garment_plant": "только в промзоне", "electronics_plant": "только в промзоне",
+	"stone_pit": "на месторождении камня", "iron_mine": "на месторождении руды", "coal_mine": "на месторождении угля", "flax_camp": "на месторождении льна",
 }
 var host: Control
 var content: VBoxContainer

@@ -52,6 +52,7 @@ var target_size := 40.0
 const DEPOSIT_COLORS := {"oil": Color("#3a3634"), "gas": Color("#8fb4c9"), "sand": Color("#e4d28c"), "forest": Color("#2e6a3c")}
 const DEPOSIT_NAMES := {"oil": "нефти", "gas": "газа", "sand": "песка", "forest": "леса"}
 var deposits: Dictionary = {}                  # id -> deposit from GET /deposits {resource, x, y, width, height, remaining}
+var recipe_sizes: Dictionary = {}              # kind -> Vector2i footprint from the goods catalogue (kinds without a built-in size)
 var deposit_kinds: Dictionary = {}             # building kind -> the resource it must stand on (from the goods catalogue)
 var zones = ZONES.new()                        # city zones from GET /geo/zones (docs/ZONING.md)
 var season_month := -1
@@ -597,6 +598,7 @@ func build_size(kind: String) -> Vector2i:
 		"gas_well": return Vector2i(2, 2)
 		"sand_pit": return Vector2i(2, 2)
 		"logging_camp": return Vector2i(2, 3)
+	if recipe_sizes.has(kind): return recipe_sizes[kind]
 	return Vector2i.ZERO
 
 func preview_build(cell: Vector2i) -> Dictionary:
@@ -640,6 +642,9 @@ func set_deposits(list: Array) -> void:
 			deposits[id] = item
 	if changed:
 		refresh_all()
+
+func set_recipe_sizes(sizes: Dictionary) -> void:
+	recipe_sizes = sizes
 
 func set_deposit_rules(rules: Dictionary) -> void:
 	deposit_kinds = rules
