@@ -3,6 +3,7 @@ extends Node3D
 const GRID = preload("res://world3d/grid_projection.gd")
 const ADAPTER = preload("res://world3d/server_visual_adapter.gd")
 const FACTORY = preload("res://world3d/visual_factory.gd")
+const MODEL_PATHS := {"factory":"res://world3d/models/factory.glb", "mine":"res://world3d/models/mine.glb", "farm":"res://world3d/models/farm.glb", "oil_well":"res://world3d/models/oil_well.glb"}
 var visuals = ADAPTER.new()
 var building_nodes: Dictionary = {}
 var building_signatures: Dictionary = {}
@@ -109,6 +110,32 @@ func apply_server_event(event: Dictionary) -> void:
     visuals.apply_event(event)
     _refresh_visuals()
 
+func _make_building_visual(kind: String, footprint: Array) -> Node3D:
+    var fallback: Node3D = FACTORY.building(kind, footprint)
+    if not MODEL_PATHS.has(kind):
+        return fallback
+    var resource: Resource = load(MODEL_PATHS[kind])
+    if not resource is PackedScene:
+        return fallback
+    var instance: Node3D = (resource as PackedScene).instantiate()
+    if instance == null:
+        return fallback
+    var min_x := 999999
+    var min_y := 999999
+    var max_x := -999999
+    var max_y := -999999
+    for cell in footprint:
+        min_x = mini(min_x, cell.x)
+        min_y = mini(min_y, cell.y)
+        max_x = maxi(max_x, cell.x)
+        max_y = maxi(max_y, cell.y)
+    var width: int = max_x - min_x + 1
+    var depth: int = max_y - min_y + 1
+    # Models are authored around a 2x2-ish footprint and scaled conservatively.
+    instance.scale = Vector3(maxf(float(width) / 2.0, 0.5), 1.0, maxf(float(depth) / 2.0, 0.5))
+    fallback.free()
+    return instance
+
 func _refresh_visuals() -> void:
     # One mesh per authoritative object ID; no fake player-owned buildings.
     for oid in building_nodes.keys():
@@ -123,7 +150,7 @@ func _refresh_visuals() -> void:
             building_nodes[oid].queue_free()
             building_nodes.erase(oid)
         if not building_nodes.has(oid):
-            var node: Node3D = FACTORY.building(str(record["kind"]), record["footprint"])
+            var node: Node3D = _make_building_visual(str(record["kind"]), record["footprint"])
             node.name = "Building_" + str(oid).left(20)
             add_child(node)
             building_nodes[oid] = node
