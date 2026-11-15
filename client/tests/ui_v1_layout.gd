@@ -1,22 +1,35 @@
 extends SceneTree
-func _initialize() -> void: call_deferred("_run")
+## Current Forest Glass UI lives in UIOverlay; test layout at logical
+## viewport sizes, not physical resolution under Godot's canvas scaling.
+
+var failures := 0
+
+func _initialize() -> void:
+    call_deferred("_run")
+
+func _check(condition: bool, message: String) -> void:
+    if not condition:
+        failures += 1
+        print("UI_LAYOUT_FAIL ", message)
+
 func _run() -> void:
-    var root = load("res://world.tscn").instantiate()
+    var root: Control = load("res://world.tscn").instantiate()
     get_root().add_child(root)
-    for resolution in [Vector2i(1280,720),Vector2i(960,540),Vector2i(846,388),Vector2i(2340,1080)]:
+    await process_frame
+    await process_frame
+    for resolution in [Vector2i(1280, 720), Vector2i(960, 540), Vector2i(846, 388), Vector2i(2340, 1080)]:
         get_root().size = resolution
         await process_frame
         await process_frame
-        var nav: Control = root.get_node("BottomNavigation")
-        var catalog: Control = root.get_node("BuildCatalog")
-        var placement: Control = root.get_node("PlacementCard")
-        var details: Control = root.get_node("EnterpriseDetails")
-        root._layout_ui_v1(Vector2(resolution))
-        assert(nav.get_global_rect().position.y >= 0)
-        for panel in [catalog,placement,details]:
-            print("PANEL ",resolution," ",panel.name," pos=",panel.position," size=",panel.size)
-            assert(panel.position.x >= 0 and panel.position.x + panel.size.x <= resolution.x + 2)
-            assert(panel.position.y >= 0 and panel.position.y + panel.size.y <= resolution.y + 2)
-        print("UI_LAYOUT_PASS ",resolution)
+        root._layout_ui_v1()
+        var logical_size: Vector2 = root.get_viewport_rect().size
+        var nav: Control = root.build_toolbar
+        _check(nav != null and nav.get_global_rect().position.y > 0, "navigation present " + str(resolution))
+        for panel in [root.catalog_panel, root.placement_panel, root.details_panel]:
+            var rect: Rect2 = panel.get_global_rect()
+            _check(rect.position.x >= 0 and rect.end.x <= logical_size.x + 2, panel.name + " horizontal " + str(resolution) + " " + str(rect))
+            _check(rect.position.y >= 0 and rect.end.y <= logical_size.y + 2, panel.name + " vertical " + str(resolution) + " " + str(rect))
+        print("UI_LAYOUT_PASS ", resolution, " logical=", logical_size)
     root.queue_free()
-    quit()
+    await process_frame
+    quit(0 if failures == 0 else 1)

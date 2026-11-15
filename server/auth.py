@@ -90,7 +90,8 @@ def _session(db, user_id, username):
     expires = int(time.time()) + 7*86400
     db.execute("INSERT INTO sessions(token_hash,user_id,expires_at) VALUES("+("%s,%s,%s" if USE_POSTGRES else "?,?,?")+")", (hashlib.sha256(token.encode()).hexdigest(),user_id,expires))
     db.commit()
-    return 200, {"token": token, "expires_at": expires, "username": username}
+    import accounts_admin
+    return 200, {"token": token, "expires_at": expires, "username": username, "dev": accounts_admin.is_developer(username, db)}
 
 def register(payload, client):
     if not _rate_limit("register:"+client): return 429, {"error":"rate_limited"}
@@ -133,7 +134,8 @@ def profile(token):
         row=db.execute("SELECT u.username,s.expires_at FROM sessions s JOIN users u ON u.id=s.user_id WHERE s.token_hash="+("%s" if USE_POSTGRES else "?"),(digest,)).fetchone()
         if row is None or row[1] < time.time(): return 401, {"error":"unauthorized"}
         if _active_ban(db, row[0]) is not None: return 403, {"error":"banned"}
-        return 200, {"username":row[0]}
+        import accounts_admin
+        return 200, {"username":row[0], "dev": accounts_admin.is_developer(row[0], db)}
 
 def _ph():
     return "%s" if USE_POSTGRES else "?"

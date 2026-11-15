@@ -25,6 +25,7 @@ func _ready() -> void:
     _refresh_terms()
     _refresh_wallet()
     _connect_server()
+    _check_developer_role()
     _load_goods_catalog()
     _load_zones()
     var deposit_timer := Timer.new()
@@ -55,7 +56,63 @@ func _ready() -> void:
             updater.check()
     )
     updater.check()
+var developer_editor: Control
+var developer_editor_insets := Vector4(20, 20, 20, 20)
+
+func _check_developer_role() -> void:
+    if not GameSession.is_authenticated(): return
+    var req := HTTPRequest.new()
+    add_child(req)
+    req.request_completed.connect(func(result: int, code: int, _headers: PackedStringArray, body: PackedByteArray) -> void:
+        req.queue_free()
+        if result != HTTPRequest.RESULT_SUCCESS or code != 200: return
+        var profile = JSON.parse_string(body.get_string_from_utf8())
+        if not profile is Dictionary or not bool(profile.get("dev", false)): return
+        var button := Button.new()
+        button.name = "DeveloperTools"
+        button.text = "Редактор"
+        $UIOverlay/HUD/Top.add_child(button)
+        button.pressed.connect(_toggle_developer_editor)
+    )
+    var headers := PackedStringArray(["Authorization: Bearer " + GameSession.access_token])
+    if req.request("https://rikagro.ru/lunexeconom/api/auth/me", headers) != OK:
+        req.queue_free()
+
+func _toggle_developer_editor() -> void:
+    if developer_editor == null:
+        developer_editor = load("res://dev_editor.gd").new()
+        $UIOverlay.add_child(developer_editor)
+        _layout_developer_editor()
+    else:
+        developer_editor.visible = not developer_editor.visible
+        if developer_editor.visible:
+            _layout_developer_editor()
+
+func _layout_developer_editor() -> void:
+    if developer_editor == null:
+        return
+    var viewport_size := get_viewport_rect().size
+    var left := developer_editor_insets.x
+    var top := developer_editor_insets.y
+    var right := developer_editor_insets.z
+    var bottom := developer_editor_insets.w
+    var available_width := maxf(0.0, viewport_size.x - left - right)
+    var panel_width := minf(available_width, minf(640.0, maxf(420.0, viewport_size.x * 0.42)))
+    # The editor is a direct child of a CanvasLayer. Set all four anchors
+    # and offsets explicitly: CENTER_RIGHT would otherwise create a zero-
+    # height panel off the right edge of the screen.
+    developer_editor.anchor_left = 1.0
+    developer_editor.anchor_right = 1.0
+    developer_editor.anchor_top = 0.0
+    developer_editor.anchor_bottom = 1.0
+    developer_editor.offset_left = -right - panel_width
+    developer_editor.offset_right = -right
+    developer_editor.offset_top = top
+    developer_editor.offset_bottom = -bottom
+
 func set_selection(cell: Vector2i) -> void:
+    if developer_editor != null:
+        developer_editor.select_cell(cell)
     info.text = "Регион 01 · Участок %d:%d" % [cell.x, cell.y]
     if regional_map_panel != null and regional_map_panel.loaded:
         for city_ref in regional_map_panel.cities:
@@ -96,6 +153,9 @@ func _update_safe_area() -> void:
         top = maxi(top, int(float(safe.position.y) * v.y / s.y) + 12)
         right = maxi(right, int(float(s.x - safe.end.x) * v.x / s.x) + 12)
         bottom = maxi(bottom, int(float(s.y - safe.end.y) * v.y / s.y) + 12)
+    developer_editor_insets = Vector4(left, top, right, bottom)
+    if developer_editor != null:
+        _layout_developer_editor()
     hud.add_theme_constant_override("margin_left", left)
     hud.add_theme_constant_override("margin_top", top)
     hud.add_theme_constant_override("margin_right", right)

@@ -45,8 +45,11 @@ func poll() -> void:
             if version != previous + 1:
                 _schedule_snapshot(coord)
             elif not pending.has(coord):
-                world.apply_server_event(event)
-                versions[coord] = version
+                if str(event.get("kind", "")) == "terrain_changed":
+                    _schedule_snapshot(coord)
+                else:
+                    world.apply_server_event(event)
+                    versions[coord] = version
             cursor = seq
         if not pending.is_empty(): _load_next_snapshot()
         elif bool(data.get("has_more", false)): poll.call_deferred()
@@ -79,6 +82,7 @@ func _load_next_snapshot() -> void:
         var data = JSON.parse_string(body.get_string_from_utf8())
         if not data is Dictionary or not data.get("cells", null) is Array: return
         world.apply_chunk_snapshot(coord, data["cells"])
+        _load_terrain(coord)
         versions[coord] = int(data.get("version", 0))
         pending.pop_front()
         if not pending.is_empty(): _load_next_snapshot.call_deferred()
@@ -90,4 +94,20 @@ func _load_next_snapshot() -> void:
     var headers := PackedStringArray(["Authorization: Bearer " + GameSession.access_token])
     if req.request(ROOT + "chunk?cx=" + str(coord.x) + "&cy=" + str(coord.y), headers) != OK:
         syncing_chunk = false
+        req.queue_free()
+
+func _load_terrain(coord: Vector2i) -> void:
+    if not GameSession.is_authenticated(): return
+    var req := HTTPRequest.new()
+    req.timeout = 8
+    add_child(req)
+    req.request_completed.connect(func(result: int, code: int, _headers: PackedStringArray, body: PackedByteArray) -> void:
+        req.queue_free()
+        if result != HTTPRequest.RESULT_SUCCESS or code != 200: return
+        var data = JSON.parse_string(body.get_string_from_utf8())
+        if data is Dictionary and data.get("edits", null) is Array:
+            world.set_terrain_edits(coord, data["edits"])
+    )
+    var headers := PackedStringArray(["Authorization: Bearer " + GameSession.access_token])
+    if req.request(ROOT + "terrain/chunk?cx=" + str(coord.x) + "&cy=" + str(coord.y), headers) != OK:
         req.queue_free()

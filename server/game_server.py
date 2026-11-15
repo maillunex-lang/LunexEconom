@@ -585,6 +585,16 @@ class Handler(BaseHTTPRequestHandler):
         return True
     def do_GET(self):
         url=urlsplit(self.path)
+        if url.path == "/terrain/chunk":
+            import devtools
+            try:
+                q=parse_qs(url.query)
+                cx=int(q["cx"][0]); cy=int(q["cy"][0])
+            except (ValueError,KeyError,IndexError):
+                return self._send(400,{"error":"invalid_query"})
+            with NPC_CONNECT() as db:
+                devtools.ensure(db,NPC_PH,os.environ.get("LUNEX_DB_ENGINE")=="postgres")
+                return self._send(*devtools.terrain_chunk(db,NPC_PH,self._identity(),cx,cy))
         if url.path.startswith("/admin/"):
             return self._admin("GET")
         if url.path == "/announcement":
@@ -687,6 +697,45 @@ class Handler(BaseHTTPRequestHandler):
             return self._send(*result)
         return self._send(404,{"error":"not_found"})
     def do_POST(self):
+        if urlsplit(self.path).path.startswith("/dev/"):
+            import devtools
+            path = urlsplit(self.path).path
+            if path not in ("/dev/terrain", "/dev/undo", "/dev/roads", "/dev/move", "/dev/demolish", "/dev/create"):
+                return self._send(404, {"error": "not_found"})
+            owner = self._identity()
+            if not owner or not devtools.require_developer(owner, None):
+                return self._send(403, {"error": "forbidden"})
+            try:
+                size = int(self.headers.get("Content-Length", "0"))
+                if size < 2 or size > 4096:
+                    return self._send(400, {"error": "invalid_body"})
+                payload = json.loads(self.rfile.read(size))
+                if not isinstance(payload, dict):
+                    return self._send(400, {"error": "invalid_body"})
+            except (ValueError, UnicodeError, json.JSONDecodeError):
+                return self._send(400, {"error": "invalid_body"})
+            # The world build/sell commands already serialize with LOCK on
+            # SQLite and advisory key 20261114 on PostgreSQL. Dev commands
+            # must share that same critical section, including validation.
+            postgres = os.environ.get("LUNEX_DB_ENGINE") == "postgres"
+            with LOCK:
+                with NPC_CONNECT() as db:
+                    devtools.ensure(db, NPC_PH, postgres)
+                    if postgres:
+                        db.execute("SELECT pg_advisory_xact_lock(20261114)")
+                    else:
+                        db.execute("BEGIN IMMEDIATE")
+                    if not devtools.require_developer(owner, None):
+                        return self._send(403, {"error": "forbidden"})
+                    handler = {
+                        "/dev/move": devtools.building_move,
+                        "/dev/demolish": devtools.building_demolish,
+                        "/dev/create": devtools.building_create,
+                        "/dev/roads": devtools.roads_set,
+                        "/dev/undo": devtools.undo,
+                        "/dev/terrain": devtools.terrain_set,
+                    }[path]
+                    return self._send(*handler(db, NPC_PH, owner, payload, self._client()))
         if urlsplit(self.path).path.startswith("/admin/"):
             return self._admin("POST")
         if self._soc_post():return
