@@ -4,82 +4,231 @@
   "title": "Дорожная карта «Башкирия: Мёд и Нефть»",
   "note": "Файл ведёт директор проекта после каждого принятого этапа. Статусы: done (сделано), wip (в работе), planned (в планах).",
   "milestones": [
-    {"id": "m0", "title": "Каркас и выпуск", "status": "done"},
-    {"id": "m1", "title": "M1: первая цепочка", "status": "wip"},
-    {"id": "m2", "title": "M2: города и деньги", "status": "planned"},
-    {"id": "m3", "title": "M3: бренд, исследования, биржа", "status": "planned"},
-    {"id": "beta", "title": "Открытая бета", "status": "planned"}
+    {
+      "id": "m0",
+      "title": "Каркас и выпуск",
+      "status": "done"
+    },
+    {
+      "id": "m1",
+      "title": "M1: первая цепочка",
+      "status": "wip"
+    },
+    {
+      "id": "m2",
+      "title": "M2: города и деньги",
+      "status": "planned"
+    },
+    {
+      "id": "m3",
+      "title": "M3: бренд, исследования, биржа",
+      "status": "planned"
+    },
+    {
+      "id": "beta",
+      "title": "Открытая бета",
+      "status": "planned"
+    }
   ],
   "phases": [
     {
-      "id": "foundation", "milestone": "m0", "title": "Основа проекта", "status": "done", "progress": 100,
+      "id": "foundation",
+      "milestone": "m0",
+      "title": "Основа проекта",
+      "status": "done",
+      "progress": 100,
       "items": [
-        {"title": "Сервер, аккаунты и безопасный вход", "status": "done"},
-        {"title": "Учёт денег: журнал проводок без потерь", "status": "done"},
-        {"title": "Игровое время: месяц = 24 часа", "status": "done"},
-        {"title": "Подписанный APK и обновление внутри игры", "status": "done"},
-        {"title": "Фоновая загрузка ресурсов, лёгкий APK", "status": "done"},
-        {"title": "Клиент в стиле Forest Glass, горизонтальный режим", "status": "done"}
+        {
+          "title": "Сервер, аккаунты и безопасный вход",
+          "status": "done"
+        },
+        {
+          "title": "Учёт денег: журнал проводок без потерь",
+          "status": "done"
+        },
+        {
+          "title": "Игровое время: месяц = 24 часа",
+          "status": "done"
+        },
+        {
+          "title": "Подписанный APK и обновление внутри игры",
+          "status": "done"
+        },
+        {
+          "title": "Фоновая загрузка ресурсов, лёгкий APK",
+          "status": "done"
+        },
+        {
+          "title": "Клиент в стиле Forest Glass, горизонтальный режим",
+          "status": "done"
+        }
       ]
     },
     {
-      "id": "data", "milestone": "m0", "title": "Каталог и мир", "status": "done", "progress": 100,
+      "id": "data",
+      "milestone": "m0",
+      "title": "Каталог и мир",
+      "status": "done",
+      "progress": 100,
       "items": [
-        {"title": "Каталог: 25 товаров, 20 зданий, рецепты", "status": "done"},
-        {"title": "20 городов Башкортостана, бесконечная карта", "status": "done"},
-        {"title": "Города растут по мере застройки", "status": "done"},
-        {"title": "Земельные участки и покупка", "status": "done"}
+        {
+          "title": "Каталог: 25 товаров, 20 зданий, рецепты",
+          "status": "done"
+        },
+        {
+          "title": "20 городов Башкортостана, бесконечная карта",
+          "status": "done"
+        },
+        {
+          "title": "Города растут по мере застройки",
+          "status": "done"
+        },
+        {
+          "title": "Земельные участки и покупка",
+          "status": "done"
+        }
       ]
     },
     {
-      "id": "enterprises", "milestone": "m1", "title": "Предприятия и карта", "status": "wip", "progress": 15,
+      "id": "enterprises",
+      "milestone": "m1",
+      "title": "Предприятия и карта",
+      "status": "wip",
+      "progress": 60,
       "items": [
-        {"title": "Стройка по стадиям и производство", "status": "wip"},
-        {"title": "Карта мира в игре, покупка участков", "status": "wip"},
-        {"title": "Склады, зарплаты, содержание", "status": "wip"}
+        {
+          "title": "Стройка по стадиям и производство",
+          "status": "done"
+        },
+        {
+          "title": "Карта мира в игре, покупка участков",
+          "status": "done"
+        },
+        {
+          "title": "Склады, зарплаты, содержание",
+          "status": "done"
+        },
+        {
+          "title": "Экран предприятий и стройки в игре",
+          "status": "wip"
+        }
       ]
     },
     {
-      "id": "supply", "milestone": "m1", "title": "Поставки и рынок", "status": "planned", "progress": 0,
+      "id": "supply",
+      "milestone": "m1",
+      "title": "Поставки и рынок",
+      "status": "planned",
+      "progress": 0,
       "items": [
-        {"title": "До трёх поставщиков на каждый вход", "status": "planned"},
-        {"title": "Городской рынок и внешний порт", "status": "planned"},
-        {"title": "Рынок меняет цены каждый день", "status": "planned"}
+        {
+          "title": "До трёх поставщиков на каждый вход",
+          "status": "planned"
+        },
+        {
+          "title": "Городской рынок и внешний порт",
+          "status": "planned"
+        },
+        {
+          "title": "Рынок меняет цены каждый день",
+          "status": "planned"
+        }
       ]
     },
     {
-      "id": "retail", "milestone": "m1", "title": "Розница", "status": "planned", "progress": 0,
+      "id": "retail",
+      "milestone": "m1",
+      "title": "Розница",
+      "status": "planned",
+      "progress": 0,
       "items": [
-        {"title": "Магазины с ячейками прилавка", "status": "planned"},
-        {"title": "Рейтинг товара: качество, цена, бренд", "status": "planned"},
-        {"title": "Первая цепочка: поле, мельница, пекарня, магазин", "status": "planned"}
+        {
+          "title": "Магазины с ячейками прилавка",
+          "status": "planned"
+        },
+        {
+          "title": "Рейтинг товара: качество, цена, бренд",
+          "status": "planned"
+        },
+        {
+          "title": "Первая цепочка: поле, мельница, пекарня, магазин",
+          "status": "planned"
+        }
       ]
     },
     {
-      "id": "economy", "milestone": "m2", "title": "Население, недвижимость, финансы", "status": "planned", "progress": 5,
+      "id": "economy",
+      "milestone": "m2",
+      "title": "Население, недвижимость, финансы",
+      "status": "planned",
+      "progress": 5,
       "items": [
-        {"title": "Жители, доходы и спрос (правила написаны)", "status": "wip"},
-        {"title": "Недвижимость и аренда (правила написаны)", "status": "wip"},
-        {"title": "Кредиты, налоги, отчёты (правила написаны)", "status": "wip"},
-        {"title": "Холдинг и управляющие (правила написаны)", "status": "wip"}
+        {
+          "title": "Жители, доходы и спрос (правила написаны)",
+          "status": "wip"
+        },
+        {
+          "title": "Недвижимость и аренда (правила написаны)",
+          "status": "wip"
+        },
+        {
+          "title": "Кредиты, налоги, отчёты (правила написаны)",
+          "status": "wip"
+        },
+        {
+          "title": "Холдинг и управляющие (правила написаны)",
+          "status": "wip"
+        }
       ]
     },
     {
-      "id": "advanced", "milestone": "m3", "title": "Бренд, исследования, биржа", "status": "planned", "progress": 2,
+      "id": "advanced",
+      "milestone": "m3",
+      "title": "Бренд, исследования, биржа",
+      "status": "planned",
+      "progress": 2,
       "items": [
-        {"title": "Исследования и технологии", "status": "wip"},
-        {"title": "Реклама и медиа", "status": "wip"},
-        {"title": "Фондовый рынок", "status": "wip"},
-        {"title": "Политика городов", "status": "wip"},
-        {"title": "Сценарии и ИИ-конкуренты", "status": "wip"}
+        {
+          "title": "Исследования и технологии",
+          "status": "wip"
+        },
+        {
+          "title": "Реклама и медиа",
+          "status": "wip"
+        },
+        {
+          "title": "Фондовый рынок",
+          "status": "wip"
+        },
+        {
+          "title": "Политика городов",
+          "status": "wip"
+        },
+        {
+          "title": "Сценарии и ИИ-конкуренты",
+          "status": "wip"
+        }
       ]
     },
     {
-      "id": "release", "milestone": "beta", "title": "Баланс и публикация", "status": "planned", "progress": 0,
+      "id": "release",
+      "milestone": "beta",
+      "title": "Баланс и публикация",
+      "status": "planned",
+      "progress": 0,
       "items": [
-        {"title": "Настройка баланса экономики", "status": "planned"},
-        {"title": "Обучение новичка", "status": "planned"},
-        {"title": "Открытая бета и магазины приложений", "status": "planned"}
+        {
+          "title": "Настройка баланса экономики",
+          "status": "planned"
+        },
+        {
+          "title": "Обучение новичка",
+          "status": "planned"
+        },
+        {
+          "title": "Открытая бета и магазины приложений",
+          "status": "planned"
+        }
       ]
     }
   ]
