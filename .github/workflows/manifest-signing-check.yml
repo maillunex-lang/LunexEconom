@@ -1,0 +1,40 @@
+name: Verify manifest signing (no publication)
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  verify-signing:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    environment: manifest-signing
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install dependencies
+        run: python -m pip install cryptography
+      - name: Run secret-free signing tests
+        run: python -m unittest discover -s tools/tests -p 'test_manifest_env_signing.py' -v
+      - name: Verify production key matches pinned public key
+        env:
+          MANIFEST_SIGNING_KEY: ${{ secrets.MANIFEST_SIGNING_KEY }}
+        run: |
+          set -euo pipefail
+          test -s client/config/update_public.pem
+          test -n "$MANIFEST_SIGNING_KEY"
+          mkdir -p "$RUNNER_TEMP/manifest-check"
+          python - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+          from cryptography.hazmat.primitives import serialization
+          from tools.manifest_security import canonical_json
+          from tools.sign_manifest_env import sign
+          root = Path(os.environ["RUNNER_TEMP"]) / "manifest-check"
+          manifest = root / "update.json"
+          manifest.write_bytes(canonical_json({"test_only": True}))
+          sign(manifest, root / "update.json.sig", "client/config/update_public.pem", os.environ["MANIFEST_SIGNING_KEY"])
+          PY
+          echo "Production manifest key verified against pinned public key; no release published"
