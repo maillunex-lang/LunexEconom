@@ -270,7 +270,10 @@ func _renew_tokens() -> bool:
 func _restore_session() -> void:
     refresh_token = _load_refresh()
     if not refresh_token.is_empty() and await _renew_tokens():
-        _show_headquarters()
+        # Session restoration must not interrupt an explicit screen navigation
+        # that happened while the refresh request was in flight.
+        if router.current in ["", "login", "headquarters"]:
+            _show_headquarters()
         _load_hq()
 
 func _send_auth(mode: String) -> void:
