@@ -3,7 +3,8 @@ from pathlib import Path
 from . import core, api
 
 def migrations():
-    return [Path(__file__).resolve().parents[1] / 'migrations' / '202611152100_enterprises_core.sql']
+    base=Path(__file__).resolve().parents[1] / 'migrations'
+    return [base / '202611152100_enterprises_core.sql', base / '202611152101_enterprises_arrears.sql']
 
 def register(registry):
     registry.flag('enterprise_enabled', True)
