@@ -74,6 +74,8 @@ def _prepare(db):
     import holding
     holding.ensure(db, "?")
     # END ChatGPT11 schema
+    import households
+    households.ensure(db, "?")
     db.commit()
 
 
@@ -491,7 +493,28 @@ def research_start(owner, payload):
     return _player_command(owner, payload, research.start)
 
 
+# BEGIN banking routes
+def bank_loan(owner, payload):
+    import routes_banking
+    return _player_command(owner, payload, routes_banking.loan)
+
+
+def bank_repay(owner, payload):
+    import routes_banking
+    return _player_command(owner, payload, routes_banking.repay)
+
+
+def shares_buy(owner, payload):
+    import routes_banking
+    return _player_command(owner, payload, routes_banking.buy_shares)
+# END banking routes
+
 ECONOMY_POST={"/sell":"sell","/loan":"loan","/city/taxes":"city_taxes","/city/build":"city_build","/city/candidacy":"city_candidacy","/city/vote":"city_vote","/contracts/offer":"contracts_offer","/contracts/accept":"contracts_accept","/contracts/cancel":"contracts_cancel","/trucks/buy":"trucks_buy","/research/start":"research_start"}
+# BEGIN banking routes
+ECONOMY_POST["/bank/loan"] = "bank_loan"
+ECONOMY_POST["/bank/repay"] = "bank_repay"
+ECONOMY_POST["/shares/buy"] = "shares_buy"
+# END banking routes
 
 class Handler(BaseHTTPRequestHandler):
     def _send_geo(self, data):
@@ -681,6 +704,29 @@ class Handler(BaseHTTPRequestHandler):
                 with connect() as db:
                     payload = deposits.query(db, "?", *box)
             return self._send_cached(payload, 300)
+        # BEGIN population routes
+        if url.path in ("/population", "/housing"):
+            import routes_population
+            query = parse_qs(url.query)
+            if os.environ.get("LUNEX_DB_ENGINE") == "postgres":
+                import postgres_db
+                with postgres_db.connect() as db:
+                    return self._send(*routes_population.handle_get(db, "%s", url.path, query))
+            with connect() as db:
+                return self._send(*routes_population.handle_get(db, "?", url.path, query))
+        # END population routes
+        # BEGIN banking routes
+        if url.path in ("/bank/offers", "/bank/loans", "/inflation"):
+            import routes_banking
+            query = parse_qs(url.query)
+            owner = self._identity()
+            if os.environ.get("LUNEX_DB_ENGINE") == "postgres":
+                import postgres_db
+                with postgres_db.connect() as db:
+                    return self._send(*routes_banking.handle_get(db, "%s", url.path, query, owner))
+            with connect() as db:
+                return self._send(*routes_banking.handle_get(db, "?", url.path, query, owner))
+        # END banking routes
         if url.path=="/health":return self._send(200,health_details())
         if url.path in ("/leaderboard", "/feed"):
             owner = self._identity()

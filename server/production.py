@@ -284,6 +284,8 @@ def step_month(db, ph, month, now):
     import research as company_research
     import trucks
     import quality as product_grade
+    import households
+    import banking
     company_research.advance(db, ph, month)
     trucks.release_arrived(db, ph, month)
     active = regions.active_regions(db, ph)                      # the game city, cities with company buildings, generated cities
@@ -469,7 +471,7 @@ def step_month(db, ph, month, now):
         # ---- every city clears its own market; surplus travels to dearer cities and arrives after the transit time ----
         arriving = regions.arrivals(db, ph, product, month) if len(active) > 1 else {}
         offered = {region: sum(offers_r[region].values()) for region in active}
-        demand_local = {region: economy.demand_for(product, month, lab_r[region]["scale"]) + need_ext_r[region] for region in active}
+        demand_local = {region: households.consumer_demand(db, ph, product, month, lab_r[region]["scale"], region) + need_ext_r[region] for region in active}
         sent = {region: 0 for region in active}
         received = {region: arriving.get(region, 0) for region in active}
         transport_by, freight_by = {}, {}
@@ -662,6 +664,8 @@ def step_month(db, ph, month, now):
             nxt = next_population(pop_r[region], jobs_r[region], lab_r[region]["labor_force"], 0.0)
             regions.save_population(db, ph, region, month, lab_r[region], staffing_r[region], nxt)
     deposits.store_remaining(db, ph, well_left)
+    households.monthly(db, ph, month, now)
+    banking.monthly(db, ph, month, now)
     # BEGIN ChatGPT11 monthly
     import auto_managers
     auto_managers.monthly(db, ph, month, now)
@@ -752,6 +756,8 @@ def labor_view(db, ph, clk):
 
 def quote(db, ph, clk):
     """Provisional market state for the running month, plus the price if one more producer were added."""
+    import households
+    import regions
     month = clk["month_index"]
     ops = _ops(db, ph)
     lab = _current_labor(db, ph, month, ops)
@@ -765,7 +771,7 @@ def quote(db, ph, clk):
         need_base = sum(n for _, k, sm, _p in ops if k in economy.PRODUCTION and sm <= month for p, n in economy.PRODUCTION.get(k, {}).get("inputs", {}).items() if p == product)
         need_extra = sum(n for _, k, sm, _p in ops if k not in economy.PRODUCTION and sm <= month for p, n in (_spec(k) or {}).get("inputs", {}).items() if p == product)
         need = int((need_base + need_extra) * lab["staffing"])
-        demand = economy.demand_for(product, month, lab["scale"]) + need
+        demand = households.consumer_demand(db, ph, product, month, lab["scale"], regions.HOME) + need
         m = economy.MARKET[product]
         out[product] = {"kind": producing_kind, "name": m["name"], "reference_price": m["reference_price"], "supply": supply, "demand": demand,
                         "price": economy.price_for(product, supply, demand), "price_if_added": economy.price_for(product, supply + output, demand),
@@ -788,7 +794,7 @@ def quote(db, ph, clk):
         made = sum((_spec(k) or {}).get("output", 0) for _, k, sm, _p in ops if sm <= month and (_spec(k) or {}).get("product") == product)
         need = sum(n for _, k, sm, _p in ops if sm <= month for p, n in (_spec(k) or {}).get("inputs", {}).items() if p == product)
         supply = int(made * lab["staffing"] * (1 + economy.SOCIAL_PRODUCTIVITY * lab["quality"]))
-        demand = economy.demand_for(product, month, lab["scale"]) + int(need * lab["staffing"])
+        demand = households.consumer_demand(db, ph, product, month, lab["scale"], regions.HOME) + int(need * lab["staffing"])
         m = economy.market_of(product)
         out[product] = {"kind": producing_kind, "name": m["name"], "reference_price": m["reference_price"], "supply": supply, "demand": demand,
                         "price": economy.price_for(product, supply, demand), "price_if_added": economy.price_for(product, supply + output, demand),

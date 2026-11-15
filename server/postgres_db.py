@@ -153,4 +153,6 @@ def init():
         import holding
         holding.ensure(db, "%s")
         # END ChatGPT11 schema
+        import households
+        households.ensure(db, "%s")
         db.commit()

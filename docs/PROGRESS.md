@@ -5,6 +5,12 @@
 - Серверная проверка ручного рельефа перед строительством и генерацией города, исключение ручных клеток, бесплатное создание и отмена зданий игроков/жилья только разработчиком, безопасный снос и отмена при отсутствии обязательств (`docs/DEVTOOLS.md`). Автоматический подъезд при **переносе** здания не реализован.
 - `python -m unittest discover -s server -p 'test_*.py' -q`: 616 тестов, OK, 62 skipped после доработок. Симулятор `tools/balance_sim.py --months 36 --seed 20261115 --bots 6`: `invariants=0 flags=0 wallet_sum=0`. Нагрузочный тест в `docs/HQ_API.md`; PostgreSQL-скрипт `test_postgres_hq.py` запускается только на изолированной `lunex_ci`, на боевой PostgreSQL не запускался. Ветки `main` и рабочие службы VPS не изменены.
 
+## 2026-11-15 — Grok7: население, жильё и финансы (EX-05, EX-09)
+
+- **Ветка `Grok7`.** Домохозяйства на город (`households.py`), рынок жилья и ипотека (`housing_market.py`), NPC-банки, доли и доп. налоги (`banking.py`), наблюдаемый индекс цен (`inflation.py`). Чтение: `GET /population`, `GET /housing`, `GET /bank/offers`, `GET /bank/loans`, `GET /inflation`. Запись: `POST /bank/loan`, `POST /bank/repay`, `POST /shares/buy` (идемпотентность по `request_id`).
+- **Совместимость.** `HOUSEHOLDS_ENABLED`, `BANKS_ENABLED`, `INFLATION_ENABLED`, `TAX_EXTRAS_ENABLED` по умолчанию выключены. Живой рынок труда (Уфа, 200 жителей) и таблица `loans` не затронуты. Масштаб домохозяйств `POPULATION_SCALE=100`. При выключенных флагах отпечаток симулятора прежний.
+- **Не сделано здесь.** Окна штаба не рисуются. `labor_market` по-прежнему не берёт городскую зарплату из `regional_prices.wage`. Строительство само не вызывает `housing_market.on_commissioned` (месяц замечает сданный дом сам). PostgreSQL в этой среде не запускался (нет `lunex_ci`).
+
 ---
 
 ## 2026-11-15 — решение: штаб-квартира как главный экран; задания четырём исполнителям (Claude, main)
