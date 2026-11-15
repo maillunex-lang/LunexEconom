@@ -1,5 +1,8 @@
 """Unit-level enterprise invariants. Integration still requires isolated PostgreSQL."""
 import unittest
+import subprocess
+import sys
+from pathlib import Path
 from server.enterprises import core
 from server.game_server import build_registry
 
@@ -25,6 +28,14 @@ class EnterprisesUnitTests(unittest.TestCase):
         for value in (True,0.5,'10',None):
             with self.assertRaises(ValueError):
                 core.integer(value)
+    def test_validator_entrypoints(self):
+        root=Path(__file__).resolve().parents[2]
+        for args in (['tools/validate_enterprises.py'],['-m','tools.validate_enterprises']):
+            with self.subTest(args=args):
+                result=subprocess.run([sys.executable,*args],cwd=root,capture_output=True,text=True,timeout=30)
+                self.assertEqual(result.returncode,0,result.stderr)
+                self.assertIn('Enterprise catalog validation OK',result.stdout)
+
     def test_registry(self):
         registry=build_registry()
         self.assertIn(('POST','/enterprises'),registry.routes)
