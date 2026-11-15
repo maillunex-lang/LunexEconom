@@ -33,3 +33,33 @@ def put(body,ctx):
             VALUES(%s,%s,%s,%s,%s,%s,%s,%s,%s)""",
             (row[0],product,entry['slot'],entry['source_type'],entry['source_enterprise_id'],entry['share'],entry['priority'],entry['max_price'],entry['min_quality']))
     return 200,{'enterprise_id':row[0],'inputs':core.read_links(ctx['conn'],row[0]),'balance':'draft'}
+
+def policy_get(body,ctx):
+    """Owner-only seller consent; absent row means no public sales."""
+    _,row,error=_mine(ctx)
+    if error:return error
+    found=ctx['conn'].execute(
+        'SELECT allow_direct_sales,allow_city_market FROM supply_seller_policy '
+        'WHERE enterprise_id=%s',(row[0],)).fetchone()
+    return 200,{'enterprise_id':row[0],
+                'allow_direct_sales':found[0] if found else False,
+                'allow_city_market':found[1] if found else False}
+
+
+def policy_put(body,ctx):
+    _,row,error=_mine(ctx)
+    if error:return error
+    if (not isinstance(body,dict)
+            or set(body)!={'allow_direct_sales','allow_city_market'}
+            or any(type(value) is not bool for value in body.values())):
+        return 400,{'error':'invalid_seller_policy'}
+    ctx['conn'].execute(
+        """INSERT INTO supply_seller_policy(enterprise_id,allow_direct_sales,
+           allow_city_market)
+           VALUES(%s,%s,%s)
+           ON CONFLICT(enterprise_id)
+           DO UPDATE SET allow_direct_sales=EXCLUDED.allow_direct_sales,
+                         allow_city_market=EXCLUDED.allow_city_market,
+                         updated_at=now()""",
+        (row[0],body['allow_direct_sales'],body['allow_city_market']))
+    return policy_get(body,ctx)
