@@ -98,14 +98,23 @@ class StagePaymentPostgresTests(unittest.TestCase):
     def stage(self,eid):
         return self.conn.execute('SELECT stage FROM enterprises WHERE id=%s',(eid,)).fetchone()[0]
 
-    def test_payment_stalls_resume_one_time_and_finances_reconcile(self):
+    def test_first_payment_rejected_without_funds_then_paid(self):
         owner=self.owner(0)
         eid=self.fixture(owner,days=8)
-        first=self.pay_first(owner,eid)
-        # First fee was funded by fixture receipt (1 RUB) only, so this call
-        # must fail, then succeed after proper capital replenishment.
-        self.assertEqual(first,45000)
+        first=core.stage_costs(150000)[0]
+        self.assertFalse(core._pay_build_stage(self.conn,eid,owner['id'],0,first,0))
         self.assertEqual(self.stage(eid),0)
+        self.assertEqual(self.conn.execute(
+            'SELECT count(*) FROM enterprise_stage_payments WHERE enterprise_id=%s',
+            (eid,)).fetchone()[0],0)
+        transfer(self.conn,'stage:deposit:'+uuid4().hex,
+                 self.treasury,owner['wallet'],first)
+        self.assertTrue(core._pay_build_stage(self.conn,eid,owner['id'],0,first,0))
+        self.assertTrue(core._pay_build_stage(self.conn,eid,owner['id'],0,first,0))
+        self.assertEqual(self.balance(owner),1)
+        self.assertEqual(self.conn.execute(
+            'SELECT count(*) FROM enterprise_stage_payments WHERE enterprise_id=%s',
+            (eid,)).fetchone()[0],1)
         self.assertTrue(reconcile(self.conn)['ok'])
 
     def test_short_build_paid_in_four_exact_stages(self):
