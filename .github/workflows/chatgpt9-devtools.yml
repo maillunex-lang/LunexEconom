@@ -41,4 +41,4 @@ jobs:
         working-directory: server
         env:
           LUNEX_DB_ENGINE: sqlite
-        run: python -m unittest test_devtools test_accounts_admin test_terrain_edits -v
+        run: python -m unittest test_devtools test_dev_road_connectivity test_accounts_admin test_terrain_edits -v
