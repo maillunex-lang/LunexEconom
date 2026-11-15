@@ -53,13 +53,31 @@ func _run() -> void:
         quit(22)
         return
     var manager := UpdateManager.new()
-    manager.current_version_code = 1
+    # A client at N sees a signed N+1 manifest, without a forced upgrade.
+    manager.current_version_code = int(manifest_result["version_code"]) - 1
     manager.manifest = manifest_result
+    if int(manifest_result["version_code"]) != manager.current_version_code + 1:
+        printerr("Signed update is not N+1")
+        quit(30)
+        return
+    if manager._mandatory():
+        printerr("The previous version should receive an optional update")
+        quit(31)
+        return
+    # Older versions must be blocked when min_version_code exceeds their code.
+    manager.current_version_code = 1
     if not manager._mandatory():
         printerr("min_version_code must block old clients")
         quit(23)
         return
 
+    # Any signed payload with foreign host or bad sha256 must fail validation.
+    var invalid_host := manifest_result.duplicate(true)
+    invalid_host["apk_url"] = "https://evil.invalid/download/lunex.apk"
+    if preload("res://update/manifest_verifier.gd").valid_update(invalid_host):
+        printerr("Foreign APK host accepted")
+        quit(32)
+        return
     # The fake server deliberately tampers with content.json but reuses its signature.
     manifest_result.clear()
     failed_reason = ""

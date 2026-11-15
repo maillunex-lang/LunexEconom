@@ -1,17 +1,18 @@
 extends RefCounted
 ## Single configurable public origin for Android. Override with ProjectSettings
 ## 'lunex/public_base_url' in trusted local build configuration.
-static var default_base_url: String = "https://rikagro.ru/lunexeconom"
+static var default_base_url: String = "https://rikagro.ru/lunexeconom/v2"
 
 static func base_url() -> String:
     var value := str(ProjectSettings.get_setting("lunex/public_base_url", default_base_url)).trim_suffix("/")
-    if not value.begins_with("https://") or "@" in value or "?" in value or "#" in value:
+    if not value.begins_with("https://") or value.length() <= 8 or "@" in value or "?" in value or "#" in value or "%" in value or "\\" in value or ".." in value or " " in value or "	" in value or "
+" in value or "//" in value.substr(8):
         return ""
     return value
 
 ## API route is separate from the public update/download origin.
-## Change lunex/api_path to "api" after the V1/V2 cutover.
-static var default_api_path: String = "v2/api"
+## V2 uses /api under the V2 public base. Change only for an approved future cutover.
+static var default_api_path: String = "api"
 
 static func api_url() -> String:
     var api_path := str(ProjectSettings.get_setting("lunex/api_path", default_api_path))
@@ -33,7 +34,7 @@ static func api_url() -> String:
     return base + "/" + api_path
 
 static func url(relative_path: String) -> String:
-    if relative_path.begins_with("/") or ".." in relative_path or "://" in relative_path:
+    if relative_path.is_empty() or relative_path.begins_with("/") or relative_path.ends_with("/") or ".." in relative_path or "://" in relative_path or "//" in relative_path or "?" in relative_path or "#" in relative_path or "%" in relative_path or "@" in relative_path or "\\" in relative_path:
         return ""
     var base := base_url()
     if base.is_empty():
