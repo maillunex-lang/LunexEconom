@@ -184,6 +184,48 @@ def create(name, kind, w, d):
         b.box(-.25,-2.89,0,.8,.06,1.25,"dark")
         b.box(0,-2.96,3.93,.98,.10,.16,"red")
         b.box(0,-2.97,3.93,.16,.11,.91,"red")
+    elif kind in ("grain_field","elevator","mill","bread_plant","oil_well","gas_well","sand_pit","logging_camp","factory","farm","mine"):
+        W,D=w*2,d*2
+        b.box(0,0,0,W-.12,D-.12,.08,"grass" if kind in ("grain_field","farm","logging_camp") else "sand")
+        if kind in ("grain_field","farm"):
+            for row in range(7):
+                y=-D*.40+row*D*.13
+                b.box(0,y,.08,W*.85,.16,.15,"yellow" if row%2 else "green")
+            b.box(-W*.34,D*.29,.08,.4,.4,.48,"wood")
+        elif kind=="elevator":
+            for x in (-1.45,0,1.45):
+                b.box(x,.55,.08,1.13,1.13,5.8,"light")
+                b.pyramid(x,.55,5.88,1.14,1.14,.6,"roof")
+            b.box(0,-1.5,.08,4.3,1.8,2.5,"brick2")
+            b.box(0,-2.43,.12,1.1,.07,1.8,"dark")
+        elif kind in ("mill","bread_plant","factory"):
+            b.box(0,0,.08,W*.84,D*.78,2.8,"brick2" if kind=="bread_plant" else "light")
+            b.box(0,0,2.88,W*.89,D*.83,.23,"roof")
+            for x in (-W*.25,0,W*.25):
+                b.box(x,-D*.39,.55,.48,.07,.95,"window")
+            b.box(W*.27,D*.15,3.11,.5,.5,1.5,"dark")
+            b.box(-W*.30,-D*.40,.08,.95,.08,1.65,"teal")
+        elif kind in ("oil_well","gas_well"):
+            b.box(0,0,.08,W*.8,D*.72,.17,"dark")
+            b.box(-.45,0,.25,.18,.24,3.3,"yellow" if kind=="oil_well" else "teal")
+            b.box(.45,0,.25,.18,.24,3.3,"yellow" if kind=="oil_well" else "teal")
+            b.box(0,0,3.5,2.2,.27,.22,"dark")
+            b.box(.35,.25,.5,.55,.8,.55,"red" if kind=="oil_well" else "blue")
+            b.box(1.2,.5,.25,.24,1.8,.25,"dark")
+        elif kind=="sand_pit":
+            for x,y in ((-1,-.7),(.9,-.5),(0,.8)):
+                b.pyramid(x,y,.08,1.7,1.6,.75,"sand")
+            b.box(-1.1,1.1,.08,.8,.6,.65,"yellow")
+        elif kind=="logging_camp":
+            b.box(-.6,0,.08,1.5,2.4,1.7,"wood")
+            b.pyramid(-.6,0,1.78,1.7,2.7,.75,"roof")
+            for y in (-1.25,-.7,-.15,.4,.95):
+                b.box(1.35,y,.1,1.2,.24,.24,"wood")
+            b.box(1.35,0,.35,1.3,2.6,.12,"wood")
+        elif kind=="mine":
+            b.box(0,.45,.08,W*.75,D*.48,1.0,"dark")
+            b.box(0,-D*.30,.08,W*.55,D*.18,1.3,"brick")
+            b.box(0,-D*.40,.08,1.2,.07,.9,"dark")
     elif kind=="park":
         b.box(0,0,0,3.92,3.92,.07,"grass")
         b.box(0,0,.07,3.82,.38,.03,"pave")
@@ -229,7 +271,18 @@ def main():
         ("hospital_3x3","hospital",3,3), ("park_2x2","park",2,2),
         ("road_straight_1x1","road_straight",1,1),
         ("road_cross_1x1","road_cross",1,1),
-        ("bridge_1x1","bridge",1,1)]
+        ("bridge_1x1","bridge",1,1),
+        ("grain_field_3x2","grain_field",3,2),
+        ("elevator_3x3","elevator",3,3),
+        ("mill_3x2","mill",3,2),
+        ("bread_plant_3x2","bread_plant",3,2),
+        ("oil_well_2x2","oil_well",2,2),
+        ("gas_well_2x2","gas_well",2,2),
+        ("sand_pit_2x2","sand_pit",2,2),
+        ("logging_camp_2x3","logging_camp",2,3),
+        ("factory_3x2","factory",3,2),
+        ("farm_2x2","farm",2,2),
+        ("mine_2x3","mine",2,3)]
     manifest=[]
     for name,kind,w,d in specs:
         mesh=create(name,kind,w,d)
@@ -238,7 +291,7 @@ def main():
         print(name, row["triangles"], "triangles", flush=True)
     # This metadata is used only by documentation script, not the Android client.
     (output.parent.parent.parent/"tools/models_build.json").write_text(json.dumps(manifest,indent=2))
-    assert len(manifest)==13
+    assert len(manifest)==24
 
 
 if __name__=="__main__":

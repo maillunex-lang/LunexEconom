@@ -115,5 +115,104 @@
     "triangles": 132,
     "height_m": 1.1,
     "license": "Original / CC0"
+  },
+  {
+    "file": "grain_field_3x2.glb",
+    "kind": "grain_field",
+    "w": 3,
+    "h": 2,
+    "triangles": 108,
+    "height_m": 0.56,
+    "license": "Original / CC0"
+  },
+  {
+    "file": "elevator_3x3.glb",
+    "kind": "elevator",
+    "w": 3,
+    "h": 3,
+    "triangles": 90,
+    "height_m": 6.48,
+    "license": "Original / CC0"
+  },
+  {
+    "file": "mill_3x2.glb",
+    "kind": "mill",
+    "w": 3,
+    "h": 2,
+    "triangles": 96,
+    "height_m": 4.61,
+    "license": "Original / CC0"
+  },
+  {
+    "file": "bread_plant_3x2.glb",
+    "kind": "bread_plant",
+    "w": 3,
+    "h": 2,
+    "triangles": 96,
+    "height_m": 4.61,
+    "license": "Original / CC0"
+  },
+  {
+    "file": "oil_well_2x2.glb",
+    "kind": "oil_well",
+    "w": 2,
+    "h": 2,
+    "triangles": 84,
+    "height_m": 3.72,
+    "license": "Original / CC0"
+  },
+  {
+    "file": "gas_well_2x2.glb",
+    "kind": "gas_well",
+    "w": 2,
+    "h": 2,
+    "triangles": 84,
+    "height_m": 3.72,
+    "license": "Original / CC0"
+  },
+  {
+    "file": "sand_pit_2x2.glb",
+    "kind": "sand_pit",
+    "w": 2,
+    "h": 2,
+    "triangles": 42,
+    "height_m": 0.83,
+    "license": "Original / CC0"
+  },
+  {
+    "file": "logging_camp_2x3.glb",
+    "kind": "logging_camp",
+    "w": 2,
+    "h": 3,
+    "triangles": 102,
+    "height_m": 2.53,
+    "license": "Original / CC0"
+  },
+  {
+    "file": "factory_3x2.glb",
+    "kind": "factory",
+    "w": 3,
+    "h": 2,
+    "triangles": 96,
+    "height_m": 4.61,
+    "license": "Original / CC0"
+  },
+  {
+    "file": "farm_2x2.glb",
+    "kind": "farm",
+    "w": 2,
+    "h": 2,
+    "triangles": 108,
+    "height_m": 0.56,
+    "license": "Original / CC0"
+  },
+  {
+    "file": "mine_2x3.glb",
+    "kind": "mine",
+    "w": 2,
+    "h": 3,
+    "triangles": 48,
+    "height_m": 1.38,
+    "license": "Original / CC0"
   }
 ]
