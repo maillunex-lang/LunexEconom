@@ -7,6 +7,7 @@ var mode := "tree"
 var brush_size := 1
 var status: Label
 var send_button: Button
+var object_id_input: LineEdit
 
 func _ready() -> void:
     name = "DeveloperEditor"
@@ -26,6 +27,13 @@ func _ready() -> void:
         sizes.add_item("%d × %d" % [n, n])
     sizes.item_selected.connect(func(index: int) -> void: brush_size = [1, 3, 5][index])
     column.add_child(sizes)
+    object_id_input = LineEdit.new()
+    object_id_input.placeholder_text = "ID здания для перемещения"
+    column.add_child(object_id_input)
+    var move_button := Button.new()
+    move_button.text = "Переместить здание в выбранную клетку"
+    move_button.pressed.connect(_move_building)
+    column.add_child(move_button)
     status = Label.new()
     status.text = "Выберите клетку на карте"
     column.add_child(status)
@@ -60,6 +68,13 @@ func _apply() -> void:
         _send("dev/roads", {"request_id": _uuid(), "operation": mode.trim_prefix("road_"), "cells": cells})
     else:
         _send("dev/terrain", {"request_id": _uuid(), "kind": mode, "cells": cells})
+
+func _move_building() -> void:
+    var oid := object_id_input.text.strip_edges()
+    if oid.is_empty():
+        status.text = "Укажите ID здания"
+        return
+    _send("dev/move", {"request_id": _uuid(), "object_id": oid, "x": selected.x, "y": selected.y})
 
 func _send(endpoint: String, payload: Dictionary) -> void:
     if not GameSession.is_authenticated(): return
