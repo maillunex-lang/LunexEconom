@@ -1,0 +1,66 @@
+# Экран обновлений (update_screen.ru.md)
+
+Ключ | текст
+
+update.screen.title | Обновление
+update.screen.checking | Проверяем обновления...
+update.screen.available | Доступна версия {version}
+update.screen.available_desc | Есть новые события и правки. Можно обновить сейчас.
+update.screen.download | Скачать обновление
+update.screen.downloading | Загрузка... {progress}%
+update.screen.download_progress | Скачано {downloaded} из {total}
+update.screen.wifi_only | Только по Wi-Fi
+update.screen.wifi_only_desc | Мобильный интернет не используется, пока не разрешишь.
+update.screen.allow_mobile | Разрешить мобильный интернет
+update.screen.install | Установить
+update.screen.installing | Установка...
+update.screen.restart | Перезапустить игру
+update.screen.success | Обновление установлено
+update.screen.success_desc | Можно продолжать игру.
+update.screen.error.network | Нет сети. Проверь подключение и попробуй снова.
+update.screen.error.space | Не хватает места. Освободи память и повтори.
+update.screen.error.corrupt | Файл повреждён. Скачай обновление заново.
+update.screen.error.signature | Подпись не прошла. Обновление отменено.
+update.screen.error.mandatory | Обязательное обновление. Без него игра не запустится.
+update.screen.error.generic | Не удалось обновить. Попробуй позже.
+update.screen.retry | Повторить
+update.screen.later | Позже
+update.screen.skip | Пропустить
+update.screen.resources.title | Ресурсы
+update.screen.resources.checking | Проверяем пакеты ресурсов...
+update.screen.resources.available | Доступны новые ресурсы
+update.screen.resources.downloaded | Скачано {amount}
+update.screen.resources.background | Скачивание в фоне
+update.screen.resources.pause | Пауза
+update.screen.resources.resume | Продолжить
+update.screen.resources.complete | Ресурсы обновлены
+update.screen.resources.error | Не удалось скачать ресурсы
+update.screen.resources.retry | Скачать снова
+update.screen.version.current | Текущая версия: {version}
+update.screen.version.new | Новая версия: {version}
+update.screen.size | Размер: {size}
+update.screen.changelog | Что нового
+update.screen.changelog.empty | Список изменений пока пуст.
+update.screen.progress.preparing | Подготовка...
+update.screen.progress.downloading | Загрузка файлов
+update.screen.progress.verifying | Проверка целостности
+update.screen.progress.installing | Установка
+update.screen.button.cancel | Отмена
+update.screen.button.ok | Хорошо
+update.screen.note.wifi | Рекомендуем Wi-Fi, чтобы не тратить мобильный трафик.
+update.screen.note.mandatory | Это обновление нужно установить, чтобы продолжить.
+update.screen.note.optional | Можно обновить позже, игра останется рабочей.
+update.screen.resources.queue | В очереди на загрузку
+update.screen.resources.paused | Загрузка на паузе
+update.screen.resources.speed | Скорость: {speed}
+update.screen.resources.eta | Осталось примерно {time}
+update.screen.error.timeout | Время ожидания вышло. Попробуй ещё раз.
+update.screen.error.server | Сервер временно недоступен.
+update.screen.force.title | Требуется обновление
+update.screen.force.desc | Установи новую версию, чтобы войти в игру.
+update.screen.resources.patch | Патч ресурсов
+update.screen.resources.full | Полный пакет
+update.screen.status.idle | Ожидание
+update.screen.status.busy | Обновление идёт
+update.screen.status.done | Готово
+update.screen.help | Если проблема повторяется, напиши в поддержку.
