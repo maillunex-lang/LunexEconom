@@ -19,6 +19,22 @@ static func material(color: Color) -> StandardMaterial3D:
 	_materials[key] = m
 	return m
 
+## GLB files carry their colours as vertex colours (COLOR_0) on one material; Godot does not switch those on by itself.
+static var _vertex_material: StandardMaterial3D
+static func vertex_color_material() -> StandardMaterial3D:
+	if _vertex_material == null:
+		_vertex_material = StandardMaterial3D.new()
+		_vertex_material.vertex_color_use_as_albedo = true
+		_vertex_material.roughness = 0.92
+		_vertex_material.cull_mode = BaseMaterial3D.CULL_DISABLED
+	return _vertex_material
+
+static func _paint(node: Node) -> void:
+	if node is MeshInstance3D:
+		(node as MeshInstance3D).material_override = vertex_color_material()
+	for child in node.get_children():
+		_paint(child)
+
 static func _hash(text: String) -> int:
 	var value: int = 2166136261
 	for byte in text.to_utf8_buffer():
@@ -77,7 +93,7 @@ static func make(kind: String, w: int, h: int, object_id: String = "", owner: St
 	var root := Node3D.new()
 	root.name = "Building"
 	var top := 0.0
-	var model := _model_for(kind, w, h)
+	var model := _model_for(kind, w, h, object_id)
 	if model != null:
 		root.add_child(model)
 		top = float(model.get_meta("top", 2.0))
@@ -96,15 +112,61 @@ static func make(kind: String, w: int, h: int, object_id: String = "", owner: St
 	return root
 
 # ---------- GLB models ----------
-static func model_path(kind: String, w: int, h: int) -> Dictionary:
-	for item in [["%s_%dx%d.glb" % [kind, w, h], false], ["%s_%dx%d.glb" % [kind, h, w], true]]:
+## Visual variants of one kind and size: files "<kind>_<variant>_<w>x<h>.glb". One is chosen per building from its object id, so a street
+## of identical 1x1 houses looks mixed, and a given house always keeps its look.
+const VARIANTS := {"house": ["panel", "brick", "modern"]}
+
+static func model_path(kind: String, w: int, h: int, object_id: String = "") -> Dictionary:
+	var names: Array = []
+	if VARIANTS.has(kind):
+		var found_variants: Array = []
+		for variant in VARIANTS[kind]:
+			if ResourceLoader.exists(MODEL_DIR + "%s_%s_%dx%d.glb" % [kind, variant, w, h]) or ResourceLoader.exists(MODEL_DIR + "%s_%s_%dx%d.glb" % [kind, variant, h, w]):
+				found_variants.append(variant)
+		if not found_variants.is_empty():
+			var chosen: String = found_variants[_hash(object_id + kind) % found_variants.size()]
+			names.append(["%s_%s_%dx%d.glb" % [kind, chosen, w, h], false])
+			names.append(["%s_%s_%dx%d.glb" % [kind, chosen, h, w], true])
+	names.append(["%s_%dx%d.glb" % [kind, w, h], false])
+	names.append(["%s_%dx%d.glb" % [kind, h, w], true])
+	for item in names:
 		var path: String = MODEL_DIR + str(item[0])
 		if ResourceLoader.exists(path):
 			return {"path": path, "rotate": bool(item[1]) and w != h}
 	return {}
 
-static func _model_for(kind: String, w: int, h: int) -> Node3D:
-	var found := model_path(kind, w, h)
+## The mesh (with its material) of the first mesh in a GLB, for MultiMesh instancing of small repeated pieces such as road tiles. {} if absent.
+static var _piece_cache: Dictionary = {}
+static func piece(name: String) -> Dictionary:
+	if _piece_cache.has(name):
+		return _piece_cache[name]
+	var out: Dictionary = {}
+	var path := MODEL_DIR + name + ".glb"
+	if ResourceLoader.exists(path):
+		var scene = load(path)
+		if scene is PackedScene:
+			var instance: Node = (scene as PackedScene).instantiate()
+			var found := _first_mesh(instance, Transform3D.IDENTITY)
+			if not found.is_empty():
+				out = found
+			instance.free()
+	_piece_cache[name] = out
+	return out
+
+static func _first_mesh(node: Node, xform: Transform3D) -> Dictionary:
+	var here := xform
+	if node is Node3D:
+		here = xform * (node as Node3D).transform
+	if node is MeshInstance3D and (node as MeshInstance3D).mesh != null:
+		return {"mesh": (node as MeshInstance3D).mesh, "transform": here}
+	for child in node.get_children():
+		var found := _first_mesh(child, here)
+		if not found.is_empty():
+			return found
+	return {}
+
+static func _model_for(kind: String, w: int, h: int, object_id: String = "") -> Node3D:
+	var found := model_path(kind, w, h, object_id)
 	if found.is_empty():
 		return null
 	var path: String = found["path"]
@@ -116,6 +178,7 @@ static func _model_for(kind: String, w: int, h: int) -> Node3D:
 	var instance: Node3D = (scene as PackedScene).instantiate() as Node3D
 	if instance == null:
 		return null
+	_paint(instance)
 	var box := _aabb(instance, Transform3D.IDENTITY)
 	if box.size.x <= 0.001 or box.size.z <= 0.001:
 		instance.free()

@@ -356,6 +356,7 @@ func build_chunk(coord: Vector2i) -> void:
 	var st := SurfaceTool.new()
 	st.begin(Mesh.PRIMITIVE_TRIANGLES)
 	var trees: Array = []
+	var road_pieces := {"road_straight_1x1": [], "road_cross_1x1": []}
 	var half := CELL * 0.5
 	for x in range(coord.x * CHUNK, (coord.x + 1) * CHUNK):
 		for y in range(coord.y * CHUNK, (coord.y + 1) * CHUNK):
@@ -385,7 +386,7 @@ func build_chunk(coord: Vector2i) -> void:
 				color = color.darkened(1.0 - OUTSIDE_DIM)
 			_quad(st, cx - half, cz - half, cx + half, cz + half, -0.02 if kind == 4 else 0.0, color)
 			if kind == 3:
-				_road_marks(st, cell, cx, cz)
+				_road_piece(cell, cx, cz, road_pieces, st)
 			elif kind == 5:
 				trees.append(cell)
 	var ground := MeshInstance3D.new()
@@ -395,7 +396,44 @@ func build_chunk(coord: Vector2i) -> void:
 	node.add_child(ground)
 	if not trees.is_empty():
 		_plant_trees(node, trees)
+	_place_road_pieces(node, road_pieces)
 	last_build_usec = Time.get_ticks_usec() - start
+
+## Road models (GLB road_straight_1x1 / road_cross_1x1) go on straight stretches and junctions; bends and dead ends stay plain asphalt. Without the
+## GLB files the centre-line marks of the ground mesh are used.
+func _road_piece(cell: Vector2i, cx: float, cz: float, pieces: Dictionary, st: SurfaceTool) -> void:
+	var mask: int = TOPOLOGY.mask_at(roads, cell)
+	var shape: String = TOPOLOGY.shape(mask)
+	var name := ""
+	var turn := 0.0
+	if shape == "straight":
+		name = "road_straight_1x1"
+		turn = 0.0 if (mask == TOPOLOGY.NORTH | TOPOLOGY.SOUTH) else PI * 0.5
+	elif shape == "t_junction" or shape == "cross":
+		name = "road_cross_1x1"
+	if name != "" and not MODELS.piece(name).is_empty():
+		pieces[name].append(Transform3D(Basis(Vector3.UP, turn), Vector3(cx, 0.0, cz)))
+	else:
+		_road_marks(st, cell, cx, cz)
+
+func _place_road_pieces(node: Node3D, pieces: Dictionary) -> void:
+	for name in pieces:
+		var list: Array = pieces[name]
+		if list.is_empty():
+			continue
+		var piece: Dictionary = MODELS.piece(name)
+		var local: Transform3D = piece["transform"]
+		var multi := MultiMesh.new()
+		multi.transform_format = MultiMesh.TRANSFORM_3D
+		multi.mesh = piece["mesh"]
+		multi.instance_count = list.size()
+		for i in list.size():
+			multi.set_instance_transform(i, (list[i] as Transform3D) * local)
+		var holder := MultiMeshInstance3D.new()
+		holder.name = "Roads_" + name
+		holder.multimesh = multi
+		holder.material_override = MODELS.vertex_color_material()
+		node.add_child(holder)
 
 func _road_marks(st: SurfaceTool, cell: Vector2i, cx: float, cz: float) -> void:
 	var mask: int = TOPOLOGY.mask_at(roads, cell)

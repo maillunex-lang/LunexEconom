@@ -64,6 +64,23 @@ func _run() -> void:
 	world.flush_all()
 	_check(world.building_nodes.has("h13") and world.building_nodes.has("fa1"), "a snapshot replaces only its own chunk")
 
+	# house variants: three looks for a 1x1 house, stable per object id, mixed across a street; single files for 1x2 and 1x3
+	var models = load("res://world3d/building_models.gd")
+	var looks: Dictionary = {}
+	for i in range(60):
+		looks[str(models.model_path("house", 1, 1, "house-%d" % i).get("path", ""))] = true
+	_check(looks.size() == 3, "three house variants are used: " + str(looks.keys()))
+	_check(models.model_path("house", 1, 1, "same").get("path") == models.model_path("house", 1, 1, "same").get("path"), "a house keeps its look")
+	_check(str(models.model_path("house", 1, 3, "x").get("path", "")).ends_with("house_1x3.glb"), "house 1x3 model")
+	_check(models.model_path("house", 3, 1, "x").get("rotate", false) == true, "a 3x1 plot uses the 1x3 model turned")
+	_check(not models.piece("road_straight_1x1").is_empty() and not models.piece("road_cross_1x1").is_empty(), "road pieces are available")
+	# road models: straight stretches and junctions are instanced by the chunk, ground asphalt stays under them
+	var ufa_chunk: Node3D = world.active_chunks[Vector2i(0, 0)]
+	_check(ufa_chunk.get_node_or_null("Roads_road_straight_1x1") != null, "straight road model instanced")
+	_check(ufa_chunk.get_node_or_null("Roads_road_cross_1x1") != null, "junction model instanced")
+	var straight: MultiMeshInstance3D = ufa_chunk.get_node("Roads_road_straight_1x1")
+	_check(straight.multimesh.instance_count >= 4, "the crossroads arms are straight pieces: %d" % straight.multimesh.instance_count)
+
 	# every kind gets a visual of the right footprint
 	for kind in ["farm", "mine", "factory", "warehouse", "shop", "school", "hospital", "park", "house"]:
 		var node: Node3D = load("res://world3d/building_models.gd").make(kind, 2, 3, "x", "")
