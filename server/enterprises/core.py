@@ -262,7 +262,12 @@ def _advance_build(conn, eid, day, info):
     while stage<4:
         duration=durations[stage]
         if duration:
-            progress += 1 if progress<duration else 0
+            # Reaching a due boundary creates a persistent wait. While it
+            # remains unpaid, do not accrue more elapsed stage days.
+            waiting=conn.execute('SELECT 1 FROM enterprise_build_waits '
+                                 'WHERE enterprise_id=%s',(eid,)).fetchone()
+            if not waiting and progress<duration:
+                progress += 1
             if progress<duration:
                 break
         new_stage=stage+1
