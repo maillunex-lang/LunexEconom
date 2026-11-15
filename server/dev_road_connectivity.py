@@ -70,21 +70,27 @@ def validate_removal(db, ph, removed):
     return None
 
 def validate_building_move(db, ph, object_id, old_cells, new_cells):
-    """Check destination road access and avoid blocking another building's access.
+    """Require an entrance into a component rooted at a city base road.
 
-    A building which had an entrance must still have one; moves of existing
-    buildings must not strand other buildings by covering their sole road
-    entrance. The road graph itself is unchanged.
+    Isolated developer-painted roads are not sufficient for access to city
+    services. The graph is evaluated against the current world state without
+    writing any economic data.
     """
     dynamic = {(int(x), int(y)) for x, y in db.execute("SELECT x,y FROM roads")}
-    network = dynamic | _base_roads()
-    if not network:
-        return "destination_road_access"
+    base = _base_roads()
+    network = dynamic | base
     target = set(new_cells)
-    if not any((x + dx, y + dy) in network for x, y in target for dx, dy in roads.DIRS):
-        return "destination_road_access"
-    # The destination cannot cover roads, checked by caller; this defensive
-    # check also prevents future callers bypassing that validation.
     if target & network:
         return "road_overlap"
+    entrances = {
+        (x + dx, y + dy)
+        for x, y in target for dx, dy in roads.DIRS
+        if (x + dx, y + dy) in network
+    }
+    if not entrances:
+        return "destination_road_access"
+    labels = _components(network)
+    anchored = {labels[c] for c in base}
+    if not any(labels[entry] in anchored for entry in entrances):
+        return "destination_road_disconnected"
     return None
