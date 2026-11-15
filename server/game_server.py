@@ -68,6 +68,12 @@ def _prepare(db):
     import deposits
     deposits.ensure(db, "?")
     zoning.ensure(db, "?")
+    import terrain_edits
+    terrain_edits.ensure(db)
+    # BEGIN ChatGPT11 schema
+    import holding
+    holding.ensure(db, "?")
+    # END ChatGPT11 schema
     db.commit()
 
 
@@ -106,7 +112,9 @@ def build(owner, payload):
         x0,x1,y0,y1=road_rules.search_box(footprint)
         dynamic={(rx,ry) for rx,ry in db.execute("SELECT x,y FROM roads WHERE x BETWEEN ? AND ? AND y BETWEEN ? AND ?",(x0,x1,y0,y1))}
         occupied={(cx_,cy_) for cx_,cy_ in db.execute("SELECT x,y FROM cells WHERE x BETWEEN ? AND ? AND y BETWEEN ? AND ?",(x0,x1,y0,y1))}
-        error,path=road_rules.plan_access(footprint,dynamic,occupied,MAX_COORD)
+        import terrain_rules
+        overrides=terrain_rules.preload(db, "?", (x0,x1,y0,y1))
+        error,path=road_rules.plan_access(footprint,dynamic,occupied,MAX_COORD,overrides)
         if error:
             return 409,{"error":error}
         import deposits
@@ -585,6 +593,14 @@ class Handler(BaseHTTPRequestHandler):
         return True
     def do_GET(self):
         url=urlsplit(self.path)
+        # BEGIN ChatGPT11 routes
+        if url.path in ('/hq','/enterprise','/finance/overview'):
+            import routes_hq
+            owner=self._identity()
+            if not owner:return self._send(401,{'error':'unauthorized'})
+            with NPC_CONNECT() as db:
+                return self._send(*routes_hq.get(db,NPC_PH,owner,url.path,parse_qs(url.query,keep_blank_values=True)))
+        # END ChatGPT11 routes
         if url.path == "/terrain/chunk":
             import devtools
             try:
@@ -697,6 +713,22 @@ class Handler(BaseHTTPRequestHandler):
             return self._send(*result)
         return self._send(404,{"error":"not_found"})
     def do_POST(self):
+        # BEGIN ChatGPT11 routes
+        if urlsplit(self.path).path == '/enterprise/settings':
+            import routes_hq
+            owner=self._identity()
+            if not owner:return self._send(401,{'error':'unauthorized'})
+            try:
+                size=int(self.headers.get('Content-Length','0'))
+                if size<2 or size>4096:return self._send(400,{'error':'invalid_body'})
+                payload=json.loads(self.rfile.read(size))
+            except (ValueError,UnicodeError,json.JSONDecodeError):
+                return self._send(400,{'error':'invalid_body'})
+            with LOCK, NPC_CONNECT() as db:
+                if NPC_PH=='%s':db.execute('SELECT pg_advisory_xact_lock(20261114)')
+                else:db.execute('BEGIN IMMEDIATE')
+                return self._send(*routes_hq.post(db,NPC_PH,owner,'/enterprise/settings',payload,int(time.time())))
+        # END ChatGPT11 routes
         if urlsplit(self.path).path.startswith("/dev/"):
             import devtools
             path = urlsplit(self.path).path

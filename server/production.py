@@ -662,6 +662,10 @@ def step_month(db, ph, month, now):
             nxt = next_population(pop_r[region], jobs_r[region], lab_r[region]["labor_force"], 0.0)
             regions.save_population(db, ph, region, month, lab_r[region], staffing_r[region], nxt)
     deposits.store_remaining(db, ph, well_left)
+    # BEGIN ChatGPT11 monthly
+    import auto_managers
+    auto_managers.monthly(db, ph, month, now)
+    # END ChatGPT11 monthly
 
 
 def _split_units(offers, qty):

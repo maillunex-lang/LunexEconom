@@ -65,7 +65,7 @@ def search_box(footprint, radius=SEARCH_RADIUS):
     return min(xs) - radius, max(xs) + radius, min(ys) - radius, max(ys) + radius
 
 
-def plan_access(footprint, dynamic_roads, occupied, max_coord):
+def plan_access(footprint, dynamic_roads, occupied, max_coord, overrides=None):
     """Validate the footprint and plan the access road.
 
     Returns (error, path). `error` is None when the footprint is acceptable;
@@ -73,6 +73,7 @@ def plan_access(footprint, dynamic_roads, occupied, max_coord):
     road (empty when the footprint already touches a road).
     """
     fset = set(footprint)
+    import terrain_rules
 
     def road(c):
         return is_base_road(*c) or c in dynamic_roads
@@ -80,7 +81,7 @@ def plan_access(footprint, dynamic_roads, occupied, max_coord):
     for c in footprint:
         if road(c):
             return "road_overlap", []
-        if is_water(*c):
+        if terrain_rules.is_water(*c,overrides):
             return "water", []
     if any(road((x + dx, y + dy)) for x, y in footprint for dx, dy in DIRS):
         return None, []
@@ -88,7 +89,7 @@ def plan_access(footprint, dynamic_roads, occupied, max_coord):
     def free(c):
         if c in fset or c in occupied or abs(c[0]) > max_coord or abs(c[1]) > max_coord:
             return False
-        return road(c) or not is_water(*c)
+        return road(c) or not terrain_rules.is_water(*c,overrides)
 
     prev, queue = {}, deque()
     for x, y in footprint:
