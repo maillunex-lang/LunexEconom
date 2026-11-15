@@ -42,6 +42,10 @@ class DeveloperToolsTests(unittest.TestCase):
         self.assertEqual(self.db.execute("SELECT owner,x,y FROM buildings WHERE id='b1'").fetchone(),("player",15,16))
         self.assertEqual(devtools.building_move(self.db,"?","dev",payload,"local")[1]["replayed"],True)
         self.assertEqual(self.db.execute("SELECT COUNT(*) FROM cells WHERE object_id='b1'").fetchone()[0],2)
+        undo={"request_id":"b0f1e34b-cda2-4924-a687-a421c82f581d"}
+        self.assertEqual(devtools.undo(self.db,"?","dev",undo,"local")[0],200)
+        self.assertEqual(self.db.execute("SELECT x,y FROM buildings WHERE id='b1'").fetchone(),(11,12))
+        self.assertTrue(devtools.undo(self.db,"?","dev",undo,"local")[1]["replayed"])
         self.db.execute("INSERT INTO cells VALUES (20,20,'other')")
         blocked=dict(payload,request_id="6d1a31fd-099e-492b-a00c-feb6ce8354a5",x=20,y=20)
         self.assertEqual(devtools.building_move(self.db,"?","dev",blocked,"local")[1]["error"],"occupied")
