@@ -1,4 +1,5 @@
 extends Control
+const UpdatesPanel = preload("res://update/updates_panel.gd")
 ## LunexEconom V2.1 platform client: Android landscape / Forest Glass.
 
 const BACKGROUND := Color("0a201b")
@@ -22,7 +23,7 @@ var status_label: Label
 var hq_status: Label
 var wallet_label: Label
 var calendar_label: Label
-var update_label: Label
+var update_screen: Control
 var token := ""
 var refresh_token := ""
 var _auth_busy := false
@@ -34,6 +35,9 @@ func _ready() -> void:
     _build_headquarters()
     headquarters.hide()
     _on_viewport_resized()
+    update_screen = UpdatesPanel.new()
+    update_screen.name = "UpdatesPanel"
+    add_child(update_screen)
     call_deferred("_restore_session")
     var presence_timer := Timer.new()
     presence_timer.name = "PresenceTimer"
@@ -159,7 +163,6 @@ func _build_headquarters() -> void:
     calendar_label = _label("Игровое время: загрузка…",headquarters)
     _label("Предприятия появятся в следующем модуле.",headquarters,14)
     hq_status = _label("Связь с игровым сервером…",headquarters,14)
-    update_label = _label("Подписанные обновления ещё не проверены",headquarters,14)
     var buttons := HBoxContainer.new()
     buttons.add_theme_constant_override("separation",10)
     headquarters.add_child(buttons)
@@ -167,7 +170,7 @@ func _build_headquarters() -> void:
     refresh_btn.pressed.connect(_load_hq)
     buttons.add_child(refresh_btn)
     var update_btn := _button("Проверить обновление")
-    update_btn.pressed.connect(_check_update)
+    update_btn.pressed.connect(func(): update_screen.open())
     buttons.add_child(update_btn)
     var logout := _button("Выйти")
     logout.pressed.connect(_logout)
@@ -315,34 +318,6 @@ func _verify_signed_config(config: Dictionary, public_pem: String = "") -> bool:
     hasher.update(raw)
     var sha256: PackedByteArray = hasher.finish()
     return Crypto.new().verify(HashingContext.HASH_SHA256,sha256,sig,key)
-
-func _check_update() -> void:
-    update_label.text = "Проверяем подписанную конфигурацию…"
-    var response: Dictionary = await _api("/config")
-    if response.code != 200:
-        update_label.text = "Конфигурация ещё не подписана или недоступна"
-        return
-    var config: Dictionary = response.data
-    if not _verify_signed_config(config):
-        update_label.text = "Обновление отклонено: подпись RSA не подтверждена"
-        return
-    var cache := ConfigFile.new()
-    cache.load(CONFIG_CACHE_PATH)
-    var previous := int(cache.get_value("config","revision",0))
-    var revision := int(config.get("revision",0))
-    if revision < previous:
-        update_label.text = "Обновление отклонено: устаревшая ревизия"
-        return
-    var payload: Variant = JSON.parse_string(Marshalls.base64_to_raw(str(config.get("payload_b64",""))).get_string_from_utf8())
-    if not payload is Dictionary:
-        update_label.text = "Недействительный формат конфигурации"
-        return
-    cache.set_value("config","revision",revision)
-    cache.save(CONFIG_CACHE_PATH)
-    var latest := str((payload as Dictionary).get("android_version",VERSION))
-    update_label.text = "Проверено · Ревизия %s · Версия %s" % [revision,latest]
-    if latest != VERSION:
-        update_label.text += " · Доступна новая версия"
 
 func _logout() -> void:
     var old := refresh_token

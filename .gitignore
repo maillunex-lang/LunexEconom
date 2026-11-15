@@ -10,3 +10,12 @@ client/.godot/**
 *.apk
 build/
 .DS_Store
+
+# Generated Android plugin and Godot Gradle project artifacts
+client/android/
+client/android_plugin/.gradle/
+client/android_plugin/plugin/build/
+client/addons/lunex_installer/bin/
+client/config/*.p12
+client/config/*.jks
+client/config/*private*.pem
