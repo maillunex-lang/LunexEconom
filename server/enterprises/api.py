@@ -117,6 +117,8 @@ def sell(body,ctx):
         return 400,{'error':'invalid_request_id'}
     conn=ctx['conn']
     conn.execute('SELECT id FROM enterprises WHERE id=%s FOR UPDATE',(row[0],))
+    if row[4]!=4:
+        return 409,{'error':'construction_not_complete'}
     if any(v['quantity']>0 for v in core.stock(conn,row[0]).values()):
         return 409,{'error':'inventory_not_empty'}
     previous=conn.execute('SELECT enterprise_id,owner_id,price,transfer_id FROM enterprise_sale_requests WHERE request_id=%s',(req,)).fetchone()
