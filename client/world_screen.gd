@@ -22,6 +22,8 @@ func _ready() -> void:
     _setup_tutorial()
     _setup_geo_features()
     _setup_top_hud()
+    _setup_hq_navigation()
+    call_deferred("_restore_hq_focus")
     _refresh_terms()
     _refresh_wallet()
     _connect_server()
@@ -1710,3 +1712,29 @@ func geo_month_index() -> int:
     var span := maxi(int(game_clock.get("month_seconds", 86400)), 1)
     var elapsed := maxf(Time.get_unix_time_from_system() + clock_offset - float(game_clock.get("epoch", 0)), 0.0)
     return int(game_clock.get("base_index", 0)) + int(elapsed / span)
+
+# EX-13: only two integration hooks; the existing map and UI remain intact.
+func _setup_hq_navigation() -> void:
+    var top: HBoxContainer = $UIOverlay/HUD/Top
+    var button := Button.new()
+    button.name = "HeadquartersButton"
+    button.text = "⌂ В штаб-квартиру"
+    button.custom_minimum_size = Vector2(190, 48)
+    button.pressed.connect(_back_to_hq)
+    top.add_child(button)
+    top.move_child(button, 0)
+
+func _restore_hq_focus() -> void:
+    var tree := get_tree()
+    if not tree.has_meta("hq_focus_cell"):
+        return
+    var target: Vector2i = tree.get_meta("hq_focus_cell")
+    tree.remove_meta("hq_focus_cell")
+    if target == Vector2i(-1, -1):
+        return
+    world.focus_cell(target)
+    world.select_cell(target)
+    set_selection(target)
+
+func _back_to_hq() -> void:
+    get_tree().change_scene_to_file("res://hq.tscn")
