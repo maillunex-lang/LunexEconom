@@ -94,6 +94,26 @@ class DeveloperToolsTests(unittest.TestCase):
         blocked=dict(payload,request_id="6d1a31fd-099e-492b-a00c-feb6ce8354a5",x=20,y=20)
         self.assertEqual(devtools.building_move(self.db,"?","dev",blocked,"local")[1]["error"],"occupied")
 
+    def test_move_rejects_incompatible_zone(self):
+        self.db.execute("INSERT INTO buildings VALUES ('b1','player','shop',11,12,0)")
+        self.db.execute("INSERT INTO cells VALUES (11,12,'b1')")
+        payload={"request_id":"c2c3ad2b-180e-4517-839c-c47e48dbd7cb","object_id":"b1","x":30,"y":30}
+        with patch("zoning.check", return_value=("industrial",("center","suburb"))):
+            status,result=devtools.building_move(self.db,"?","dev",payload,"local")
+        self.assertEqual(status,409,result)
+        self.assertEqual(result["error"],"invalid_destination_zone")
+        self.assertEqual(self.db.execute("SELECT x,y FROM buildings WHERE id='b1'").fetchone(),(11,12))
+
+    def test_road_removal_protects_adjacent_building(self):
+        self.db.execute("INSERT INTO buildings VALUES ('b1','player','shop',12,12,0)")
+        self.db.execute("INSERT INTO cells VALUES (12,12,'b1')")
+        self.db.execute("INSERT INTO roads VALUES (11,12,'dev',0)")
+        payload={"request_id":"c2c3ad2b-180e-4517-839c-c47e48dbd7cb","operation":"remove","cells":[[11,12]]}
+        status,result=devtools.roads_set(self.db,"?","dev",payload,"local")
+        self.assertEqual(status,409,result)
+        self.assertEqual(result["error"],"building_access_road")
+        self.assertIsNotNone(self.db.execute("SELECT 1 FROM roads WHERE x=11 AND y=12").fetchone())
+
     def test_roads_add_remove_and_idempotency(self):
         add={"request_id":"c2c3ad2b-180e-4517-839c-c47e48dbd7cb","operation":"add","cells":[[11,12]]}
         self.assertEqual(devtools.roads_set(self.db,"?","dev",add,"local")[0],200)
