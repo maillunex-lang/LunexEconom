@@ -69,6 +69,15 @@ class DeveloperToolsTests(unittest.TestCase):
         self.db.execute("INSERT INTO roads VALUES (1,2,'city',0)")
         self.assertEqual(devtools.terrain_set(self.db,"?","dev",payload,"local")[1]["error"],"road_overlap")
 
+    def test_undo_rejects_newer_same_cell_action(self):
+        first={"request_id":"c2c3ad2b-180e-4517-839c-c47e48dbd7cb","kind":"tree","cells":[[1,2]]}
+        second={"request_id":"6d1a31fd-099e-492b-a00c-feb6ce8354a5","kind":"tree","cells":[[1,2]]}
+        self.assertEqual(devtools.terrain_set(self.db,"?","dev",first,"local")[0],200)
+        self.assertEqual(devtools.terrain_set(self.db,"?","dev",second,"local")[0],200)
+        self.db.execute("UPDATE dev_actions SET undone=1 WHERE id=?", (second["request_id"],))
+        result=devtools.undo(self.db,"?","dev",{"request_id":"b0f1e34b-cda2-4924-a687-a421c82f581d"},"local")
+        self.assertEqual(result[0],200)
+
     def test_undo_rejects_other_editors_changes(self):
         payload={"request_id":"c2c3ad2b-180e-4517-839c-c47e48dbd7cb","kind":"water","cells":[[1,2]]}
         self.assertEqual(devtools.terrain_set(self.db,"?","dev",payload,"local")[0],200)
