@@ -347,6 +347,10 @@ def building_move(db, ph, owner, payload, ip):
     import zoning
     if zoning.check(db, ph, kind, new_cells):
         return 409, {"error": "invalid_destination_zone"}
+    import dev_road_connectivity
+    access_error = dev_road_connectivity.validate_building_move(db, ph, oid, old_cells, new_cells)
+    if access_error:
+        return 409, {"error": access_error}
     db.execute("DELETE FROM cells WHERE object_id=" + ph, (oid,))
     for xx, yy in new_cells:
         db.execute("INSERT INTO cells(x,y,object_id) VALUES(" + ",".join([ph]*3) + ")", (xx, yy, oid))
