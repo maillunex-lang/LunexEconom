@@ -84,16 +84,23 @@ def run():
                 with concurrent.futures.ThreadPoolExecutor(max_workers=12) as pool:
                     builds=list(pool.map(build,range(200)))
                 build_codes={}
-                for status,_ in builds: build_codes[str(status)]=build_codes.get(str(status),0)+1
+                build_errors={}
+                for status,payload in builds:
+                    build_codes[str(status)]=build_codes.get(str(status),0)+1
+                    if status!=201:
+                        key=payload.get("error","unknown")
+                        build_errors[key]=build_errors.get(key,0)+1
                 with sqlite3.connect(Path(temp)/"world.sqlite3") as db:
                     bad=db.execute("SELECT COUNT(*) FROM (SELECT tx_id FROM ledger_entries GROUP BY tx_id HAVING SUM(amount)<>0)").fetchone()[0]
                     wallet_total=db.execute("SELECT COALESCE(SUM(balance),0) FROM wallets").fetchone()[0]
                 output={"players":200,"parallel_workers":20,"statuses":codes,
                         "p95_ms":round(sorted(x[2] for x in results)[190],2),
                         "build_statuses":build_codes,
+                        "build_errors":build_errors,
                         "unbalanced_ledger_transactions":bad,"wallet_sum":wallet_total}
                 assert codes=={"200":200} and bad==0 and wallet_total==0,output
                 assert sum(build_codes.values())==200 and build_codes.get("201",0)>0 and all(int(k)<500 for k in build_codes),output
+                assert set(build_errors).issubset({"no_road_access", "occupied", "insufficient_funds", "blocked", "not_buildable", "out_of_bounds", "road_overlap"}),output
                 return output
             finally:
                 process.terminate()
