@@ -22,6 +22,7 @@ func _ready() -> void:
     scroll.add_child(column)
     var heading := Label.new()
     heading.text = "Редактор мира"
+    heading.add_theme_font_size_override("font_size", 28)
     column.add_child(heading)
     var modes := OptionButton.new()
     for kind in ["tree", "grass", "water", "clear", "road_add", "road_remove"]:
@@ -54,6 +55,9 @@ func _ready() -> void:
     column.add_child(demolish_button)
     status = Label.new()
     status.text = "Выберите клетку на карте"
+    status.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+    status.custom_minimum_size.y = 50
+    status.add_theme_font_size_override("font_size", 24)
     column.add_child(status)
     send_button = Button.new()
     send_button.text = "Применить"
@@ -67,6 +71,11 @@ func _ready() -> void:
     close_button.text = "Закрыть"
     close_button.pressed.connect(hide)
     column.add_child(close_button)
+    # Large touch targets remain usable after Android canvas scaling.
+    for item in [modes, sizes, object_id_input, building_kind_input, create_button, move_button, demolish_button, send_button, undo_button, close_button]:
+        item.custom_minimum_size.y = 80
+        item.add_theme_font_size_override("font_size", 24)
+    column.add_theme_constant_override("separation", 10)
 
 func select_cell(cell: Vector2i) -> void:
     selected = cell
