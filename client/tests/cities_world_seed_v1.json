@@ -1,0 +1,385 @@
+{
+  "seed": 20261115,
+  "cities": [
+    {
+      "id": "ufa",
+      "name": "Уфа",
+      "latitude_e6": 54738762,
+      "longitude_e6": 55972055,
+      "x": 0,
+      "y": 0,
+      "population_estimate": 1150000,
+      "specialization": "administration",
+      "base_radius": 12,
+      "indices_bp": {
+        "construction": 10000,
+        "land": 10000,
+        "housing": 10000,
+        "salary": 10000,
+        "traffic": 10000
+      },
+      "balance": "draft"
+    },
+    {
+      "id": "sterlitamak",
+      "name": "Стерлитамак",
+      "latitude_e6": 53630249,
+      "longitude_e6": 55930825,
+      "x": -143,
+      "y": -6153,
+      "population_estimate": 280000,
+      "specialization": "chemicals",
+      "base_radius": 12,
+      "indices_bp": {
+        "construction": 8800,
+        "land": 8800,
+        "housing": 8800,
+        "salary": 8800,
+        "traffic": 8800
+      },
+      "balance": "draft"
+    },
+    {
+      "id": "salavat",
+      "name": "Салават",
+      "latitude_e6": 53361651,
+      "longitude_e6": 55924640,
+      "x": -164,
+      "y": -7643,
+      "population_estimate": 150000,
+      "specialization": "oil_refining",
+      "base_radius": 12,
+      "indices_bp": {
+        "construction": 8500,
+        "land": 8500,
+        "housing": 8500,
+        "salary": 8500,
+        "traffic": 8500
+      },
+      "balance": "draft"
+    },
+    {
+      "id": "neftekamsk",
+      "name": "Нефтекамск",
+      "latitude_e6": 56088470,
+      "longitude_e6": 54248390,
+      "x": -5947,
+      "y": 7490,
+      "population_estimate": 145000,
+      "specialization": "manufacturing",
+      "base_radius": 12,
+      "indices_bp": {
+        "construction": 8500,
+        "land": 8500,
+        "housing": 8500,
+        "salary": 8500,
+        "traffic": 8500
+      },
+      "balance": "draft"
+    },
+    {
+      "id": "oktyabrsky",
+      "name": "Октябрьский",
+      "latitude_e6": 54481470,
+      "longitude_e6": 53465570,
+      "x": -8648,
+      "y": -1428,
+      "population_estimate": 114000,
+      "specialization": "oil",
+      "base_radius": 12,
+      "indices_bp": {
+        "construction": 8400,
+        "land": 8400,
+        "housing": 8400,
+        "salary": 8400,
+        "traffic": 8400
+      },
+      "balance": "draft"
+    },
+    {
+      "id": "beloretsk",
+      "name": "Белорецк",
+      "latitude_e6": 53967650,
+      "longitude_e6": 58410020,
+      "x": 8410,
+      "y": -4280,
+      "population_estimate": 63000,
+      "specialization": "steel",
+      "base_radius": 12,
+      "indices_bp": {
+        "construction": 7800,
+        "land": 7800,
+        "housing": 7800,
+        "salary": 7800,
+        "traffic": 7800
+      },
+      "balance": "draft"
+    },
+    {
+      "id": "sibay",
+      "name": "Сибай",
+      "latitude_e6": 52720580,
+      "longitude_e6": 58665060,
+      "x": 9290,
+      "y": -11201,
+      "population_estimate": 60000,
+      "specialization": "mining",
+      "base_radius": 12,
+      "indices_bp": {
+        "construction": 7900,
+        "land": 7900,
+        "housing": 7900,
+        "salary": 7900,
+        "traffic": 7900
+      },
+      "balance": "draft"
+    },
+    {
+      "id": "meleuz",
+      "name": "Мелеуз",
+      "latitude_e6": 52958960,
+      "longitude_e6": 55927880,
+      "x": -153,
+      "y": -9878,
+      "population_estimate": 56000,
+      "specialization": "agriculture",
+      "base_radius": 12,
+      "indices_bp": {
+        "construction": 7600,
+        "land": 7600,
+        "housing": 7600,
+        "salary": 7600,
+        "traffic": 7600
+      },
+      "balance": "draft"
+    },
+    {
+      "id": "kumertau",
+      "name": "Кумертау",
+      "latitude_e6": 52757750,
+      "longitude_e6": 55796790,
+      "x": -605,
+      "y": -10995,
+      "population_estimate": 57000,
+      "specialization": "manufacturing",
+      "base_radius": 12,
+      "indices_bp": {
+        "construction": 7600,
+        "land": 7600,
+        "housing": 7600,
+        "salary": 7600,
+        "traffic": 7600
+      },
+      "balance": "draft"
+    },
+    {
+      "id": "tuymazy",
+      "name": "Туймазы",
+      "latitude_e6": 54606300,
+      "longitude_e6": 53696700,
+      "x": -7850,
+      "y": -736,
+      "population_estimate": 68000,
+      "specialization": "trade",
+      "base_radius": 12,
+      "indices_bp": {
+        "construction": 8200,
+        "land": 8200,
+        "housing": 8200,
+        "salary": 8200,
+        "traffic": 8200
+      },
+      "balance": "draft"
+    },
+    {
+      "id": "ishimbay",
+      "name": "Ишимбай",
+      "latitude_e6": 53454460,
+      "longitude_e6": 56041550,
+      "x": 239,
+      "y": -7128,
+      "population_estimate": 63000,
+      "specialization": "oil",
+      "base_radius": 12,
+      "indices_bp": {
+        "construction": 8100,
+        "land": 8100,
+        "housing": 8100,
+        "salary": 8100,
+        "traffic": 8100
+      },
+      "balance": "draft"
+    },
+    {
+      "id": "birsk",
+      "name": "Бирск",
+      "latitude_e6": 55417840,
+      "longitude_e6": 55530700,
+      "x": -1523,
+      "y": 3768,
+      "population_estimate": 46000,
+      "specialization": "agriculture",
+      "base_radius": 12,
+      "indices_bp": {
+        "construction": 7500,
+        "land": 7500,
+        "housing": 7500,
+        "salary": 7500,
+        "traffic": 7500
+      },
+      "balance": "draft"
+    },
+    {
+      "id": "belebey",
+      "name": "Белебей",
+      "latitude_e6": 54103700,
+      "longitude_e6": 54111000,
+      "x": -6421,
+      "y": -3525,
+      "population_estimate": 58000,
+      "specialization": "engineering",
+      "base_radius": 12,
+      "indices_bp": {
+        "construction": 7800,
+        "land": 7800,
+        "housing": 7800,
+        "salary": 7800,
+        "traffic": 7800
+      },
+      "balance": "draft"
+    },
+    {
+      "id": "dyurtyuli",
+      "name": "Дюртюли",
+      "latitude_e6": 55491080,
+      "longitude_e6": 54857900,
+      "x": -3844,
+      "y": 4175,
+      "population_estimate": 31000,
+      "specialization": "agriculture",
+      "base_radius": 12,
+      "indices_bp": {
+        "construction": 7300,
+        "land": 7300,
+        "housing": 7300,
+        "salary": 7300,
+        "traffic": 7300
+      },
+      "balance": "draft"
+    },
+    {
+      "id": "baymak",
+      "name": "Баймак",
+      "latitude_e6": 52593300,
+      "longitude_e6": 58322540,
+      "x": 8109,
+      "y": -11908,
+      "population_estimate": 18000,
+      "specialization": "agriculture",
+      "base_radius": 12,
+      "indices_bp": {
+        "construction": 6900,
+        "land": 6900,
+        "housing": 6900,
+        "salary": 6900,
+        "traffic": 6900
+      },
+      "balance": "draft"
+    },
+    {
+      "id": "uchaly",
+      "name": "Учалы",
+      "latitude_e6": 54319440,
+      "longitude_e6": 59378630,
+      "x": 11752,
+      "y": -2328,
+      "population_estimate": 38000,
+      "specialization": "mining",
+      "base_radius": 12,
+      "indices_bp": {
+        "construction": 7600,
+        "land": 7600,
+        "housing": 7600,
+        "salary": 7600,
+        "traffic": 7600
+      },
+      "balance": "draft"
+    },
+    {
+      "id": "davlekanovo",
+      "name": "Давлеканово",
+      "latitude_e6": 54218660,
+      "longitude_e6": 55034000,
+      "x": -3237,
+      "y": -2887,
+      "population_estimate": 23000,
+      "specialization": "agriculture",
+      "base_radius": 12,
+      "indices_bp": {
+        "construction": 7000,
+        "land": 7000,
+        "housing": 7000,
+        "salary": 7000,
+        "traffic": 7000
+      },
+      "balance": "draft"
+    },
+    {
+      "id": "blagoveshchensk",
+      "name": "Благовещенск",
+      "latitude_e6": 55035700,
+      "longitude_e6": 55982000,
+      "x": 34,
+      "y": 1648,
+      "population_estimate": 35000,
+      "specialization": "manufacturing",
+      "base_radius": 12,
+      "indices_bp": {
+        "construction": 7800,
+        "land": 7800,
+        "housing": 7800,
+        "salary": 7800,
+        "traffic": 7800
+      },
+      "balance": "draft"
+    },
+    {
+      "id": "agidel",
+      "name": "Агидель",
+      "latitude_e6": 55900000,
+      "longitude_e6": 53935000,
+      "x": -7028,
+      "y": 6444,
+      "population_estimate": 14000,
+      "specialization": "energy",
+      "base_radius": 12,
+      "indices_bp": {
+        "construction": 6700,
+        "land": 6700,
+        "housing": 6700,
+        "salary": 6700,
+        "traffic": 6700
+      },
+      "balance": "draft"
+    },
+    {
+      "id": "yanaul",
+      "name": "Янаул",
+      "latitude_e6": 56265700,
+      "longitude_e6": 54932500,
+      "x": -3587,
+      "y": 8474,
+      "population_estimate": 25000,
+      "specialization": "trade",
+      "base_radius": 12,
+      "indices_bp": {
+        "construction": 7000,
+        "land": 7000,
+        "housing": 7000,
+        "salary": 7000,
+        "traffic": 7000
+      },
+      "balance": "draft"
+    }
+  ]
+}

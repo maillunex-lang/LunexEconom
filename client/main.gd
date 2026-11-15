@@ -8,6 +8,7 @@ const Router = preload("res://screens/router.gd")
 const LoginScreen = preload("res://screens/login.tscn")
 const HeadquartersScreen = preload("res://screens/headquarters.tscn")
 const SettingsScreen = preload("res://screens/settings.tscn")
+const MapScreen = preload("res://screens/map.tscn")
 const VERSION := "2.1.0"
 const PUBLIC_KEY_PATH := "res://security/config_public.pem"
 const SESSION_PATH := "user://platform_session.cfg"
@@ -18,6 +19,7 @@ var router: Control
 var login_screen: Control
 var headquarters_screen: Control
 var settings_screen: Control
+var map_screen: Control
 var login_card: PanelContainer
 var form: VBoxContainer
 var headquarters: VBoxContainer
@@ -48,9 +50,11 @@ func _ready() -> void:
     login_screen = LoginScreen.instantiate()
     headquarters_screen = HeadquartersScreen.instantiate()
     settings_screen = SettingsScreen.instantiate()
+    map_screen = MapScreen.instantiate()
     router.register_screen("login",login_screen)
     router.register_screen("headquarters",headquarters_screen)
     router.register_screen("settings",settings_screen)
+    router.register_screen("map",map_screen)
     # Existing V2-01b implementation stays untouched.
     update_screen = UpdatesPanel.instantiate()
     router.register_screen("updates", update_screen)
@@ -60,6 +64,8 @@ func _ready() -> void:
     headquarters_screen.navigate.connect(_navigate)
     headquarters_screen.logout_requested.connect(_logout)
     settings_screen.back_requested.connect(func(): router.back())
+    map_screen.back_requested.connect(func(): router.back())
+    map_screen.wallet_changed.connect(_load_hq)
     form = login_screen.form
     login_card = login_screen.card
     login_username = login_screen.username
@@ -86,6 +92,14 @@ func _navigate(screen: String) -> void:
     router.go(screen)
     if screen == "updates":
         update_screen.open()
+    elif screen == "map":
+        map_screen.api.refresh = Callable(self,"_refresh_map_access")
+        map_screen.open(base_url,token)
+
+func _refresh_map_access() -> String:
+    if await _renew_tokens():
+        return token
+    return ""
 
 func _on_update_state(_message: String, _can_install: bool, mandatory: bool) -> void:
     if mandatory:
@@ -121,6 +135,7 @@ func _on_viewport_resized() -> void:
     login_screen.resize_ui(size_now,keyboard_canvas)
     headquarters_screen.resize_ui(size_now)
     settings_screen.resize_ui(size_now)
+    map_screen.resize_ui(size_now)
     Forest.apply_touch(update_screen,size_now)
 
 func _process(_delta: float) -> void:

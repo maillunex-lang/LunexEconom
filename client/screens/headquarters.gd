@@ -56,8 +56,11 @@ func _ready() -> void:
     stack.add_child(tabs)
     for key in ["map.title","player.enterprises","market.title","finance.title"]:
         var tab := _button(key,tabs)
-        tab.disabled = true
-        tab.focus_mode = Control.FOCUS_NONE
+        if key == "map.title":
+            tab.pressed.connect(func(): navigate.emit("map"))
+        else:
+            tab.disabled = true
+            tab.focus_mode = Control.FOCUS_NONE
 
 func _button(key: String, parent: HBoxContainer) -> Button:
     var control := Button.new()
