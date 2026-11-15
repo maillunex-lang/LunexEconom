@@ -1,0 +1,22 @@
+{
+  "id": "m1_underfunded",
+  "days": 90,
+  "city": "ufa",
+  "district": {
+    "pop_permille": 1000,
+    "layer_share_permille": 1000,
+    "income_index": 1000,
+    "traffic": 0,
+    "appeal_permille": 1000,
+    "competition_s": 1
+  },
+  "players": [
+    {"id": "anna", "capital": {"equals_build_cost": "field"}}
+  ],
+  "orders": [
+    {"day": 1, "player": "anna", "enterprise": "field", "building": "field", "recipe": "field_grain"}
+  ],
+  "infusions": [
+    {"day": 70, "player": "anna", "amount": 20000}
+  ]
+}

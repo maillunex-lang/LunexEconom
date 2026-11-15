@@ -1,0 +1,1891 @@
+{
+  "city": "ufa",
+  "days": [
+    {
+      "day": 1,
+      "enterprises": {
+        "bakery": {
+          "arrears": 0,
+          "building": "bakery",
+          "load_bp": 0,
+          "player": "mira",
+          "stage": 1,
+          "stalled": true,
+          "stock": {}
+        },
+        "field": {
+          "arrears": 0,
+          "building": "field",
+          "load_bp": 0,
+          "player": "mira",
+          "stage": 4,
+          "stalled": false,
+          "stock": {}
+        },
+        "mill": {
+          "arrears": 0,
+          "building": "mill",
+          "load_bp": 0,
+          "player": "mira",
+          "stage": 4,
+          "stalled": false,
+          "stock": {}
+        },
+        "store": {
+          "arrears": 0,
+          "building": "grocery_store",
+          "load_bp": 0,
+          "player": "mira",
+          "stage": 0,
+          "stalled": true,
+          "stock": {}
+        }
+      },
+      "ledger_sum": 0,
+      "market": [],
+      "month_closed": 0,
+      "players": {
+        "mira": {
+          "money": 80000,
+          "output": {},
+          "revenue": 0,
+          "sales": 0,
+          "tax": 0,
+          "tax_due": 0,
+          "tax_paid": 0,
+          "wages_paid": 0
+        }
+      }
+    },
+    {
+      "day": 2,
+      "enterprises": {
+        "bakery": {
+          "arrears": 0,
+          "building": "bakery",
+          "load_bp": 0,
+          "player": "mira",
+          "stage": 1,
+          "stalled": true,
+          "stock": {}
+        },
+        "field": {
+          "arrears": 0,
+          "building": "field",
+          "load_bp": 10000,
+          "player": "mira",
+          "stage": 4,
+          "stalled": false,
+          "stock": {}
+        },
+        "mill": {
+          "arrears": 0,
+          "building": "mill",
+          "load_bp": 0,
+          "player": "mira",
+          "stage": 4,
+          "stalled": false,
+          "stock": {
+            "grain": 100
+          }
+        },
+        "store": {
+          "arrears": 0,
+          "building": "grocery_store",
+          "load_bp": 0,
+          "player": "mira",
+          "stage": 0,
+          "stalled": true,
+          "stock": {}
+        }
+      },
+      "ledger_sum": 0,
+      "market": [],
+      "month_closed": 0,
+      "players": {
+        "mira": {
+          "money": 80000,
+          "output": {
+            "grain": 100
+          },
+          "revenue": 0,
+          "sales": 0,
+          "tax": 0,
+          "tax_due": 0,
+          "tax_paid": 0,
+          "wages_paid": 0
+        }
+      }
+    },
+    {
+      "day": 3,
+      "enterprises": {
+        "bakery": {
+          "arrears": 0,
+          "building": "bakery",
+          "load_bp": 0,
+          "player": "mira",
+          "stage": 1,
+          "stalled": true,
+          "stock": {}
+        },
+        "field": {
+          "arrears": 0,
+          "building": "field",
+          "load_bp": 10000,
+          "player": "mira",
+          "stage": 4,
+          "stalled": false,
+          "stock": {}
+        },
+        "mill": {
+          "arrears": 0,
+          "building": "mill",
+          "load_bp": 10000,
+          "player": "mira",
+          "stage": 4,
+          "stalled": false,
+          "stock": {
+            "flour": 80,
+            "grain": 100
+          }
+        },
+        "store": {
+          "arrears": 0,
+          "building": "grocery_store",
+          "load_bp": 0,
+          "player": "mira",
+          "stage": 0,
+          "stalled": true,
+          "stock": {}
+        }
+      },
+      "ledger_sum": 0,
+      "market": [],
+      "month_closed": 0,
+      "players": {
+        "mira": {
+          "money": 80000,
+          "output": {
+            "flour": 80,
+            "grain": 100
+          },
+          "revenue": 0,
+          "sales": 0,
+          "tax": 0,
+          "tax_due": 0,
+          "tax_paid": 0,
+          "wages_paid": 0
+        }
+      }
+    },
+    {
+      "day": 4,
+      "enterprises": {
+        "bakery": {
+          "arrears": 0,
+          "building": "bakery",
+          "load_bp": 0,
+          "player": "mira",
+          "stage": 1,
+          "stalled": true,
+          "stock": {}
+        },
+        "field": {
+          "arrears": 0,
+          "building": "field",
+          "load_bp": 10000,
+          "player": "mira",
+          "stage": 4,
+          "stalled": false,
+          "stock": {}
+        },
+        "mill": {
+          "arrears": 0,
+          "building": "mill",
+          "load_bp": 10000,
+          "player": "mira",
+          "stage": 4,
+          "stalled": false,
+          "stock": {
+            "flour": 160,
+            "grain": 100
+          }
+        },
+        "store": {
+          "arrears": 0,
+          "building": "grocery_store",
+          "load_bp": 0,
+          "player": "mira",
+          "stage": 0,
+          "stalled": true,
+          "stock": {}
+        }
+      },
+      "ledger_sum": 0,
+      "market": [],
+      "month_closed": 0,
+      "players": {
+        "mira": {
+          "money": 80000,
+          "output": {
+            "flour": 80,
+            "grain": 100
+          },
+          "revenue": 0,
+          "sales": 0,
+          "tax": 0,
+          "tax_due": 0,
+          "tax_paid": 0,
+          "wages_paid": 0
+        }
+      }
+    },
+    {
+      "day": 5,
+      "enterprises": {
+        "bakery": {
+          "arrears": 0,
+          "building": "bakery",
+          "load_bp": 0,
+          "player": "mira",
+          "stage": 1,
+          "stalled": true,
+          "stock": {}
+        },
+        "field": {
+          "arrears": 0,
+          "building": "field",
+          "load_bp": 10000,
+          "player": "mira",
+          "stage": 4,
+          "stalled": false,
+          "stock": {}
+        },
+        "mill": {
+          "arrears": 0,
+          "building": "mill",
+          "load_bp": 10000,
+          "player": "mira",
+          "stage": 4,
+          "stalled": false,
+          "stock": {
+            "flour": 240,
+            "grain": 100
+          }
+        },
+        "store": {
+          "arrears": 0,
+          "building": "grocery_store",
+          "load_bp": 0,
+          "player": "mira",
+          "stage": 0,
+          "stalled": true,
+          "stock": {}
+        }
+      },
+      "ledger_sum": 0,
+      "market": [],
+      "month_closed": 0,
+      "players": {
+        "mira": {
+          "money": 80000,
+          "output": {
+            "flour": 80,
+            "grain": 100
+          },
+          "revenue": 0,
+          "sales": 0,
+          "tax": 0,
+          "tax_due": 0,
+          "tax_paid": 0,
+          "wages_paid": 0
+        }
+      }
+    },
+    {
+      "day": 6,
+      "enterprises": {
+        "bakery": {
+          "arrears": 0,
+          "building": "bakery",
+          "load_bp": 0,
+          "player": "mira",
+          "stage": 1,
+          "stalled": true,
+          "stock": {}
+        },
+        "field": {
+          "arrears": 0,
+          "building": "field",
+          "load_bp": 10000,
+          "player": "mira",
+          "stage": 4,
+          "stalled": false,
+          "stock": {}
+        },
+        "mill": {
+          "arrears": 0,
+          "building": "mill",
+          "load_bp": 10000,
+          "player": "mira",
+          "stage": 4,
+          "stalled": false,
+          "stock": {
+            "flour": 320,
+            "grain": 100
+          }
+        },
+        "store": {
+          "arrears": 0,
+          "building": "grocery_store",
+          "load_bp": 0,
+          "player": "mira",
+          "stage": 0,
+          "stalled": true,
+          "stock": {}
+        }
+      },
+      "ledger_sum": 0,
+      "market": [],
+      "month_closed": 0,
+      "players": {
+        "mira": {
+          "money": 80000,
+          "output": {
+            "flour": 80,
+            "grain": 100
+          },
+          "revenue": 0,
+          "sales": 0,
+          "tax": 0,
+          "tax_due": 0,
+          "tax_paid": 0,
+          "wages_paid": 0
+        }
+      }
+    },
+    {
+      "day": 7,
+      "enterprises": {
+        "bakery": {
+          "arrears": 0,
+          "building": "bakery",
+          "load_bp": 0,
+          "player": "mira",
+          "stage": 1,
+          "stalled": true,
+          "stock": {}
+        },
+        "field": {
+          "arrears": 0,
+          "building": "field",
+          "load_bp": 10000,
+          "player": "mira",
+          "stage": 4,
+          "stalled": false,
+          "stock": {}
+        },
+        "mill": {
+          "arrears": 0,
+          "building": "mill",
+          "load_bp": 10000,
+          "player": "mira",
+          "stage": 4,
+          "stalled": false,
+          "stock": {
+            "flour": 400,
+            "grain": 100
+          }
+        },
+        "store": {
+          "arrears": 0,
+          "building": "grocery_store",
+          "load_bp": 0,
+          "player": "mira",
+          "stage": 0,
+          "stalled": true,
+          "stock": {}
+        }
+      },
+      "ledger_sum": 0,
+      "market": [],
+      "month_closed": 0,
+      "players": {
+        "mira": {
+          "money": 80000,
+          "output": {
+            "flour": 80,
+            "grain": 100
+          },
+          "revenue": 0,
+          "sales": 0,
+          "tax": 0,
+          "tax_due": 0,
+          "tax_paid": 0,
+          "wages_paid": 0
+        }
+      }
+    },
+    {
+      "day": 8,
+      "enterprises": {
+        "bakery": {
+          "arrears": 0,
+          "building": "bakery",
+          "load_bp": 0,
+          "player": "mira",
+          "stage": 1,
+          "stalled": true,
+          "stock": {}
+        },
+        "field": {
+          "arrears": 0,
+          "building": "field",
+          "load_bp": 10000,
+          "player": "mira",
+          "stage": 4,
+          "stalled": false,
+          "stock": {}
+        },
+        "mill": {
+          "arrears": 0,
+          "building": "mill",
+          "load_bp": 10000,
+          "player": "mira",
+          "stage": 4,
+          "stalled": false,
+          "stock": {
+            "flour": 480,
+            "grain": 100
+          }
+        },
+        "store": {
+          "arrears": 0,
+          "building": "grocery_store",
+          "load_bp": 0,
+          "player": "mira",
+          "stage": 0,
+          "stalled": true,
+          "stock": {}
+        }
+      },
+      "ledger_sum": 0,
+      "market": [],
+      "month_closed": 0,
+      "players": {
+        "mira": {
+          "money": 80000,
+          "output": {
+            "flour": 80,
+            "grain": 100
+          },
+          "revenue": 0,
+          "sales": 0,
+          "tax": 0,
+          "tax_due": 0,
+          "tax_paid": 0,
+          "wages_paid": 0
+        }
+      }
+    },
+    {
+      "day": 9,
+      "enterprises": {
+        "bakery": {
+          "arrears": 0,
+          "building": "bakery",
+          "load_bp": 0,
+          "player": "mira",
+          "stage": 1,
+          "stalled": true,
+          "stock": {}
+        },
+        "field": {
+          "arrears": 0,
+          "building": "field",
+          "load_bp": 10000,
+          "player": "mira",
+          "stage": 4,
+          "stalled": false,
+          "stock": {}
+        },
+        "mill": {
+          "arrears": 0,
+          "building": "mill",
+          "load_bp": 10000,
+          "player": "mira",
+          "stage": 4,
+          "stalled": false,
+          "stock": {
+            "flour": 560,
+            "grain": 100
+          }
+        },
+        "store": {
+          "arrears": 0,
+          "building": "grocery_store",
+          "load_bp": 0,
+          "player": "mira",
+          "stage": 0,
+          "stalled": true,
+          "stock": {}
+        }
+      },
+      "ledger_sum": 0,
+      "market": [],
+      "month_closed": 0,
+      "players": {
+        "mira": {
+          "money": 80000,
+          "output": {
+            "flour": 80,
+            "grain": 100
+          },
+          "revenue": 0,
+          "sales": 0,
+          "tax": 0,
+          "tax_due": 0,
+          "tax_paid": 0,
+          "wages_paid": 0
+        }
+      }
+    },
+    {
+      "day": 10,
+      "enterprises": {
+        "bakery": {
+          "arrears": 0,
+          "building": "bakery",
+          "load_bp": 0,
+          "player": "mira",
+          "stage": 1,
+          "stalled": true,
+          "stock": {}
+        },
+        "field": {
+          "arrears": 0,
+          "building": "field",
+          "load_bp": 10000,
+          "player": "mira",
+          "stage": 4,
+          "stalled": false,
+          "stock": {}
+        },
+        "mill": {
+          "arrears": 0,
+          "building": "mill",
+          "load_bp": 10000,
+          "player": "mira",
+          "stage": 4,
+          "stalled": false,
+          "stock": {
+            "flour": 640,
+            "grain": 100
+          }
+        },
+        "store": {
+          "arrears": 0,
+          "building": "grocery_store",
+          "load_bp": 0,
+          "player": "mira",
+          "stage": 0,
+          "stalled": true,
+          "stock": {}
+        }
+      },
+      "ledger_sum": 0,
+      "market": [],
+      "month_closed": 0,
+      "players": {
+        "mira": {
+          "money": 80000,
+          "output": {
+            "flour": 80,
+            "grain": 100
+          },
+          "revenue": 0,
+          "sales": 0,
+          "tax": 0,
+          "tax_due": 0,
+          "tax_paid": 0,
+          "wages_paid": 0
+        }
+      }
+    },
+    {
+      "day": 11,
+      "enterprises": {
+        "bakery": {
+          "arrears": 0,
+          "building": "bakery",
+          "load_bp": 0,
+          "player": "mira",
+          "stage": 1,
+          "stalled": true,
+          "stock": {}
+        },
+        "field": {
+          "arrears": 0,
+          "building": "field",
+          "load_bp": 10000,
+          "player": "mira",
+          "stage": 4,
+          "stalled": false,
+          "stock": {}
+        },
+        "mill": {
+          "arrears": 0,
+          "building": "mill",
+          "load_bp": 10000,
+          "player": "mira",
+          "stage": 4,
+          "stalled": false,
+          "stock": {
+            "flour": 720,
+            "grain": 100
+          }
+        },
+        "store": {
+          "arrears": 0,
+          "building": "grocery_store",
+          "load_bp": 0,
+          "player": "mira",
+          "stage": 0,
+          "stalled": true,
+          "stock": {}
+        }
+      },
+      "ledger_sum": 0,
+      "market": [],
+      "month_closed": 0,
+      "players": {
+        "mira": {
+          "money": 80000,
+          "output": {
+            "flour": 80,
+            "grain": 100
+          },
+          "revenue": 0,
+          "sales": 0,
+          "tax": 0,
+          "tax_due": 0,
+          "tax_paid": 0,
+          "wages_paid": 0
+        }
+      }
+    },
+    {
+      "day": 12,
+      "enterprises": {
+        "bakery": {
+          "arrears": 0,
+          "building": "bakery",
+          "load_bp": 0,
+          "player": "mira",
+          "stage": 1,
+          "stalled": true,
+          "stock": {}
+        },
+        "field": {
+          "arrears": 0,
+          "building": "field",
+          "load_bp": 10000,
+          "player": "mira",
+          "stage": 4,
+          "stalled": false,
+          "stock": {}
+        },
+        "mill": {
+          "arrears": 0,
+          "building": "mill",
+          "load_bp": 10000,
+          "player": "mira",
+          "stage": 4,
+          "stalled": false,
+          "stock": {
+            "flour": 800,
+            "grain": 100
+          }
+        },
+        "store": {
+          "arrears": 0,
+          "building": "grocery_store",
+          "load_bp": 0,
+          "player": "mira",
+          "stage": 0,
+          "stalled": true,
+          "stock": {}
+        }
+      },
+      "ledger_sum": 0,
+      "market": [],
+      "month_closed": 0,
+      "players": {
+        "mira": {
+          "money": 80000,
+          "output": {
+            "flour": 80,
+            "grain": 100
+          },
+          "revenue": 0,
+          "sales": 0,
+          "tax": 0,
+          "tax_due": 0,
+          "tax_paid": 0,
+          "wages_paid": 0
+        }
+      }
+    },
+    {
+      "day": 13,
+      "enterprises": {
+        "bakery": {
+          "arrears": 0,
+          "building": "bakery",
+          "load_bp": 0,
+          "player": "mira",
+          "stage": 1,
+          "stalled": true,
+          "stock": {}
+        },
+        "field": {
+          "arrears": 0,
+          "building": "field",
+          "load_bp": 10000,
+          "player": "mira",
+          "stage": 4,
+          "stalled": false,
+          "stock": {}
+        },
+        "mill": {
+          "arrears": 0,
+          "building": "mill",
+          "load_bp": 10000,
+          "player": "mira",
+          "stage": 4,
+          "stalled": false,
+          "stock": {
+            "flour": 880,
+            "grain": 100
+          }
+        },
+        "store": {
+          "arrears": 0,
+          "building": "grocery_store",
+          "load_bp": 0,
+          "player": "mira",
+          "stage": 0,
+          "stalled": true,
+          "stock": {}
+        }
+      },
+      "ledger_sum": 0,
+      "market": [],
+      "month_closed": 0,
+      "players": {
+        "mira": {
+          "money": 80000,
+          "output": {
+            "flour": 80,
+            "grain": 100
+          },
+          "revenue": 0,
+          "sales": 0,
+          "tax": 0,
+          "tax_due": 0,
+          "tax_paid": 0,
+          "wages_paid": 0
+        }
+      }
+    },
+    {
+      "day": 14,
+      "enterprises": {
+        "bakery": {
+          "arrears": 0,
+          "building": "bakery",
+          "load_bp": 0,
+          "player": "mira",
+          "stage": 1,
+          "stalled": true,
+          "stock": {}
+        },
+        "field": {
+          "arrears": 0,
+          "building": "field",
+          "load_bp": 10000,
+          "player": "mira",
+          "stage": 4,
+          "stalled": false,
+          "stock": {}
+        },
+        "mill": {
+          "arrears": 0,
+          "building": "mill",
+          "load_bp": 10000,
+          "player": "mira",
+          "stage": 4,
+          "stalled": false,
+          "stock": {
+            "flour": 960,
+            "grain": 100
+          }
+        },
+        "store": {
+          "arrears": 0,
+          "building": "grocery_store",
+          "load_bp": 0,
+          "player": "mira",
+          "stage": 0,
+          "stalled": true,
+          "stock": {}
+        }
+      },
+      "ledger_sum": 0,
+      "market": [],
+      "month_closed": 0,
+      "players": {
+        "mira": {
+          "money": 80000,
+          "output": {
+            "flour": 80,
+            "grain": 100
+          },
+          "revenue": 0,
+          "sales": 0,
+          "tax": 0,
+          "tax_due": 0,
+          "tax_paid": 0,
+          "wages_paid": 0
+        }
+      }
+    },
+    {
+      "day": 15,
+      "enterprises": {
+        "bakery": {
+          "arrears": 0,
+          "building": "bakery",
+          "load_bp": 0,
+          "player": "mira",
+          "stage": 1,
+          "stalled": true,
+          "stock": {}
+        },
+        "field": {
+          "arrears": 0,
+          "building": "field",
+          "load_bp": 10000,
+          "player": "mira",
+          "stage": 4,
+          "stalled": false,
+          "stock": {}
+        },
+        "mill": {
+          "arrears": 0,
+          "building": "mill",
+          "load_bp": 10000,
+          "player": "mira",
+          "stage": 4,
+          "stalled": false,
+          "stock": {
+            "flour": 1040,
+            "grain": 100
+          }
+        },
+        "store": {
+          "arrears": 0,
+          "building": "grocery_store",
+          "load_bp": 0,
+          "player": "mira",
+          "stage": 0,
+          "stalled": true,
+          "stock": {}
+        }
+      },
+      "ledger_sum": 0,
+      "market": [],
+      "month_closed": 0,
+      "players": {
+        "mira": {
+          "money": 80000,
+          "output": {
+            "flour": 80,
+            "grain": 100
+          },
+          "revenue": 0,
+          "sales": 0,
+          "tax": 0,
+          "tax_due": 0,
+          "tax_paid": 0,
+          "wages_paid": 0
+        }
+      }
+    },
+    {
+      "day": 16,
+      "enterprises": {
+        "bakery": {
+          "arrears": 0,
+          "building": "bakery",
+          "load_bp": 0,
+          "player": "mira",
+          "stage": 1,
+          "stalled": true,
+          "stock": {}
+        },
+        "field": {
+          "arrears": 0,
+          "building": "field",
+          "load_bp": 10000,
+          "player": "mira",
+          "stage": 4,
+          "stalled": false,
+          "stock": {}
+        },
+        "mill": {
+          "arrears": 0,
+          "building": "mill",
+          "load_bp": 10000,
+          "player": "mira",
+          "stage": 4,
+          "stalled": false,
+          "stock": {
+            "flour": 1120,
+            "grain": 100
+          }
+        },
+        "store": {
+          "arrears": 0,
+          "building": "grocery_store",
+          "load_bp": 0,
+          "player": "mira",
+          "stage": 0,
+          "stalled": true,
+          "stock": {}
+        }
+      },
+      "ledger_sum": 0,
+      "market": [],
+      "month_closed": 0,
+      "players": {
+        "mira": {
+          "money": 80000,
+          "output": {
+            "flour": 80,
+            "grain": 100
+          },
+          "revenue": 0,
+          "sales": 0,
+          "tax": 0,
+          "tax_due": 0,
+          "tax_paid": 0,
+          "wages_paid": 0
+        }
+      }
+    },
+    {
+      "day": 17,
+      "enterprises": {
+        "bakery": {
+          "arrears": 0,
+          "building": "bakery",
+          "load_bp": 0,
+          "player": "mira",
+          "stage": 1,
+          "stalled": true,
+          "stock": {}
+        },
+        "field": {
+          "arrears": 0,
+          "building": "field",
+          "load_bp": 10000,
+          "player": "mira",
+          "stage": 4,
+          "stalled": false,
+          "stock": {}
+        },
+        "mill": {
+          "arrears": 0,
+          "building": "mill",
+          "load_bp": 10000,
+          "player": "mira",
+          "stage": 4,
+          "stalled": false,
+          "stock": {
+            "flour": 1200,
+            "grain": 100
+          }
+        },
+        "store": {
+          "arrears": 0,
+          "building": "grocery_store",
+          "load_bp": 0,
+          "player": "mira",
+          "stage": 0,
+          "stalled": true,
+          "stock": {}
+        }
+      },
+      "ledger_sum": 0,
+      "market": [],
+      "month_closed": 0,
+      "players": {
+        "mira": {
+          "money": 80000,
+          "output": {
+            "flour": 80,
+            "grain": 100
+          },
+          "revenue": 0,
+          "sales": 0,
+          "tax": 0,
+          "tax_due": 0,
+          "tax_paid": 0,
+          "wages_paid": 0
+        }
+      }
+    },
+    {
+      "day": 18,
+      "enterprises": {
+        "bakery": {
+          "arrears": 0,
+          "building": "bakery",
+          "load_bp": 0,
+          "player": "mira",
+          "stage": 1,
+          "stalled": true,
+          "stock": {}
+        },
+        "field": {
+          "arrears": 0,
+          "building": "field",
+          "load_bp": 10000,
+          "player": "mira",
+          "stage": 4,
+          "stalled": false,
+          "stock": {}
+        },
+        "mill": {
+          "arrears": 0,
+          "building": "mill",
+          "load_bp": 10000,
+          "player": "mira",
+          "stage": 4,
+          "stalled": false,
+          "stock": {
+            "flour": 1280,
+            "grain": 100
+          }
+        },
+        "store": {
+          "arrears": 0,
+          "building": "grocery_store",
+          "load_bp": 0,
+          "player": "mira",
+          "stage": 0,
+          "stalled": true,
+          "stock": {}
+        }
+      },
+      "ledger_sum": 0,
+      "market": [],
+      "month_closed": 0,
+      "players": {
+        "mira": {
+          "money": 80000,
+          "output": {
+            "flour": 80,
+            "grain": 100
+          },
+          "revenue": 0,
+          "sales": 0,
+          "tax": 0,
+          "tax_due": 0,
+          "tax_paid": 0,
+          "wages_paid": 0
+        }
+      }
+    },
+    {
+      "day": 19,
+      "enterprises": {
+        "bakery": {
+          "arrears": 0,
+          "building": "bakery",
+          "load_bp": 0,
+          "player": "mira",
+          "stage": 1,
+          "stalled": true,
+          "stock": {}
+        },
+        "field": {
+          "arrears": 0,
+          "building": "field",
+          "load_bp": 10000,
+          "player": "mira",
+          "stage": 4,
+          "stalled": false,
+          "stock": {}
+        },
+        "mill": {
+          "arrears": 0,
+          "building": "mill",
+          "load_bp": 10000,
+          "player": "mira",
+          "stage": 4,
+          "stalled": false,
+          "stock": {
+            "flour": 1360,
+            "grain": 100
+          }
+        },
+        "store": {
+          "arrears": 0,
+          "building": "grocery_store",
+          "load_bp": 0,
+          "player": "mira",
+          "stage": 0,
+          "stalled": true,
+          "stock": {}
+        }
+      },
+      "ledger_sum": 0,
+      "market": [],
+      "month_closed": 0,
+      "players": {
+        "mira": {
+          "money": 80000,
+          "output": {
+            "flour": 80,
+            "grain": 100
+          },
+          "revenue": 0,
+          "sales": 0,
+          "tax": 0,
+          "tax_due": 0,
+          "tax_paid": 0,
+          "wages_paid": 0
+        }
+      }
+    },
+    {
+      "day": 20,
+      "enterprises": {
+        "bakery": {
+          "arrears": 0,
+          "building": "bakery",
+          "load_bp": 0,
+          "player": "mira",
+          "stage": 1,
+          "stalled": true,
+          "stock": {}
+        },
+        "field": {
+          "arrears": 0,
+          "building": "field",
+          "load_bp": 10000,
+          "player": "mira",
+          "stage": 4,
+          "stalled": false,
+          "stock": {}
+        },
+        "mill": {
+          "arrears": 0,
+          "building": "mill",
+          "load_bp": 10000,
+          "player": "mira",
+          "stage": 4,
+          "stalled": false,
+          "stock": {
+            "flour": 1440,
+            "grain": 100
+          }
+        },
+        "store": {
+          "arrears": 0,
+          "building": "grocery_store",
+          "load_bp": 0,
+          "player": "mira",
+          "stage": 0,
+          "stalled": true,
+          "stock": {}
+        }
+      },
+      "ledger_sum": 0,
+      "market": [],
+      "month_closed": 0,
+      "players": {
+        "mira": {
+          "money": 80000,
+          "output": {
+            "flour": 80,
+            "grain": 100
+          },
+          "revenue": 0,
+          "sales": 0,
+          "tax": 0,
+          "tax_due": 0,
+          "tax_paid": 0,
+          "wages_paid": 0
+        }
+      }
+    },
+    {
+      "day": 21,
+      "enterprises": {
+        "bakery": {
+          "arrears": 0,
+          "building": "bakery",
+          "load_bp": 0,
+          "player": "mira",
+          "stage": 1,
+          "stalled": true,
+          "stock": {}
+        },
+        "field": {
+          "arrears": 0,
+          "building": "field",
+          "load_bp": 10000,
+          "player": "mira",
+          "stage": 4,
+          "stalled": false,
+          "stock": {}
+        },
+        "mill": {
+          "arrears": 0,
+          "building": "mill",
+          "load_bp": 10000,
+          "player": "mira",
+          "stage": 4,
+          "stalled": false,
+          "stock": {
+            "flour": 1520,
+            "grain": 100
+          }
+        },
+        "store": {
+          "arrears": 0,
+          "building": "grocery_store",
+          "load_bp": 0,
+          "player": "mira",
+          "stage": 0,
+          "stalled": true,
+          "stock": {}
+        }
+      },
+      "ledger_sum": 0,
+      "market": [],
+      "month_closed": 0,
+      "players": {
+        "mira": {
+          "money": 80000,
+          "output": {
+            "flour": 80,
+            "grain": 100
+          },
+          "revenue": 0,
+          "sales": 0,
+          "tax": 0,
+          "tax_due": 0,
+          "tax_paid": 0,
+          "wages_paid": 0
+        }
+      }
+    },
+    {
+      "day": 22,
+      "enterprises": {
+        "bakery": {
+          "arrears": 0,
+          "building": "bakery",
+          "load_bp": 0,
+          "player": "mira",
+          "stage": 1,
+          "stalled": true,
+          "stock": {}
+        },
+        "field": {
+          "arrears": 0,
+          "building": "field",
+          "load_bp": 10000,
+          "player": "mira",
+          "stage": 4,
+          "stalled": false,
+          "stock": {}
+        },
+        "mill": {
+          "arrears": 0,
+          "building": "mill",
+          "load_bp": 10000,
+          "player": "mira",
+          "stage": 4,
+          "stalled": false,
+          "stock": {
+            "flour": 1600,
+            "grain": 100
+          }
+        },
+        "store": {
+          "arrears": 0,
+          "building": "grocery_store",
+          "load_bp": 0,
+          "player": "mira",
+          "stage": 0,
+          "stalled": true,
+          "stock": {}
+        }
+      },
+      "ledger_sum": 0,
+      "market": [],
+      "month_closed": 0,
+      "players": {
+        "mira": {
+          "money": 80000,
+          "output": {
+            "flour": 80,
+            "grain": 100
+          },
+          "revenue": 0,
+          "sales": 0,
+          "tax": 0,
+          "tax_due": 0,
+          "tax_paid": 0,
+          "wages_paid": 0
+        }
+      }
+    },
+    {
+      "day": 23,
+      "enterprises": {
+        "bakery": {
+          "arrears": 0,
+          "building": "bakery",
+          "load_bp": 0,
+          "player": "mira",
+          "stage": 1,
+          "stalled": true,
+          "stock": {}
+        },
+        "field": {
+          "arrears": 0,
+          "building": "field",
+          "load_bp": 10000,
+          "player": "mira",
+          "stage": 4,
+          "stalled": false,
+          "stock": {}
+        },
+        "mill": {
+          "arrears": 0,
+          "building": "mill",
+          "load_bp": 10000,
+          "player": "mira",
+          "stage": 4,
+          "stalled": false,
+          "stock": {
+            "flour": 1680,
+            "grain": 100
+          }
+        },
+        "store": {
+          "arrears": 0,
+          "building": "grocery_store",
+          "load_bp": 0,
+          "player": "mira",
+          "stage": 0,
+          "stalled": true,
+          "stock": {}
+        }
+      },
+      "ledger_sum": 0,
+      "market": [],
+      "month_closed": 0,
+      "players": {
+        "mira": {
+          "money": 80000,
+          "output": {
+            "flour": 80,
+            "grain": 100
+          },
+          "revenue": 0,
+          "sales": 0,
+          "tax": 0,
+          "tax_due": 0,
+          "tax_paid": 0,
+          "wages_paid": 0
+        }
+      }
+    },
+    {
+      "day": 24,
+      "enterprises": {
+        "bakery": {
+          "arrears": 0,
+          "building": "bakery",
+          "load_bp": 0,
+          "player": "mira",
+          "stage": 1,
+          "stalled": true,
+          "stock": {}
+        },
+        "field": {
+          "arrears": 0,
+          "building": "field",
+          "load_bp": 10000,
+          "player": "mira",
+          "stage": 4,
+          "stalled": false,
+          "stock": {}
+        },
+        "mill": {
+          "arrears": 0,
+          "building": "mill",
+          "load_bp": 10000,
+          "player": "mira",
+          "stage": 4,
+          "stalled": false,
+          "stock": {
+            "flour": 1760,
+            "grain": 100
+          }
+        },
+        "store": {
+          "arrears": 0,
+          "building": "grocery_store",
+          "load_bp": 0,
+          "player": "mira",
+          "stage": 0,
+          "stalled": true,
+          "stock": {}
+        }
+      },
+      "ledger_sum": 0,
+      "market": [],
+      "month_closed": 0,
+      "players": {
+        "mira": {
+          "money": 80000,
+          "output": {
+            "flour": 80,
+            "grain": 100
+          },
+          "revenue": 0,
+          "sales": 0,
+          "tax": 0,
+          "tax_due": 0,
+          "tax_paid": 0,
+          "wages_paid": 0
+        }
+      }
+    },
+    {
+      "day": 25,
+      "enterprises": {
+        "bakery": {
+          "arrears": 0,
+          "building": "bakery",
+          "load_bp": 0,
+          "player": "mira",
+          "stage": 1,
+          "stalled": true,
+          "stock": {}
+        },
+        "field": {
+          "arrears": 0,
+          "building": "field",
+          "load_bp": 10000,
+          "player": "mira",
+          "stage": 4,
+          "stalled": false,
+          "stock": {}
+        },
+        "mill": {
+          "arrears": 0,
+          "building": "mill",
+          "load_bp": 10000,
+          "player": "mira",
+          "stage": 4,
+          "stalled": false,
+          "stock": {
+            "flour": 1840,
+            "grain": 100
+          }
+        },
+        "store": {
+          "arrears": 0,
+          "building": "grocery_store",
+          "load_bp": 0,
+          "player": "mira",
+          "stage": 0,
+          "stalled": true,
+          "stock": {}
+        }
+      },
+      "ledger_sum": 0,
+      "market": [],
+      "month_closed": 0,
+      "players": {
+        "mira": {
+          "money": 80000,
+          "output": {
+            "flour": 80,
+            "grain": 100
+          },
+          "revenue": 0,
+          "sales": 0,
+          "tax": 0,
+          "tax_due": 0,
+          "tax_paid": 0,
+          "wages_paid": 0
+        }
+      }
+    },
+    {
+      "day": 26,
+      "enterprises": {
+        "bakery": {
+          "arrears": 0,
+          "building": "bakery",
+          "load_bp": 0,
+          "player": "mira",
+          "stage": 1,
+          "stalled": true,
+          "stock": {}
+        },
+        "field": {
+          "arrears": 0,
+          "building": "field",
+          "load_bp": 10000,
+          "player": "mira",
+          "stage": 4,
+          "stalled": false,
+          "stock": {}
+        },
+        "mill": {
+          "arrears": 0,
+          "building": "mill",
+          "load_bp": 10000,
+          "player": "mira",
+          "stage": 4,
+          "stalled": false,
+          "stock": {
+            "flour": 1920,
+            "grain": 100
+          }
+        },
+        "store": {
+          "arrears": 0,
+          "building": "grocery_store",
+          "load_bp": 0,
+          "player": "mira",
+          "stage": 0,
+          "stalled": true,
+          "stock": {}
+        }
+      },
+      "ledger_sum": 0,
+      "market": [],
+      "month_closed": 0,
+      "players": {
+        "mira": {
+          "money": 80000,
+          "output": {
+            "flour": 80,
+            "grain": 100
+          },
+          "revenue": 0,
+          "sales": 0,
+          "tax": 0,
+          "tax_due": 0,
+          "tax_paid": 0,
+          "wages_paid": 0
+        }
+      }
+    },
+    {
+      "day": 27,
+      "enterprises": {
+        "bakery": {
+          "arrears": 0,
+          "building": "bakery",
+          "load_bp": 0,
+          "player": "mira",
+          "stage": 1,
+          "stalled": true,
+          "stock": {}
+        },
+        "field": {
+          "arrears": 0,
+          "building": "field",
+          "load_bp": 10000,
+          "player": "mira",
+          "stage": 4,
+          "stalled": false,
+          "stock": {}
+        },
+        "mill": {
+          "arrears": 0,
+          "building": "mill",
+          "load_bp": 10000,
+          "player": "mira",
+          "stage": 4,
+          "stalled": false,
+          "stock": {
+            "flour": 2000,
+            "grain": 100
+          }
+        },
+        "store": {
+          "arrears": 0,
+          "building": "grocery_store",
+          "load_bp": 0,
+          "player": "mira",
+          "stage": 0,
+          "stalled": true,
+          "stock": {}
+        }
+      },
+      "ledger_sum": 0,
+      "market": [],
+      "month_closed": 0,
+      "players": {
+        "mira": {
+          "money": 80000,
+          "output": {
+            "flour": 80,
+            "grain": 100
+          },
+          "revenue": 0,
+          "sales": 0,
+          "tax": 0,
+          "tax_due": 0,
+          "tax_paid": 0,
+          "wages_paid": 0
+        }
+      }
+    },
+    {
+      "day": 28,
+      "enterprises": {
+        "bakery": {
+          "arrears": 0,
+          "building": "bakery",
+          "load_bp": 0,
+          "player": "mira",
+          "stage": 1,
+          "stalled": true,
+          "stock": {}
+        },
+        "field": {
+          "arrears": 0,
+          "building": "field",
+          "load_bp": 10000,
+          "player": "mira",
+          "stage": 4,
+          "stalled": false,
+          "stock": {}
+        },
+        "mill": {
+          "arrears": 0,
+          "building": "mill",
+          "load_bp": 10000,
+          "player": "mira",
+          "stage": 4,
+          "stalled": false,
+          "stock": {
+            "flour": 2080,
+            "grain": 100
+          }
+        },
+        "store": {
+          "arrears": 0,
+          "building": "grocery_store",
+          "load_bp": 0,
+          "player": "mira",
+          "stage": 0,
+          "stalled": true,
+          "stock": {}
+        }
+      },
+      "ledger_sum": 0,
+      "market": [],
+      "month_closed": 0,
+      "players": {
+        "mira": {
+          "money": 80000,
+          "output": {
+            "flour": 80,
+            "grain": 100
+          },
+          "revenue": 0,
+          "sales": 0,
+          "tax": 0,
+          "tax_due": 0,
+          "tax_paid": 0,
+          "wages_paid": 0
+        }
+      }
+    },
+    {
+      "day": 29,
+      "enterprises": {
+        "bakery": {
+          "arrears": 0,
+          "building": "bakery",
+          "load_bp": 0,
+          "player": "mira",
+          "stage": 1,
+          "stalled": true,
+          "stock": {}
+        },
+        "field": {
+          "arrears": 0,
+          "building": "field",
+          "load_bp": 10000,
+          "player": "mira",
+          "stage": 4,
+          "stalled": false,
+          "stock": {}
+        },
+        "mill": {
+          "arrears": 0,
+          "building": "mill",
+          "load_bp": 10000,
+          "player": "mira",
+          "stage": 4,
+          "stalled": false,
+          "stock": {
+            "flour": 2160,
+            "grain": 100
+          }
+        },
+        "store": {
+          "arrears": 0,
+          "building": "grocery_store",
+          "load_bp": 0,
+          "player": "mira",
+          "stage": 0,
+          "stalled": true,
+          "stock": {}
+        }
+      },
+      "ledger_sum": 0,
+      "market": [],
+      "month_closed": 0,
+      "players": {
+        "mira": {
+          "money": 80000,
+          "output": {
+            "flour": 80,
+            "grain": 100
+          },
+          "revenue": 0,
+          "sales": 0,
+          "tax": 0,
+          "tax_due": 0,
+          "tax_paid": 0,
+          "wages_paid": 0
+        }
+      }
+    },
+    {
+      "day": 30,
+      "enterprises": {
+        "bakery": {
+          "arrears": 0,
+          "building": "bakery",
+          "load_bp": 0,
+          "player": "mira",
+          "stage": 1,
+          "stalled": true,
+          "stock": {}
+        },
+        "field": {
+          "arrears": 0,
+          "building": "field",
+          "load_bp": 10000,
+          "player": "mira",
+          "stage": 4,
+          "stalled": false,
+          "stock": {}
+        },
+        "mill": {
+          "arrears": 0,
+          "building": "mill",
+          "load_bp": 10000,
+          "player": "mira",
+          "stage": 4,
+          "stalled": false,
+          "stock": {
+            "flour": 2240,
+            "grain": 100
+          }
+        },
+        "store": {
+          "arrears": 0,
+          "building": "grocery_store",
+          "load_bp": 0,
+          "player": "mira",
+          "stage": 0,
+          "stalled": true,
+          "stock": {}
+        }
+      },
+      "ledger_sum": 0,
+      "market": [],
+      "month_closed": 1,
+      "players": {
+        "mira": {
+          "money": 67000,
+          "output": {
+            "flour": 80,
+            "grain": 100
+          },
+          "revenue": 0,
+          "sales": 0,
+          "tax": 0,
+          "tax_due": 0,
+          "tax_paid": 0,
+          "wages_paid": 13000
+        }
+      }
+    }
+  ],
+  "days_run": 30,
+  "salary_index_bp": 10000,
+  "salary_worker": 100,
+  "scenario": "m1_basic",
+  "sim_version": 1,
+  "totals": {
+    "mira": {
+      "min_money": 67000,
+      "money": 67000,
+      "output": {
+        "flour": 2240,
+        "grain": 2900
+      },
+      "revenue": 0,
+      "sales": 0,
+      "tax_paid": 0,
+      "wages_paid": 13000
+    }
+  },
+  "verdict": {
+    "accepted": false,
+    "build_cost_sum": 1600000,
+    "chain_operational": false,
+    "reason": "выручка за 10 суток равна 0; не все предприятия цепочки введены; капитал 1000000 меньше суммы стройки 1600000",
+    "revenue_first_window": 0,
+    "stages": {
+      "bakery": 1,
+      "field": 4,
+      "mill": 4,
+      "store": 0
+    },
+    "starting_capital": 1000000,
+    "window_days": 10
+  }
+}

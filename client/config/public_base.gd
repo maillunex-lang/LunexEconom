@@ -9,6 +9,29 @@ static func base_url() -> String:
         return ""
     return value
 
+## API route is separate from the public update/download origin.
+## Change lunex/api_path to "api" after the V1/V2 cutover.
+static var default_api_path: String = "v2/api"
+
+static func api_url() -> String:
+    var api_path := str(ProjectSettings.get_setting("lunex/api_path", default_api_path))
+    if api_path.is_empty() or api_path != api_path.strip_edges():
+        return ""
+    if api_path.begins_with("/") or api_path.ends_with("/") or "\\" in api_path:
+        return ""
+    if "@" in api_path or "?" in api_path or "#" in api_path or ".." in api_path or "://" in api_path:
+        return ""
+    for segment in api_path.split("/"):
+        if segment.is_empty():
+            return ""
+        for character in segment:
+            if not (character.is_valid_identifier() or character.is_valid_int() or character == "-"):
+                return ""
+    var base := base_url()
+    if base.is_empty() or ".." in base:
+        return ""
+    return base + "/" + api_path
+
 static func url(relative_path: String) -> String:
     if relative_path.begins_with("/") or ".." in relative_path or "://" in relative_path:
         return ""
