@@ -25,7 +25,15 @@ func _ready() -> void:
     _refresh_terms()
     _refresh_wallet()
     _connect_server()
+    _load_goods_catalog()
     _load_zones()
+    var deposit_timer := Timer.new()
+    deposit_timer.wait_time = 3.0
+    deposit_timer.autostart = true
+    deposit_timer.timeout.connect(func() -> void:
+        _deposit_age += 3.0
+        _deposit_tick())
+    add_child(deposit_timer)
     var zone_timer := Timer.new()
     zone_timer.wait_time = 90.0
     zone_timer.autostart = true
@@ -158,6 +166,9 @@ var section_body: Label
 var size_panel: PanelContainer
 var pending_size_kind := ""
 var catalog_panel: PanelContainer
+var build_menu                                  # build_menu.gd
+var goods_recipes: Dictionary = {}              # kind -> recipe from GET /catalog/goods
+var goods_names: Dictionary = {}                # good id -> name
 var placement_panel: PanelContainer
 var details_panel: PanelContainer
 var sell_button: Button
@@ -242,14 +253,11 @@ func _setup_ui_v1() -> void:
     get_node("UIOverlay").add_child(catalog_panel)
     var content := VBoxContainer.new()
     catalog_panel.add_child(content)
-    content.add_child(_ui_button("Строительство  ×", func(): catalog_panel.hide(), 230))
-    var tiles := GridContainer.new()
-    tiles.columns = 2
-    content.add_child(tiles)
-    for entry in [["farm","Ферма 2×2"],["mine","Шахта 2×3"],["factory","Завод 3×2"],["warehouse","Склад 3×3"],["shop","Магазин 2×2"]]:
-        var kind: String = entry[0]
-        tiles.add_child(_ui_button("%s · %s" % [entry[1], _fmt_money_short(int(building_costs[kind]))], func(): _choose_ui_build(kind), 190))
-    content.add_child(_ui_button("Все отрасли (33) · скоро", _open_trade_catalog, 390))
+    var catalog_header := _ui_button("Строительство  ×", func(): catalog_panel.hide(), 230)
+    catalog_header.name = "Header"
+    content.add_child(catalog_header)
+    build_menu = load("res://build_menu.gd").new()
+    build_menu.setup(self, content)                 # field of activity -> sub-field -> building
     catalog_panel.hide()
     size_panel = PanelContainer.new()
     size_panel.name = "BuildSizePicker"
@@ -696,8 +704,84 @@ func _open_trade_catalog() -> void:
         section_body.text = "Не удалось запросить каталог (код %d)." % err
 
 
+func _good_name(id: String) -> String:
+    if goods_names.has(id): return str(goods_names[id])
+    if market_quotes.has(id): return str(market_quotes[id].get("name", id))
+    return id
+
+## GET /catalog/goods: names, sizes, costs, products and inputs of every building kind; fills the menu and the profit forecast.
+func _load_goods_catalog() -> void:
+    var req := HTTPRequest.new()
+    add_child(req)
+    req.timeout = 10.0
+    req.request_completed.connect(func(result: int, code: int, _headers: PackedStringArray, body: PackedByteArray) -> void:
+        req.queue_free()
+        if result != HTTPRequest.RESULT_SUCCESS or code != 200:
+            return
+        var data = JSON.parse_string(body.get_string_from_utf8())
+        if data is Dictionary:
+            apply_goods_catalog(data)
+    )
+    if req.request(API_ROOT + "catalog/goods") != OK:
+        req.queue_free()
+
+func apply_goods_catalog(data: Dictionary) -> void:
+    var reference: Dictionary = {}
+    for good in data.get("goods", []):
+        if good is Dictionary:
+            goods_names[str(good.get("id", ""))] = str(good.get("name", ""))
+            reference[str(good.get("id", ""))] = int(good.get("reference_price", 0))
+    for recipe in data.get("recipes", []):
+        if not recipe is Dictionary: continue
+        var kind := str(recipe.get("kind", ""))
+        if kind == "": continue
+        goods_recipes[kind] = recipe
+        if not building_costs.has(kind) or not bool(recipe.get("legacy", false)):
+            building_costs[kind] = int(recipe.get("build_cost", building_costs.get(kind, 0)))
+        if not production.has(kind) and str(recipe.get("role", "")) != "retail":
+            var output = recipe.get("output", null)
+            production[kind] = {"product_id": str(output) if output != null else "", "output": int(recipe.get("capacity", 0)) if output != null else 0,
+                "unit_price": int(reference.get(str(output), 0)) if output != null else 0, "upkeep": int(recipe.get("upkeep", 0)),
+                "jobs": int(recipe.get("jobs", 0)), "inputs": recipe.get("inputs", {}), "storage": int(recipe.get("storage", 0))}
+    var rules: Dictionary = {}
+    for kind in goods_recipes:
+        if goods_recipes[kind].get("deposit", null) != null:
+            rules[kind] = str(goods_recipes[kind]["deposit"])
+    world.set_deposit_rules(rules)
+    if build_menu != null:
+        build_menu.rebuild()
+
+var _deposit_center := Vector2i(-2147483648, -2147483648)
+var _deposit_busy := false
+## Deposits around the camera (GET /deposits, at most 2000 cells wide): refreshed when the camera moved far or every few minutes.
+func _deposit_tick() -> void:
+    if _deposit_busy: return
+    var here: Vector2i = world.cell_of(world.focus)
+    if _deposit_center.x != -2147483648 and absi(here.x - _deposit_center.x) < 90 and absi(here.y - _deposit_center.y) < 90 and _deposit_age < 240.0:
+        return
+    _deposit_busy = true
+    var req := HTTPRequest.new()
+    add_child(req)
+    req.timeout = 8.0
+    req.request_completed.connect(func(result: int, code: int, _headers: PackedStringArray, body: PackedByteArray) -> void:
+        req.queue_free()
+        _deposit_busy = false
+        if result != HTTPRequest.RESULT_SUCCESS or code != 200: return
+        var data = JSON.parse_string(body.get_string_from_utf8())
+        if data is Dictionary and data.get("deposits", null) is Array:
+            world.set_deposits(data["deposits"])
+            _deposit_center = here
+            _deposit_age = 0.0
+    )
+    var url := "%sdeposits?x0=%d&y0=%d&x1=%d&y1=%d" % [API_ROOT, here.x - 220, here.y - 220, here.x + 220, here.y + 220]
+    if req.request(url) != OK:
+        _deposit_busy = false
+        req.queue_free()
+var _deposit_age := 0.0
+
 func _open_catalog() -> void:
     world.cancel_build()
+    if build_menu != null: build_menu.show_page("root")
     if regional_map_panel != null: regional_map_panel.hide()
     if contracts_panel != null:
         contracts_panel.hide()
@@ -711,7 +795,8 @@ func _open_catalog() -> void:
     call_deferred("_layout_ui_v1")
 
 func _choose_ui_build(kind: String) -> void:
-    if kind in ["farm", "mine", "factory", "warehouse", "shop"]:
+    # The size picker stays hidden while the server answers building_size_economy_pending to any sized request (docs/PROGRESS.md).
+    if SIZE_PICKER_ENABLED and kind in ["farm", "mine", "factory", "warehouse", "shop"]:
         pending_size_kind = kind
         for n in [1, 2, 3]:
             var b: Button = size_panel.get_child(0).get_child(n)
@@ -980,6 +1065,7 @@ var city_mode := false
 const LOAN_STEP := 100000
 var seen_bankruptcy_month = null
 var seen_missed := 0
+const SIZE_PICKER_ENABLED := false
 const KIND_NAMES := {"house": "Жилой дом", "farm": "Ферма", "mine": "Шахта", "factory": "Завод", "warehouse": "Склад", "shop": "Магазин", "school": "Школа", "hospital": "Больница", "park": "Парк",
     "grain_field": "Поле зерновых", "elevator": "Элеватор", "mill": "Мельница", "bread_plant": "Хлебозавод", "oil_well": "Нефтяная скважина", "gas_well": "Газовая скважина", "sand_pit": "Песчаный карьер", "logging_camp": "Лесосека"}
 var production := {"farm": {"product_id": "honey", "output": 100, "unit_price": 200, "upkeep": 2000, "jobs": 4}, "mine": {"product_id": "oil", "output": 40, "unit_price": 1500, "upkeep": 15000, "jobs": 10}, "factory": {"product_id": "goods", "output": 60, "unit_price": 2000, "upkeep": 26000, "jobs": 20, "inputs": {"oil": 10, "honey": 20}}, "warehouse": {"product_id": "", "output": 0, "unit_price": 0, "upkeep": 2000, "jobs": 2, "capacity": 400}, "shop": {"product_id": "", "output": 0, "unit_price": 0, "upkeep": 3000, "jobs": 5, "retail_hint": 18000}}

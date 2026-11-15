@@ -49,6 +49,10 @@ var camera: Camera3D
 var focus := Vector3.ZERO                      # ground point in the centre of the screen
 var target_focus := Vector3.ZERO
 var target_size := 40.0
+const DEPOSIT_COLORS := {"oil": Color("#3a3634"), "gas": Color("#8fb4c9"), "sand": Color("#e4d28c"), "forest": Color("#2e6a3c")}
+const DEPOSIT_NAMES := {"oil": "нефти", "gas": "газа", "sand": "песка", "forest": "леса"}
+var deposits: Dictionary = {}                  # id -> deposit from GET /deposits {resource, x, y, width, height, remaining}
+var deposit_kinds: Dictionary = {}             # building kind -> the resource it must stand on (from the goods catalogue)
 var zones = ZONES.new()                        # city zones from GET /geo/zones (docs/ZONING.md)
 var season_month := -1
 var seasons_on := false
@@ -382,6 +386,10 @@ func build_chunk(coord: Vector2i) -> void:
 						color = SAND_COLOR
 					elif zones.enabled and zones.zone_at(x, y) == "industrial":
 						color = color.lerp(INDUSTRIAL_TINT, 0.55)
+					if not deposits.is_empty():
+						var deposit := deposit_at(cell)
+						if not deposit.is_empty() and int(deposit.get("remaining", 0)) > 0 and DEPOSIT_COLORS.has(str(deposit.get("resource", ""))):
+							color = color.lerp(DEPOSIT_COLORS[str(deposit["resource"])], 0.78)
 			if kind != 3:
 				color = _season_tint(color)
 			if outside:
@@ -598,6 +606,43 @@ func preview_build(cell: Vector2i) -> Dictionary:
 ## Reason (Russian) why the server would refuse `kind` on these cells because of the zones, or "".
 func zone_refusal(kind: String, cells: Array) -> String:
 	return zones.refusal(kind, cells)
+
+## Zone and deposit rules the server would apply: "" when the building may stand on these cells, else the Russian reason.
+func build_refusal(kind: String, cells: Array) -> String:
+	var zone_text: String = zones.refusal(kind, cells)
+	if zone_text != "":
+		return zone_text
+	if deposit_kinds.has(kind):
+		var resource: String = deposit_kinds[kind]
+		for cell in cells:
+			var found := deposit_at(cell)
+			if not found.is_empty() and str(found.get("resource", "")) == resource and int(found.get("remaining", 0)) > 0:
+				return ""
+		return "Нужно месторождение %s: оно подсвечено на карте" % str(DEPOSIT_NAMES.get(resource, resource))
+	return ""
+
+func deposit_at(cell: Vector2i) -> Dictionary:
+	for id in deposits:
+		var d: Dictionary = deposits[id]
+		var x := int(d.get("x", 0))
+		var y := int(d.get("y", 0))
+		if cell.x >= x and cell.x < x + int(d.get("width", 2)) and cell.y >= y and cell.y < y + int(d.get("height", 2)):
+			return d
+	return {}
+
+func set_deposits(list: Array) -> void:
+	var changed := false
+	for item in list:
+		if item is Dictionary and str(item.get("id", "")) != "":
+			var id := str(item["id"])
+			if not deposits.has(id) or int(deposits[id].get("remaining", -1)) != int(item.get("remaining", -2)):
+				changed = true
+			deposits[id] = item
+	if changed:
+		refresh_all()
+
+func set_deposit_rules(rules: Dictionary) -> void:
+	deposit_kinds = rules
 
 func set_zones(data: Dictionary) -> void:
 	zones.load_data(data)

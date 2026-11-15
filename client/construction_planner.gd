@@ -28,7 +28,7 @@ func preview(origin: Vector2i, size: Vector2i, roads: Object, world: Object, bui
             return {"ok": false, "reason": "road_overlap"}
         if world.cell_kind(cell.x, cell.y) == 4:
             return {"ok": false, "reason": "water"}
-    var wrong_zone: String = world.zone_refusal(build_kind, cells) if world.has_method("zone_refusal") else ""
+    var wrong_zone: String = world.build_refusal(build_kind, cells) if world.has_method("build_refusal") else ""
     if wrong_zone != "":
         return {"ok": false, "reason": "wrong_zone", "message": wrong_zone}
     var access := find_access_path(cells, roads, world)

@@ -49,12 +49,30 @@ class CityCatalogTests(unittest.TestCase):
         self.assertEqual([s for s, _ in cc.STAGES], ["foundation", "frame", "finishing", "commissioning"])
         self.assertEqual(sum(p for _, p in cc.STAGES), 1000)
 
-    def test_bigger_buildings_take_longer_and_taller_housing_is_cheaper_per_resident(self):
+    def test_bigger_buildings_take_longer(self):
         self.assertLess(cc.CATALOG["house_wood"]["build_months"], cc.CATALOG["block_9"]["build_months"])
         self.assertLess(cc.CATALOG["block_9"]["build_months"], cc.CATALOG["quarter"]["build_months"])
-        per = lambda oid: cc.CATALOG[oid]["build_cost"] / cc.CATALOG[oid]["capacity"]
-        self.assertLess(per("block_16"), per("block_5"))
-        self.assertLess(per("block_5"), per("cottage"))
+
+    def test_housing_cost_is_area_times_the_structure_price_per_m2(self):
+        import regional_prices as rp
+        for oid in TARGET:
+            item = cc.CATALOG[oid]
+            self.assertEqual(item["area_m2"], item["capacity"] * rp.AREA_PER_RESIDENT)
+            self.assertEqual(item["build_cost"], rp.to_game(rp.BUILD_COST_M2_UFA[item["structure"]] * item["area_m2"]))
+
+    def test_a_developer_earns_in_ufa_but_towers_do_not_pay_in_the_smallest_town(self):
+        import regional_prices as rp
+        for oid in TARGET:
+            item = cc.CATALOG[oid]
+            cost_m2 = cc.cost_in(oid, "ufa") / item["area_m2"]
+            self.assertLess(cost_m2, rp.market_price_m2("ufa"), oid)               # profitable in the capital
+        small = cc.CATALOG["block_16"]
+        self.assertGreater(cc.cost_in("block_16", "agidel") / small["area_m2"], rp.market_price_m2("agidel"))
+
+    def test_the_price_depends_on_the_city(self):
+        self.assertGreater(cc.cost_in("block_9", "ufa"), cc.cost_in("block_9", "sterlitamak"))
+        self.assertGreater(cc.cost_in("block_9", "sterlitamak"), cc.cost_in("block_9", "agidel"))
+        self.assertEqual(cc.view("agidel")["objects"][0]["build_cost"], cc.cost_in(cc.view("agidel")["objects"][0]["id"], "agidel"))
 
     def test_legacy_kinds_keep_their_footprints_and_the_catalog_never_overrides_them(self):
         for oid, item in cc.CATALOG.items():

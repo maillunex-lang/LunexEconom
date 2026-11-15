@@ -5,7 +5,9 @@ construction with materials and stages, households, the city development directo
 integer roubles, all quantities integer units, wear in permille. Parameters are starting targets of the game balance and are meant to be
 tuned (docs/EXPANSION_1_0.md). Existing building kinds, sizes and economics are not changed; `legacy_kind` links an entry to one.
 """
-VERSION = 1
+import regional_prices
+
+VERSION = 2
 
 # Construction stages: share (permille) of the build time, in order; each has its own 3D visual (client/world3d, docs/WORLD3D.md).
 STAGES = (("foundation", 200), ("frame", 350), ("finishing", 300), ("commissioning", 150))
@@ -21,7 +23,8 @@ STRUCTURES = {
     "ground": {"materials": {"stone": 1}, "wear": 4},
 }
 
-# id, name, category, (w, h), structure, capacity, cost per unit of capacity (roubles), jobs, upkeep per month, floors, legacy kind
+# id, name, category, (w, h), structure, capacity, (unused cost column, kept for the table shape), jobs, upkeep per month (game roubles), floors, legacy kind.
+# A housing object costs capacity x AREA_PER_RESIDENT m2 x the build cost per m2 of its structure (regional_prices.py).
 HOUSING = (
     ("house_wood", "Деревянный дом", "housing", (1, 1), "wood", 4, 15000, 0, 400, 1, None),
     ("house_brick", "Кирпичный дом", "housing", (1, 1), "brick", 5, 18000, 0, 500, 1, None),
@@ -37,27 +40,27 @@ HOUSING = (
     ("quarter", "Жилой квартал", "housing", (6, 6), "monolith", 2400, 20000, 25, 280000, 16, None),
 )
 
-# id, name, category, (w, h), structure, served population, build cost, jobs, upkeep per month, legacy kind
+# id, name, category, (w, h), structure, served population, build cost in REAL roubles (ESTIMATE, Ufa 2025; the game price is /REAL_PER_GAME), jobs, upkeep per month (game roubles), legacy kind
 MUNICIPAL = (
-    ("kindergarten", "Детский сад", "education", (2, 2), "public", 150, 300000, 12, 12000, None),
-    ("school", "Школа", "education", (3, 2), "public", 600, 400000, 6, 3000, "school"),
-    ("lyceum", "Лицей", "education", (3, 3), "public", 700, 650000, 30, 26000, None),
-    ("college", "Колледж", "education", (3, 3), "public", 900, 900000, 40, 34000, None),
-    ("university", "Университет", "education", (4, 4), "public", 3000, 3500000, 150, 140000, None),
-    ("fap", "ФАП", "health", (1, 2), "light", 800, 120000, 3, 6000, None),
-    ("polyclinic", "Поликлиника", "health", (3, 2), "public", 6000, 700000, 40, 45000, None),
-    ("hospital", "Больница", "health", (3, 3), "public", 10000, 800000, 8, 5000, "hospital"),
-    ("administration", "Администрация", "administration", (3, 2), "public", 20000, 600000, 25, 30000, None),
-    ("police", "Полиция", "administration", (2, 2), "public", 15000, 400000, 18, 22000, None),
-    ("fire_depot", "Пожарное депо", "administration", (2, 3), "public", 20000, 500000, 20, 26000, None),
-    ("park", "Парк", "green", (2, 2), "ground", 3000, 150000, 2, 1000, "park"),
-    ("square", "Сквер", "green", (1, 1), "ground", 800, 40000, 0, 500, None),
-    ("playground", "Детская площадка", "green", (1, 1), "ground", 600, 30000, 0, 400, None),
-    ("sports", "Спортивное сооружение", "green", (3, 2), "public", 2500, 450000, 10, 18000, None),
-    ("bus_stop", "Остановка", "transport", (1, 1), "light", 1500, 25000, 0, 300, None),
-    ("bus_station", "Автовокзал", "transport", (3, 2), "public", 8000, 550000, 20, 28000, None),
-    ("parking", "Парковка", "transport", (2, 2), "ground", 400, 60000, 1, 800, None),
-    ("landscaping", "Благоустройство", "amenity", (1, 1), "ground", 1000, 20000, 0, 300, None),
+    ("kindergarten", "Детский сад", "education", (2, 2), "public", 150, 330000000, 12, 12000, None),
+    ("school", "Школа", "education", (3, 2), "public", 600, 900000000, 6, 3000, "school"),
+    ("lyceum", "Лицей", "education", (3, 3), "public", 700, 1100000000, 30, 26000, None),
+    ("college", "Колледж", "education", (3, 3), "public", 900, 1400000000, 40, 34000, None),
+    ("university", "Университет", "education", (4, 4), "public", 3000, 4500000000, 150, 140000, None),
+    ("fap", "ФАП", "health", (1, 2), "light", 800, 25000000, 3, 6000, None),
+    ("polyclinic", "Поликлиника", "health", (3, 2), "public", 6000, 650000000, 40, 45000, None),
+    ("hospital", "Больница", "health", (3, 3), "public", 10000, 1800000000, 8, 5000, "hospital"),
+    ("administration", "Администрация", "administration", (3, 2), "public", 20000, 250000000, 25, 30000, None),
+    ("police", "Полиция", "administration", (2, 2), "public", 15000, 150000000, 18, 22000, None),
+    ("fire_depot", "Пожарное депо", "administration", (2, 3), "public", 20000, 200000000, 20, 26000, None),
+    ("park", "Парк", "green", (2, 2), "ground", 3000, 60000000, 2, 1000, "park"),
+    ("square", "Сквер", "green", (1, 1), "ground", 800, 8000000, 0, 500, None),
+    ("playground", "Детская площадка", "green", (1, 1), "ground", 600, 4000000, 0, 400, None),
+    ("sports", "Спортивное сооружение", "green", (3, 2), "public", 2500, 350000000, 10, 18000, None),
+    ("bus_stop", "Остановка", "transport", (1, 1), "light", 1500, 1500000, 0, 300, None),
+    ("bus_station", "Автовокзал", "transport", (3, 2), "public", 8000, 180000000, 20, 28000, None),
+    ("parking", "Парковка", "transport", (2, 2), "ground", 400, 25000000, 1, 800, None),
+    ("landscaping", "Благоустройство", "amenity", (1, 1), "ground", 1000, 5000000, 0, 300, None),
 )
 
 # Starting build time in game months by number of cells (larger projects take longer, never less than one month).
@@ -82,7 +85,10 @@ def _entry(oid, name, category, size, structure, capacity, unit_cost, jobs, upke
     return {
         "id": oid, "name": name, "category": category, "w": size[0], "h": size[1], "cells": cells,
         "structure": structure, "capacity": capacity,
-        "build_cost": capacity * unit_cost if category == "housing" else unit_cost,
+        "area_m2": capacity * regional_prices.AREA_PER_RESIDENT if category == "housing" else None,
+        "build_cost_real": (regional_prices.BUILD_COST_M2_UFA[structure] * capacity * regional_prices.AREA_PER_RESIDENT) if category == "housing" else unit_cost,
+        "build_cost": regional_prices.build_cost(structure, capacity * regional_prices.AREA_PER_RESIDENT, "ufa") if category == "housing"
+                      else regional_prices.to_game(unit_cost),
         "materials": _materials(structure, capacity if category == "housing" else max(cells * 12, 1)),
         "jobs": jobs, "upkeep": upkeep, "wear_permille_per_month": STRUCTURES[structure]["wear"],
         "build_months": build_months(cells), "zone": "city",
@@ -108,9 +114,24 @@ def get(object_id):
     return CATALOG.get(object_id)
 
 
-def view():
-    """GET /catalog/city: public, cacheable, read-only. `enabled` is false until the construction blocks land."""
-    return {"version": VERSION, "enabled": False, "stages": [{"id": s, "share_permille": p} for s, p in STAGES],
+def cost_in(object_id, city_id="ufa"):
+    """Construction cost of an object in a city (game roubles): the Ufa price times the city's construction index."""
+    return int(round(CATALOG[object_id]["build_cost"] * regional_prices.indices(city_id)["construction"]))
+
+
+def view(city_id=None):
+    """GET /catalog/city[?city=id]: public, cacheable, read-only. `enabled` is false until the construction blocks land.
+    Prices are Ufa prices; with `city_id` every `build_cost` is that city's price and `prices` holds its market indices."""
+    city_id = city_id or "ufa"
+    objects = []
+    for key in CATALOG:
+        item = dict(CATALOG[key])
+        item["build_cost"] = cost_in(key, city_id)
+        objects.append(item)
+    return {"version": VERSION, "enabled": False, "city": city_id, "scale": {"real_per_game": regional_prices.REAL_PER_GAME},
+            "prices": {**regional_prices.indices(city_id), "market_price_m2": regional_prices.market_price_m2(city_id),
+                       "rent_m2_month": regional_prices.rent_m2_month(city_id), "wage": regional_prices.wage(city_id)},
+            "stages": [{"id": s, "share_permille": p} for s, p in STAGES],
             "structures": {k: {"materials_per_unit": v["materials"], "wear_permille_per_month": v["wear"]} for k, v in STRUCTURES.items()},
-            "objects": [CATALOG[k] for k in CATALOG],
-            "note": "Starting balance targets; nothing here is buildable yet (docs/EXPANSION_1_0.md)."}
+            "objects": objects,
+            "note": "Real-world calibration (docs/REGIONAL_PRICES.md); nothing here is buildable yet (docs/EXPANSION_1_0.md)."}
