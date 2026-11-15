@@ -105,12 +105,34 @@ def undo(db, ph, owner, payload, ip):
     recent = db.execute("SELECT COUNT(*) FROM dev_actions WHERE actor=" + ph + " AND created>=" + ph, (owner, action_time - 60_000_000_000)).fetchone()[0]
     if recent >= 30:
         return 429, {"error": "rate_limited"}
-    row = db.execute("SELECT id,action,inverse_json,payload_json FROM dev_actions WHERE actor=" + ph + " AND action IN ('terrain','roads','move','demolish') AND undone=0 ORDER BY created DESC,id DESC LIMIT 1", (owner,)).fetchone()
+    row = db.execute("SELECT id,action,inverse_json,payload_json FROM dev_actions WHERE actor=" + ph + " AND action IN ('terrain','roads','move','demolish','create') AND undone=0 ORDER BY created DESC,id DESC LIMIT 1", (owner,)).fetchone()
     if not row:
         return 409, {"error": "nothing_to_undo"}
     action_id, action_kind, inverse, original_payload = row
     original = json.loads(original_payload)
     snapshot = json.loads(inverse)
+    if action_kind == "create":
+        oid = snapshot["object_id"]
+        row = db.execute("SELECT owner,kind FROM buildings WHERE id=" + ph, (oid,)).fetchone()
+        if row is None or row[1] != original["kind"]:
+            return 409, {"error": "undo_conflict"}
+        # Do not delete a building whose ownership or economic registrations
+        # have changed since the operator created it.
+        import economy
+        if row[0] != economy.CITY:
+            return 409, {"error": "undo_conflict"}
+        original_anchor = db.execute("SELECT x,y FROM buildings WHERE id=" + ph, (oid,)).fetchone()
+        if original_anchor != (original["x"], original["y"]):
+            return 409, {"error": "undo_conflict"}
+        if db.execute("SELECT 1 FROM building_ops WHERE object_id=" + ph, (oid,)).fetchone():
+            return 409, {"error": "building_operational"}
+        import production
+        production._remove_building(db, ph, oid, row[0])
+        db.execute("UPDATE dev_actions SET undone=1 WHERE id=" + ph, (action_id,))
+        db.execute("INSERT INTO dev_actions(id,actor,action,payload_json,inverse_json,created,undone) VALUES(" + ",".join([ph]*7) + ")", (request_id, owner, "undo", json.dumps(payload), inverse, action_time, 0))
+        admin_api.audit(db, ph, owner, "dev_undo_create", oid, "removed", ip, now)
+        db.commit()
+        return 200, {"request_id": request_id, "undone": action_id, "removed": oid}
     if action_kind == "demolish":
         building = snapshot["building"]
         oid = original["object_id"]
@@ -365,3 +387,71 @@ def building_demolish(db, ph, actor, payload, ip):
     admin_api.audit(db, ph, actor, "dev_demolish", oid, "no_ledger_payment", ip, int(time.time()))
     db.commit()
     return 200, {"request_id": request_id, "object_id": oid, "removed": len(cells)}
+
+def building_create(db, ph, actor, payload, ip):
+    """Create a city-owned world building without any money movement.
+
+    Player-owned assets are deliberately excluded: gifting them would alter
+    production capacity and balance without a corresponding transaction.
+    """
+    if not require_developer(actor, db):
+        return 403, {"error": "forbidden"}
+    if not isinstance(payload, dict):
+        return 400, {"error": "invalid_body"}
+    try:
+        request_id = str(uuid.UUID(payload.get("request_id")))
+    except (ValueError, TypeError, AttributeError):
+        return 400, {"error": "invalid_request_id"}
+    kind, x, y = payload.get("kind"), payload.get("x"), payload.get("y")
+    if type(x) is not int or type(y) is not int or abs(x) > 1000 or abs(y) > 1000:
+        return 400, {"error": "invalid_coordinates"}
+    import building_dimensions
+    import economy
+    import roads
+    import zoning
+    try:
+        width, height = building_dimensions.footprint(kind)
+    except (ValueError, TypeError):
+        return 400, {"error": "unknown_building_kind"}
+    if payload.get("owner", economy.CITY) != economy.CITY:
+        return 403, {"error": "city_only"}
+    if kind not in economy.SOCIAL_KINDS:
+        return 409, {"error": "economic_building_requires_normal_construction"}
+    if x + width - 1 > 1000 or y + height - 1 > 1000:
+        return 400, {"error": "outside_world"}
+    previous = db.execute("SELECT actor,action,payload_json FROM dev_actions WHERE id=" + ph, (request_id,)).fetchone()
+    if previous:
+        return (200, {"request_id": request_id, "replayed": True}) if previous == (actor, "create", json.dumps(payload, ensure_ascii=False)) else (409, {"error": "request_id_conflict"})
+    cells = [(xx, yy) for xx in range(x, x + width) for yy in range(y, y + height)]
+    for xx, yy in cells:
+        if roads.is_water(xx, yy) or roads.is_base_road(xx, yy):
+            return 409, {"error": "blocked_terrain"}
+        if db.execute("SELECT 1 FROM cells WHERE x=" + ph + " AND y=" + ph, (xx, yy)).fetchone():
+            return 409, {"error": "occupied"}
+        if db.execute("SELECT 1 FROM roads WHERE x=" + ph + " AND y=" + ph, (xx, yy)).fetchone():
+            return 409, {"error": "road_overlap"}
+        if db.execute("SELECT kind FROM terrain_edits WHERE x=" + ph + " AND y=" + ph, (xx, yy)).fetchone() == ("water",):
+            return 409, {"error": "water"}
+    if zoning.check(db, ph, kind, cells):
+        return 409, {"error": "invalid_zone"}
+    action_time = time.time_ns()
+    count = db.execute("SELECT COUNT(*) FROM dev_actions WHERE actor=" + ph + " AND created>=" + ph, (actor, action_time - 60_000_000_000)).fetchone()[0]
+    if count >= 30:
+        return 429, {"error": "rate_limited"}
+    oid = uuid.uuid4().hex
+    now = int(time.time())
+    db.execute("INSERT INTO buildings(id,owner,kind,x,y,created) VALUES(" + ",".join([ph]*6) + ")", (oid, economy.CITY, kind, x, y, now))
+    for xx, yy in cells:
+        db.execute("INSERT INTO cells(x,y,object_id) VALUES(" + ",".join([ph]*3) + ")", (xx, yy, oid))
+    grouped = {}
+    for xx, yy in cells:
+        grouped.setdefault((xx // 12, yy // 12), []).append([xx, yy])
+    for (cx, cy), coords in grouped.items():
+        db.execute("INSERT INTO chunks(cx,cy,version) VALUES(" + ",".join([ph]*3) + ") ON CONFLICT(cx,cy) DO UPDATE SET version=chunks.version+1", (cx, cy, 1))
+        version = db.execute("SELECT version FROM chunks WHERE cx=" + ph + " AND cy=" + ph, (cx, cy)).fetchone()[0]
+        event = {"object_id": oid, "owner": economy.CITY, "building_kind": kind, "cells": coords}
+        db.execute("INSERT INTO events(cx,cy,version,kind,payload) VALUES(" + ",".join([ph]*5) + ")", (cx, cy, version, "building_created", json.dumps(event)))
+    db.execute("INSERT INTO dev_actions(id,actor,action,payload_json,inverse_json,created,undone) VALUES(" + ",".join([ph]*7) + ")", (request_id, actor, "create", json.dumps(payload, ensure_ascii=False), json.dumps({"object_id": oid}), action_time, 0))
+    admin_api.audit(db, ph, actor, "dev_create", oid, "city_owned_no_ledger_payment", ip, now)
+    db.commit()
+    return 200, {"request_id": request_id, "object_id": oid, "created": len(cells)}
