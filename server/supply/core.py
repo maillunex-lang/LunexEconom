@@ -32,7 +32,13 @@ def validate_links(conn, row, inputs):
     if not isinstance(inputs, dict):
         raise ValueError('invalid_inputs')
     recipe = _recipe(row[2])
-    if not set(inputs).issubset(recipe['inputs'] if recipe else {}):
+    allowed = recipe['inputs'] if recipe else {}
+    if recipe is None:
+        building_row = conn.execute('SELECT building_id FROM enterprises WHERE id=%s', (row[0],)).fetchone()
+        building = enterprise.catalog().index['buildings'].get(building_row[0], {}) if building_row else {}
+        if building.get('role') == 'retail':
+            allowed = building.get('allowed_goods', ())
+    if not set(inputs).issubset(allowed):
         raise ValueError('not_own_input')
     result = []
     for product, links in sorted(inputs.items()):
@@ -134,16 +140,43 @@ def _free(conn, eid, capacity):
     return max(0, capacity - enterprise.stock_total(conn, eid) - reserved)
 
 
+def retail_need(conn, enterprise_id, capacity):
+    """Public V2-06 replenishment demand for live retail shelves.
+
+    Uses the same warehouse and in-transit accounting as recipe inputs.
+    The desired minimum on each configured cell is aggregated by SKU.
+    """
+    from server.retail.core import replenishment_targets
+    targets = replenishment_targets(conn, enterprise_id)
+    stored = enterprise.stock(conn, enterprise_id)
+    pending = _in_transit(conn, enterprise_id)
+    free = max(0, capacity - sum(item["quantity"] for item in stored.values())
+               - sum(pending.values()))
+    needs = {}
+    for product, target in sorted(targets.items()):
+        missing = max(0, target - stored.get(product, {}).get("quantity", 0)
+                      - pending.get(product, 0))
+        needs[product] = min(missing, free)
+        free -= needs[product]
+    return needs
+
+
 def _need(conn, row):
     eid, _, recipe_id, _, stage, running, capacity = row
     recipe = _recipe(recipe_id)
-    if not recipe or stage != 4 or not running:
+    if stage != 4 or not running:
         return {}
     if conn.execute(
             'SELECT 1 FROM enterprise_arrears '
             'WHERE enterprise_id=%s AND paid_at IS NULL LIMIT 1',
             (eid,)).fetchone():
         return {}
+    if not recipe:
+        building_id = conn.execute(
+            'SELECT building_id FROM enterprises WHERE id=%s', (eid,)
+        ).fetchone()[0]
+        building = enterprise.catalog().index['buildings'].get(building_id, {})
+        return retail_need(conn, eid, capacity) if building.get('role') == 'retail' else {}
     stored = enterprise.stock(conn, eid)
     pending = _in_transit(conn, eid)
     free = max(0, capacity - sum(v['quantity'] for v in stored.values())
