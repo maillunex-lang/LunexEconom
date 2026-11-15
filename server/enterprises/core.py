@@ -78,16 +78,23 @@ def cells_for(x,y,building):
 def placement(conn, actor_id, px, py, x, y, building):
     row=conn.execute('SELECT owner_kind,owner_ref FROM world_parcels WHERE px=%s AND py=%s FOR UPDATE',(px,py)).fetchone()
     if row != ('player',str(actor_id)):
-        return 'parcel_not_owned',None,None
+        return 'parcel_not_owned',None,None,[]
     cells=cells_for(x,y,building)
     if not all(px*6<=a<px*6+6 and py*6<=b<py*6+6 for a,b in cells):
-        return 'outside_parcel',None,None
+        return 'outside_parcel',None,None,[]
     ok,reason=world.placement_valid(conn,building['id'],x,y)
+    road=[]
+    if not ok and reason=='no_road_access':
+        # D-new: a building without road contact gets an access road at the builder's cost.
+        road,failure=world.plan_access_road(conn,actor_id,cells)
+        if road is None:
+            return failure,None,None,[]
+        ok=True
     if not ok:
-        return reason,None,None
+        return reason,None,None,[]
     states=world.city_states(conn)
     city=world.city_at(x,y,states)
-    return None,cells,city['id'] if city else None
+    return None,cells,(city['id'] if city else None),road
 
 def place(conn, actor, request_id, building_id, px, py, x, y):
     building=catalog().index['buildings'].get(building_id)
@@ -99,21 +106,31 @@ def place(conn, actor, request_id, building_id, px, py, x, y):
         if previous[1:] != (actor['id'],building_id,px,py,x,y):
             return 409,{'error':'request_id_conflict'}
         return 200,{'id':previous[0],'idempotent':True}
-    reason,cells,city_id=placement(conn,actor['id'],px,py,x,y,building)
+    reason,cells,city_id,road=placement(conn,actor['id'],px,py,x,y,building)
     if reason:
         return 409,{'error':reason}
     payer=account(conn,'player:'+actor['username'].lower(),'player',actor['id'])
     treasury=account(conn,'system:treasury')
     wallet_balance=conn.execute('SELECT balance FROM ledger_accounts WHERE id=%s',(payer,)).fetchone()[0]
     initial_payment = stage_costs(building['build_cost'])[0]
-    if wallet_balance < initial_payment:
-        return 409,{'error':'insufficient_funds'}
+    road_cost = len(road)*world.AUTO_ROAD_CELL_COST
+    if wallet_balance < initial_payment + road_cost:
+        return 409,{'error':'insufficient_funds','required':initial_payment+road_cost,
+                    'road_cost':road_cost,'shortfall':initial_payment+road_cost-wallet_balance}
     try:
         transfer_id=transfer(conn,'enterprise:build:'+request_id,payer,treasury,initial_payment)
+        if road_cost:
+            transfer(conn,'enterprise:road:'+request_id,payer,treasury,road_cost)
     except ValueError as exc:
         if str(exc)=='insufficient balance':
             return 409,{'error':'insufficient_funds'}
         raise
+    if road:
+        for rx,ry in road:
+            conn.execute('INSERT INTO world_roads(x,y,builder_id) VALUES(%s,%s,%s) ON CONFLICT DO NOTHING',
+                         (rx,ry,actor['id']))
+        world._touch(conn,world._chunks_for_cells(road),'road_build',city_id,
+                     {'cells':[list(c) for c in road],'player':actor['id'],'auto':True})
     recipes=[r for r in catalog().data['recipes'] if r['building']==building_id]
     recipe_id=recipes[0]['id'] if recipes else None
     eid=conn.execute("""INSERT INTO enterprises(owner_id,building_id,px,py,x,y,width,height,city_id,name,build_cost,build_days,upkeep_month,jobs,storage_capacity,started_day,recipe_id,build_request_id,build_transfer_id)
@@ -138,7 +155,8 @@ def place(conn, actor, request_id, building_id, px, py, x, y):
                            {'enterprise_id':eid,'stage_index':0,'stage':'foundation'})
     return 201,{'id':eid,'build_cost':building['build_cost'],
                 'initial_payment':initial_payment,'transfer_id':transfer_id,
-                'event_version':event,'idempotent':False,'balance':'draft'}
+                'event_version':event,'idempotent':False,'balance':'draft',
+                'road_cells':[list(c) for c in road],'road_cost':road_cost}
 
 def stock(conn,eid):
     rows=conn.execute('SELECT product_id,quantity,quality FROM enterprise_inventory WHERE enterprise_id=%s ORDER BY product_id',(eid,)).fetchall()
@@ -349,3 +367,21 @@ def close_month(conn,month,salary_per_worker=100,monthly_wear=1):
               VALUES(%s,%s,0,%s,%s,%s,%s) ON CONFLICT DO NOTHING""",
               (eid,month,expenses,avg,Jsonb(stock(conn,eid)),wear))
             conn.execute('UPDATE enterprises SET last_month=%s WHERE id=%s',(month,eid))
+
+
+def plan(conn, actor, building_id, px, py, x, y):
+    """Read-only placement preview: access road cells and the total first payment."""
+    building=catalog().index['buildings'].get(building_id)
+    if building is None:
+        return 404,{'error':'unknown_building'}
+    reason,cells,_,road=placement(conn,actor['id'],px,py,x,y,building)
+    if reason:
+        return 200,{'ok':False,'reason':reason,'road_cells':[],'road_cost':0}
+    payer=account(conn,'player:'+actor['username'].lower(),'player',actor['id'])
+    balance=conn.execute('SELECT balance FROM ledger_accounts WHERE id=%s',(payer,)).fetchone()[0]
+    initial=stage_costs(building['build_cost'])[0]
+    road_cost=len(road)*world.AUTO_ROAD_CELL_COST
+    total=initial+road_cost
+    return 200,{'ok':True,'reason':None,'road_cells':[list(c) for c in road],'road_cost':road_cost,
+                'initial_payment':initial,'total_initial':total,'can_afford':balance>=total,
+                'shortfall':max(0,total-balance),'balance':'draft'}
