@@ -105,12 +105,44 @@ def undo(db, ph, owner, payload, ip):
     recent = db.execute("SELECT COUNT(*) FROM dev_actions WHERE actor=" + ph + " AND created>=" + ph, (owner, action_time - 60_000_000_000)).fetchone()[0]
     if recent >= 30:
         return 429, {"error": "rate_limited"}
-    row = db.execute("SELECT id,action,inverse_json,payload_json FROM dev_actions WHERE actor=" + ph + " AND action IN ('terrain','roads','move') AND undone=0 ORDER BY created DESC,id DESC LIMIT 1", (owner,)).fetchone()
+    row = db.execute("SELECT id,action,inverse_json,payload_json FROM dev_actions WHERE actor=" + ph + " AND action IN ('terrain','roads','move','demolish') AND undone=0 ORDER BY created DESC,id DESC LIMIT 1", (owner,)).fetchone()
     if not row:
         return 409, {"error": "nothing_to_undo"}
     action_id, action_kind, inverse, original_payload = row
     original = json.loads(original_payload)
     snapshot = json.loads(inverse)
+    if action_kind == "demolish":
+        building = snapshot["building"]
+        oid = original["object_id"]
+        if db.execute("SELECT 1 FROM buildings WHERE id=" + ph, (oid,)).fetchone():
+            return 409, {"error": "undo_conflict"}
+        for x, y in snapshot["cells"]:
+            if db.execute("SELECT 1 FROM cells WHERE x=" + ph + " AND y=" + ph, (x, y)).fetchone():
+                return 409, {"error": "undo_conflict", "cell": [x, y]}
+            if db.execute("SELECT 1 FROM roads WHERE x=" + ph + " AND y=" + ph, (x, y)).fetchone():
+                return 409, {"error": "road_overlap", "cell": [x, y]}
+        for link in snapshot["dependent"]["building_deposits"]:
+            if db.execute("SELECT 1 FROM building_deposits WHERE deposit_id=" + ph, (link[1],)).fetchone():
+                return 409, {"error": "deposit_claimed"}
+        db.execute("INSERT INTO buildings(id,owner,kind,x,y,created) VALUES(" + ",".join([ph]*6) + ")", (oid, *building))
+        for table in ("building_ops", "building_dimensions", "building_specializations", "building_deposits"):
+            for record in snapshot["dependent"][table]:
+                db.execute("INSERT INTO " + table + " VALUES(" + ",".join([ph]*len(record)) + ")", record)
+        for x, y in snapshot["cells"]:
+            db.execute("INSERT INTO cells(x,y,object_id) VALUES(" + ",".join([ph]*3) + ")", (x, y, oid))
+        groups = {}
+        for x, y in snapshot["cells"]:
+            groups.setdefault((x // 12, y // 12), []).append([x, y])
+        for (cx, cy), cells in groups.items():
+            db.execute("INSERT INTO chunks(cx,cy,version) VALUES(" + ",".join([ph]*3) + ") ON CONFLICT(cx,cy) DO UPDATE SET version=chunks.version+1", (cx, cy, 1))
+            version = db.execute("SELECT version FROM chunks WHERE cx=" + ph + " AND cy=" + ph, (cx, cy)).fetchone()[0]
+            event = {"object_id": oid, "owner": building[0], "building_kind": building[1], "cells": cells}
+            db.execute("INSERT INTO events(cx,cy,version,kind,payload) VALUES(" + ",".join([ph]*5) + ")", (cx, cy, version, "building_created", json.dumps(event)))
+        db.execute("UPDATE dev_actions SET undone=1 WHERE id=" + ph, (action_id,))
+        db.execute("INSERT INTO dev_actions(id,actor,action,payload_json,inverse_json,created,undone) VALUES(" + ",".join([ph]*7) + ")", (request_id, owner, "undo", json.dumps(payload), inverse, action_time, 0))
+        admin_api.audit(db, ph, owner, "dev_undo_demolish", oid, "restored", ip, now)
+        db.commit()
+        return 200, {"request_id": request_id, "undone": action_id, "restored": oid}
     if action_kind == "move":
         oid = snapshot.get("object_id")
         current = db.execute("SELECT x,y FROM buildings WHERE id=" + ph, (oid,)).fetchone()
@@ -286,3 +318,50 @@ def building_move(db, ph, owner, payload, ip):
     admin_api.audit(db, ph, owner, "dev_move", oid, f"from={old_x},{old_y} to={x},{y}", ip, now)
     db.commit()
     return 200, {"request_id": request_id, "object_id": oid, "moved": len(new_cells)}
+
+def building_demolish(db, ph, actor, payload, ip):
+    """Developer demolition without sale proceeds or ledger mutations.
+
+    This removes the building's operational registration using the same
+    internal cleanup as regular sales, but deliberately does not run a sale.
+    """
+    if not require_developer(actor, db):
+        return 403, {"error": "forbidden"}
+    if not isinstance(payload, dict):
+        return 400, {"error": "invalid_body"}
+    try:
+        request_id = str(uuid.UUID(payload.get("request_id")))
+    except (ValueError, TypeError, AttributeError):
+        return 400, {"error": "invalid_request_id"}
+    oid = payload.get("object_id")
+    if not isinstance(oid, str) or not 1 <= len(oid) <= 100:
+        return 400, {"error": "invalid_object_id"}
+    previous = db.execute("SELECT actor,action,payload_json FROM dev_actions WHERE id=" + ph, (request_id,)).fetchone()
+    if previous:
+        return (200, {"request_id": request_id, "replayed": True}) if previous == (actor, "demolish", json.dumps(payload, ensure_ascii=False)) else (409, {"error": "request_id_conflict"})
+    row = db.execute("SELECT owner,kind,x,y,created FROM buildings WHERE id=" + ph, (oid,)).fetchone()
+    if not row:
+        return 404, {"error": "building_not_found"}
+    cells = db.execute("SELECT x,y FROM cells WHERE object_id=" + ph, (oid,)).fetchall()
+    if not cells or len(cells) > 25:
+        return 409, {"error": "invalid_footprint"}
+    action_time = time.time_ns()
+    recent = db.execute("SELECT COUNT(*) FROM dev_actions WHERE actor=" + ph + " AND created>=" + ph, (actor, action_time - 60_000_000_000)).fetchone()[0]
+    if recent >= 30:
+        return 429, {"error": "rate_limited"}
+    # Keep a complete reversible snapshot of the building's direct records.
+    dependent = {}
+    for table, columns in (
+        ("building_ops", "object_id,owner,kind,start_month,start_permille"),
+        ("building_dimensions", "object_id,width,height,equipment_level"),
+        ("building_specializations", "object_id,specialization"),
+        ("building_deposits", "object_id,deposit_id,resource"),
+    ):
+        dependent[table] = db.execute("SELECT " + columns + " FROM " + table + " WHERE object_id=" + ph, (oid,)).fetchall()
+    snapshot = {"building": list(row), "cells": [list(c) for c in cells], "dependent": {k: [list(r) for r in v] for k,v in dependent.items()}}
+    import production
+    production._remove_building(db, ph, oid, row[0])
+    db.execute("INSERT INTO dev_actions(id,actor,action,payload_json,inverse_json,created,undone) VALUES(" + ",".join([ph]*7) + ")", (request_id, actor, "demolish", json.dumps(payload, ensure_ascii=False), json.dumps(snapshot), action_time, 0))
+    admin_api.audit(db, ph, actor, "dev_demolish", oid, "no_ledger_payment", ip, int(time.time()))
+    db.commit()
+    return 200, {"request_id": request_id, "object_id": oid, "removed": len(cells)}
