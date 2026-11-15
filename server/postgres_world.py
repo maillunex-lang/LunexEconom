@@ -5,6 +5,7 @@ import uuid
 import psycopg
 import postgres_db
 import roads as road_rules
+import zoning
 import economy
 import building_dimensions
 import production
@@ -45,6 +46,9 @@ def build(owner,payload):
         if db.execute("SELECT 1 FROM cells WHERE (x,y) IN ("+",".join(["(%s,%s)"]*len(footprint))+") LIMIT 1",
                       [v for cell in footprint for v in cell]).fetchone():
             return 409,{"error":"occupied"}
+        wrong=zoning.check(db,"%s",kind,footprint)
+        if wrong:
+            return 409,zoning.error_body(wrong,kind)
         x0,x1,y0,y1=road_rules.search_box(footprint)
         dynamic={(rx,ry) for rx,ry in db.execute("SELECT x,y FROM roads WHERE x BETWEEN %s AND %s AND y BETWEEN %s AND %s",(x0,x1,y0,y1)).fetchall()}
         occupied={(a_,b_) for a_,b_ in db.execute("SELECT x,y FROM cells WHERE x BETWEEN %s AND %s AND y BETWEEN %s AND %s",(x0,x1,y0,y1)).fetchall()}

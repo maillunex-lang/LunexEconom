@@ -10,6 +10,7 @@ import uuid
 import auth
 import sqlite_util
 import roads as road_rules
+import zoning
 import economy
 import building_dimensions
 import production
@@ -60,6 +61,7 @@ def _prepare(db):
     citygen.ensure(db, "?")
     import regions
     regions.ensure(db, "?")
+    zoning.ensure(db, "?")
     db.commit()
 
 
@@ -92,6 +94,9 @@ def build(owner, payload):
             return 200,json.loads(prev[0])
         if any(db.execute("SELECT 1 FROM cells WHERE x=? AND y=?",(xx,yy)).fetchone() for xx,yy in footprint):
             return 409,{"error":"occupied"}
+        wrong=zoning.check(db,"?",kind,footprint)
+        if wrong:
+            return 409,zoning.error_body(wrong,kind)
         x0,x1,y0,y1=road_rules.search_box(footprint)
         dynamic={(rx,ry) for rx,ry in db.execute("SELECT x,y FROM roads WHERE x BETWEEN ? AND ? AND y BETWEEN ? AND ?",(x0,x1,y0,y1))}
         occupied={(cx_,cy_) for cx_,cy_ in db.execute("SELECT x,y FROM cells WHERE x BETWEEN ? AND ? AND y BETWEEN ? AND ?",(x0,x1,y0,y1))}
@@ -525,10 +530,13 @@ class Handler(BaseHTTPRequestHandler):
             return self._admin("GET")
         if url.path == "/announcement":
             return self._send(*announcement_state())
+        if url.path == "/geo/zones":
+            with NPC_CONNECT() as db:        # the connection and placeholder of the active engine (SQLite or PostgreSQL)
+                return self._send(200, zoning.overview(db, NPC_PH))
         if url.path == "/economy/regions":
             import regions
-            with connect() as db:
-                return self._send(200, regions.overview(db, "?"))
+            with NPC_CONNECT() as db:
+                return self._send(200, regions.overview(db, NPC_PH))
         if url.path in ("/geo/regions", "/geo/cities", "/geo/routes"):
             import geo
             if url.path == "/geo/regions":

@@ -46,6 +46,9 @@ def plan(db, ph, kind, x, y):
         _q("SELECT x,y FROM cells WHERE x BETWEEN %s AND %s AND y BETWEEN %s AND %s", ph), (x0, x1, y0, y1))}
     if any(db.execute(_q("SELECT 1 FROM cells WHERE x=%s AND y=%s", ph), (xx, yy)).fetchone() for xx, yy in footprint):
         return "occupied", None
+    import zoning
+    if zoning.check(db, ph, kind, footprint):
+        return "wrong_zone", None
     error, path = road_rules.plan_access(footprint, dynamic, occupied, MAX_COORD)
     if error:
         return error, None

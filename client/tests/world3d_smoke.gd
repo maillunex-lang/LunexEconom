@@ -109,6 +109,15 @@ func _run() -> void:
 	world.cancel_build()
 	_check(world._preview_node.mesh == null, "cancel removes the preview")
 
+	# zones: once the server says they exist, a factory is refused in the city centre and the preview explains why
+	world.set_zones({"enabled": true, "cities": [{"id": "ufa", "x": 0, "y": 0, "radius": 63, "wedge_angle": 90}]})
+	world.choose_build("factory")
+	world.select_cell(Vector2i(-8, -8))
+	var zone_preview: Dictionary = world.preview_build(Vector2i(-8, -8))
+	_check(str(zone_preview.get("reason", "")) == "wrong_zone" and str(zone_preview.get("message", "")).contains("центр города"), "a factory in the centre: " + str(zone_preview))
+	world.cancel_build()
+	world.set_zones({"enabled": false, "cities": []})
+
 	# season refresh and the performance overlay keep working
 	host._toggle_seasons()
 	world._read_season()

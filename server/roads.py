@@ -9,7 +9,7 @@ SEED = 18273
 ARM = 4                 # a city's crossroads: two roads of 2*ARM+1 cells through the city centre
 RIVER_X = 230           # the river runs north-south between Ufa and Beloretsk; no city lies on it
 RIVER_KNOT = 64         # rows between the points the river bends at
-SEARCH_RADIUS = 32      # cells around the footprint loaded for access-road search
+SEARCH_RADIUS = 72      # cells around the footprint loaded for the access-road search: must cover everything the BFS (MAX_VISITED) can reach, or an existing road outside the box would be "built" again
 MAX_VISITED = 6000
 DIRS = ((0, -1), (1, 0), (0, 1), (-1, 0))
 

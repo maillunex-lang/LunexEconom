@@ -10,6 +10,8 @@ const PLANNER_SCRIPT = preload("res://construction_planner.gd")
 const TOPOLOGY = preload("res://road_topology.gd")
 const SEASONS = preload("res://season_visual.gd")
 const MODELS = preload("res://world3d/building_models.gd")
+const ZONES = preload("res://zones.gd")
+const INDUSTRIAL_TINT := Color("#b0a58a")   # ground colour of the industrial zone (blended over the grass)
 ## Every building kind a server snapshot or event may carry ("house" = a city-generated dwelling, never player-built).
 const BUILDING_KINDS := ["farm", "mine", "factory", "warehouse", "shop", "school", "hospital", "park", "house"]
 const SEED := 18273
@@ -45,6 +47,7 @@ var camera: Camera3D
 var focus := Vector3.ZERO                      # ground point in the centre of the screen
 var target_focus := Vector3.ZERO
 var target_size := 40.0
+var zones = ZONES.new()                        # city zones from GET /geo/zones (docs/ZONING.md)
 var season_month := -1
 var seasons_on := false
 var last_build_usec := 0                       # time of the last chunk rebuild (performance overlay)
@@ -374,6 +377,8 @@ func build_chunk(coord: Vector2i) -> void:
 					color = GRASS[n % 3]
 					if ROAD_SCRIPT.is_water(cell + Vector2i(1, 0)) or ROAD_SCRIPT.is_water(cell - Vector2i(1, 0)):
 						color = SAND_COLOR
+					elif zones.enabled and zones.zone_at(x, y) == "industrial":
+						color = color.lerp(INDUSTRIAL_TINT, 0.55)
 			if kind != 3:
 				color = _season_tint(color)
 			if outside:
@@ -540,7 +545,15 @@ func build_size(kind: String) -> Vector2i:
 
 func preview_build(cell: Vector2i) -> Dictionary:
 	if build_type.is_empty(): return {"ok": false, "reason": "no_build_mode"}
-	return planner.preview(cell, build_size(build_type), roads, self)
+	return planner.preview(cell, build_size(build_type), roads, self, build_type)
+
+## Reason (Russian) why the server would refuse `kind` on these cells because of the zones, or "".
+func zone_refusal(kind: String, cells: Array) -> String:
+	return zones.refusal(kind, cells)
+
+func set_zones(data: Dictionary) -> void:
+	zones.load_data(data)
+	refresh_all()
 
 func choose_build(kind: String, square_size: int = 0) -> void:
 	build_type = kind

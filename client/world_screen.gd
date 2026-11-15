@@ -25,6 +25,12 @@ func _ready() -> void:
     _refresh_terms()
     _refresh_wallet()
     _connect_server()
+    _load_zones()
+    var zone_timer := Timer.new()
+    zone_timer.wait_time = 90.0
+    zone_timer.autostart = true
+    zone_timer.timeout.connect(_load_zones)
+    add_child(zone_timer)
     var sync = load("res://world_sync.gd").new()
     sync.world = world
     add_child(sync)
@@ -120,6 +126,22 @@ func _connect_server() -> void:
     var err := req.request("https://rikagro.ru/lunexeconom/api/world")
     if err != OK:
         info.text = "Ошибка соединения: %d" % err
+        req.queue_free()
+
+## City zones (industrial zones, the growing city radius): refreshed every 90 seconds. The server stays the judge.
+func _load_zones() -> void:
+    var req := HTTPRequest.new()
+    add_child(req)
+    req.timeout = 8.0
+    req.request_completed.connect(func(result: int, code: int, _headers: PackedStringArray, body: PackedByteArray) -> void:
+        req.queue_free()
+        if result != HTTPRequest.RESULT_SUCCESS or code != 200:
+            return
+        var data = JSON.parse_string(body.get_string_from_utf8())
+        if data is Dictionary and data.get("cities", null) is Array:
+            world.set_zones(data)
+    )
+    if req.request("https://rikagro.ru/lunexeconom/api/geo/zones") != OK:
         req.queue_free()
 
 func _on_update_state(message: String, can_install: bool) -> void:
@@ -754,7 +776,7 @@ func show_build_preview(result: Dictionary) -> void:
             "server_occupied": "Участок занят серверным объектом",
             "water": "На воде строить нельзя"
         }
-        info.text = str(messages.get(str(result.get("reason", "")), "Участок не подходит"))
+        info.text = str(result.get("message", "")) if str(result.get("reason", "")) == "wrong_zone" else str(messages.get(str(result.get("reason", "")), "Участок не подходит"))
         if build_hint != null: build_hint.text = info.text
 
 func _place_building() -> void:
@@ -804,6 +826,8 @@ func _place_building() -> void:
             info.text = ("Построено за счёт бюджета: %s" if from_budget else "Построено за %s") % _fmt_money(int(data.get("cost", 0))) + ((" · дорога +%d кл." % road_cells) if road_cells > 0 else "")
         else:
             var errors := {"occupied":"Участок уже занят", "invalid_build":"Неверное место или тип здания", "building_size_economy_pending":"Выбор размера появится после завершения экономического баланса и тестов", "outside_world":"За пределами карты", "unauthorized":"Сессия завершена, войдите снова", "invalid_request_id":"Ошибка команды строительства", "water":"Нельзя строить на воде", "road_overlap":"Нельзя строить на дороге", "no_road_access":"Дорогу к участку проложить нельзя"}
+            if str(data.get("error", "")) == "wrong_zone":
+                errors["wrong_zone"] = "Здесь %s: %s нельзя. Допустимо: %s" % [str(data.get("zone_name", "эта зона")), str(data.get("kind", "это здание")), ", ".join(PackedStringArray(data.get("allowed", [])))]
             if str(data.get("error", "")) == "insufficient_funds":
                 _set_balance(int(data.get("balance", wallet_balance)))
                 info.text = "Недостаточно средств: нужно %s, на счёте %s" % [_fmt_money(int(data.get("cost", 0))), _fmt_money(int(data.get("balance", 0)))]
