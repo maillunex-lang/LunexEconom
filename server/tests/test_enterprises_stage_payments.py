@@ -98,23 +98,24 @@ class StagePaymentPostgresTests(unittest.TestCase):
     def stage(self,eid):
         return self.conn.execute('SELECT stage FROM enterprises WHERE id=%s',(eid,)).fetchone()[0]
 
-    def test_first_payment_rejected_without_funds_then_paid(self):
-        owner=self.owner(0)
+    def test_stage_one_rejected_without_funds_then_paid_once(self):
+        owner=self.owner(45000)
         eid=self.fixture(owner,days=8)
-        first=core.stage_costs(150000)[0]
-        self.assertFalse(core._pay_build_stage(self.conn,eid,owner['id'],0,first,0))
+        self.pay_first(owner,eid)
+        second=core.stage_costs(150000)[1]
+        self.assertFalse(core._pay_build_stage(self.conn,eid,owner['id'],1,second,2))
         self.assertEqual(self.stage(eid),0)
         self.assertEqual(self.conn.execute(
             'SELECT count(*) FROM enterprise_stage_payments WHERE enterprise_id=%s',
-            (eid,)).fetchone()[0],0)
+            (eid,)).fetchone()[0],1)
         transfer(self.conn,'stage:deposit:'+uuid4().hex,
-                 self.treasury,owner['wallet'],first)
-        self.assertTrue(core._pay_build_stage(self.conn,eid,owner['id'],0,first,0))
-        self.assertTrue(core._pay_build_stage(self.conn,eid,owner['id'],0,first,0))
+                 self.treasury,owner['wallet'],second)
+        self.assertTrue(core._pay_build_stage(self.conn,eid,owner['id'],1,second,3))
+        self.assertTrue(core._pay_build_stage(self.conn,eid,owner['id'],1,second,3))
         self.assertEqual(self.balance(owner),1)
         self.assertEqual(self.conn.execute(
             'SELECT count(*) FROM enterprise_stage_payments WHERE enterprise_id=%s',
-            (eid,)).fetchone()[0],1)
+            (eid,)).fetchone()[0],2)
         self.assertTrue(reconcile(self.conn)['ok'])
 
     def test_short_build_paid_in_four_exact_stages(self):
