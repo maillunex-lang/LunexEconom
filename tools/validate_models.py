@@ -125,6 +125,37 @@ def validate(path, footprint=None):
         return [f"malformed GLB: {exc}"]
 
 
+
+def missing_catalog_models(directory):
+    """Read catalog IDs without importing game_server (which may initialize DB state).
+
+    Import city_catalog and goods_catalog only from the local repository; this is
+    an advisory report and intentionally does not affect validation exit status.
+    """
+    import sys
+    root = Path(__file__).resolve().parents[1]
+    sys.path.insert(0, str(root / "server"))
+    import city_catalog
+    import goods_catalog
+    import ast
+
+    server_source = (root / "server" / "game_server.py").read_text(encoding="utf-8")
+    tree = ast.parse(server_source)
+    kinds = set()
+    for node in tree.body:
+        if isinstance(node, ast.Assign) and any(isinstance(t, ast.Name) and t.id == "KINDS" for t in node.targets):
+            kinds.update(ast.literal_eval(node.value))
+            break
+    kinds.update(goods_catalog.extra_footprints())
+    expected = set(city_catalog.CATALOG) | kinds
+    present = {p.stem for p in Path(directory).glob("*.glb")}
+    missing = []
+    for name in sorted(expected):
+        if name in present or any(p.startswith(name + "_") for p in present):
+            continue
+        missing.append(name)
+    return missing
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("directory", nargs="?", default="client/world3d/models")
@@ -139,6 +170,13 @@ def main():
         failures += bool(issues)
         print(f"{file.name:44} {'PASS' if not issues else 'FAIL'} {'; '.join(issues)}")
     print(f"Checked {len(files)} GLB, failed {failures}")
+    try:
+        missing = missing_catalog_models(args.directory)
+        print(f"Missing catalog models (advisory, not errors): {len(missing)}")
+        for name in missing:
+            print(f"  нет модели: {name}")
+    except (ImportError, OSError, ValueError, SyntaxError) as exc:
+        print(f"Catalog coverage unavailable: {exc}")
     return int(bool(failures))
 
 
