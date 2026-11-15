@@ -92,3 +92,45 @@ class DeveloperPostgresTests(unittest.TestCase):
             finally:
                 db.execute("ROLLBACK TO SAVEPOINT devtools_ci_create")
                 db.execute("RELEASE SAVEPOINT devtools_ci_create")
+
+    def test_road_graph_rejects_disconnection_isolated(self):
+        """Exercise the real PostgreSQL SQL dialect and savepoint rollback."""
+        import postgres_db
+        import devtools
+        import dev_road_connectivity as graph
+        from unittest.mock import patch
+        with postgres_db.connect() as db:
+            devtools.ensure(db, "%s", postgres=True)
+            db.execute("SAVEPOINT devtools_ci_roads")
+            try:
+                # Coordinates are outside all city bases. Use a synthetic
+                # base anchor to make this graph deterministic.
+                anchor = (800, 800)
+                points = [(801, 800), (802, 800), (803, 800)]
+                db.executemany(
+                    "INSERT INTO roads(x,y,owner,created) VALUES(%s,%s,%s,%s) "
+                    "ON CONFLICT(x,y) DO UPDATE SET owner=excluded.owner",
+                    [(x, y, "ci_operator", 0) for x, y in points],
+                )
+                with patch("dev_road_connectivity._base_roads", return_value={anchor}), \
+                     patch("roads.is_base_road", return_value=False), \
+                     patch("devtools.require_developer", return_value=True):
+                    self.assertEqual(graph.validate_removal(db, "%s", [points[1]]),
+                                     "road_network_disconnected")
+                    payload = {
+                        "request_id": str(uuid.uuid4()),
+                        "operation": "remove",
+                        "cells": [[802, 800]],
+                    }
+                    status, result = devtools.roads_set(
+                        SavepointConnection(db), "%s", "ci_operator", payload, "ci"
+                    )
+                    self.assertEqual(status, 409, result)
+                    self.assertEqual(result["error"], "road_network_disconnected")
+                    self.assertIsNotNone(
+                        db.execute("SELECT 1 FROM roads WHERE x=%s AND y=%s",
+                                   points[1]).fetchone()
+                    )
+            finally:
+                db.execute("ROLLBACK TO SAVEPOINT devtools_ci_roads")
+                db.execute("RELEASE SAVEPOINT devtools_ci_roads")
