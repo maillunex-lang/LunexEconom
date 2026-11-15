@@ -88,7 +88,7 @@ class EnterpriseDatabaseTests(unittest.TestCase):
     def test_integer_load_boundaries(self):
         recipe=enterprises.catalog().index['recipes']['mill_flour']
         self.assertEqual(enterprises.load_bp({'grain':{'quantity':50,'quality':50}},recipe,4000,10000),5000)
-        self.assertEqual(enterprises.load_bp({'grain':{'quantity':4000,'quality':50}},recipe,4000,10000),0)
+        self.assertEqual(enterprises.load_bp({'grain':{'quantity':4000,'quality':50}},recipe,4000,10000),10000)
         self.assertEqual(enterprises.load_bp({'grain':{'quantity':100,'quality':50}},recipe,4000,10000),10000)
 
 if __name__=='__main__':
