@@ -153,6 +153,9 @@ def _buy(conn,day,row,product,qty,source_type,source_id,unit_price,quality,flags
         payee=_wallet(conn,seller_owner)
         if payee is None:return 0
         seller=payee[0]
+        if seller==buyer[0]:
+            # Same owner: transfer goods without a fabricated cash sale.
+            unit_price=0
     else:
         seller=account(conn,'system:market')
         if source_type=='port':
