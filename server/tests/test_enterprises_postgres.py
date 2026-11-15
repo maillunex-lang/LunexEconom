@@ -70,6 +70,15 @@ class EnterpriseDatabaseTests(unittest.TestCase):
                 enterprises.advance_day(conn,day)
             self.assertEqual(enterprises.stock(conn,eid)['grain']['quantity'],1000)
             self.assertEqual(conn.execute('SELECT stage FROM enterprises WHERE id=%s',(eid,)).fetchone()[0],4)
+            # Reuse the isolated enterprise row to verify the M1 mill recipe.
+            conn.execute("UPDATE enterprises SET building_id='mill',recipe_id='mill_flour' WHERE id=%s",(eid,))
+            enterprises.adjust(conn,eid,'grain',-900)
+            enterprises.production(conn,eid,start+11)
+            self.assertEqual(enterprises.stock(conn,eid)['flour']['quantity'],80)
+            self.assertEqual(enterprises.stock(conn,eid)['grain']['quantity'],0)
+            enterprises.production(conn,eid,start+11)
+            self.assertEqual(enterprises.stock(conn,eid)['flour']['quantity'],80)
+
             self.assertEqual(conn.execute('SELECT count(*) FROM world_events WHERE payload->>\'enterprise_id\'=%s',(str(eid),)).fetchone()[0],2)
             self.assertTrue(reconcile(conn)['ok'])
         finally:
