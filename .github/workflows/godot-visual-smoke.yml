@@ -1,5 +1,7 @@
 name: Godot 4.7 visual smoke (isolated)
 on:
+  push:
+    branches: [ChatGPT8]
   workflow_dispatch:
   pull_request:
     paths:
