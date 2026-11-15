@@ -1,4 +1,6 @@
 """End-to-end loopback HTTP probe on a disposable SQLite database only."""
+import concurrent.futures
+import statistics
 import contextlib
 import json
 import os
@@ -51,6 +53,24 @@ def run():
                     results[path] = {"status": status, "payload_type": type(data).__name__}
                     if status != 200:
                         raise AssertionError(results[path])
+                # 200 simultaneous logical clients on a disposable loopback HTTP server.
+                # Bound actual worker threads to avoid exhausting VPS memory.
+                def sample(i):
+                    path = ("/health", "/catalog/goods",
+                            "/deposits?x0=0&y0=0&x1=8&y1=8")[i % 3]
+                    start = time.monotonic()
+                    status, _ = request(base + path)
+                    return status, round((time.monotonic() - start) * 1000, 2)
+                with concurrent.futures.ThreadPoolExecutor(max_workers=16) as pool:
+                    samples = list(pool.map(sample, range(200)))
+                latencies = sorted(x[1] for x in samples)
+                results["http_load_200"] = {
+                    "logical_clients": 200, "max_parallel_workers": 16,
+                    "ok": sum(status == 200 for status, _ in samples),
+                    "errors": sum(status != 200 for status, _ in samples),
+                    "p50_ms": round(statistics.median(latencies), 2),
+                    "p95_ms": latencies[int(len(latencies) * .95)]}
+                assert results["http_load_200"]["errors"] == 0
                 return results
             finally:
                 process.terminate()
