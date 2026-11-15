@@ -14,6 +14,7 @@ var zoom := 1.0
 var selected := Vector2i(2147483647,2147483647)
 var tiles: Dictionary = {}
 var building_cells: Dictionary = {}
+var enterprise_info: Dictionary = {}
 var preview: Dictionary = {}
 var touches: Dictionary = {}
 var start_touch: Dictionary = {}
@@ -133,7 +134,13 @@ func _draw() -> void:
     for chunk in building_cells:
         for cell in building_cells[chunk]:
             var pos := _origin_of_cell(int(cell["x"]),int(cell["y"]))
-            draw_rect(Rect2(pos,Vector2(tile,tile)),Color("dfaa61"),true)
+            var info: Dictionary = enterprise_info.get(str(cell.get("ref", "")), {})
+            var stage := int(info.get("stage_index",4))
+            var color := Color("dfaa61") if stage == 4 else Color("a5a4a1")
+            draw_rect(Rect2(pos,Vector2(tile,tile)),color,true)
+            if tile >= 22.0 and not info.is_empty():
+                var symbol := "●" if stage == 4 else str(stage+1)
+                draw_string(ThemeDB.fallback_font,pos+Vector2(3.0,tile-4.0),symbol,HORIZONTAL_ALIGNMENT_LEFT,-1,mini(14,roundi(tile*0.5)),Color("203c30"))
             draw_rect(Rect2(pos,Vector2(tile,tile)),Color("563f30"),false,maxf(1.0,zoom))
     if not preview.is_empty():
         var origin := _origin_of_cell(int(preview.get("x",0)),int(preview.get("y",0)))
