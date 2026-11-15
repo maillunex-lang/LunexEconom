@@ -1235,8 +1235,7 @@ func _tick_game_date() -> void:
     var season := int(load("res://season_visual.gd").season_for_month(current_month))
     if rendered_season != season:
         rendered_season = season
-        for chunk in world.active_chunks.values():
-            chunk.queue_redraw()
+        world.refresh_all()
 
 func _owner_name(owner: String) -> String:
     for c in competitors:
@@ -1497,10 +1496,7 @@ func goto_geo_city(city: Dictionary) -> void:
     var x: int = int(city.get("x", 0))
     var y: int = int(city.get("y", 0))
     # The geography overlay never changes build permissions or terrain.
-    world.expansion_radius = maxi(world.expansion_radius, maxi(absi(x), absi(y)) + 48)
-    world.target_position = world.iso(float(x), float(y))
-    world.camera.position = world.target_position
-    world._update_visible_chunks()
+    world.focus_cell(Vector2i(x, y))
     info.text = "Переход: " + str(city.get("name", "Город"))
 
 func _toggle_seasons() -> void:
@@ -1510,8 +1506,7 @@ func _toggle_seasons() -> void:
         file.store_string("on" if seasons_enabled else "off")
         file.close()
     (geo_actions.get_child(1) as Button).text = "Сезоны: вкл" if seasons_enabled else "Сезоны: выкл"
-    for chunk in world.active_chunks.values():
-        chunk.queue_redraw()
+    world.refresh_all()
 
 ## Leave this account on this device: end the server session (best effort), forget the remembered login, back to the entry screen.
 func _sign_out_account() -> void:

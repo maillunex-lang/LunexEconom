@@ -73,7 +73,7 @@ func _run() -> void:
         _fail("selection did not follow zoom and pan")
         return
     panel._jump()
-    if panel.visible or host.world.target_position != host.world.iso(100.0, 45.0):
+    if panel.visible or host.world.cell_of(host.world.target_focus) != Vector2i(100, 45):
         host.queue_free()
         _fail("camera transition failed")
         return

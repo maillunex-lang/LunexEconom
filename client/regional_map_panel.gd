@@ -184,8 +184,7 @@ func set_geo_data(new_cities: Array, new_regions: Array, new_routes: Array) -> v
     if map_canvas != null:
         map_canvas.queue_redraw()
     if host != null and host.world != null:
-        for chunk in host.world.active_chunks.values():
-            chunk.queue_redraw()
+        host.world.refresh_all()
 
 func _restore_cache() -> void:
     if not FileAccess.file_exists(CACHE_FILE):

@@ -46,19 +46,10 @@ func _run() -> void:
 	# a snapshot (what /chunk returns) works the same way
 	world.world.apply_chunk_snapshot(Vector2i(10, 10), [{"x": 120, "y": 120, "kind": "building_created", "building_kind": "house", "object_id": "h2", "owner": "town:ufa"}])
 	_check(world.world.building_at(Vector2i(120, 120)) == "house", "snapshot house is known")
-	# the renderer can draw it (several different positions, so every colour variant runs)
-	var renderer = load("res://chunk_renderer.gd").new()
-	get_root().add_child(renderer)
-	var drawn := [0]
-	renderer.draw.connect(func() -> void:                       # drawing is only legal while the node is being drawn
-		for i in range(8):
-			renderer._draw_house(Vector2(13.0 * i, 7.0 * i))
-			drawn[0] += 1
-	)
-	renderer.queue_redraw()
-	await process_frame
-	await process_frame
-	_check(drawn[0] >= 8, "all house colour variants were drawn without errors")
+	# the 3D world builds one house node per object, whatever the footprint (1x1, 1x2, 1x3)
+	world.world.apply_server_event({"kind": "building_created", "building_kind": "house", "owner": "town:ufa", "object_id": "h3", "cells": [[44, 40], [44, 41], [44, 42]]})
+	world.world.flush_all()
+	_check(world.world.building_nodes.has("h1") and world.world.building_nodes.has("h2") and world.world.building_nodes.has("h3"), "3D house nodes")
 	if failures == 0:
 		print("CITYGEN_SMOKE_PASS")
 	else:
