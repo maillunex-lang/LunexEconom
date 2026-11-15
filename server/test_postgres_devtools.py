@@ -1,18 +1,26 @@
-"""Developer-world schema smoke on the isolated CI PostgreSQL database only."""
+"""Developer tools PostgreSQL integration against disposable CI database only."""
 import os
 import unittest
+import uuid
 
-@unittest.skipUnless(os.environ.get("LUNEX_DB_ENGINE") == "postgres" and os.environ.get("LUNEX_PG_DB") == "lunex_ci", "requires isolated lunex_ci PostgreSQL")
+CI = os.environ.get("LUNEX_DB_ENGINE") == "postgres" and os.environ.get("LUNEX_PG_DB") == "lunex_ci"
+
+
+@unittest.skipUnless(CI, "requires isolated lunex_ci PostgreSQL")
 class DeveloperPostgresTests(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        import postgres_db
+        # Initialize once, outside the test transaction; init opens its own connection.
+        postgres_db.init()
+
     def test_schema_and_terrain_events(self):
         import postgres_db
         import devtools
         with postgres_db.connect() as db:
-            postgres_db.init()
             devtools.ensure(db, "%s", postgres=True)
             db.execute("SAVEPOINT devtools_ci")
             try:
-                # Event writes must use the same transaction and chunk version stream.
                 cx, cy = 833, 833
                 devtools.publish_terrain_events(db, "%s", [(cx * 12, cy * 12)])
                 version = db.execute("SELECT version FROM chunks WHERE cx=%s AND cy=%s", (cx, cy)).fetchone()
