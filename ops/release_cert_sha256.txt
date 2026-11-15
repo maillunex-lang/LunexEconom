@@ -1,0 +1,2 @@
+# Owner must replace this comment with the APPROVED public APK signer SHA-256 fingerprint.
+# Production builds FAIL CLOSED until a real signing certificate is pinned here.

@@ -23,3 +23,6 @@ textures/vram_compression/import_etc2_astc=true
 
 [physics]
 3d/run_on_separate_thread=false
+
+[editor_plugins]
+enabled=PackedStringArray("res://addons/lunex_installer/plugin.cfg")

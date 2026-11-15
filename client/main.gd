@@ -1,4 +1,6 @@
 extends Control
+const PublicBase = preload("res://config/public_base.gd")
+const UpdatesPanel = preload("res://update/updates_panel.gd")
 ## Forest Glass V2: login + empty headquarters; no real economy content yet.
 
 const BACKGROUND := Color("0a201b")
@@ -8,7 +10,7 @@ const TEXT := Color("eef5e8")
 const MUTED := Color("a1b9ad")
 const FONT := 27
 
-var base_url := "https://rikagro.ru/lunexeconom/api"
+var base_url := PublicBase.url("api")
 var shell: MarginContainer
 var form: VBoxContainer
 var headquarters: VBoxContainer
@@ -18,6 +20,7 @@ var status_label: Label
 var hq_status: Label
 var token := ""
 var _http: HTTPRequest
+var update_screen: Control
 var _health_http: HTTPRequest
 
 func _ready() -> void:
@@ -27,6 +30,9 @@ func _ready() -> void:
     _build_headquarters()
     headquarters.hide()
     _on_viewport_resized()
+    update_screen = UpdatesPanel.new()
+    add_child(update_screen)
+    _resume_saved_login()
 
 func _on_viewport_resized() -> void:
     if shell == null:
@@ -151,9 +157,14 @@ func _build_headquarters() -> void:
     var btn := _button("Проверить сервер")
     btn.pressed.connect(_check_health)
     headquarters.add_child(btn)
+    var updates := _button("Проверить обновление")
+    updates.pressed.connect(func(): if update_screen != null: update_screen.open())
+    headquarters.add_child(updates)
     var logout := _button("Выйти")
     logout.pressed.connect(func():
         token = ""
+        if Engine.has_singleton("LunexInstaller"):
+            Engine.get_singleton("LunexInstaller").clearToken()
         headquarters.hide()
         form.show()
     )
@@ -181,6 +192,8 @@ func _send_auth(mode: String) -> void:
             return
         if response is Dictionary and response.has("token"):
             token = response["token"]
+            if Engine.has_singleton("LunexInstaller"):
+                Engine.get_singleton("LunexInstaller").saveToken(token)
             form.hide()
             headquarters.show()
             _check_health()
@@ -207,3 +220,25 @@ func _check_health() -> void:
         hq_status.text = "Сервер V2: нет соединения"
         _health_http.queue_free()
         _health_http = null
+
+func _resume_saved_login() -> void:
+    if not Engine.has_singleton("LunexInstaller"):
+        return
+    var restored: String = str(Engine.get_singleton("LunexInstaller").loadToken())
+    if restored.is_empty():
+        return
+    var request := HTTPRequest.new()
+    add_child(request)
+    var err := request.request(base_url + "/auth/me", PackedStringArray(["Authorization: Bearer " + restored]))
+    if err != OK:
+        request.queue_free()
+        return
+    var response: Array = await request.request_completed
+    request.queue_free()
+    if int(response[0]) == HTTPRequest.RESULT_SUCCESS and int(response[1]) == 200:
+        token = restored
+        form.hide()
+        headquarters.show()
+        _check_health()
+    else:
+        Engine.get_singleton("LunexInstaller").clearToken()

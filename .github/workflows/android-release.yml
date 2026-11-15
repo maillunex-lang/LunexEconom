@@ -1,0 +1,145 @@
+name: Android release candidate
+on:
+  workflow_dispatch:
+    inputs:
+      version_tag:
+        description: "Version in form vMAJOR.MINOR.PATCH"
+        required: true
+        default: "v0.1.0"
+        type: string
+      pipeline_test:
+        description: "TEST-ONLY: ephemeral Android signing key; never publish"
+        type: boolean
+        default: true
+  push:
+    branches: [v2/release]
+    tags:
+      - "v[0-9]*"
+permissions:
+  contents: read
+jobs:
+  signed-candidate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 65
+    environment: ${{ (inputs.pipeline_test == true || github.ref == 'refs/heads/v2/release') && 'ci-test' || 'android-signing' }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+      - uses: android-actions/setup-android@v3
+        with:
+          packages: 'platform-tools platforms;android-35 build-tools;35.0.0'
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "8.10.2"
+      - name: Resolve and validate version
+        env:
+          INPUT_TAG: ${{ inputs.version_tag }}
+        run: |
+          set -euo pipefail
+          if [[ "$GITHUB_REF" == refs/tags/* ]]; then
+            VERSION_TAG="${GITHUB_REF_NAME}"
+          else
+            VERSION_TAG="${INPUT_TAG:-v0.1.0}"
+          fi
+          python3 -c "import sys;sys.path.insert(0,'tools');from release_version import parse;print(parse(sys.argv[1]))" "$VERSION_TAG"
+          echo "VERSION_TAG=$VERSION_TAG" >> "$GITHUB_ENV"
+          python3 tools/release_version.py "$VERSION_TAG"
+      - name: Download Godot 4.7.2 and templates
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/godot" "$HOME/.local/share/godot/export_templates/4.7.2.stable"
+          curl -fLsS --retry 3 https://github.com/godotengine/godot-builds/releases/download/4.7.2-stable/Godot_v4.7.2-stable_linux.x86_64.zip -o "$RUNNER_TEMP/godot/godot.zip"
+          unzip -q "$RUNNER_TEMP/godot/godot.zip" -d "$RUNNER_TEMP/godot"
+          GODOT="$RUNNER_TEMP/godot/Godot_v4.7.2-stable_linux.x86_64"
+          chmod +x "$GODOT"
+          echo "GODOT=$GODOT" >> "$GITHUB_ENV"
+          curl -fLsS --retry 3 https://github.com/godotengine/godot-builds/releases/download/4.7.2-stable/Godot_v4.7.2-stable_export_templates.tpz -o "$RUNNER_TEMP/godot/templates.tpz"
+          unzip -q "$RUNNER_TEMP/godot/templates.tpz" -d "$RUNNER_TEMP/godot"
+          cp -a "$RUNNER_TEMP/godot/templates/." "$HOME/.local/share/godot/export_templates/4.7.2.stable/"
+      - name: Test release tools and reproducible pack builder
+        run: |
+          python3 -m pip install --disable-pip-version-check cryptography
+          GODOT="$GODOT" python3 -m unittest discover -s tools/tests -v
+          "$GODOT" --headless --path client --editor --quit
+          "$GODOT" --headless --path client -s tests/release_smoke.gd
+      - name: Build Android v2 installation plugin
+        run: |
+          set -euo pipefail
+          gradle -p client/android_plugin :plugin:assembleDebug :plugin:assembleRelease --no-daemon
+          mkdir -p client/addons/lunex_installer/bin/{debug,release}
+          cp client/android_plugin/plugin/build/outputs/aar/plugin-debug.aar client/addons/lunex_installer/bin/debug/LunexInstaller-debug.aar
+          cp client/android_plugin/plugin/build/outputs/aar/plugin-release.aar client/addons/lunex_installer/bin/release/LunexInstaller-release.aar
+      - name: Configure temporary TEST key or approved production secret
+        env:
+          TEST_MODE: ${{ (inputs.pipeline_test == true || github.ref == 'refs/heads/v2/release') && 'true' || 'false' }}
+          KEYSTORE_B64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          set -euo pipefail
+          KEYSTORE_FILE="$RUNNER_TEMP/release-key.p12"
+          if [[ "$TEST_MODE" == "true" ]]; then
+            ALIAS="ci-test-throwaway"
+            PASS="$(openssl rand -hex 20)"
+            keytool -genkeypair -noprompt -alias "$ALIAS" -keystore "$KEYSTORE_FILE" -storetype PKCS12 -keyalg RSA -keysize 4096 -validity 30 -storepass "$PASS" -keypass "$PASS" -dname "CN=CI Only DO NOT SHIP, O=LunexEconom" >/dev/null
+            keytool -exportcert -rfc -keystore "$KEYSTORE_FILE" -alias "$ALIAS" -storepass "$PASS" | openssl x509 -noout -fingerprint -sha256 | cut -d= -f2 > "$RUNNER_TEMP/ci-test-cert.sha256"
+            EXPECTED_CERT="$RUNNER_TEMP/ci-test-cert.sha256"
+          else
+            test -s client/config/update_public.pem || { echo 'Owner manifest public key missing'; exit 1; }
+            grep -q 'BEGIN PUBLIC KEY' client/config/update_public.pem
+            test -n "$KEYSTORE_B64" && test -n "$KEYSTORE_PASSWORD" && test -n "$KEY_ALIAS"
+            test "$KEYSTORE_PASSWORD" = "$KEY_PASSWORD" || { echo 'Godot requires equal key/store passwords'; exit 1; }
+            printf '%s' "$KEYSTORE_B64" | base64 --decode > "$KEYSTORE_FILE"
+            PASS="$KEYSTORE_PASSWORD"
+            ALIAS="$KEY_ALIAS"
+            EXPECTED_CERT="$GITHUB_WORKSPACE/ops/release_cert_sha256.txt"
+          fi
+          test -s "$KEYSTORE_FILE"
+          chmod 600 "$KEYSTORE_FILE"
+          echo "GODOT_ANDROID_KEYSTORE_RELEASE_PATH=$KEYSTORE_FILE" >> "$GITHUB_ENV"
+          echo "GODOT_ANDROID_KEYSTORE_RELEASE_USER=$ALIAS" >> "$GITHUB_ENV"
+          echo "GODOT_ANDROID_KEYSTORE_RELEASE_PASSWORD=$PASS" >> "$GITHUB_ENV"
+          echo "EXPECTED_CERT=$EXPECTED_CERT" >> "$GITHUB_ENV"
+      - name: Export release APK + AAB (arm64, Gradle plugin enabled)
+        run: |
+          set -euo pipefail
+          mkdir -p build
+          sed -i 's/gradle_build\/use_gradle_build=false/gradle_build\/use_gradle_build=true/' client/export_presets.cfg
+          "$GODOT" --headless --path client --editor --quit
+          "$GODOT" --headless --path client --install-android-build-template --export-release Android "$GITHUB_WORKSPACE/build/lunex.apk"
+          test -s build/lunex.apk
+          "$GODOT" --headless --path client --export-release Android "$GITHUB_WORKSPACE/build/lunex.aab"
+          test -s build/lunex.aab
+      - name: Enforce signature, ABI, version and APK size
+        run: |
+          set -euo pipefail
+          APKSIGNER="$ANDROID_HOME/build-tools/35.0.0/apksigner"
+          AAPT="$ANDROID_HOME/build-tools/35.0.0/aapt"
+          "$APKSIGNER" verify --verbose --print-certs build/lunex.apk | tee build/cert-report.txt
+          python3 tools/verify_apk_cert.py build/cert-report.txt "$EXPECTED_CERT"
+          python3 tools/check_apk_size.py build/lunex.apk | tee build/apk-size.json
+          "$AAPT" dump badging build/lunex.apk | tee build/apk-badging.txt
+          CODE="$(python3 -c 'import json;print(json.load(open("client/build_info.json"))["version_code"])')"
+          grep -q "versionCode='$CODE'" build/apk-badging.txt
+          grep -q "'arm64-v8a'" build/apk-badging.txt
+          if grep -qE "'x86_64'|'armeabi-v7a'|'x86'" build/apk-badging.txt; then echo 'Unexpected non-arm64 ABI'; exit 1; fi
+          jarsigner -verify build/lunex.aab
+          sha256sum build/lunex.apk build/lunex.aab > build/SHA256SUMS
+      - uses: actions/upload-artifact@v4
+        with:
+          name: signed-candidate-${{ env.VERSION_TAG }}-${{ (inputs.pipeline_test == true || github.ref == 'refs/heads/v2/release') && 'TEST-NOT-FOR-RELEASE' || 'release' }}
+          path: |
+            build/lunex.apk
+            build/lunex.aab
+            build/cert-report.txt
+            build/apk-size.json
+            build/SHA256SUMS
+            client/build_info.json
+          retention-days: 14
+          if-no-files-found: error
