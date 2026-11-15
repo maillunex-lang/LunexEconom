@@ -1,6 +1,6 @@
 # Developer world editor (ChatGPT9, implementation in progress)
 
-> **Not ready for deployment.** This document describes only the routes implemented and tested so far. Building operations are NOT implemented; road/terrain tools and basic undo exist, but require integration validation.
+> **Not ready for deployment.** Building operations are partially implemented; Android device integration and isolated PostgreSQL CI have not been confirmed green.
 
 ## Operator-only roles
 
@@ -26,17 +26,25 @@ Returns `{"request_id":"...","changed":2}`. Valid kinds: `grass`, `tree`, `water
 
 `GET /terrain/chunk?cx=0&cy=0` (authenticated) returns `{"cx":0,"cy":0,"edits":[{"x":1,"y":2,"kind":"water","manual":true}]}`.
 
-Actions are written to `dev_actions` with an inverse snapshot and to `adm_audit`. **Undo supports terrain and dynamic roads, but does not yet protect against concurrent edits by other operators.** Terrain edits are stored server-side, but the normal server terrain planner, chunk events and Godot rendering have not yet been connected. Do not advertise them as synchronized world edits.
+Actions are written to `dev_actions` with inverse snapshots and to `adm_audit`. Undo checks current cell state and rejects conflicting subsequent road/terrain actions; full multi-operator concurrency validation remains pending. Terrain changes increment chunk versions and trigger client chunk reloads. The procedural server road planner does not yet consume manual terrain overrides consistently, so do not deploy the editor.
+
+## Building tools (experimental)
+
+- `POST /dev/create`: developer-only creation of city-owned **park, school, hospital**. Body: `{"request_id":"<uuid>","kind":"park","x":11,"y":12}`. Validates zones, cells, roads and water. No ledger postings. Player-owned businesses are intentionally forbidden.
+- `POST /dev/move`: body `{"request_id":"<uuid>","object_id":"<id>","x":11,"y":12}`. Moves existing geometry, retaining owner and operating records; deposit-bound buildings cannot be moved.
+- `POST /dev/demolish`: body `{"request_id":"<uuid>","object_id":"<id>"}`. Removes a building without sale proceeds; saves an inverse snapshot of direct building-related rows.
+- `POST /dev/undo`: reverses the latest eligible developer operation, including city creation, move and demolition, when destination cells are still available.
+
+All routes verify the developer role against the **authentication database**, serialize world mutations using the economy world lock, apply a 30-action/minute limit, require UUID idempotency and write an audit record.
 
 ## Outstanding safety work
 
-- Integrate terrain overrides into `roads.is_water` and server terrain checks without per-cell SQL.
-- Integrate event/version updates, client terrain cache and rebuild of 3D chunk meshes.
-- Implement developer-only building, demolition and moving tools, including all economic invariants. Road add/remove exists through `POST /dev/roads` and Godot editor, but requires further conflict testing.
-- Complete the Godot editor for buildings, strengthen undo history and run the PostgreSQL CI workflow. SQLite regression and Godot headless project load passed locally.
-- Have the owner apply the manual-cell exclusion patch to `citygen`; never edit citygen in this branch.
-
-No production database migrations, role grants or deployment have been performed.
+- Integrate manual terrain overrides into server-side road access and water checks without per-cell SQL.
+- Verify road removal does not strand existing businesses; protect building relocation against zoning/access changes.
+- Validate all economic dependencies of demolition and restoration, especially contracts, loans and deposits.
+- Test PostgreSQL with isolated `lunex_ci` only; never use production DB.
+- Run Android landscape/safe-area, touch and editor UI integration tests on an actual device.
+- Owner-controlled manual-cell exclusion in `citygen` is still pending and is outside this branch's allowed files.
 
 ## Road editing and undo (experimental)
 
@@ -44,4 +52,4 @@ No production database migrations, role grants or deployment have been performed
 
 ## Validation record
 
-Isolated development workspace, 2026-11-15: `python -m unittest discover -p 'test_*.py' -q` returned **553 tests, OK (56 skipped)** with SQLite engine. Godot 4.7.2 headless editor load exited with code 0. The PostgreSQL `lunex_ci` workflow has been committed but has **not been confirmed green**. No production database was accessed.
+Isolated development workspace, 2026-11-15: `python -m unittest discover -p 'test_*.py' -q` returned **559 tests, OK (56 skipped)** with SQLite engine before this documentation update. Godot 4.7.2 headless editor load exited with code 0. The PostgreSQL `lunex_ci` workflow has been committed but has **not been confirmed green**. No production database was accessed.
