@@ -46,3 +46,30 @@ class ConstructionStageTests(unittest.TestCase):
         self.assertEqual(status,201)
         with game_server.connect() as db:
             self.assertEqual(db.execute('SELECT stage FROM construction_stages WHERE object_id=?',(result['object_id'],)).fetchone()[0],'foundation')
+
+    def test_catchup_after_downtime_and_no_duplicate_events(self):
+        status,result=game_server.build('tester',{'kind':'factory','x':10,'y':10,'request_id':str(uuid.uuid4())})
+        self.assertEqual(status,201,result)
+        oid=result['object_id']
+        with game_server.connect() as db:
+            next_at=db.execute('SELECT next_at FROM construction_stages WHERE object_id=?',(oid,)).fetchone()[0]
+            initial=db.execute('SELECT COUNT(*) FROM events').fetchone()[0]
+            # A 3x2 footprint spans the chunk boundary at x=12.
+            changed=construction_stages.advance(db,'?',next_at+30)
+            self.assertEqual(changed,2)
+            self.assertEqual(db.execute('SELECT stage FROM construction_stages WHERE object_id=?',(oid,)).fetchone()[0],'complete')
+            self.assertEqual(db.execute('SELECT COUNT(*) FROM events').fetchone()[0],initial+2)
+            self.assertEqual(construction_stages.advance(db,'?',next_at+60),0)
+            db.commit()
+        for cx in (0,1):
+            for cy in (0,):
+                snapshot=game_server.chunk(cx,cy)[1]
+                self.assertTrue(any(c.get('object_id')==oid and c.get('construction_stage')=='complete' for c in snapshot['cells']))
+
+    def test_legacy_building_without_stage_remains_complete(self):
+        with game_server.connect() as db:
+            db.execute('INSERT INTO buildings VALUES(?,?,?,?,?,?)',('old1','tester','factory',2,2,1))
+            db.execute('INSERT INTO cells VALUES(?,?,?)',(2,2,'old1'))
+            db.commit()
+        snapshot=game_server.chunk(0,0)[1]
+        self.assertTrue(any(c.get('object_id')=='old1' and c.get('construction_stage')=='complete' for c in snapshot['cells']))
