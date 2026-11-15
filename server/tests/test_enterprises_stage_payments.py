@@ -177,6 +177,76 @@ class StagePaymentPostgresTests(unittest.TestCase):
         self.assertEqual(result['price'],22500)
         self.assertEqual(self.balance(owner),22501)
 
+    def test_api_paid_stages_wait_and_cleanup_by_sale(self):
+        owner=self.owner(45000)
+        eid=self.fixture(owner,days=8)
+        self.pay_first(owner,eid)
+        core.advance_day(self.conn,1)
+        core.advance_day(self.conn,2)
+        with patch('server.enterprises.api.authenticate',return_value=owner):
+            status,detail=api.one({},{'conn':self.conn,'path_params':{'id':str(eid)}})
+            list_status,listing=api.list_own({}, {'conn':self.conn})
+            self.assertEqual(status,200,detail)
+            self.assertEqual(list_status,200,listing)
+            self.assertEqual(detail['paid_amount'],45000)
+            self.assertEqual(detail['next_payment']['stage_index'],1)
+            self.assertEqual(detail['next_payment']['amount'],60000)
+            self.assertTrue(detail['waiting_for_payment'])
+            self.assertEqual(detail['waiting_days'],1)
+            self.assertIn(eid,listing['enterprises'])
+            brief=next(item for item in listing['items'] if item['id']==eid)
+            self.assertTrue(brief['waiting_for_payment'])
+        receipt='stage:sale:'+uuid4().hex
+        with patch('server.enterprises.api.authenticate',return_value=owner), \
+             patch('server.enterprises.api.world.clear_occupied'):
+            status,sale=api.sell({'request_id':receipt},
+                            {'conn':self.conn,'path_params':{'id':str(eid)}})
+            retry_status,retry=api.sell({'request_id':receipt},
+                            {'conn':self.conn,'path_params':{'id':str(eid)}})
+        self.assertEqual(status,200,sale)
+        self.assertEqual(sale['price'],22500)
+        self.assertEqual(retry_status,200,retry)
+        self.assertTrue(retry['idempotent'])
+        self.assertEqual(self.conn.execute('SELECT count(*) FROM enterprise_build_waits '
+                         'WHERE enterprise_id=%s',(eid,)).fetchone()[0],0)
+        self.assertEqual(self.conn.execute('SELECT count(*) FROM ledger_transfers '
+                         'WHERE request_id=%s',('enterprise:sell:'+receipt,)).fetchone()[0],1)
+        core.advance_day(self.conn,3)
+        self.assertEqual(self.stage(eid),0)
+        self.assertTrue(reconcile(self.conn)['ok'])
+
+    def test_demolition_partial_refund_and_replayed_request(self):
+        owner=self.owner(45000)
+        eid=self.fixture(owner,days=8)
+        self.pay_first(owner,eid)
+        request='stage:demolish:'+uuid4().hex
+        with patch('server.enterprises.api.authenticate',return_value=owner), \
+             patch('server.enterprises.api.world.clear_occupied'):
+            status,first=api.demolish({'request_id':request},
+                              {'conn':self.conn,'path_params':{'id':str(eid)}})
+            again,replayed=api.demolish({'request_id':request},
+                              {'conn':self.conn,'path_params':{'id':str(eid)}})
+        self.assertEqual(status,200,first)
+        self.assertEqual(first['refund'],9000)
+        self.assertEqual(again,200,replayed)
+        self.assertTrue(replayed['idempotent'])
+        self.assertEqual(self.balance(owner),9001)
+        self.assertTrue(reconcile(self.conn)['ok'])
+
+    def test_underfunded_build_does_not_block_other_owners(self):
+        broke=self.owner(45000)
+        rich=self.owner(150000)
+        a=self.fixture(broke,days=1)
+        b=self.fixture(rich,days=1)
+        self.pay_first(broke,a)
+        self.pay_first(rich,b)
+        core.advance_day(self.conn,1)
+        self.assertEqual(self.stage(a),0)
+        self.assertEqual(self.stage(b),4)
+        self.assertEqual(self.balance(broke),1)
+        self.assertEqual(self.balance(rich),1)
+        self.assertTrue(reconcile(self.conn)['ok'])
+
     def test_legacy_paid_enterprise_stays_operational(self):
         owner=self.owner(10000)
         eid=self.fixture(owner,stage=4)
