@@ -1,6 +1,6 @@
 # Developer world editor (ChatGPT9, implementation in progress)
 
-> **Not ready for deployment.** Building operations are partially implemented; Android device integration and isolated PostgreSQL CI have not been confirmed green.
+> **Not ready for production deployment.** The temporary isolated PostgreSQL integration suite passed on Lunex, and a signed Android debug APK was exported. No physical Android device run or production-safe concurrent editing verification has been completed.
 
 ## Operator-only roles
 
@@ -42,8 +42,8 @@ All routes verify the developer role against the **authentication database**, se
 - Integrate manual terrain overrides into server-side road access and water checks without per-cell SQL.
 - Road removal and road-add undo now run a cardinal graph connectivity check over all base and dynamic roads. The check rejects splits of any surviving connected component and loss of every road entrance to an existing building. Dead-end trimming and removal with an alternate route remain allowed. Building relocation checks zoning and requires a destination adjacent to a road. The destination road must belong to a component connected to at least one city base road; isolated roads are rejected. Large-world performance benchmarking remains pending.
 - Validate all economic dependencies of demolition and restoration, especially contracts, loans and deposits.
-- Test PostgreSQL with isolated `lunex_ci` only; never use production DB.
-- Run Android landscape/safe-area, touch and editor UI integration tests on an actual device.
+- The three PostgreSQL integration tests passed on 2026-11-15 against a disposable, memory-limited PostgreSQL 16 container with the isolated `lunex_ci` database. The container was removed after the tests; production PostgreSQL was never used. GitHub Actions results must be checked independently.
+- A signed 55 MB Android debug APK was exported and verified with `apksigner` and `aapt` on the VPS. The editor UI smoke passes 846×388, 1280×720 and 2340×1080 landscape resolutions after fixing a zero-height/off-screen editor panel. The existing Forest Glass layout and unauthenticated touch-flow smoke tests were updated to match the current UI tree. Actual Android installation and interaction on a physical device are still required.
 - Owner-controlled manual-cell exclusion in `citygen` is still pending and is outside this branch's allowed files.
 
 ## Road editing and undo (experimental)
@@ -52,4 +52,10 @@ All routes verify the developer role against the **authentication database**, se
 
 ## Validation record
 
-Isolated development workspace, 2026-11-15: `python -m unittest discover -p 'test_*.py' -q` returned **559 tests, OK (56 skipped)** with SQLite engine before this documentation update. Godot 4.7.2 headless editor load exited with code 0. The PostgreSQL `lunex_ci` workflow has been committed but has **not been confirmed green**. No production database was accessed.
+On Lunex, 2026-11-15:
+- **PostgreSQL 16:** 3/3 real integration tests passed against a temporary local `lunex_ci` container. Container explicitly removed by a shell exit trap.
+- **SQLite:** full Python regression suite passed after the editor and UI smoke updates with 579 tests (58 skipped).
+- **Godot 4.7.2:** headless developer-editor smoke, dynamic-panel layout smoke, catalogue smoke and unauthenticated touch flow all passed on the isolated `ChatGPT9` checkout. The tests are executable with `godot --headless --path client --script res://tests/<name>.gd`.
+- **Android:** build `/home/gamedev/projects/LunexEconom-chatgpt9-android-debug.apk` is generated in a separate output path, signed with the local debug keystore and verified with the Android SDK. No Android device or emulator was connected during testing, so this is not an on-device certification.
+
+Neither the production DB, active game service, running production Docker containers, nor `main` was modified.
