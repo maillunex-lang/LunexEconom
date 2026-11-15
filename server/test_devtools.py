@@ -17,6 +17,10 @@ class DeveloperToolsTests(unittest.TestCase):
         self.db.execute("CREATE TABLE cells(x INTEGER,y INTEGER,object_id TEXT,PRIMARY KEY(x,y))")
         self.db.execute("CREATE TABLE buildings(id TEXT PRIMARY KEY,owner TEXT,kind TEXT,x INTEGER,y INTEGER,created INTEGER)")
         self.db.execute("CREATE TABLE building_deposits(object_id TEXT,deposit_id TEXT,resource TEXT)")
+        self.db.execute("CREATE TABLE building_ops(object_id TEXT,owner TEXT,kind TEXT,start_month INTEGER,start_permille INTEGER)")
+        self.db.execute("CREATE TABLE building_dimensions(object_id TEXT,width INTEGER,height INTEGER,equipment_level INTEGER)")
+        self.db.execute("CREATE TABLE building_specializations(object_id TEXT,specialization TEXT)")
+        self.db.execute("CREATE TABLE ledger_entries(tx_id TEXT,account TEXT,amount INTEGER)")
         self.db.execute("CREATE TABLE roads(x INTEGER,y INTEGER,owner TEXT,created INTEGER,PRIMARY KEY(x,y))")
         self.db.execute("CREATE TABLE events(seq INTEGER PRIMARY KEY AUTOINCREMENT,cx INTEGER,cy INTEGER,version INTEGER,kind TEXT,payload TEXT)")
         admin_api.ensure(self.db,"?")
@@ -41,6 +45,23 @@ class DeveloperToolsTests(unittest.TestCase):
         payload={"request_id":"c2c3ad2b-180e-4517-839c-c47e48dbd7cb","kind":"water","cells":[[1,2]]}
         self.assertEqual(devtools.terrain_set(self.db,"?","player",payload,"127.0.0.1")[0],403)
         self.assertEqual(self.db.execute("SELECT COUNT(*) FROM terrain_edits").fetchone()[0],0)
+
+    def test_demolish_removes_building_without_ledger(self):
+        self.db.execute("INSERT INTO buildings VALUES ('b1','player','shop',11,12,0)")
+        self.db.execute("INSERT INTO cells VALUES (11,12,'b1')")
+        self.db.execute("INSERT INTO building_ops VALUES ('b1','player','shop',0,0)")
+        payload={"request_id":"c2c3ad2b-180e-4517-839c-c47e48dbd7cb","object_id":"b1"}
+        status,result=devtools.building_demolish(self.db,"?","dev",payload,"local")
+        self.assertEqual(status,200,result)
+        self.assertIsNone(self.db.execute("SELECT id FROM buildings WHERE id='b1'").fetchone())
+        self.assertIsNone(self.db.execute("SELECT object_id FROM building_ops WHERE object_id='b1'").fetchone())
+        self.assertEqual(self.db.execute("SELECT COUNT(*) FROM ledger_entries").fetchone()[0],0)
+        self.assertTrue(devtools.building_demolish(self.db,"?","dev",payload,"local")[1]["replayed"])
+        status,result=devtools.undo(self.db,"?","dev",{"request_id":"b0f1e34b-cda2-4924-a687-a421c82f581d"},"local")
+        self.assertEqual(status,200,result)
+        self.assertEqual(self.db.execute("SELECT owner,kind FROM buildings WHERE id='b1'").fetchone(),("player","shop"))
+        self.assertEqual(self.db.execute("SELECT owner FROM building_ops WHERE object_id='b1'").fetchone(),("player",))
+        self.assertEqual(self.db.execute("SELECT COUNT(*) FROM ledger_entries").fetchone()[0],0)
 
     def test_move_preserves_owner_and_rejects_overlap(self):
         self.db.execute("INSERT INTO buildings VALUES ('b1','player','shop',11,12,0)")
