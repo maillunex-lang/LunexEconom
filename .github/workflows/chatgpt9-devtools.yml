@@ -1,0 +1,44 @@
+name: ChatGPT9 Developer Tools checks
+on:
+  push:
+    branches: [ChatGPT9]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  devtools:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: lunex_ci
+          POSTGRES_PASSWORD: ci-only-not-production
+          POSTGRES_DB: lunex_ci
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U lunex_ci -d lunex_ci"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 15
+    env:
+      LUNEX_DB_ENGINE: postgres
+      LUNEX_PG_HOST: 127.0.0.1
+      LUNEX_PG_PORT: '5432'
+      LUNEX_PG_DB: lunex_ci
+      LUNEX_PG_USER: lunex_ci
+      LUNEX_PG_PASSWORD: ci-only-not-production
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python -m pip install 'psycopg[binary]'
+      - name: PostgreSQL developer schema
+        working-directory: server
+        run: python -m unittest test_postgres_devtools -v
+      - name: SQLite developer regressions
+        working-directory: server
+        env:
+          LUNEX_DB_ENGINE: sqlite
+        run: python -m unittest test_devtools test_accounts_admin test_terrain_edits -v
