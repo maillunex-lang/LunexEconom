@@ -110,4 +110,25 @@ class TestUpdater(unittest.TestCase):
             self.assertEqual((target/'game_server.py').read_text(),'old')
             self.assertIn('LUNEX_SHA='+'a'*40,env.read_text())
 
+    def test_rollback_restores_code_even_when_env_restore_fails(self):
+        with tempfile.TemporaryDirectory() as t:
+            root=Path(t); target=root/'server'; target.mkdir()
+            (target/'game_server.py').write_text('old')
+            env=root/'env'; env.write_text('LUNEX_SHA='+'a'*40+'\\n')
+            def stage(sha,names,folder):
+                (folder/'game_server.py').write_text('new')
+            original_atomic=updater.atomic_sha
+            calls=[0]
+            def failing_restore(sha):
+                calls[0]+=1
+                if calls[0]==2:
+                    raise OSError('FAKE_PRIVATE_SECRET')
+                return original_atomic(sha)
+            with patch.object(updater,'STATE',root/'state'),patch.object(updater,'SERVER_DIR',target),patch.object(updater,'ENV_FILE',env),patch.object(updater,'stage_tree',side_effect=stage),patch.object(updater,'atomic_sha',side_effect=failing_restore),patch.object(updater,'restart',side_effect=[None,None]) as restart,patch.object(updater,'health_sha',side_effect=[False,True]),contextlib.redirect_stderr(io.StringIO()) as output:
+                with self.assertRaisesRegex(RuntimeError,'rollback incomplete'):
+                    updater.deploy('b'*40,['game_server.py'])
+                self.assertEqual(restart.call_count,2)
+            self.assertEqual((target/'game_server.py').read_text(),'old')
+            self.assertNotIn('FAKE_PRIVATE_SECRET',output.getvalue())
+
 if __name__=='__main__': unittest.main()
