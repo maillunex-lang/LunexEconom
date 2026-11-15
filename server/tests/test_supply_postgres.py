@@ -37,6 +37,12 @@ class SupplyPostgresTests(unittest.TestCase):
         self.conn = db.connect(DSN)
         self.fixture = uuid4().hex
         self.serial = 0
+        # Daily receipt is global per day. Earlier integration tests may have
+        # completed day 0 before this isolated fixture is created.
+        self.day = int(self.conn.execute(
+            "SELECT GREATEST(COALESCE((SELECT max(day_index) FROM supply_receipts),-1),"
+            " COALESCE((SELECT max(day_index) FROM game_ticks),-1))"
+        ).fetchone()[0]) + 100
         self.treasury = account(self.conn, 'system:treasury')
 
     def tearDown(self):
@@ -163,18 +169,18 @@ class SupplyPostgresTests(unittest.TestCase):
         mill = self.enterprise(owner, 'mill', recipe='mill_flour')
         self.link(mill, 'grain', field, quality=60)
         before = self.balance(owner)
-        supply.links_day(self.conn, 0, FLAGS)
-        self.assertEqual(self.qty(mill, 'grain'), 100, (supply._need(self.conn, supply._enterprises(self.conn)[-1]), self.conn.execute('SELECT * FROM supply_daily_needs WHERE enterprise_id=%s',(mill,)).fetchall(), self.conn.execute('SELECT id,owner_id,stage,running,recipe_id FROM enterprises WHERE id=%s',(mill,)).fetchone()))
+        supply.links_day(self.conn, self.day, FLAGS)
+        self.assertEqual(self.qty(mill, 'grain'), 100)
         self.assertEqual(self.qty(field, 'grain'), 0)
         self.assertEqual(enterprises.stock(self.conn, mill)['grain']['quality'], 65)
         self.assertEqual(self.balance(owner), before)
         count = self.conn.execute('SELECT count(*) FROM ledger_transfers').fetchone()[0]
-        supply.links_day(self.conn, 0, FLAGS)
+        supply.links_day(self.conn, self.day, FLAGS)
         self.assertEqual(self.balance(owner), before)
         self.assertEqual(self.conn.execute(
             'SELECT count(*) FROM ledger_transfers').fetchone()[0], count)
-        supply.market_day(self.conn, 0, FLAGS)
-        supply.market_day(self.conn, 0, FLAGS)
+        supply.market_day(self.conn, self.day, FLAGS)
+        supply.market_day(self.conn, self.day, FLAGS)
         self.assertTrue(reconcile(self.conn)['ok'])
 
     def test_max_price_quality_and_city_market_settlement(self):
@@ -183,16 +189,16 @@ class SupplyPostgresTests(unittest.TestCase):
         field = self.enterprise(seller, 'field', stock=[('grain', 70, 40)])
         mill = self.enterprise(buyer, 'mill')
         self.link(mill, 'grain', field, cap=24, quality=50)
-        supply.links_day(self.conn, 0, FLAGS)
+        supply.links_day(self.conn, self.day, FLAGS)
         self.assertEqual(self.qty(mill, 'grain'), 0)
         initial_buyer, initial_seller = self.balance(buyer), self.balance(seller)
-        supply.market_day(self.conn, 0, FLAGS)
+        supply.market_day(self.conn, self.day, FLAGS)
         # Residual city order is permissive; the explicit supplier link is not.
         self.assertEqual(self.qty(mill, 'grain'), 70)
         quote = self.conn.execute(
             """SELECT price,demand,supply,volume FROM market_prices
-            WHERE city_id='ufa' AND product_id='grain' AND day_index=0"""
-        ).fetchone()
+            WHERE city_id='ufa' AND product_id='grain' AND day_index=%s"""
+        ,(self.day,)).fetchone()
         self.assertEqual(quote, (35, 100, 70, 70))
         self.assertEqual(self.balance(buyer), initial_buyer - 70 * 35)
         self.assertEqual(self.balance(seller), initial_seller + 70 * 35)
@@ -206,24 +212,24 @@ class SupplyPostgresTests(unittest.TestCase):
         owner = self.owner(5000000)
         mill = self.enterprise(owner, 'mill', city='sterlitamak')
         self.link(mill, 'grain', None, kind='port', quality=50)
-        supply.links_day(self.conn, 0, FLAGS)
-        supply.market_day(self.conn, 0, FLAGS)
+        supply.links_day(self.conn, self.day, FLAGS)
+        supply.market_day(self.conn, self.day, FLAGS)
         shipped = self.conn.execute(
             """SELECT quantity,arrival_day,status FROM shipments
             WHERE buyer_enterprise_id=%s""", (mill,)).fetchone()
         self.assertEqual(shipped[0], 100)
-        self.assertGreater(shipped[1], 0)
+        self.assertGreater(shipped[1], self.day)
         self.assertEqual(shipped[2], 'transit')
         self.assertEqual(self.qty(mill, 'grain'), 0)
         payments = self.conn.execute(
             "SELECT count(*) FROM ledger_transfers WHERE request_id LIKE %s",
-            (f'supply:{mill}:grain:0:%',)).fetchone()[0]
-        supply.links_day(self.conn, 0, FLAGS)
-        supply.market_day(self.conn, 0, FLAGS)
+            (f'supply:{mill}:grain:{self.day}:%',)).fetchone()[0]
+        supply.links_day(self.conn, self.day, FLAGS)
+        supply.market_day(self.conn, self.day, FLAGS)
         self.assertEqual(self.conn.execute(
             "SELECT count(*) FROM ledger_transfers WHERE request_id LIKE %s",
-            (f'supply:{mill}:grain:0:%',)).fetchone()[0], payments)
-        for day in range(1, shipped[1] + 1):
+            (f'supply:{mill}:grain:{self.day}:%',)).fetchone()[0], payments)
+        for day in range(self.day + 1, shipped[1] + 1):
             supply.links_day(self.conn, day, FLAGS)
             supply.market_day(self.conn, day, FLAGS)
         self.assertEqual(self.qty(mill, 'grain'), 100)
@@ -244,8 +250,8 @@ class SupplyPostgresTests(unittest.TestCase):
         second = self.enterprise(solvent, 'mill')
         self.link(first, 'grain', field)
         self.link(second, 'grain', field)
-        supply.links_day(self.conn, 0, FLAGS)
-        supply.market_day(self.conn, 0, FLAGS)
+        supply.links_day(self.conn, self.day, FLAGS)
+        supply.market_day(self.conn, self.day, FLAGS)
         self.assertEqual(self.qty(first, 'grain'), 0)
         self.assertEqual(self.qty(second, 'grain'), 100)
         self.assertEqual(self.balance(broke), 0)
@@ -261,7 +267,7 @@ class SupplyPostgresTests(unittest.TestCase):
         bakery = self.enterprise(owner, 'bakery', recipe='bakery_bread')
         self.link(mill, 'grain', field)
         self.link(bakery, 'flour', mill)
-        for day in range(10):
+        for day in range(self.day, self.day + 10):
             self.run_day(day)
         self.assertGreaterEqual(self.qty(bakery, 'bread'), 700)
         self.assertEqual(self.qty(field, 'grain'), 100)
@@ -279,8 +285,8 @@ class SupplyPostgresTests(unittest.TestCase):
                       slot=index % 3 + 1, priority=index % 3 + 1,
                       share=334 if index % 3 == 0 else 333)
         started = time.monotonic()
-        supply.links_day(self.conn, 0, FLAGS)
-        supply.market_day(self.conn, 0, FLAGS)
+        supply.links_day(self.conn, self.day, FLAGS)
+        supply.market_day(self.conn, self.day, FLAGS)
         duration = time.monotonic() - started
         self.assertEqual(self.conn.execute(
             'SELECT count(*) FROM supply_links').fetchone()[0], 200)
