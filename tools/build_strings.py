@@ -11,6 +11,8 @@ SOURCES = (
     "docs/content/update_screen.ru.md",
     "docs/content/notifications.ru.md",
 )
+POLISH_SOURCE = "client/data/polish_strings.ru.json"
+POLISH_OUTPUT = "client/data/polish_strings.json"
 KEY = re.compile(r"^[a-z][a-z0-9_.]*$")
 PLACEHOLDER = re.compile(r"\{([a-z][a-z0-9_]*)\}")
 
@@ -35,19 +37,36 @@ def collect(root=ROOT):
     return strings
 
 
+def collect_polish(root=ROOT):
+    value = json.loads((root / POLISH_SOURCE).read_text(encoding="utf-8"))
+    if not isinstance(value, dict):
+        raise ValueError("Polish strings must be a dictionary")
+    for key, translation in value.items():
+        if not KEY.fullmatch(key) or not isinstance(translation, str) or not translation.strip():
+            raise ValueError(f"Invalid polish string: {key}")
+        if re.sub(PLACEHOLDER, "", translation).count("{") or re.sub(PLACEHOLDER, "", translation).count("}"):
+            raise ValueError(f"Malformed placeholder: {key}")
+    return value
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--check", action="store_true")
     args = parser.parse_args()
     output = ROOT / "client/data/strings.json"
     content = json.dumps(collect(), ensure_ascii=False, indent=2, sort_keys=True) + "\n"
+    polish = json.dumps(collect_polish(),ensure_ascii=False,indent=2,sort_keys=True) + "\n"
+    extra_output = ROOT / POLISH_OUTPUT
     if args.check:
+        if not extra_output.exists() or extra_output.read_text(encoding="utf-8") != polish:
+            raise SystemExit("polish_strings.json differs from source: rerun tools/build_strings.py")
         if not output.exists() or output.read_text(encoding="utf-8") != content:
             raise SystemExit("strings.json differs from docs: rerun tools/build_strings.py")
         print(f"strings OK: {len(collect())} keys")
     else:
         output.parent.mkdir(parents=True, exist_ok=True)
         output.write_text(content, encoding="utf-8")
+        extra_output.write_text(polish, encoding="utf-8")
         print(f"built {output.relative_to(ROOT)}: {len(collect())} keys")
 
 

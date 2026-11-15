@@ -48,8 +48,13 @@ def _actor(ctx, minimum=READ):
 
 
 def _need(ctx, roles):
-    actor = _actor(ctx, roles)
-    return actor, (None if actor else (401, {'error':'unauthorized'}))
+    # Distinguish an unauthenticated request from an authenticated role without permission.
+    actor = _actor(ctx, READ)
+    if not actor:
+        return None, (403, {'error':'forbidden'})
+    if actor['role'] not in roles:
+        return None, (403, {'error':'forbidden'})
+    return actor, None
 
 
 def _audit(ctx, actor, action, payload=None, target=None, old=None, new=None):
@@ -99,7 +104,7 @@ def password(body,ctx):
     value=body.get('password')
     if not isinstance(value,str) or len(value)<14:return 400,{'error':'admin_password_too_short','message':'задайте пароль не короче 14 символов'}
     if actor['id'] is None:return 400,{'error':'emergency_token_no_password'}
-    ctx['conn'].execute('UPDATE accounts SET password_hash=%s WHERE id=%s',(hash_password(value),actor['id'])); _audit(ctx,actor,'admin.password',{},target=actor['id']); return 200,{'ok':True}
+    ctx['conn'].execute('UPDATE accounts SET password_hash=%s WHERE id=%s',(hash_password(value),actor['id'])); _audit(ctx,actor,'admin.password',{},target=actor['id'],old={'password_changed':False},new={'password_changed':True}); return 200,{'ok':True}
 
 
 def overview(body,ctx):
@@ -133,9 +138,12 @@ get_settings=flags
 def update_settings(body,ctx):
     actor,err=_need(ctx,WRITE_SETTINGS)
     if err:return err
-    try: result=settings.change(ctx['conn'],body.get('key'),body.get('value'),body.get('apply_at','now'),actor['username'],ctx['registry'].flags,ctx['registry'].flag_constraints)
+    key, value = body.get('key'), body.get('value')
+    try:
+        before = settings.read_settings(ctx['conn'],ctx['registry'].flags,ctx['registry'].flag_constraints).get(key)
+        result=settings.change(ctx['conn'],key,value,body.get('apply_at','now'),actor['username'],ctx['registry'].flags,ctx['registry'].flag_constraints)
     except ValueError as exc:return 400,{'error':str(exc),'message':'значение вне допустимых границ или неверный тип'}
-    _audit(ctx,actor,'setting.change',result,old=result.get('old_value'),new=body.get('value'))
+    _audit(ctx,actor,'setting.change',result,old={'key':key,'value':before},new={'key':key,'value':value})
     return 200,result
 
 
@@ -197,7 +205,7 @@ def block_player(body,ctx):
     with ctx['conn'].transaction():
         row=ctx['conn'].execute('UPDATE accounts SET is_blocked=true, blocked_until=%s, block_reason=%s WHERE id=%s RETURNING username',(until,reason,pid)).fetchone()
         if not row:return 404,{'error':'not_found'}
-        ctx['conn'].execute('UPDATE sessions SET revoked_at=now() WHERE account_id=%s',(pid,)); ctx['conn'].execute('UPDATE admin_sessions SET revoked_at=now() WHERE account_id=%s',(pid,)); _audit(ctx,actor,'player.block',{'reason':reason,'until':until},target=pid)
+        ctx['conn'].execute('UPDATE sessions SET revoked_at=now() WHERE account_id=%s',(pid,)); ctx['conn'].execute('UPDATE admin_sessions SET revoked_at=now() WHERE account_id=%s',(pid,)); _audit(ctx,actor,'player.block',{'reason':reason,'until':until},target=pid,old={'blocked':False},new={'blocked':True,'until':until})
     return 200,{'ok':True,'blocked_until':until}
 
 
@@ -206,7 +214,7 @@ def unblock_player(body,ctx):
     if err:return err
     pid=int(ctx['path_params']['id']); row=ctx['conn'].execute('UPDATE accounts SET is_blocked=false, blocked_until=NULL, block_reason=NULL WHERE id=%s RETURNING id',(pid,)).fetchone()
     if not row:return 404,{'error':'not_found'}
-    _audit(ctx,actor,'player.unblock',{},target=pid); return 200,{'ok':True}
+    _audit(ctx,actor,'player.unblock',{},target=pid,old={'blocked':True},new={'blocked':False}); return 200,{'ok':True}
 
 
 def revoke_sessions(body,ctx):
@@ -214,7 +222,7 @@ def revoke_sessions(body,ctx):
     if err:return err
     pid=body.get('player_id')
     if pid is None:return 400,{'error':'player_id_required'}
-    ctx['conn'].execute('UPDATE sessions SET revoked_at=now() WHERE account_id=%s',(int(pid),)); ctx['conn'].execute('UPDATE admin_sessions SET revoked_at=now() WHERE account_id=%s',(int(pid),)); _audit(ctx,actor,'player.sessions_revoke',{},target=int(pid)); return 200,{'ok':True}
+    ctx['conn'].execute('UPDATE sessions SET revoked_at=now() WHERE account_id=%s',(int(pid),)); ctx['conn'].execute('UPDATE admin_sessions SET revoked_at=now() WHERE account_id=%s',(int(pid),)); _audit(ctx,actor,'player.sessions_revoke',{},target=int(pid),old={'revoked':False},new={'revoked':True}); return 200,{'ok':True}
 
 
 def compensate(body,ctx):
@@ -228,9 +236,12 @@ def compensate(body,ctx):
     row=ctx['conn'].execute('SELECT username FROM accounts WHERE id=%s',(pid,)).fetchone()
     if not row:return 404,{'error':'not_found'}
     treasury=ledger_account(ctx['conn'],'system:treasury'); wallet=ledger_account(ctx['conn'],'player:'+row[0].lower(),'player',pid)
+    before=ctx['conn'].execute('SELECT balance FROM ledger_accounts WHERE id=%s',(wallet,)).fetchone()[0]
     try: tx=ledger_transfer(ctx['conn'],request_id,treasury,wallet,amount) if amount>0 else ledger_transfer(ctx['conn'],request_id,wallet,treasury,-amount)
     except ValueError as exc:return 400,{'error':str(exc)}
-    _audit(ctx,actor,'player.compensate',{'request_id':request_id,'amount':amount,'reason':reason,'ticket':ticket},target=pid); return 200,{'ok':True,'transfer_id':tx}
+    after=ctx['conn'].execute('SELECT balance FROM ledger_accounts WHERE id=%s',(wallet,)).fetchone()[0]
+    _audit(ctx,actor,'player.compensate',{'request_id':request_id,'amount':amount,'reason':reason,'ticket':ticket},target=pid,old={'wallet':before},new={'wallet':after})
+    return 200,{'ok':True,'transfer_id':tx}
 
 
 def roles(body,ctx):
@@ -238,9 +249,11 @@ def roles(body,ctx):
     if err:return err
     pid=body.get('player_id'); role=body.get('role'); confirm=body.get('confirm')
     if not isinstance(pid,int) or role not in ROLES+('player','developer') or confirm is not True:return 400,{'error':'подтвердите выдачу роли'}
+    old_row=ctx['conn'].execute('SELECT username,role FROM accounts WHERE id=%s',(pid,)).fetchone()
+    if not old_row:return 404,{'error':'not_found'}
     row=ctx['conn'].execute('UPDATE accounts SET role=%s WHERE id=%s RETURNING username,role',(role,pid)).fetchone()
     if not row:return 404,{'error':'not_found'}
-    _audit(ctx,actor,'account.role',{'role':role},target=pid,new={'role':role}); return 200,{'ok':True,'username':row[0],'role':row[1]}
+    _audit(ctx,actor,'account.role',{'role':role},target=pid,old={'role':old_row[1]},new={'role':role}); return 200,{'ok':True,'username':row[0],'role':row[1]}
 
 
 def block(body,ctx):
