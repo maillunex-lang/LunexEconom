@@ -13,6 +13,7 @@ func _run() -> void:
     assert(instance.get("form") != null)
     assert(instance.get("headquarters") != null)
     assert(instance.get("login_email") != null)
+    assert(instance.get_node_or_null("PresenceTimer") != null)
     assert(not instance.get("headquarters").visible)
     assert(DisplayServer.window_get_size().x >= DisplayServer.window_get_size().y)
     instance._save_refresh("device-test-only")

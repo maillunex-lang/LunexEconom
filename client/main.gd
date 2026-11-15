@@ -35,6 +35,12 @@ func _ready() -> void:
     headquarters.hide()
     _on_viewport_resized()
     call_deferred("_restore_session")
+    var presence_timer := Timer.new()
+    presence_timer.name = "PresenceTimer"
+    presence_timer.wait_time = 60.0
+    presence_timer.timeout.connect(_presence_heartbeat)
+    add_child(presence_timer)
+    presence_timer.start()
 
 func _on_viewport_resized() -> void:
     if shell == null:
@@ -261,6 +267,15 @@ func _authorized_api(path: String) -> Dictionary:
     if result.code == 401 and await _renew_tokens():
         result = await _api(path,HTTPClient.METHOD_GET,{},true)
     return result
+
+func _presence_heartbeat() -> void:
+    if token.is_empty():
+        return
+    var result: Dictionary = await _authorized_api("/auth/me")
+    if result.code == 401 and token.is_empty():
+        headquarters.hide()
+        form.show()
+        status_label.text = "Сессия истекла. Войдите снова."
 
 func _load_hq() -> void:
     if token.is_empty():
