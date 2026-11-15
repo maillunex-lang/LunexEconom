@@ -114,6 +114,25 @@ class DeveloperToolsTests(unittest.TestCase):
         self.assertEqual(result["error"],"invalid_destination_zone")
         self.assertEqual(self.db.execute("SELECT x,y FROM buildings WHERE id='b1'").fetchone(),(11,12))
 
+    def test_road_removal_rejects_bridge_even_without_adjacent_buildings(self):
+        with patch("dev_road_connectivity._base_roads", return_value={(0, 0)}), patch("roads.is_base_road", return_value=False):
+            self.db.executemany("INSERT INTO roads VALUES (?,?,'dev',0)", [(1, 0), (2, 0), (3, 0)])
+            payload={"request_id":"c2c3ad2b-180e-4517-839c-c47e48dbd7cb","operation":"remove","cells":[[2,0]]}
+            status,result=devtools.roads_set(self.db,"?","dev",payload,"local")
+        self.assertEqual(status,409,result)
+        self.assertEqual(result["error"],"road_network_disconnected")
+        self.assertIsNotNone(self.db.execute("SELECT 1 FROM roads WHERE x=2 AND y=0").fetchone())
+
+    def test_undo_road_add_rejects_newly_critical_connection(self):
+        with patch("dev_road_connectivity._base_roads", return_value={(0, 0)}), patch("roads.is_base_road", return_value=False):
+            payload={"request_id":"c2c3ad2b-180e-4517-839c-c47e48dbd7cb","operation":"add","cells":[[1,0]]}
+            self.assertEqual(devtools.roads_set(self.db,"?","dev",payload,"local")[0],200)
+            self.db.execute("INSERT INTO roads VALUES (2,0,'other',0)")
+            status,result=devtools.undo(self.db,"?","dev",{"request_id":"b0f1e34b-cda2-4924-a687-a421c82f581d"},"local")
+        self.assertEqual(status,409,result)
+        self.assertEqual(result["error"],"road_network_disconnected")
+        self.assertIsNotNone(self.db.execute("SELECT 1 FROM roads WHERE x=1 AND y=0").fetchone())
+
     def test_road_removal_protects_adjacent_building(self):
         self.db.execute("INSERT INTO buildings VALUES ('b1','player','shop',12,12,0)")
         self.db.execute("INSERT INTO cells VALUES (12,12,'b1')")
@@ -121,7 +140,7 @@ class DeveloperToolsTests(unittest.TestCase):
         payload={"request_id":"c2c3ad2b-180e-4517-839c-c47e48dbd7cb","operation":"remove","cells":[[11,12]]}
         status,result=devtools.roads_set(self.db,"?","dev",payload,"local")
         self.assertEqual(status,409,result)
-        self.assertEqual(result["error"],"building_access_road")
+        self.assertEqual(result["error"],"building_access_lost")
         self.assertIsNotNone(self.db.execute("SELECT 1 FROM roads WHERE x=11 AND y=12").fetchone())
 
     def test_roads_add_remove_and_idempotency(self):
