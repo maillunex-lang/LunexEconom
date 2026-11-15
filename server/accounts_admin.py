@@ -9,7 +9,6 @@ import auth
 
 def ensure(db):
     db.execute("CREATE TABLE IF NOT EXISTS dev_roles (username TEXT PRIMARY KEY, granted_at BIGINT NOT NULL)")
-    db.commit()
 
 def set_developer(username, enabled, db=None):
     owned = db is None
