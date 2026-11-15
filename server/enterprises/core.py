@@ -8,6 +8,54 @@ from server.world import core as world
 BP = 10000
 MAX = 2**63 - 1
 STAGES = ('foundation','frame','finishing','commissioning','operational')
+# balance: draft (D-10, D-53). Four payments sum to exactly build_cost.
+COST_SHARES_PERMILLE = (300, 400, 200, 100)
+TIME_SHARES_PERMILLE = (250, 350, 300, 100)
+
+def stage_costs(total):
+    """Floor each of the first three shares; final payment takes remainder."""
+    integer(total, 1)
+    result = [total * share // 1000 for share in COST_SHARES_PERMILLE[:3]]
+    result.append(total - sum(result))
+    return tuple(result)
+
+def stage_day_lengths(days):
+    """Cumulative floor boundaries, as tools.sim.formulas.split_by_bp."""
+    integer(days, 1)
+    previous = 0
+    result = []
+    cumulative = 0
+    for share in TIME_SHARES_PERMILLE:
+        cumulative += share
+        end = days * cumulative // 1000
+        result.append(end - previous)
+        previous = end
+    return tuple(result)
+
+def payment_status(conn, eid, stage, cost):
+    """Owner-only API projection; ledger rows are the source of payment truth."""
+    entries = conn.execute(
+        'SELECT stage,amount,legacy_prepaid FROM enterprise_stage_payments '
+        'WHERE enterprise_id=%s ORDER BY stage', (eid,)
+    ).fetchall()
+    paid = [{'stage_index': i, 'stage': STAGES[i], 'amount': amount,
+             'legacy_prepaid': legacy} for i,amount,legacy in entries]
+    paid_index = {r[0] for r in entries}
+    upcoming = next((i for i in range(4) if i not in paid_index), None)
+    if stage == 4:
+        upcoming = None
+    waiting = conn.execute(
+        'SELECT stage,amount,waiting_days,first_wait_day '
+        'FROM enterprise_build_waits WHERE enterprise_id=%s', (eid,)
+    ).fetchone()
+    amounts = stage_costs(cost)
+    return {'paid_stages': paid, 'paid_amount': sum(item['amount'] for item in paid),
+            'next_payment': None if upcoming is None else
+                {'stage_index': upcoming, 'stage': STAGES[upcoming],
+                 'amount': amounts[upcoming]},
+            'waiting_for_payment': waiting is not None,
+            'waiting_days': waiting[2] if waiting else 0}
+
 _CATALOG = None
 
 def catalog():
@@ -57,10 +105,11 @@ def place(conn, actor, request_id, building_id, px, py, x, y):
     payer=account(conn,'player:'+actor['username'].lower(),'player',actor['id'])
     treasury=account(conn,'system:treasury')
     wallet_balance=conn.execute('SELECT balance FROM ledger_accounts WHERE id=%s',(payer,)).fetchone()[0]
-    if wallet_balance<building['build_cost']:
+    initial_payment = stage_costs(building['build_cost'])[0]
+    if wallet_balance < initial_payment:
         return 409,{'error':'insufficient_funds'}
     try:
-        transfer_id=transfer(conn,'enterprise:build:'+request_id,payer,treasury,building['build_cost'])
+        transfer_id=transfer(conn,'enterprise:build:'+request_id,payer,treasury,initial_payment)
     except ValueError as exc:
         if str(exc)=='insufficient balance':
             return 409,{'error':'insufficient_funds'}
@@ -70,6 +119,12 @@ def place(conn, actor, request_id, building_id, px, py, x, y):
     eid=conn.execute("""INSERT INTO enterprises(owner_id,building_id,px,py,x,y,width,height,city_id,name,build_cost,build_days,upkeep_month,jobs,storage_capacity,started_day,recipe_id,build_request_id,build_transfer_id)
       VALUES(%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s) RETURNING id""",
       (actor['id'],building_id,px,py,x,y,building['size']['width'],building['size']['height'],city_id,building['name'],building['build_cost'],building['build_days'],building['upkeep_month'],building['jobs'],building['storage_capacity'],today(conn),recipe_id,request_id,transfer_id)).fetchone()[0]
+    # First installment and the enterprise are committed in the same transaction.
+    # Stage 0 preserves the old order-level ledger idempotency key.
+    conn.execute("""INSERT INTO enterprise_stage_payments
+      (enterprise_id,stage,amount,request_id,transfer_id)
+      VALUES(%s,0,%s,%s,%s)""",
+      (eid,initial_payment,'enterprise:build:'+request_id,transfer_id))
     # World mark_occupied currently rejects free land; preserve world tables
     # and use the same sparse occupancy and chunk-event contract for both zones.
     if city_id:
@@ -81,7 +136,8 @@ def place(conn, actor, request_id, building_id, px, py, x, y):
                          (cx,cy,nearest,'enterprise:'+str(eid)))
         event=world._touch(conn,world._chunks_for_cells(cells),'enterprise_construction',None,
                            {'enterprise_id':eid,'stage_index':0,'stage':'foundation'})
-    return 201,{'id':eid,'build_cost':building['build_cost'],'transfer_id':transfer_id,
+    return 201,{'id':eid,'build_cost':building['build_cost'],
+                'initial_payment':initial_payment,'transfer_id':transfer_id,
                 'event_version':event,'idempotent':False,'balance':'draft'}
 
 def stock(conn,eid):
@@ -152,21 +208,100 @@ def production(conn,eid,day,default_staffing_bp=10000):
     conn.execute('UPDATE enterprises SET load_bp=%s,last_production_day=%s WHERE id=%s',(load,day,eid))
     conn.execute('INSERT INTO enterprise_daily_load(enterprise_id,day_index,load_bp) VALUES(%s,%s,%s) ON CONFLICT DO NOTHING',(eid,day,load))
 
+def _record_build_wait(conn, eid, stage, amount, day):
+    """A missed installment is not debt and never generates a debit journal."""
+    conn.execute("""INSERT INTO enterprise_build_waits
+      (enterprise_id,stage,amount,first_wait_day,last_wait_day,waiting_days)
+      VALUES(%s,%s,%s,%s,%s,1)
+      ON CONFLICT(enterprise_id) DO UPDATE SET
+        stage=EXCLUDED.stage,amount=EXCLUDED.amount,
+        waiting_days=enterprise_build_waits.waiting_days
+          + CASE WHEN EXCLUDED.last_wait_day > enterprise_build_waits.last_wait_day
+                 THEN 1 ELSE 0 END,
+        last_wait_day=GREATEST(enterprise_build_waits.last_wait_day,EXCLUDED.last_wait_day)""",
+      (eid,stage,amount,day,day))
+
+
+def _pay_build_stage(conn, eid, owner, stage, amount, day):
+    """Try exactly once per stage (ledger and payment row are transactional)."""
+    if conn.execute('SELECT 1 FROM enterprise_stage_payments WHERE enterprise_id=%s '
+                    'AND stage=%s',(eid,stage)).fetchone():
+        conn.execute('DELETE FROM enterprise_build_waits WHERE enterprise_id=%s',(eid,))
+        return True
+    payer=conn.execute("""SELECT l.id FROM ledger_accounts l JOIN accounts a
+      ON l.account_key='player:'||lower(a.username) WHERE a.id=%s""",(owner,)).fetchone()
+    if payer is None:
+        _record_build_wait(conn,eid,stage,amount,day)
+        return False
+    request_id=f'enterprise:build:{eid}:{stage}'
+    transfer_id=None
+    if amount:
+        try:
+            transfer_id=transfer(conn,request_id,payer[0],
+                                 account(conn,'system:treasury'),amount)
+        except ValueError as exc:
+            if str(exc) != 'insufficient balance':
+                raise
+            _record_build_wait(conn,eid,stage,amount,day)
+            return False
+    conn.execute("""INSERT INTO enterprise_stage_payments
+      (enterprise_id,stage,amount,request_id,transfer_id)
+      VALUES(%s,%s,%s,%s,%s) ON CONFLICT(enterprise_id,stage) DO NOTHING""",
+      (eid,stage,amount,request_id,transfer_id))
+    conn.execute('DELETE FROM enterprise_build_waits WHERE enterprise_id=%s',(eid,))
+    return True
+
+
+def _advance_build(conn, eid, day, info):
+    owner,cost,days,stage,progress,x,y,width,height,city=info
+    durations=stage_day_lengths(days)
+    amounts=stage_costs(cost)
+    footprint={(a,b) for a in range(x,x+width) for b in range(y,y+height)}
+    # Zero-day stages are allowed for short catalogue build_days. The loop
+    # advances through them in one daily tick, as the reference simulator does.
+    while stage<4:
+        duration=durations[stage]
+        if duration:
+            # Advance time only while the current installment is not stalled.
+            if progress < duration:
+                progress += 1
+            if progress < duration:
+                break
+        new_stage=stage+1
+        if new_stage<4 and not _pay_build_stage(
+                conn,eid,owner,new_stage,amounts[new_stage],day):
+            # Progress is frozen at the boundary until the installment clears.
+            progress=duration
+            break
+        stage=new_stage
+        progress=0
+        world._touch(conn,world._chunks_for_cells(footprint),'enterprise_stage',city,
+                     {'enterprise_id':eid,'stage_index':stage,
+                      'stage':STAGES[stage],'day_index':day})
+    conn.execute('UPDATE enterprises SET stage=%s,stage_progress_days=%s '
+                 'WHERE id=%s',(stage,progress,eid))
+
+
 def advance_day(conn,day,default_staffing_bp=10000):
     integer(day)
     integer(default_staffing_bp,0,BP)
-    rows=conn.execute('SELECT id,started_day,build_days,stage,x,y,width,height,city_id FROM enterprises WHERE sold_at IS NULL AND last_production_day<%s ORDER BY id',(day,)).fetchall()
-    for eid,start,duration,stage,x,y,width,height,city in rows:
-        if stage<4:
-            elapsed=max(0,day-start)
-            target=min(4,elapsed*4//duration)
-            if elapsed>=duration:target=4
-            if target>stage:
-                conn.execute('UPDATE enterprises SET stage=%s WHERE id=%s',(target,eid))
-                footprint={(a,b) for a in range(x,x+width) for b in range(y,y+height)}
-                world._touch(conn,world._chunks_for_cells(footprint),'enterprise_stage',city,
-                             {'enterprise_id':eid,'stage_index':target,'stage':STAGES[target],'day_index':day})
-        production(conn,eid,day,default_staffing_bp)
+    rows=conn.execute('SELECT id FROM enterprises WHERE sold_at IS NULL '
+                      'AND last_production_day<%s ORDER BY id',(day,)).fetchall()
+    for (eid,) in rows:
+        # Each construction and production step is an isolated savepoint.
+        # An underfunded owner cannot block construction for others.
+        with conn.transaction():
+            info=conn.execute("""SELECT owner_id,build_cost,build_days,stage,
+              stage_progress_days,x,y,width,height,city_id,last_production_day
+              FROM enterprises WHERE id=%s AND sold_at IS NULL FOR UPDATE""",
+              (eid,)).fetchone()
+            if info is None or info[-1]>=day:
+                continue
+            # Match simulator: production precedes end-of-day construction.
+            production(conn,eid,day,default_staffing_bp)
+            if info[3]<4:
+                _advance_build(conn,eid,day,info[:-1])
+
 
 def close_month(conn,month,salary_per_worker=100,monthly_wear=1):
     """Draft: settle cumulative arrears atomically per enterprise, never block other owners."""

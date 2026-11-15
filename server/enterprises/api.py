@@ -36,7 +36,9 @@ def _detail(ctx,r):
             'wear':r[10],'build_cost':r[11],
             'parcel':{'px':r[12],'py':r[13]},
             'position':{'x':r[14],'y':r[15]},
-            'inventory':core.stock(ctx['conn'],r[0]),'balance':'draft'}
+            'inventory':core.stock(ctx['conn'],r[0]),
+            **core.payment_status(ctx['conn'],r[0],r[4],r[11]),
+            'balance':'draft'}
 
 def create(body,ctx):
     actor=authenticate(ctx)
@@ -63,8 +65,15 @@ def list_own(body,ctx):
     actor=authenticate(ctx)
     if not actor:
         return 401,{'error':'unauthorized'}
-    rows=ctx['conn'].execute('SELECT id FROM enterprises WHERE owner_id=%s AND sold_at IS NULL ORDER BY id',(actor['id'],)).fetchall()
-    return 200,{'enterprises':[row[0] for row in rows]}
+    rows=ctx['conn'].execute(
+        'SELECT id,stage,build_cost FROM enterprises '
+        'WHERE owner_id=%s AND sold_at IS NULL ORDER BY id',
+        (actor['id'],)).fetchall()
+    # Preserve the original enterprise ID list for existing Android clients.
+    details=[{'id':eid,'stage_index':stage,
+              **core.payment_status(ctx['conn'],eid,stage,cost)}
+             for eid,stage,cost in rows]
+    return 200,{'enterprises':[row[0] for row in rows], 'items':details}
 
 def one(body,ctx):
     _,row,error=_mine(ctx)
@@ -116,9 +125,16 @@ def sell(body,ctx):
     if not isinstance(req,str) or not REQUEST.fullmatch(req):
         return 400,{'error':'invalid_request_id'}
     conn=ctx['conn']
-    conn.execute('SELECT id FROM enterprises WHERE id=%s FOR UPDATE',(row[0],))
-    if row[4]!=4:
-        return 409,{'error':'construction_not_complete'}
+    locked=conn.execute('SELECT stage,build_cost,sold_at FROM enterprises '
+                        'WHERE id=%s FOR UPDATE',(row[0],)).fetchone()
+    if locked is None or locked[2] is not None:
+        previous=conn.execute('SELECT enterprise_id,owner_id,price,transfer_id '
+                              'FROM enterprise_sale_requests WHERE request_id=%s',
+                              (req,)).fetchone()
+        if previous and previous[:2]==(row[0],actor['id']):
+            return 200,{'id':row[0],'price':previous[2],
+                        'transfer_id':previous[3],'idempotent':True}
+        return 404,{'error':'not_found'}
     if any(v['quantity']>0 for v in core.stock(conn,row[0]).values()):
         return 409,{'error':'inventory_not_empty'}
     previous=conn.execute('SELECT enterprise_id,owner_id,price,transfer_id FROM enterprise_sale_requests WHERE request_id=%s',(req,)).fetchone()
@@ -126,16 +142,72 @@ def sell(body,ctx):
         if previous[:2]!=(row[0],actor['id']):
             return 409,{'error':'request_id_conflict'}
         return 200,{'id':row[0],'price':previous[2],'transfer_id':previous[3],'idempotent':True}
-    # Provisional resale policy, not a confirmed market valuation.
-    price=row[11]//2
+    # balance: draft. Construction resale refunds half of the ALREADY paid
+    # installments. Operational buildings preserve 50% of full build_cost.
+    paid=conn.execute('SELECT COALESCE(sum(amount),0),count(*) '
+                      'FROM enterprise_stage_payments WHERE enterprise_id=%s',
+                      (row[0],)).fetchone()
+    total_paid=int(paid[0]) if paid[1] else (locked[1] if locked[0]==4 else 0)
+    price=total_paid//2
+    if price<=0:
+        return 409,{'error':'no_paid_construction'}
     player=account(conn,'player:'+actor['username'].lower(),'player',actor['id'])
     treasury=account(conn,'system:treasury')
     transfer_id=transfer(conn,'enterprise:sell:'+req,treasury,player,price)
     world.clear_occupied(conn,'enterprise:'+str(row[0]))
+    conn.execute('DELETE FROM enterprise_build_waits WHERE enterprise_id=%s',(row[0],))
     conn.execute('UPDATE enterprises SET sold_at=now(),running=false WHERE id=%s',(row[0],))
     conn.execute('INSERT INTO enterprise_sale_requests(request_id,enterprise_id,owner_id,price,transfer_id) VALUES(%s,%s,%s,%s,%s)',
                  (req,row[0],actor['id'],price,transfer_id))
     return 200,{'id':row[0],'price':price,'transfer_id':transfer_id,'idempotent':False}
+
+def demolish(body,ctx):
+    """Retire a building without charging unfinished stages (D-14: 200‰ draft)."""
+    actor,row,error=_mine(ctx)
+    req=body.get('request_id') if isinstance(body,dict) else None
+    if not isinstance(req,str) or not REQUEST.fullmatch(req):
+        return 400,{'error':'invalid_request_id'}
+    conn=ctx['conn']
+    if error:
+        if actor:
+            previous=conn.execute("""SELECT enterprise_id,owner_id,refund,transfer_id
+              FROM enterprise_demolition_requests WHERE request_id=%s""",(req,)).fetchone()
+            if previous and previous[:2]==(_id(ctx),actor['id']):
+                return 200,{'id':previous[0],'refund':previous[2],
+                            'transfer_id':previous[3],'idempotent':True}
+        return error
+    locked=conn.execute('SELECT stage,build_cost,sold_at FROM enterprises '
+                        'WHERE id=%s FOR UPDATE',(row[0],)).fetchone()
+    if locked is None or locked[2] is not None:
+        return 404,{'error':'not_found'}
+    previous=conn.execute("""SELECT enterprise_id,owner_id,refund,transfer_id
+      FROM enterprise_demolition_requests WHERE request_id=%s""",(req,)).fetchone()
+    if previous:
+        if previous[:2]!=(row[0],actor['id']):
+            return 409,{'error':'request_id_conflict'}
+        return 200,{'id':row[0],'refund':previous[2],
+                    'transfer_id':previous[3],'idempotent':True}
+    if any(v['quantity']>0 for v in core.stock(conn,row[0]).values()):
+        return 409,{'error':'inventory_not_empty'}
+    paid=conn.execute('SELECT COALESCE(sum(amount),0),count(*) '
+                      'FROM enterprise_stage_payments WHERE enterprise_id=%s',
+                      (row[0],)).fetchone()
+    amount=int(paid[0]) if paid[1] else (locked[1] if locked[0]==4 else 0)
+    refund=amount*200//1000  # 20% of paid material value, balance: draft.
+    receipt=None
+    if refund:
+        player=account(conn,'player:'+actor['username'].lower(),'player',actor['id'])
+        receipt=transfer(conn,'enterprise:demolish:'+req,
+                         account(conn,'system:treasury'),player,refund)
+    world.clear_occupied(conn,'enterprise:'+str(row[0]))
+    conn.execute('DELETE FROM enterprise_build_waits WHERE enterprise_id=%s',(row[0],))
+    conn.execute('UPDATE enterprises SET sold_at=now(),running=false WHERE id=%s',(row[0],))
+    conn.execute("""INSERT INTO enterprise_demolition_requests
+      (request_id,enterprise_id,owner_id,refund,transfer_id)
+      VALUES(%s,%s,%s,%s,%s)""",(req,row[0],actor['id'],refund,receipt))
+    return 200,{'id':row[0],'refund':refund,'transfer_id':receipt,
+                'idempotent':False}
+
 
 def report(body,ctx):
     _,row,error=_mine(ctx)
