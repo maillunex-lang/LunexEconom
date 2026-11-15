@@ -124,7 +124,8 @@ def production(conn,eid,day,default_staffing_bp=10000):
     if row is None or row[5]>=day:
         return
     recipe_id,stage,running,staff,capacity,_=row
-    if stage!=4 or not running or recipe_id is None:
+    has_arrears=conn.execute('SELECT 1 FROM enterprise_arrears WHERE enterprise_id=%s AND paid_at IS NULL LIMIT 1',(eid,)).fetchone()
+    if stage!=4 or not running or recipe_id is None or has_arrears:
         conn.execute('UPDATE enterprises SET load_bp=0,last_production_day=%s WHERE id=%s',(day,eid))
         return
     recipe=catalog().index['recipes'][recipe_id]
@@ -168,25 +169,47 @@ def advance_day(conn,day,default_staffing_bp=10000):
         production(conn,eid,day,default_staffing_bp)
 
 def close_month(conn,month,salary_per_worker=100,monthly_wear=1):
+    """Draft: settle cumulative arrears atomically per enterprise, never block other owners."""
     from psycopg.types.json import Jsonb
     integer(month)
     integer(salary_per_worker,0,1000000)
     integer(monthly_wear,0,100)
-    rows=conn.execute('SELECT id,owner_id,jobs,upkeep_month,stage,last_month,wear,staffing_bp FROM enterprises WHERE sold_at IS NULL ORDER BY id FOR UPDATE').fetchall()
-    for eid,owner,jobs,upkeep,stage,last,wear,staff in rows:
-        if last>=month:continue
-        expenses=0
-        avg=0
-        if stage==4 and month>0:
-            loads=conn.execute('SELECT load_bp FROM enterprise_daily_load WHERE enterprise_id=%s AND day_index BETWEEN %s AND %s',(eid,(month-1)*30+1,month*30)).fetchall()
-            avg=sum(r[0] for r in loads)//len(loads) if loads else 0
-            expenses=upkeep+jobs*salary_per_worker*staff//BP
-            payer=conn.execute("SELECT l.id FROM ledger_accounts l JOIN accounts a ON l.account_key='player:'||lower(a.username) WHERE a.id=%s",(owner,)).fetchone()
-            if expenses and payer:
-                destination=account(conn,'system:upkeep')
-                transfer(conn,f'enterprise:upkeep:{eid}:{month}',payer[0],destination,expenses)
-            wear=min(100,wear+monthly_wear)
-            conn.execute('UPDATE enterprises SET wear=%s WHERE id=%s',(wear,eid))
-        conn.execute("""INSERT INTO enterprise_month_reports(enterprise_id,month_index,revenue,expenses,average_load_bp,inventory,wear)
-          VALUES(%s,%s,0,%s,%s,%s,%s) ON CONFLICT DO NOTHING""",(eid,month,expenses,avg,Jsonb(stock(conn,eid)),wear))
-        conn.execute('UPDATE enterprises SET last_month=%s WHERE id=%s',(month,eid))
+    rows=conn.execute('SELECT id FROM enterprises WHERE sold_at IS NULL ORDER BY id').fetchall()
+    for (eid,) in rows:
+        # The caller's monthly transaction remains intact. This savepoint isolates
+        # each enterprise's state and ledger postings from other enterprises.
+        with conn.transaction():
+            row=conn.execute('SELECT owner_id,jobs,upkeep_month,stage,last_month,wear,staffing_bp FROM enterprises WHERE id=%s AND sold_at IS NULL FOR UPDATE',(eid,)).fetchone()
+            if row is None:continue
+            owner,jobs,upkeep,stage,last,wear,staff=row
+            if last>=month:continue
+            expenses=0
+            avg=0
+            if stage==4 and month>0:
+                loads=conn.execute('SELECT load_bp FROM enterprise_daily_load WHERE enterprise_id=%s AND day_index BETWEEN %s AND %s',(eid,(month-1)*30+1,month*30)).fetchall()
+                avg=sum(r[0] for r in loads)//len(loads) if loads else 0
+                expenses=upkeep+jobs*salary_per_worker*staff//BP
+                prior=conn.execute('SELECT COALESCE(sum(amount),0),COALESCE(max(consecutive_months),0) FROM enterprise_arrears WHERE enterprise_id=%s AND paid_at IS NULL',(eid,)).fetchone()
+                debt,streak=prior
+                due=integer(debt+expenses)
+                payer=conn.execute("SELECT l.id,l.balance FROM ledger_accounts l JOIN accounts a ON l.account_key='player:'||lower(a.username) WHERE a.id=%s FOR UPDATE",(owner,)).fetchone()
+                if due and payer is not None and payer[1]>=due:
+                    destination=account(conn,'system:upkeep')
+                    # One journal for accumulated arrears and the current month.
+                    # Idempotency is keyed by enterprise/month, not by retry count.
+                    transfer(conn,f'enterprise:upkeep:{eid}:{month}',payer[0],destination,due)
+                    conn.execute('UPDATE enterprise_arrears SET paid_at=now() WHERE enterprise_id=%s AND paid_at IS NULL',(eid,))
+                elif expenses or debt:
+                    # Current month's obligation is recorded once. Zero-expense
+                    # months keep the previous debt without fabricating a charge.
+                    if expenses:
+                        conn.execute("""INSERT INTO enterprise_arrears
+                          (enterprise_id,month_index,amount,consecutive_months)
+                          VALUES(%s,%s,%s,%s) ON CONFLICT(enterprise_id,month_index) DO NOTHING""",
+                          (eid,month,expenses,streak+1))
+                wear=min(100,wear+monthly_wear)
+                conn.execute('UPDATE enterprises SET wear=%s WHERE id=%s',(wear,eid))
+            conn.execute("""INSERT INTO enterprise_month_reports(enterprise_id,month_index,revenue,expenses,average_load_bp,inventory,wear)
+              VALUES(%s,%s,0,%s,%s,%s,%s) ON CONFLICT DO NOTHING""",
+              (eid,month,expenses,avg,Jsonb(stock(conn,eid)),wear))
+            conn.execute('UPDATE enterprises SET last_month=%s WHERE id=%s',(month,eid))
