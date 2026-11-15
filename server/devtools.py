@@ -66,6 +66,11 @@ def terrain_set(db, ph, owner, payload, ip):
         return 429,{"error":"rate_limited"}
     previous={}
     for x,y in coords:
+        if db.execute("SELECT 1 FROM cells WHERE x="+ph+" AND y="+ph,(x,y)).fetchone():
+            return 409, {"error": "occupied"}
+        if db.execute("SELECT 1 FROM roads WHERE x="+ph+" AND y="+ph,(x,y)).fetchone():
+            return 409, {"error": "road_overlap"}
+    for x,y in coords:
         row=db.execute("SELECT kind,editor,created,manual FROM terrain_edits WHERE x="+ph+" AND y="+ph,(x,y)).fetchone()
         previous[f"{x},{y}"]=list(row) if row else None
     # Transaction ownership stays with caller; no commit before the audit record.
