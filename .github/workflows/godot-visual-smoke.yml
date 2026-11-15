@@ -31,6 +31,12 @@ jobs:
           timeout 90 xvfb-run -a /tmp/Godot_v4.7.2-stable_linux.x86_64 --headless --path client --script res://tests/world3d_smoke.gd 2>&1 | tee godot-world.log
           grep -q 'WORLD3D_SMOKE_PASS' godot-world.log
           ! grep -E 'FAIL:|ERROR:|Parse Error:' godot-world.log
+      - name: Road traffic animation smoke
+        run: |
+          set -o pipefail
+          timeout 90 xvfb-run -a /tmp/Godot_v4.7.2-stable_linux.x86_64 --headless --path client --script res://tests/road_traffic_smoke.gd 2>&1 | tee godot-traffic.log
+          grep -q 'ROAD_TRAFFIC_SMOKE_PASS' godot-traffic.log
+          ! grep -E 'FAIL:|ERROR:|Parse Error:' godot-traffic.log
       - name: Build menu functional smoke
         run: |
           set -o pipefail
