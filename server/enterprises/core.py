@@ -167,8 +167,8 @@ def close_month(conn,month,salary_per_worker=100,monthly_wear=1):
         if last>=month:continue
         expenses=0
         avg=0
-        if stage==4:
-            loads=conn.execute('SELECT load_bp FROM enterprise_daily_load WHERE enterprise_id=%s AND day_index BETWEEN %s AND %s',(eid,month*30,month*30+29)).fetchall()
+        if stage==4 and month>0:
+            loads=conn.execute('SELECT load_bp FROM enterprise_daily_load WHERE enterprise_id=%s AND day_index BETWEEN %s AND %s',(eid,(month-1)*30+1,month*30)).fetchall()
             avg=sum(r[0] for r in loads)//len(loads) if loads else 0
             expenses=upkeep+jobs*salary_per_worker*staff//BP
             payer=conn.execute("SELECT l.id FROM ledger_accounts l JOIN accounts a ON l.account_key='player:'||lower(a.username) WHERE a.id=%s",(owner,)).fetchone()
