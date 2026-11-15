@@ -362,7 +362,7 @@ func build_chunk(coord: Vector2i) -> void:
 	var st := SurfaceTool.new()
 	st.begin(Mesh.PRIMITIVE_TRIANGLES)
 	var trees: Array = []
-	var road_pieces := {"road_straight_1x1": [], "road_cross_1x1": []}
+	var road_pieces := {"road_straight_1x1": [], "road_cross_1x1": [], "road_corner_1x1": []}
 	var half := CELL * 0.5
 	for x in range(coord.x * CHUNK, (coord.x + 1) * CHUNK):
 		for y in range(coord.y * CHUNK, (coord.y + 1) * CHUNK):
@@ -419,6 +419,14 @@ func _road_piece(cell: Vector2i, cx: float, cz: float, pieces: Dictionary, st: S
 	if shape == "straight":
 		name = "road_straight_1x1"
 		turn = 0.0 if (mask == TOPOLOGY.NORTH | TOPOLOGY.SOUTH) else PI * 0.5
+	elif shape == "corner":
+		name = "road_corner_1x1"
+		# Corner GLB's baseline arms point north and east.
+		match mask:
+			TOPOLOGY.NORTH | TOPOLOGY.EAST: turn = 0.0
+			TOPOLOGY.EAST | TOPOLOGY.SOUTH: turn = PI * 0.5
+			TOPOLOGY.SOUTH | TOPOLOGY.WEST: turn = PI
+			TOPOLOGY.WEST | TOPOLOGY.NORTH: turn = PI * 1.5
 	elif shape == "t_junction" or shape == "cross":
 		name = "road_cross_1x1"
 	if name != "" and not MODELS.piece(name).is_empty():
