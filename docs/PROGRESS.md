@@ -1,3 +1,15 @@
+## 2026-11-15 — World3D 2.5D: изолированный прототип, серверные объекты и GLB (main)
+
+- **Решение владельца:** настоящая 2.5D-карта Godot с 3D-зданиями и изометрической Camera3D; серверная экономика, PostgreSQL, строительная сетка и Android-управление должны сохраниться.
+- **Код:** client/world3d/grid_projection.gd, world3d.gd, world3d.tscn (отдельная сцена, чанки 12×12, ортографическая камера, панорамирование и pinch-прототип), server_visual_adapter.gd (read-only снимки/события, ID и footprint), visual_factory.gd (fallback).
+- **Ресурсы:** 4 бинарных GLB в client/world3d/models/: factory.glb, mine.glb, farm.glb, oil_well.glb; экспорт Blender 5.0.1, импорт Godot 4.7.2. Это минимальные тестовые модели, не финальный арт. Бинарные файлы опубликованы в main коммитом 2610765.
+- **Проверено на VPS:** Godot 4.7.2 headless script res://tests/world3d_projection_smoke.gd → WORLD3D_PROTOTYPE_PASS chunks=25; res://tests/world3d_server_sync_smoke.gd → WORLD3D_SERVER_SYNC_PASS (группировка footprint, дороги, расширение, удаление).
+- **Не сделано:** переключение главной сцены, live API/event stream, полная библиотека моделей, Android APK с 3D, проверка жестов/FPS на устройстве. Production сервер и БД не менялись.
+- **Следующий приоритет:** BE-203 → BE-204 → BE-205 → BE-206…208. См. [WORLD3D_MIGRATION.md](WORLD3D_MIGRATION.md), [ROADMAP.md](ROADMAP.md).
+- **Git-заметка:** VPS checkout main имеет локальную историю, отличную от GitHub main; не применять force push/reset без безопасной сверки и сохранения работы.
+
+---
+
 ## 2026-11-15 — актуализация каталога отраслей и графики (main)
 
 - **Дорожная карта:** добавлены BE-100…BE-118 и подробный каталог 33 торговых специализаций, жильё, растениеводство, животноводство, добыча нефти/газа/минералов, переработка, химия, машиностроение, лёгкая промышленность, стройматериалы, энергия, логистика, НИИ и социальная инфраструктура. Это план, не выполненные функции. См. [ROADMAP.md](ROADMAP.md).
