@@ -57,6 +57,11 @@ class RoadConnectivityTests(unittest.TestCase):
         self.road((80, 80), (81, 80), (82, 80))
         self.assertEqual(self.check((81, 80)), "road_network_disconnected")
 
+    def test_move_requires_road_entrance(self):
+        self.road((1, 0))
+        self.assertEqual(graph.validate_building_move(self.db, "?", "shop", [(2, 0)], [(30, 30)]), "destination_road_access")
+        self.assertIsNone(graph.validate_building_move(self.db, "?", "shop", [(2, 0)], [(2, 0)]))
+
     def test_removing_nonexistent_road_is_noop(self):
         self.assertIsNone(self.check((44, 44)))
 
