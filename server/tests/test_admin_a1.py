@@ -62,17 +62,17 @@ class TestAdminA1StaticContract(unittest.TestCase):
 class AdminDatabaseTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.app = create_app(DSN)
+        cls.application = staticmethod(create_app(DSN))
 
     @classmethod
     def tearDownClass(cls):
-        cls.app.close()
+        cls.application.close()
 
     def account(self, role='owner', password='AdminPasswordLong!123'):
         suffix = uuid4().hex[:12]
         username = 'a' + suffix
         email = username + '@example.com'
-        reg = request(self.app, 'POST', '/auth/register', {
+        reg = request(self.application, 'POST', '/auth/register', {
             'username': username, 'email': email, 'password': password,
         }, ip='10.77.' + str(int(suffix[:2], 16) % 240 + 1) + '.3')
         self.assertEqual(reg['status'], 201, reg)
@@ -82,7 +82,7 @@ class AdminDatabaseTests(unittest.TestCase):
         return reg['body']['id'], username, email, password
 
     def admin_login(self, username, password, ip='10.78.0.1'):
-        result = request(self.app, 'POST', '/admin/login', {
+        result = request(self.application, 'POST', '/admin/login', {
             'username': username, 'password': password,
         }, ip=ip)
         self.assertEqual(result['status'], 200, result)
@@ -99,29 +99,29 @@ class AdminDatabaseTests(unittest.TestCase):
             ('POST', '/admin/roles', {'player_id': 1, 'role': 'viewer', 'confirm': True}),
         ]
         for method, path, body in routes:
-            self.assertEqual(request(self.app, method, path, body, query='city=ufa')['status'], 403, path)
+            self.assertEqual(request(self.application, method, path, body, query='city=ufa')['status'], 403, path)
         secret = 'TEST_ONLY_ADMIN_ACCESS_TOKEN_123456789012345'
-        self.assertEqual(request(self.app, 'GET', '/admin/overview', admin_token=secret, ip='10.1.2.3')['status'], 403)
-        self.assertEqual(request(self.app, 'GET', '/admin/overview', admin_token='incorrect')['status'], 403)
-        self.assertEqual(request(self.app, 'GET', '/admin/overview', admin_token=secret, host='rikagro.ru')['status'], 403)
-        self.assertEqual(request(self.app, 'GET', '/admin/overview', admin_token=secret, forwarded='203.0.113.10')['status'], 403)
+        self.assertEqual(request(self.application, 'GET', '/admin/overview', admin_token=secret, ip='10.1.2.3')['status'], 403)
+        self.assertEqual(request(self.application, 'GET', '/admin/overview', admin_token='incorrect')['status'], 403)
+        self.assertEqual(request(self.application, 'GET', '/admin/overview', admin_token=secret, host='rikagro.ru')['status'], 403)
+        self.assertEqual(request(self.application, 'GET', '/admin/overview', admin_token=secret, forwarded='203.0.113.10')['status'], 403)
         with patch.dict(os.environ, {'LUNEX_ADMIN_TOKEN': secret}):
-            self.assertEqual(request(self.app, 'GET', '/admin/overview', admin_token=secret)['status'], 200)
+            self.assertEqual(request(self.application, 'GET', '/admin/overview', admin_token=secret, ip='127.0.0.1')['status'], 200)
 
     def test_login_password_change_rate_limit_expiry_and_absolute_limit(self):
         account_id, username, _, password = self.account()
-        self.assertEqual(request(self.app, 'POST', '/admin/login', {'username': username, 'password': password[:10]}, ip='10.79.0.1')['status'], 401)
+        self.assertEqual(request(self.application, 'POST', '/admin/login', {'username': username, 'password': password[:10]}, ip='10.79.0.1')['status'], 401)
         short_id, short_name, _, _ = self.account(password='ShortPass1')
-        short = request(self.app, 'POST', '/admin/login', {'username': short_name, 'password': 'ShortPass1'}, ip='10.79.0.2')
+        short = request(self.application, 'POST', '/admin/login', {'username': short_name, 'password': 'ShortPass1'}, ip='10.79.0.2')
         self.assertEqual(short['status'], 400)
         self.assertIn('14', short['body']['message'])
         for index in range(8):
-            self.assertEqual(request(self.app, 'POST', '/admin/login', {'username': 'missing-' + uuid4().hex, 'password': 'wrong'}, ip='10.79.0.3')['status'], 401)
-        self.assertEqual(request(self.app, 'POST', '/admin/login', {'username': 'last', 'password': 'wrong'}, ip='10.79.0.3')['status'], 429)
+            self.assertEqual(request(self.application, 'POST', '/admin/login', {'username': 'missing-' + uuid4().hex, 'password': 'wrong'}, ip='10.79.0.3')['status'], 401)
+        self.assertEqual(request(self.application, 'POST', '/admin/login', {'username': 'last', 'password': 'wrong'}, ip='10.79.0.3')['status'], 429)
         token = self.admin_login(username, password, ip='10.79.0.4')
-        changed = request(self.app, 'POST', '/admin/password', {'password': 'NewAdminPassword!456'}, token=token)
+        changed = request(self.application, 'POST', '/admin/password', {'password': 'NewAdminPassword!456'}, token=token)
         self.assertEqual(changed['status'], 200, changed)
-        self.assertEqual(request(self.app, 'POST', '/admin/logout', token=token)['status'], 200)
+        self.assertEqual(request(self.application, 'POST', '/admin/logout', token=token)['status'], 200)
         new_token = self.admin_login(username, 'NewAdminPassword!456', ip='10.79.0.5')
         with db.connect(DSN) as conn:
             row = conn.execute('SELECT token_hash, expires_at-created_at, absolute_expires_at-created_at FROM admin_sessions WHERE account_id=%s ORDER BY created_at DESC LIMIT 1', (account_id,)).fetchone()
@@ -131,11 +131,11 @@ class AdminDatabaseTests(unittest.TestCase):
             self.assertLessEqual(row[2].total_seconds(), 481 * 60)
             conn.execute("UPDATE admin_sessions SET expires_at=now()+interval '1 minute' WHERE token_hash=%s", (row[0],))
             conn.commit()
-        self.assertEqual(request(self.app, 'GET', '/admin/overview', token=new_token)['status'], 200)
+        self.assertEqual(request(self.application, 'GET', '/admin/overview', token=new_token)['status'], 200)
         with db.connect(DSN) as conn:
             conn.execute("UPDATE admin_sessions SET absolute_expires_at=now()-interval '1 second' WHERE token_hash=%s", (token_hash(new_token),))
             conn.commit()
-        self.assertEqual(request(self.app, 'GET', '/admin/overview', token=new_token)['status'], 403)
+        self.assertEqual(request(self.application, 'GET', '/admin/overview', token=new_token)['status'], 403)
 
     def test_roles_permissions_and_role_grant_only_owner(self):
         owner_id, owner, _, owner_password = self.account('owner')
@@ -146,12 +146,12 @@ class AdminDatabaseTests(unittest.TestCase):
         admin_token = self.admin_login(admin, admin_password, '10.78.0.2')
         support_token = self.admin_login(support, support_password, '10.78.0.3')
         viewer_token = self.admin_login(viewer, viewer_password, '10.78.0.4')
-        self.assertEqual(request(self.app, 'GET', '/admin/overview', token=viewer_token)['status'], 200)
-        self.assertEqual(request(self.app, 'GET', '/admin/players', token=support_token)['status'], 200)
-        self.assertEqual(request(self.app, 'POST', '/admin/settings', {'key': 'registration_enabled', 'value': False}, token=support_token)['status'], 403)
-        self.assertEqual(request(self.app, 'POST', '/admin/settings', {'key': 'registration_enabled', 'value': False}, token=viewer_token)['status'], 403)
-        self.assertEqual(request(self.app, 'POST', '/admin/roles', {'player_id': viewer_id, 'role': 'support', 'confirm': True}, token=admin_token)['status'], 403)
-        granted = request(self.app, 'POST', '/admin/roles', {'player_id': viewer_id, 'role': 'support', 'confirm': True}, token=owner_token)
+        self.assertEqual(request(self.application, 'GET', '/admin/overview', token=viewer_token)['status'], 200)
+        self.assertEqual(request(self.application, 'GET', '/admin/players', token=support_token)['status'], 200)
+        self.assertEqual(request(self.application, 'POST', '/admin/settings', {'key': 'registration_enabled', 'value': False}, token=support_token)['status'], 403)
+        self.assertEqual(request(self.application, 'POST', '/admin/settings', {'key': 'registration_enabled', 'value': False}, token=viewer_token)['status'], 403)
+        self.assertEqual(request(self.application, 'POST', '/admin/roles', {'player_id': viewer_id, 'role': 'support', 'confirm': True}, token=admin_token)['status'], 403)
+        granted = request(self.application, 'POST', '/admin/roles', {'player_id': viewer_id, 'role': 'support', 'confirm': True}, token=owner_token)
         self.assertEqual(granted['status'], 200, granted)
         with db.connect(DSN) as conn:
             self.assertEqual(conn.execute('SELECT role FROM accounts WHERE id=%s', (viewer_id,)).fetchone()[0], 'support')
@@ -160,24 +160,24 @@ class AdminDatabaseTests(unittest.TestCase):
         owner_id, owner, _, owner_password = self.account('owner')
         player_id, player, _, player_password = self.account('player', 'PlayerPasswordLong!123')
         owner_token = self.admin_login(owner, owner_password)
-        player_login = request(self.app, 'POST', '/auth/login', {'username': player, 'password': player_password}, ip='10.80.0.1')
+        player_login = request(self.application, 'POST', '/auth/login', {'username': player, 'password': player_password}, ip='10.80.0.1')
         self.assertEqual(player_login['status'], 200)
-        blocked = request(self.app, 'POST', f'/admin/players/{player_id}/block', {'reason': 'проверка обращения', 'until': None}, token=owner_token)
+        blocked = request(self.application, 'POST', f'/admin/players/{player_id}/block', {'reason': 'проверка обращения', 'until': None}, token=owner_token)
         self.assertEqual(blocked['status'], 200, blocked)
-        self.assertEqual(request(self.app, 'GET', '/auth/me', token=player_login['body']['access_token'])['status'], 401)
-        self.assertEqual(request(self.app, 'POST', f'/admin/players/{player_id}/unblock', token=owner_token)['status'], 200)
-        player_login = request(self.app, 'POST', '/auth/login', {'username': player, 'password': player_password}, ip='10.80.0.2')
+        self.assertEqual(request(self.application, 'GET', '/auth/me', token=player_login['body']['access_token'])['status'], 401)
+        self.assertEqual(request(self.application, 'POST', f'/admin/players/{player_id}/unblock', token=owner_token)['status'], 200)
+        player_login = request(self.application, 'POST', '/auth/login', {'username': player, 'password': player_password}, ip='10.80.0.2')
         self.assertEqual(player_login['status'], 200)
-        self.assertEqual(request(self.app, 'POST', '/admin/sessions/revoke', {'player_id': player_id}, token=owner_token)['status'], 200)
-        self.assertEqual(request(self.app, 'GET', '/auth/me', token=player_login['body']['access_token'])['status'], 401)
-        bad = request(self.app, 'POST', f'/admin/players/{player_id}/compensate', {'amount': 10, 'request_id': 'missing-reason', 'ticket': 'SUP-1'}, token=owner_token)
+        self.assertEqual(request(self.application, 'POST', '/admin/sessions/revoke', {'player_id': player_id}, token=owner_token)['status'], 200)
+        self.assertEqual(request(self.application, 'GET', '/auth/me', token=player_login['body']['access_token'])['status'], 401)
+        bad = request(self.application, 'POST', f'/admin/players/{player_id}/compensate', {'amount': 10, 'request_id': 'missing-reason', 'ticket': 'SUP-1'}, token=owner_token)
         self.assertEqual(bad['status'], 400)
-        negative = request(self.app, 'POST', f'/admin/players/{player_id}/compensate', {'amount': -2000000, 'request_id': 'negative-' + uuid4().hex, 'reason': 'проверка минуса', 'ticket': 'SUP-2'}, token=owner_token)
+        negative = request(self.application, 'POST', f'/admin/players/{player_id}/compensate', {'amount': -2000000, 'request_id': 'negative-' + uuid4().hex, 'reason': 'проверка минуса', 'ticket': 'SUP-2'}, token=owner_token)
         self.assertEqual(negative['status'], 400)
         request_id = 'comp-' + uuid4().hex
         payload = {'amount': 250, 'request_id': request_id, 'reason': 'компенсация', 'ticket': 'SUP-42'}
-        first = request(self.app, 'POST', f'/admin/players/{player_id}/compensate', payload, token=owner_token)
-        repeat = request(self.app, 'POST', f'/admin/players/{player_id}/compensate', payload, token=owner_token)
+        first = request(self.application, 'POST', f'/admin/players/{player_id}/compensate', payload, token=owner_token)
+        repeat = request(self.application, 'POST', f'/admin/players/{player_id}/compensate', payload, token=owner_token)
         self.assertEqual(first['status'], 200, first)
         self.assertEqual(repeat['status'], 200, repeat)
         self.assertEqual(first['body']['transfer_id'], repeat['body']['transfer_id'])
@@ -195,13 +195,13 @@ class AdminDatabaseTests(unittest.TestCase):
         with db.connect(DSN) as conn:
             conn.execute("INSERT INTO runtime_config(key,value) VALUES('support_compensation_limit','100') ON CONFLICT(key) DO UPDATE SET value='100'")
             conn.commit()
-        over = request(self.app, 'POST', f'/admin/players/{player_id}/compensate', {'amount': 101, 'request_id': 'over-' + uuid4().hex, 'reason': 'лимит', 'ticket': 'SUP-1'}, token=support_token)
+        over = request(self.application, 'POST', f'/admin/players/{player_id}/compensate', {'amount': 101, 'request_id': 'over-' + uuid4().hex, 'reason': 'лимит', 'ticket': 'SUP-1'}, token=support_token)
         self.assertEqual(over['status'], 403)
-        changed = request(self.app, 'POST', '/admin/settings', {'key': 'registration_enabled', 'value': False, 'apply_at': 'now'}, token=owner_token)
+        changed = request(self.application, 'POST', '/admin/settings', {'key': 'registration_enabled', 'value': False, 'apply_at': 'now'}, token=owner_token)
         self.assertEqual(changed['status'], 200, changed)
         revision = changed['body']['revision']
-        self.assertEqual(request(self.app, 'POST', '/admin/revisions/rollback', {'revision': revision}, token=owner_token)['status'], 200)
-        audit = request(self.app, 'GET', '/admin/audit', token=owner_token, query=f'player={player_id}&limit=100')
+        self.assertEqual(request(self.application, 'POST', '/admin/revisions/rollback', {'revision': revision}, token=owner_token)['status'], 200)
+        audit = request(self.application, 'GET', '/admin/audit', token=owner_token, query=f'player={player_id}&limit=100')
         self.assertEqual(audit['status'], 200, audit)
         with db.connect(DSN) as conn:
             rows = conn.execute('SELECT actor,actor_role,target_account_id,ip,old_value,new_value FROM audit WHERE actor=%s ORDER BY id DESC LIMIT 20', (owner,)).fetchall()
