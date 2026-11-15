@@ -4,7 +4,7 @@ from . import core, api
 
 def migrations():
     base=Path(__file__).resolve().parents[1] / 'migrations'
-    return [base / '202611152100_enterprises_core.sql', base / '202611152101_enterprises_arrears.sql']
+    return [base / '202611152100_enterprises_core.sql', base / '202611152101_enterprises_arrears.sql', base / '202611152350_enterprises_stage_payments.sql']
 
 def register(registry):
     registry.flag('enterprise_enabled', True)
