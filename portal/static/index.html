@@ -316,7 +316,9 @@ window.addEventListener('appinstalled',function(){deferredInstall=null;toast('П
 var lastCrumb='',isStandalone=window.matchMedia&&window.matchMedia('(display-mode: standalone)').matches;
 function rememberSlug(s){try{localStorage.setItem('portalSlug',s)}catch(e){}}
 function lastSlug(){try{return localStorage.getItem('portalSlug')||''}catch(e){return ''}}
-function focusIdeas(){var t=document.getElementById('idea');if(t){t.scrollIntoView({behavior:'smooth',block:'center'});t.focus();return}var sl=current?current.slug:lastSlug();if(sl){showBoard(sl)}else showProjects()}
+/* Выбор проекта: ничего не открываем само. Один проект открывается сразу, несколько показываются списком (последний отмечен). */
+function pickProject(title,go){drawBar(title);app.textContent='';app.appendChild(el('h1','',title));return api('/api/projects').then(function(r){var ps=r.projects||[];if(!ps.length){showProjects();return}if(ps.length===1){go(ps[0].slug);return}app.appendChild(el('div','muted','Выберите проект'));ps.forEach(function(p){var c=el('div','card');c.appendChild(el('h3','',p.name||p.slug));c.appendChild(el('div','small muted',p.repo||p.slug));if(p.slug===lastSlug())c.appendChild(el('div','small','Открывали последним'));c.appendChild(btn('Открыть','primary',function(){go(p.slug)},{tip:'Открыть проект '+(p.name||p.slug)}));app.appendChild(c)})}).catch(function(){showProjects()})}
+function focusIdeas(){var t=document.getElementById('idea');if(t){t.scrollIntoView({behavior:'smooth',block:'center'});t.focus();return}if(current){showBoard(current.slug)}else pickProject('Идеи',function(sl){showBoard(sl)})}
 function drawTabs(){
   var nav=document.getElementById('tabs');nav.textContent='';
   if(!ME){nav.hidden=true;nav.classList.remove('show');return}
@@ -325,8 +327,8 @@ function drawTabs(){
   [['Сегодня','flag',showToday],['Доска','next',openB6Board],['Проекты','book',showProjects],['Ещё','work',showMore]].forEach(function(x){
     var b=btn(x[0],tab===x[0]?'on':'',x[2],{icon:x[1],tip:'Открыть раздел «'+x[0]+'»'});b.setAttribute('aria-current',tab===x[0]?'page':'false');nav.appendChild(b)});
 }
-function openB6Board(){var sl=current?current.slug:lastSlug();if(sl)return showBoard(sl);return api('/api/projects').then(function(r){if(r.projects&&r.projects.length)return showBoard(r.projects[0].slug);showProjects()}).catch(function(){showProjects()})}
-function showMemory(slug){if(!slug){api('/api/projects').then(function(r){if(r.projects.length)showMemory(r.projects[0].slug);else showProjects()});return}
+function openB6Board(){if(current)return showBoard(current.slug);activeB6Tab='Доска';return pickProject('Доска',showBoard)}
+function showMemory(slug){if(!slug){if(current)showMemory(current.slug);else pickProject('Память',showMemory);return}
 drawBar('Память');app.textContent='';app.appendChild(el('h1','','Память проекта'));app.appendChild(el('p','help','Вставьте этот контекст новому ИИ, чтобы он сразу вошёл в курс дела.'));
 var c=cardB2('Контекст для ИИ');app.appendChild(c);var role=el('select');role.setAttribute('aria-label','Роль ИИ');['director','executor','reviewer'].forEach(function(v){var o=el('option','',({director:'Директор',executor:'Исполнитель',reviewer:'Проверяющий'})[v]);o.value=v;role.appendChild(o)});c.appendChild(role);
 var preview=el('textarea');preview.rows=11;preview.readOnly=true;preview.setAttribute('aria-label','Предпросмотр контекста для ИИ');c.appendChild(preview);
@@ -344,7 +346,7 @@ var map=cardB2('Карта репозитория');app.appendChild(map);api('/a
 function showAIContext(){showMemory(current?current.slug:lastSlug())}
 function showMore(){activeB6Tab='Ещё';drawBar('Ещё');app.textContent='';app.appendChild(el('h1','','Ещё'));app.appendChild(btn('Память','',showAIContext));app.appendChild(btn('Контекст для ИИ','',showAIContext));
   var grid=el('div','b6-more');app.appendChild(grid);
-  [['Развитие портала','book',showPortalDevGuide],['Идеи','inbox',function(){var sl=current?current.slug:lastSlug();if(sl)showBoard(sl).then(function(){focusIdeas()});else showProjects()}],['Настройки','work',showSettings],['Уведомления','flag',showNotifications],['Поиск','book',function(){showSearch()}],['Граф','map',function(){openB6Board().then(function(){if(current)showGraph(current.slug)})}],['Новая идея','plus',function(){openB6Board().then(function(){focusIdeas()})}],['Справка','help',showHelp],['Мастер-промпт','book',function(){showProjects();var m=document.querySelector('.master');if(m){m.scrollIntoView();m.querySelector('details').open=true}}],['Протокол для ИИ','book',showProtocol],['Планы и проекты','map',showProjects],['Сменить тему','moon',toggleTheme],['Установить PWA','upload',function(){if(deferredInstall){deferredInstall.prompt();deferredInstall=null}else toast('Установка доступна через меню браузера')}],['Версия и функции','help',showVersion],['Выйти','out',function(){api('/api/logout','POST',{}).finally(function(){CSRF='';ME='';showLogin()})}]].forEach(function(x){grid.appendChild(btn(x[0],'card',x[2],{icon:x[1],tip:'Перейти: '+x[0]}))});
+  [['Развитие портала','book',showPortalDevGuide],['Идеи','inbox',function(){var go=function(sl){showBoard(sl).then(function(){focusIdeas()})};if(current)go(current.slug);else pickProject('Идеи',go)}],['Настройки','work',showSettings],['Уведомления','flag',showNotifications],['Поиск','book',function(){showSearch()}],['Граф','map',function(){openB6Board().then(function(){if(current)showGraph(current.slug)})}],['Новая идея','plus',function(){openB6Board().then(function(){focusIdeas()})}],['Справка','help',showHelp],['Мастер-промпт','book',function(){showProjects();var m=document.querySelector('.master');if(m){m.scrollIntoView();m.querySelector('details').open=true}}],['Протокол для ИИ','book',showProtocol],['Планы и проекты','map',showProjects],['Сменить тему','moon',toggleTheme],['Установить PWA','upload',function(){if(deferredInstall){deferredInstall.prompt();deferredInstall=null}else toast('Установка доступна через меню браузера')}],['Версия и функции','help',showVersion],['Выйти','out',function(){api('/api/logout','POST',{}).finally(function(){CSRF='';ME='';showLogin()})}]].forEach(function(x){grid.appendChild(btn(x[0],'card',x[2],{icon:x[1],tip:'Перейти: '+x[0]}))});
 }
 function showPortalDevGuide(){
   activeB6Tab='Ещё';drawBar('Развитие портала');app.textContent='';
@@ -374,7 +376,7 @@ function showNotifications(){activeB6Tab='Ещё';drawBar('Уведомлени�
     var save=btn('Сохранить события','primary',function(){var events={};Object.keys(eventBoxes).forEach(function(k){events[k]=eventBoxes[k].checked});request('settings',{channel:channel,enabled:enabled.checked,events:events},function(){b4State(state,'Настройки событий сохранены.')})},{tip:'Сохранить уведомления и переключатели событий'});save.disabled=!data.linked;c.appendChild(save);
   })}).catch(function(e){var c=cardB2('Каналы уведомлений');grid.appendChild(c);b4Unavailable(c.appendChild(el('p','')),e)})
 }
-function b4Hash(){var match=/^#task\/([A-Za-z][A-Za-z0-9_-]{0,39})$/.exec(location.hash);if(!match||!ME)return;var id=match[1],slug=current?current.slug:lastSlug();if(!slug){api('/api/projects').then(function(r){if(r.projects&&r.projects.length)showBoard(r.projects[0].slug).then(function(){b4OpenTask(id)});else toast('Для ссылки на задачу сначала создайте проект')});return}showBoard(slug).then(function(){b4OpenTask(id)})}
+function b4Hash(){var match=/^#task\/([A-Za-z][A-Za-z0-9_-]{0,39})$/.exec(location.hash);if(!match||!ME)return;var id=match[1],open=function(sl){showBoard(sl).then(function(){b4OpenTask(id)})};if(current)open(current.slug);else pickProject('Задача '+id,open)}
 function b4OpenTask(id){if(current&&byId(id)){openId=id;drawBoard()}else toast('Задача '+id+' не найдена. Проверьте проект и ссылку.')}
 window.addEventListener('hashchange',b4Hash);
 function b4Shared(){var q=new URLSearchParams(location.search),t=[q.get('title'),q.get('text')].filter(Boolean).join(' · ').slice(0,500);if(!t||!ME||b4Shared.done)return;b4Shared.done=true;var c=cardB2('Идея из другого приложения');app.insertBefore(c,app.firstChild);var input=el('textarea');input.value=t;input.maxLength=500;input.setAttribute('aria-label','Текст идеи для подтверждения');c.appendChild(input);var status=el('p','muted','Выберите проект и подтвердите сохранение.');c.appendChild(status);
@@ -431,7 +433,7 @@ function ring(pct,size){
 function showProjects(){
   activeB6Tab='Проекты';current=null;drawBar('Проекты');app.textContent='';
   var top=el('div','row spread');var l=el('div');l.appendChild(el('h1','','Мои проекты'));l.appendChild(el('div','muted','Здесь все ваши проекты. Откройте проект, чтобы увидеть задачи и промпты для исполнителей.'));top.appendChild(l);
-  top.appendChild(btn('Новый проект','primary',showNew,{icon:'plus',tip:'Мастер создаст проект и выдаст стартовые промпты для ИИ-директора'}));app.appendChild(top);
+  top.appendChild(btn('Новый проект','primary',showNew,{icon:'plus',tip:'Мастер создаст проект и выдаст единый промпт для ИИ-директора'}));app.appendChild(top);
   drawOverview();
   drawMaster();
   var g=el('div','grid');app.appendChild(g);
@@ -441,7 +443,7 @@ function showProjects(){
     r.projects.forEach(function(p){
       var c=el('div','card');var h=el('div','row spread');var t=el('div');t.appendChild(el('h3','',p.name));t.appendChild(el('div','muted small',p.repo||'репозиторий не указан'));h.appendChild(t);h.appendChild(ring(p.total?100*p.accepted/p.total:0,56));c.appendChild(h);
       if(p.description)c.appendChild(el('div','small muted',p.description));
-      c.appendChild(el('div','small',p.has_plan?('Принято '+p.accepted+' из '+p.total+' задач'):'План ещё не загружен: сначала «Старт проекта»'));
+      c.appendChild(el('div','small',p.has_plan?('Принято '+p.accepted+' из '+p.total+' задач'):'План ещё не загружен: сначала «Запуск проекта»'));
       c.appendChild(btn(p.has_plan?'Открыть доску':'Продолжить запуск проекта','primary',function(){if(p.has_plan)showBoard(p.slug);else showLaunch(p.slug)},{icon:'next',tip:'Открыть проект или мастер запуска'}));g.appendChild(c)});
   }).catch(function(){showLogin()});
 }
@@ -670,9 +672,9 @@ function drawNow(d,P,cnt){
 }
 function drawStart(d){
   var done=d.start.filter(function(x){return x.done}).length;
-  var det=el('details','card');det.style.borderTop='1px solid var(--line)';var sm=el('summary','','Старт проекта: промпты директору ('+done+' из '+d.start.length+' выполнено)');det.appendChild(sm);
+  var det=el('details','card');det.style.borderTop='1px solid var(--line)';var sm=el('summary','','Старт проекта: промпт директору ('+done+' из '+d.start.length+' выполнено)');det.appendChild(sm);
   if(!d.packages.length)det.open=true;
-  det.appendChild(el('div','help','Эти два промпта отдаются ИИ-директору один раз в начале. После выполнения отметьте их.'));
+  det.appendChild(el('div','help','Единый промпт отдаётся ИИ-директору один раз в начале, вместе с архивом скелета. После выполнения отметьте его.'));
   d.start.forEach(function(x){var b=el('div','act');var m=el('div');m.style.flex='1';m.appendChild(el('h3','',(x.done?'✓ ':'')+x.title));
     var pd=el('details');pd.appendChild(el('summary','','Показать текст'));pd.appendChild(el('pre','',x.prompt));m.appendChild(pd);b.appendChild(m);
     var r=el('div','row');r.style.flexDirection='column';r.style.alignItems='stretch';
@@ -790,7 +792,7 @@ function showHelp(){
   var ov=el('div','ov');ov.onclick=function(e){if(e.target===ov)ov.remove()};var c=el('div','drawer');c.setAttribute('role','dialog');c.setAttribute('aria-label','Справка');
   var h=el('div','row spread');h.appendChild(el('h2','','Справка'));h.appendChild(btn('Закрыть','ghost',function(){ov.remove()}));c.appendChild(h);
   c.appendChild(el('b','','Как это работает'));
-  var ol=el('ol');ol.style.cssText='margin:6px 0;padding-left:20px';['Создайте проект и отдайте ИИ-директору два стартовых промпта: он организует репозиторий и разработает GDD.','Директор составит план работ. Нажмите «Синхронизировать», и задачи появятся на доске.','Откройте задачу, скопируйте промпт, передайте исполнителю и нажмите «Отдал исполнителю».','Когда исполнитель сдал, нажмите «Исполнитель сдал». Директор проверит и сольёт работу.','Когда директор подтвердит, нажмите «Принято, в архив». Откроется следующая задача.'].forEach(function(x){ol.appendChild(el('li','',x))});c.appendChild(ol);
+  var ol=el('ol');ol.style.cssText='margin:6px 0;padding-left:20px';['Создайте проект и отдайте ИИ-директору единый промпт вместе с архивом скелета: он организует репозиторий, разработает GDD и составит план.','Директор составит план работ. Нажмите «Синхронизировать», и задачи появятся на доске.','Откройте задачу, скопируйте промпт, передайте исполнителю и нажмите «Отдал исполнителю».','Когда исполнитель сдал, нажмите «Исполнитель сдал». Директор проверит и сольёт работу.','Когда директор подтвердит, нажмите «Принято, в архив». Откроется следующая задача.'].forEach(function(x){ol.appendChild(el('li','',x))});c.appendChild(ol);
   c.appendChild(el('b','','Установка на телефон'));
   c.appendChild(el('div','help','Откройте портал в браузере телефона и выберите «Добавить на главный экран» (в Chrome на Android появится кнопка «Установить» вверху). Портал откроется как приложение без адресной строки. Данные нигде не хранятся на устройстве, нужен интернет.'));
   c.appendChild(el('b','','Статусы задач'));
