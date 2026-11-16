@@ -30,7 +30,7 @@ func _once(path: String, method: int, payload: Dictionary, etag: String) -> Dict
     var request := HTTPRequest.new()
     request.timeout = 12.0
     add_child(request)
-    var body := JSON.stringify(payload) if method == HTTPClient.METHOD_POST else ""
+    var body := JSON.stringify(payload) if method in [HTTPClient.METHOD_POST, HTTPClient.METHOD_PUT, HTTPClient.METHOD_PATCH] else ""
     var error := request.request(base_url + path, headers, method, body)
     if error != OK:
         request.queue_free()

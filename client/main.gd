@@ -11,6 +11,8 @@ const SettingsScreen = preload("res://screens/settings.tscn")
 const MapScreen = preload("res://screens/map.tscn")
 const EnterprisesScreen = preload("res://screens/enterprises.tscn")
 const BuildScreen = preload("res://screens/build.tscn")
+const SupplyScreen = preload("res://screens/supply.tscn")
+const StoreScreen = preload("res://screens/store.tscn")
 const PublicBase = preload("res://config/public_base.gd")
 const VERSION := "2.1.0"
 const PUBLIC_KEY_PATH := "res://security/config_public.pem"
@@ -25,6 +27,8 @@ var settings_screen: Control
 var map_screen: Control
 var enterprises_screen: Control
 var build_screen: Control
+var supply_screen: Control
+var store_screen: Control
 var login_card: PanelContainer
 var form: VBoxContainer
 var headquarters: VBoxContainer
@@ -58,12 +62,16 @@ func _ready() -> void:
     map_screen = MapScreen.instantiate()
     enterprises_screen = EnterprisesScreen.instantiate()
     build_screen = BuildScreen.instantiate()
+    supply_screen = SupplyScreen.instantiate()
+    store_screen = StoreScreen.instantiate()
     router.register_screen("login",login_screen)
     router.register_screen("headquarters",headquarters_screen)
     router.register_screen("settings",settings_screen)
     router.register_screen("map",map_screen)
     router.register_screen("enterprises",enterprises_screen)
     router.register_screen("build",build_screen)
+    router.register_screen("supply",supply_screen)
+    router.register_screen("store",store_screen)
     # Existing V2-01b implementation stays untouched.
     update_screen = UpdatesPanel.instantiate()
     router.register_screen("updates", update_screen)
@@ -79,7 +87,11 @@ func _ready() -> void:
     map_screen.enterprise_requested.connect(_on_enterprise_requested)
     enterprises_screen.back_requested.connect(func(): router.back())
     enterprises_screen.wallet_changed.connect(_load_hq)
+    enterprises_screen.supply_requested.connect(_on_supply_requested)
+    enterprises_screen.store_requested.connect(_on_store_requested)
     build_screen.back_requested.connect(func(): router.back())
+    supply_screen.back_requested.connect(func(): router.back())
+    store_screen.back_requested.connect(func(): router.back())
     build_screen.built.connect(_on_enterprise_built)
     build_screen.preview_changed.connect(func(footprint: Dictionary): map_screen.canvas.preview = footprint; map_screen.canvas.queue_redraw())
     form = login_screen.form
@@ -127,6 +139,14 @@ func _on_build_requested(parcel: Dictionary, cell: Vector2i) -> void:
 func _on_enterprise_requested(id: int) -> void:
     router.go("enterprises")
     enterprises_screen.open(_enterprise_transport(), id)
+
+func _on_supply_requested(id: int) -> void:
+    router.go("supply")
+    supply_screen.open(_enterprise_transport(), id)
+
+func _on_store_requested(id: int) -> void:
+    router.go("store")
+    store_screen.open(_enterprise_transport(), id)
 
 func _on_enterprise_built() -> void:
     map_screen.canvas.preview = {}
@@ -178,6 +198,8 @@ func _on_viewport_resized() -> void:
     map_screen.resize_ui(size_now)
     enterprises_screen.resize_ui(size_now)
     build_screen.resize_ui(size_now)
+    supply_screen.resize_ui(size_now)
+    store_screen.resize_ui(size_now)
     Forest.apply_touch(update_screen,size_now)
 
 func _process(_delta: float) -> void:
@@ -248,7 +270,10 @@ func _renew_tokens() -> bool:
 func _restore_session() -> void:
     refresh_token = _load_refresh()
     if not refresh_token.is_empty() and await _renew_tokens():
-        _show_headquarters()
+        # Session restoration must not interrupt an explicit screen navigation
+        # that happened while the refresh request was in flight.
+        if router.current in ["", "login", "headquarters"]:
+            _show_headquarters()
         _load_hq()
 
 func _send_auth(mode: String) -> void:
