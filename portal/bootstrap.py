@@ -148,10 +148,9 @@ def gdd_prompt(name, repo, description):
 
 
 def start_prompts(name, repo, description):
-    return [
-        {"id": "repo", "title": "Организовать репозиторий и правила работы", "prompt": director_prompt(name, repo, description)},
-        {"id": "gdd", "title": "Разработать полный GDD проекта (механики, экраны, симуляции, план работ)", "prompt": gdd_prompt(name, repo, description)},
-    ]
+    """Один единый промпт запуска (раньше было два). Шаблон: portal/launch/PROJECT_LAUNCH_PROMPT.md."""
+    from .launch import render_prompt
+    return [{"id": "launch", "title": "Запуск проекта: единый промпт директору (прикрепите zip скелета)", "prompt": render_prompt(name, repo, description)}]
 
 
 def zip_bytes(files):

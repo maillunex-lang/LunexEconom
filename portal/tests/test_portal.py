@@ -194,16 +194,16 @@ class Portal(unittest.TestCase):
         cookie, csrf = self.login()
         r = self.create_project(cookie, csrf)
         ids = [x["id"] for x in r["json"]["start"]]
-        self.assertEqual(ids, ["repo", "gdd"])
-        gdd = r["json"]["start"][1]["prompt"]
-        for need in ("GDD", "work_plan.json", "docs/gdd/00_OVERVIEW.md", "Критерии приёмки", "симулятор", "Решения для владельца", "owner/demo"):
+        self.assertEqual(ids, ["launch"])
+        gdd = r["json"]["start"][0]["prompt"]
+        for need in ("GDD", "work_plan.json", "docs/gdd/00_OVERVIEW.md", "критерии приёмки", "симуляцию", "решения для владельца", "owner/demo", "Фаза 0", "Фаза 5"):
             self.assertIn(need, gdd)
         base = "/createportal/api/projects/demo-project"
-        self.assertEqual(call(self.app, "POST", base + "/start", {"id": "gdd", "done": True}, cookie=cookie, csrf=csrf)["status"], 200)
+        self.assertEqual(call(self.app, "POST", base + "/start", {"id": "launch", "done": True}, cookie=cookie, csrf=csrf)["status"], 200)
         self.assertEqual(call(self.app, "POST", base + "/start", {"id": "zzz", "done": True}, cookie=cookie, csrf=csrf)["status"], 400)
-        self.assertEqual(call(self.app, "POST", base + "/start", {"id": "gdd", "done": "yes"}, cookie=cookie, csrf=csrf)["status"], 400)
+        self.assertEqual(call(self.app, "POST", base + "/start", {"id": "launch", "done": "yes"}, cookie=cookie, csrf=csrf)["status"], 400)
         d = call(self.app, "GET", base, cookie=cookie)["json"]
-        self.assertEqual([x["done"] for x in d["start"]], [False, True])
+        self.assertEqual([x["done"] for x in d["start"]], [True])
 
     def test_ideas_inbox(self):
         cookie, csrf = self.login()
