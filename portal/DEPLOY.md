@@ -37,3 +37,42 @@
 ## A2: GitHub webhook (только после отдельного разрешения на развёртывание)
 
 Добавьте `PORTAL_WEBHOOK_ENABLED=1` и `PORTAL_WEBHOOK_SECRET_FILE=/etc/createportal/github_webhook_secret` в сервис, **после** создания секретного файла владельцем с правами 0600 и резервного копирования БД. Подпишите GitHub webhook `application/json`, URL `https://rikagro.ru/createportal/hook/github`, события push, pull_request, check_suite, workflow_run. Используйте конфигурацию `portal/deploy/nginx-createportal.conf` с лимитом 1 МБ. Новые таблицы появляются через последовательную миграцию 3 при первом запуске с флагом. Без флага вебхук и связанные API выключены. Не помещайте секрет в переменную окружения, репозиторий, базу или журнал. Директора предупредить: без `required_checks` автоприёмка оценивает только уже полученные проверки, а GitHub может доставлять события не по порядку. Для строгой гарантии перечислите обязательные проверки в настройках проекта.
+
+
+## A5: флаги и фоновый обработчик
+
+При запуске `python3 -m portal.serve` включён `PORTAL_FEATURES=webhook,reports,notifications,ops`.
+Для отключения используйте `PORTAL_FEATURES=` либо отдельные `PORTAL_WEBHOOK_ENABLED=0`,
+`PORTAL_REPORTS_ENABLED=0`, `PORTAL_NOTIFICATIONS_ENABLED=0`, `PORTAL_OPS_ENABLED=0`.
+При прямом вызове `create_app` все новые функции по умолчанию выключены.
+
+Токены: `PORTAL_GITHUB_TOKEN_FILE`, `PORTAL_WEBHOOK_SECRET_FILE`,
+`PORTAL_MAX_TOKEN_FILE`, `PORTAL_TELEGRAM_TOKEN_FILE`. Только внешние файлы 0600,
+доступные пользователю createportal. Каталог копий: `PORTAL_BACKUP_DIR`
+(по умолчанию `/var/backups/createportal`), права доступа настроить для createportal.
+
+Встроенный фоновый поток раз в 60 секунд обрабатывает уведомления, ожидающую приёмку,
+привязки мессенджеров и опрос GitHub. Дополнительный cron для уведомлений не нужен.
+Синхронизация GitHub на проекте: `POST /api/projects/{slug}/sync-settings` с
+`{"sync_mode":"webhook|polling|both","poll_minutes":5|10|30}`.
+Статус: `GET /api/projects/{slug}/sync-status`.
+GitHub API используется только для чтения; без доступного полного списка check-runs
+автоприёмка блокируется. Для GitHub webhook нужен действующий секрет HMAC.
+
+Резервное копирование: `portal/deploy/backup.sh` (sqlite backup API, проверка
+целостности, 14 последних). `portal/deploy/update.sh` вызывает проверенный install.sh,
+сохраняющий `/opt/createportal.prev` и копию базы. Откат кода и восстановление БД
+выполнять отдельно при остановленном сервисе; восстановление через
+`portal.backup.core.restore_backup` только в новый файл. Не запускать deploy
+без прямого разрешения владельца.
+
+`GET /share?title=...&text=...&url=...` создаёт только черновик, не изменяет БД.
+Сохранение идеи требует входа и POST с CSRF. Экспорт и импорт проектов,
+удаление с подтверждением slug, граф, поиск, версия и сводка доступны через
+авторизованный API.
+
+Для существующей установки проверьте systemd override: при ProtectSystem=strict
+нужно разрешить ReadWritePaths=/var/lib/createportal /var/backups/createportal.
+Новый unit в portal/deploy/createportal.service уже содержит оба каталога;
+install.sh не перезаписывает ранее изменённый unit. Перезагрузку systemd
+выполняйте только при отдельном разрешении на развёртывание.

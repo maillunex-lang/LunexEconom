@@ -49,6 +49,10 @@ CREATE TABLE IF NOT EXISTS notify_log(id INTEGER PRIMARY KEY,ts REAL NOT NULL,ch
 CREATE TABLE IF NOT EXISTS notify_inbound(channel TEXT NOT NULL,update_id TEXT NOT NULL,PRIMARY KEY(channel,update_id));
 CREATE TABLE IF NOT EXISTS notify_devices(fingerprint TEXT PRIMARY KEY,created REAL NOT NULL);"""),
 
+    (6, """ALTER TABLE projects ADD COLUMN sync_mode TEXT NOT NULL DEFAULT 'both';
+ALTER TABLE projects ADD COLUMN poll_minutes INTEGER NOT NULL DEFAULT 5;
+CREATE TABLE IF NOT EXISTS project_sync(project_slug TEXT PRIMARY KEY,last_poll REAL,last_webhook REAL,etag TEXT,error TEXT NOT NULL DEFAULT '');"""),
+
 )
 
 
@@ -63,9 +67,11 @@ def migrate(conn, webhook=False, reports=False, notifications=False):
         for version, script in MIGRATIONS:
             if version == 3 and not (webhook or reports or notifications):
                 continue
-            if version == 4 and not (reports or notifications):
+            if version == 4 and not (reports or notifications or webhook):
                 continue
-            if version == 5 and not notifications:
+            if version == 5 and not (notifications or webhook):
+                continue
+            if version == 6 and not webhook:
                 continue
             if version in versions:
                 continue
@@ -96,7 +102,7 @@ def check_health(conn):
 AUDIT_FIELDS = {
     "login": ("ip",), "login.failure": ("ip",), "login.locked": ("ip",), "login.rate_limited": ("ip",),
     "password.change": (), "sessions.revoke": (),
-    "project.create": ("slug",), "plan.import": ("slug", "packages"),
+    "project.delete": ("slug",), "project.create": ("slug",), "plan.import": ("slug", "packages"),
     "task.auto_accept": ("slug", "id", "sha"),
     "plan.sync": ("slug",), "task.status": ("slug", "id", "status"),
     "task.manual_accept": ("slug", "id", "manual"), "task.revision": ("slug", "id", "count"),

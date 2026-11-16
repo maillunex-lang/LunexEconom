@@ -24,7 +24,7 @@ R="$TMP/repo"
 
 id createportal >/dev/null 2>&1 || useradd --system --home "$APP" --shell /usr/sbin/nologin createportal
 install -d -m 0700 -o createportal -g createportal "$DATA"
-install -d -m 0700 -o root -g root "$BAK"
+install -d -m 0700 -o createportal -g createportal "$BAK"
 
 # копия базы перед обновлением (если есть)
 if [ -f "$DATA/portal.sqlite" ]; then
@@ -49,18 +49,15 @@ systemctl daemon-reload
 systemctl enable createportal >/dev/null 2>&1
 systemctl restart createportal
 
-# ежедневная копия базы, хранить 14 дней
+# Ежедневный backup через sqlite backup API, хранить последние 14 файлов.
 cat > /etc/cron.daily/createportal-backup <<'CR'
 #!/bin/sh
-python3 - <<'PY'
-import sqlite3, time
-s = sqlite3.connect("/var/lib/createportal/portal.sqlite")
-d = sqlite3.connect("/var/backups/createportal/portal-%s.sqlite" % time.strftime("%F"))
-s.backup(d); d.close(); s.close()
-PY
-find /var/backups/createportal -name 'portal-*.sqlite' -mtime +14 -delete
+set -eu
+cd /opt/createportal
+PORTAL_APP_DIR=/opt/createportal PORTAL_DB=/var/lib/createportal/portal.sqlite PORTAL_BACKUP_DIR=/var/backups/createportal exec /bin/sh portal/deploy/backup.sh
 CR
 chmod 0755 /etc/cron.daily/createportal-backup
+# Owner controls secrets in environment files; never create or print token values.
 
 # проверка работы
 for i in 1 2 3 4 5 6 7 8; do
