@@ -25,7 +25,7 @@ class ConcurrentSecurityTests(unittest.TestCase):
     def player(self):
         name = 'c'+uuid4().hex[:13]
         password = 'StrongConcurrentPass123!'
-        credentials = {'username':name,'email':name+'@example.test','password':password}
+        credentials = {'consent_personal_data':True,'username':name,'email':name+'@example.test','password':password}
         code, created = request(self.app, 'POST', '/auth/register', credentials, ip='10.140.'+str(int(name[1:3],16)%240+1)+'.'+str(int(name[3:5],16)%240+1))
         self.assertEqual(code,201,created)
         code, auth = request(self.app, 'POST', '/auth/login', {'username':name,'password':password},ip='10.141.'+str(int(name[5:7],16)%240+1)+'.'+str(int(name[7:9],16)%240+1))

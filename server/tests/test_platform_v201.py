@@ -43,7 +43,7 @@ class TestAuthAndAdmin(unittest.TestCase):
 
     def _user(self):
         name='u'+uuid4().hex[:12]
-        data={'username':name,'email':name.upper()+'@EXAMPLE.COM','password':'veryStrongPassword!23'}
+        data={'consent_personal_data':True,'username':name,'email':name.upper()+'@EXAMPLE.COM','password':'veryStrongPassword!23'}
         ip='10.9.'+str(int(uuid4().hex[:2],16)%250+1)+'.'+str(int(uuid4().hex[:2],16)%250+1)
         status,profile=request(type(self).app,'POST','/auth/register',data,ip=ip)
         self.assertEqual(status,201,profile)
@@ -104,9 +104,9 @@ class TestAuthAndAdmin(unittest.TestCase):
 
     def test_registration_validation_and_rate_limits(self):
         name='n'+uuid4().hex[:10]
-        self.assertEqual(request(type(self).app,'POST','/auth/register',{'username':name,'email':'bad','password':'goodPassword111'})[0],400)
-        self.assertEqual(request(type(self).app,'POST','/auth/register',{'username':name,'email':'good@example.com','password':'short'})[0],400)
-        self.assertEqual(request(type(self).app,'POST','/auth/register',{'username':'bad:name','email':'good@example.com','password':'goodPassword111'})[0],400)
+        self.assertEqual(request(type(self).app,'POST','/auth/register',{'consent_personal_data':True,'username':name,'email':'bad','password':'goodPassword111'})[0],400)
+        self.assertEqual(request(type(self).app,'POST','/auth/register',{'consent_personal_data':True,'username':name,'email':'good@example.com','password':'short'})[0],400)
+        self.assertEqual(request(type(self).app,'POST','/auth/register',{'consent_personal_data':True,'username':'bad:name','email':'good@example.com','password':'goodPassword111'})[0],400)
         ip='10.23.'+str(int(uuid4().hex[:2],16)%250+1)+'.'+str(int(uuid4().hex[:2],16)%250+1)
         for i in range(8):
             status,_=request(type(self).app,'POST','/auth/login',{'username':'none_'+name,'password':'not-known'},ip=ip)
@@ -120,10 +120,10 @@ class TestAuthAndAdmin(unittest.TestCase):
         ip='10.24.'+str(int(uuid4().hex[:2],16)%250+1)+'.'+str(int(uuid4().hex[:2],16)%250+1)
         for i in range(10):
             u='r'+uuid4().hex[:10]
-            status,_=request(type(self).app,'POST','/auth/register',{'username':u,'email':u+'@example.com','password':'goodPassword111'},ip=ip)
+            status,_=request(type(self).app,'POST','/auth/register',{'consent_personal_data':True,'username':u,'email':u+'@example.com','password':'goodPassword111'},ip=ip)
             self.assertEqual(status,201)
         u='r'+uuid4().hex[:10]
-        self.assertEqual(request(type(self).app,'POST','/auth/register',{'username':u,'email':u+'@example.com','password':'goodPassword111'},ip=ip)[0],429)
+        self.assertEqual(request(type(self).app,'POST','/auth/register',{'consent_personal_data':True,'username':u,'email':u+'@example.com','password':'goodPassword111'},ip=ip)[0],429)
 
     def test_admin_loopback_role_and_block(self):
         data,_=self._user()
