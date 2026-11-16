@@ -128,5 +128,11 @@
   "supply.fuel.trip": "Топливо рейса: {liters} л, {cost}",
   "supply.transport.trip": "Перевозка: {cost}",
   "error.build.fuel_unaffordable": "Не хватает денег на топливо рейса",
-  "error.build.fuel_missing": "Не хватает топлива для рейса"
+  "error.build.fuel_missing": "Не хватает топлива для рейса",
+  "category.other": "Прочее",
+  "build.materials.title": "Материалы для стадии",
+  "build.materials.row": "{name}: нужно {needed} {unit}, на складе {have} {unit}",
+  "build.materials.summary": "Материалы: {items}",
+  "build.materials.item": "{name} {needed} {unit}",
+  "store.reference": "Эталон: {price}"
 }

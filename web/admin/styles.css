@@ -78,3 +78,21 @@ svg { width: 100%; height: auto; min-height: 120px; }
   .tab { padding: 10px 12px; }
   .table-scroll table { min-width: 390px; }
 }
+
+
+/* A3: all forms, revision tables and announcements fit a 360px viewport. */
+.a3-form-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; margin:16px 0; }
+.a3-form-grid > label,.a3-form-grid > label > * { min-width:0; }
+.a3-details { margin-top:16px; border-top:1px solid var(--line); padding-top:12px; }
+.a3-details > summary { cursor:pointer; font-size:16px; font-weight:700; margin-bottom:10px; }
+.a3-wrap { max-width:100%; overflow-wrap:anywhere; }
+.a3-items { display:grid; gap:12px; }
+.a3-items .row-main { min-width:0; overflow-wrap:anywhere; }
+#content { min-width:0; }
+#content code { overflow-wrap:anywhere; white-space:normal; }
+@media (max-width:600px) {
+  .a3-form-grid { grid-template-columns:minmax(0,1fr); }
+  .panel { padding:14px; }
+  .topbar { flex-wrap:wrap; }
+  .shell { overflow-x:clip; }
+}

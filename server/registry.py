@@ -20,7 +20,14 @@ class Registry:
             raise ValueError('Duplicate/invalid tick: ' + name)
         if isinstance(order,bool) or not isinstance(order,int):
             raise ValueError('tick order must be integer')
-        self.tick_handlers[kind].append((order,name,handler))
+        # Refresh the catalog before every existing tick without adding new
+        # tick names or changing the order contract of supply/market/retail.
+        def current_catalog(conn, *args, **kwargs):
+            if hasattr(self, 'catalog'):
+                from server.catalog.overrides import refresh_registry
+                refresh_registry(self, conn)
+            return handler(conn, *args, **kwargs)
+        self.tick_handlers[kind].append((order,name,current_catalog))
 
     def flag(self, name, default, min_value=None, max_value=None):
         if name in self.flags:
@@ -33,6 +40,11 @@ class Registry:
         self.modules.append(module)
 
     def dispatch(self, method, path, body, context):
+        # Lazy refresh after database migrations, also on the first request after
+        # a committed catalog revision. No mutable JSON source files are touched.
+        if hasattr(self, 'catalog') and context.get('conn') is not None:
+            from server.catalog.overrides import refresh_registry
+            refresh_registry(self, context['conn'])
         handler = self.routes.get((method.upper(),path))
         if handler is None:
             import re

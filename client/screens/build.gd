@@ -84,6 +84,8 @@ func _ready() -> void:
     preview_canvas.mouse_filter = Control.MOUSE_FILTER_IGNORE
     preview_box.add_child(preview_canvas)
     var scroll := ScrollContainer.new()
+    scroll.follow_focus = true
+    scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
     scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
     outer.add_child(scroll)
     rows = VBoxContainer.new()
@@ -167,7 +169,7 @@ func _load() -> void:
             categories.append(kind)
     categories.sort()
     for kind in categories:
-        category.add_item(Words.get_text("category."+kind))
+        category.add_item(Words.get_text("category."+kind) if Words.has_text("category."+kind) else Words.get_text("category.other"))
         category.set_item_metadata(category.item_count-1,kind)
     _render()
 
@@ -289,12 +291,28 @@ func _render() -> void:
             Format.days(item.get("build_days",0)),
             Words.get_text("build.zone.allowed",{"zones":_allowed_names(item)})]
         content.add_child(specs)
+        var requirements: Variant = item.get("materials_required", null)
+        if requirements is Dictionary and requirements.get("items", []) is Array:
+            _append_materials_summary(content, requirements.get("items", []))
         var button := Button.new()
         button.text = Words.get_text("build.plan.choose") if str(status.get("reason","")) in ["road","money"] else (Words.get_text("build.available") if allowed else Words.get_text("build.unavailable",{"reason":_reason(item,status)}))
         button.disabled = not allowed
         if allowed:
             button.pressed.connect(_choose.bind(item, status.get("candidate", status)))
         content.add_child(button)
+
+func _append_materials_summary(container: VBoxContainer, items: Array) -> void:
+    var labels: Array[String] = []
+    for entry in items:
+        if not (entry is Dictionary):
+            continue
+        var id := str(entry.get("product_id", ""))
+        labels.append(Words.get_text("build.materials.item", {"name":catalog.product_name(id),"needed":Format.number(entry.get("needed",0)),"unit":catalog.product_unit(id)}))
+    if not labels.is_empty():
+        var label := Label.new()
+        label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+        label.text = Words.get_text("build.materials.summary", {"items":", ".join(labels)})
+        container.add_child(label)
 
 func _choose(item: Dictionary, placement: Dictionary) -> void:
     if _busy:
@@ -338,10 +356,19 @@ func _schedule_plan() -> void:
     var road: Array = data.get("road_cells", [])
     road_preview_changed.emit(road)
     _update_local_preview(road)
+    var material_lines: Array[String] = []
+    var required: Variant = data.get("materials_required", null)
+    if required is Dictionary and required.get("items", []) is Array:
+        for item in required["items"]:
+            if item is Dictionary:
+                var product_id := str(item.get("product_id", ""))
+                material_lines.append(Words.get_text("build.materials.item", {"name":catalog.product_name(product_id),"needed":Format.number(item.get("needed",0)),"unit":catalog.product_unit(product_id)}))
     plan_details.text = "\n".join([
         Words.get_text("build.plan.road", {"count": road.size(), "cost": Format.money(data.get("road_cost", 0))}),
         Words.get_text("build.plan.initial", {"amount": Format.money(data.get("initial_payment", 0))}),
         Words.get_text("build.plan.total", {"amount": Format.money(data.get("total_initial", 0))})])
+    if not material_lines.is_empty():
+        plan_details.text += "\n" + Words.get_text("build.materials.summary", {"items":", ".join(material_lines)})
     if not bool(data.get("can_afford", false)):
         plan_shortfall.text = Words.get_text("build.plan.shortfall", {"amount": Format.money(data.get("shortfall", 0))})
         return

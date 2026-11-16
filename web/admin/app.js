@@ -230,9 +230,18 @@
     await refreshAlertsBadge();
   }
 
+  const a3Options = () => ({ api, role: currentRole });
+  async function loadA3(name) {
+    if (!window.ADMIN_A3) throw new Error('Модуль A3 не загружен');
+    if (name === 'catalog') await window.ADMIN_A3.catalog(a3Options());
+    if (name === 'announcements') await window.ADMIN_A3.announcements(a3Options());
+    if (name === 'releases') await window.ADMIN_A3.releases(a3Options());
+  }
+
   async function loadTab(name) {
     document.querySelectorAll('.tab').forEach((tab) => tab.classList.toggle('active', tab.dataset.tab === name));
     try {
+      if (['catalog','announcements','releases'].includes(name)) await loadA3(name);
       if (name === 'economy') await loadEconomy();
       if (name === 'cities') await loadCities();
       if (name === 'events') await loadEvents();
@@ -251,6 +260,17 @@
         const renderAudit = (items) => { $('#audit-list').innerHTML = (items || []).map((item) => `<div class="row"><div><b>${escapeHtml(item.action)}</b><div class="hint">${escapeHtml(item.actor)} · роль ${escapeHtml(item.role || '')} · ${escapeHtml(item.at)}</div></div><span class="hint">игрок: ${escapeHtml(item.player_id || '—')}</span></div>`).join('') || '<p class="muted">Записей нет.</p>'; };
         renderAudit(data.items);
         $('#audit-search').onclick = async () => renderAudit((await api(`/audit?action=${encodeURIComponent($('#audit-action').value)}`)).items);
+        if (['owner','admin'].includes(currentRole)) {
+          const download = document.createElement('button');
+          download.id='audit-export';
+          download.className='button secondary';
+          download.textContent='Экспорт аудита (CSV/JSON)';
+          $('#audit-search').parentElement.appendChild(download);
+          download.onclick=async()=>{
+            try { await window.ADMIN_A3.exportAudit(a3Options()); }
+            catch(error) { window.alert('Ошибка экспорта: '+error.message); }
+          };
+        }
       }
     } catch (error) { $('#content').innerHTML = `<p class="error">${escapeHtml(error.message)}</p>`; }
   }

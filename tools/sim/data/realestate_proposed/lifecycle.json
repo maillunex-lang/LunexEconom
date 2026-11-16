@@ -1,0 +1,73 @@
+{
+  "balance": "draft",
+  "initial_state": "draft",
+  "states": [
+    "draft",
+    "offered",
+    "active",
+    "renewal_pending",
+    "termination_pending",
+    "delinquent",
+    "ended",
+    "cancelled",
+    "expired",
+    "evicted"
+  ],
+  "transitions": {
+    "draft": [
+      "offered",
+      "cancelled"
+    ],
+    "offered": [
+      "active",
+      "cancelled",
+      "expired"
+    ],
+    "active": [
+      "renewal_pending",
+      "termination_pending",
+      "delinquent",
+      "ended"
+    ],
+    "renewal_pending": [
+      "termination_pending",
+      "delinquent",
+      "ended"
+    ],
+    "termination_pending": [
+      "delinquent",
+      "ended"
+    ],
+    "delinquent": [
+      "evicted",
+      "ended"
+    ],
+    "ended": [],
+    "cancelled": [],
+    "expired": [],
+    "evicted": []
+  },
+  "terminal_states": [
+    "ended",
+    "cancelled",
+    "expired",
+    "evicted"
+  ],
+  "events": [
+    "offer_created",
+    "offer_published",
+    "offer_accepted",
+    "offer_expired",
+    "renewal_requested",
+    "renewal_accepted",
+    "termination_requested",
+    "payment_due",
+    "payment_failed",
+    "payment_completed",
+    "rent_arrears_created",
+    "evicted",
+    "lease_ended"
+  ],
+  "renewal_rule": "accepted renewal creates next lease term/version after closing current term; no backward state transition",
+  "arrears_cure_rule": "payment clears arrears while state delinquent, state remains delinquent; active operations flag restored without backward transition"
+}

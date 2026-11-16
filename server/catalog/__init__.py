@@ -9,6 +9,7 @@ from jsonschema import Draft202012Validator
 
 ROOT = Path(__file__).resolve().parents[1] / 'data'
 NAMES = ('products', 'recipes', 'buildings')
+_ACTIVE_RUNTIME = None  # catalog revision for legacy Catalog() readers
 
 
 class CatalogError(ValueError):
@@ -121,6 +122,11 @@ def verify(data):
 
 class Catalog:
     def __init__(self, root=None):
+        # All no-argument Catalog readers see the latest committed runtime
+        # snapshot; explicit-root callers remain isolated for schema tests.
+        if root is None and _ACTIVE_RUNTIME is not None:
+            self.__dict__ = _ACTIVE_RUNTIME.__dict__
+            return
         self.data = load_all(root)
         self.version = hashlib.sha256(canonical(self.data)).hexdigest()
         self.etag = '"' + self.version + '"'
@@ -139,6 +145,9 @@ def migrations():
 
 
 def register(registry):
+    # Building a new WSGI registry must not inherit an earlier app's runtime.
+    global _ACTIVE_RUNTIME
+    _ACTIVE_RUNTIME = None
     # Eager validation intentionally blocks app startup even before database access.
     catalog = Catalog()
 

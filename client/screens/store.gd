@@ -1,11 +1,13 @@
 extends Control
 signal back_requested
 const Api = preload("res://enterprises/chain_api.gd")
+const Catalog = preload("res://enterprises/catalog.gd")
 const Words = preload("res://enterprises/strings.gd")
 const Format = preload("res://i18n/format.gd")
 const Forest = preload("res://theme/forest_glass.gd")
 
 var api: Node
+var catalog: Node
 var enterprise_id := -1
 var city := ""
 var rows: VBoxContainer
@@ -17,6 +19,8 @@ func _ready() -> void:
     set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
     api = Api.new()
     add_child(api)
+    catalog = Catalog.new()
+    add_child(catalog)
     var root_box := VBoxContainer.new()
     root_box.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
     add_child(root_box)
@@ -53,12 +57,15 @@ func _ready() -> void:
 
 func open(adapter: Node, id: int) -> void:
     api.configure(adapter)
+    catalog.configure(adapter)
     enterprise_id = id
     message.text = Words.get_text("chain.loading")
+    await catalog.update()
     await _load()
 
 func _load() -> void:
     row_controls.clear()
+    save_button.disabled = false
     for child in rows.get_children():
         child.queue_free()
     var detail: Dictionary = await api.detail(enterprise_id)
@@ -74,8 +81,14 @@ func _load() -> void:
     var payload: Dictionary = cells_response.get("data", {})
     var capacity := int(payload.get("capacity", payload.get("retail_cells", 0)))
     var allowed: Array = payload.get("allowed_goods", [])
+    var building: Dictionary = catalog.building(str(data.get("building_id", "")))
+    if building.has("allowed_goods"):
+        var server_allowed: Array = building["allowed_goods"]
+        allowed = allowed.filter(func(item):
+            var good_id := str(item.get("id", "") if item is Dictionary else item)
+            return good_id in server_allowed)
     var current: Array = payload.get("cells", [])
-    if capacity <= 0:
+    if capacity <= 0 or allowed.is_empty():
         _label(Words.get_text("store.no_cells"))
         return
     for cell_index in range(capacity):
@@ -95,8 +108,8 @@ func _add_cell(index: int, allowed: Array, current: Array) -> void:
     var product := OptionButton.new()
     product.custom_minimum_size = Vector2(220, 48)
     for good in allowed:
-        var id := str(good.get("id", good) if good is Dictionary else good)
-        var name := str(good.get("name", id) if good is Dictionary else id)
+        var id := str(good.get("id", "") if good is Dictionary else good)
+        var name: String = catalog.product_name(id)
         product.add_item(name)
         product.set_item_metadata(product.item_count - 1, id)
     var price := SpinBox.new()
@@ -135,11 +148,25 @@ func _add_cell(index: int, allowed: Array, current: Array) -> void:
             selected = cell
             break
     _set_product(product, str(selected.get("product_id", "")))
-    price.value = int(selected.get("price", 1))
+    var initial_id := str(selected.get("product_id", ""))
+    if initial_id.is_empty() and product.item_count > 0:
+        initial_id = str(product.get_item_metadata(0))
+    var ref_price := int(catalog.product(initial_id).get("reference_price", 0))
+    price.value = int(selected.get("price", ref_price if ref_price > 0 else 1))
+    var reference := Label.new()
+    reference.name = "ReferencePrice"
+    reference.text = Words.get_text("store.reference", {"price": Format.money(ref_price)}) if ref_price > 0 else ""
+    box.add_child(reference)
+    product.item_selected.connect(func(_idx: int):
+        var chosen_id := str(product.get_item_metadata(product.selected))
+        var new_price := int(catalog.product(chosen_id).get("reference_price", 0))
+        reference.text = Words.get_text("store.reference", {"price": Format.money(new_price)}) if new_price > 0 else ""
+        if new_price > 0 and selected.is_empty():
+            price.value = new_price)
     min_stock.value = int(selected.get("min_stock", 0))
     _set_source(source, int(selected.get("supply_link_slot", 0)))
     row_controls.append({"index": index, "product": product, "price": price, "min_stock": min_stock, "source": source})
-    var good := str(selected.get("product_id", ""))
+    var good := initial_id
     if good.is_empty() and product.item_count > 0:
         good = str(product.get_item_metadata(0))
     if not good.is_empty():
