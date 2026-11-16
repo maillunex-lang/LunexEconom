@@ -142,7 +142,9 @@ def prompt(plan, pid):
     p = next(x for x in plan["packages"] if x["id"] == pid)
     lane = plan["lanes"][p["lane"]]
     zone = zones(plan, p)
-    gdds = ", ".join(f"docs/gdd/{g}_*.md" for g in p["gdd"])
+    gdd_dir = plan["rules"].get("gdd_dir", "docs/gdd").rstrip("/")
+    decisions = plan["rules"].get("decisions_file", gdd_dir + "/DECISIONS_APPROVED.md")
+    gdds = ", ".join(f"{gdd_dir}/{g}_*.md" for g in p["gdd"])
     report = (lane.get("report") or "docs/qa/{id}.md").format(id=pid)
     proj = plan.get("project", {})
     repo = proj.get("repo") or "репозиторий проекта"
@@ -151,7 +153,7 @@ def prompt(plan, pid):
     rules = [
         "Один большой заход, вопросов не задавать: при неясности выбери простейший безопасный вариант и запиши в %s (раздел «Допущения»)." % report,
         "Репозиторий %s, ветка %s. Работай в ветке %s от свежего main, создай pull request; слияние делает директор." % (repo, branch, pattern),
-        "Проект и контракты: " + gdds + " (читать полностью), docs/gdd/DECISIONS_APPROVED.md, docs/AI_RULES.md; макеты в docs/mockups; эталонные данные и тесты проекта читать, не менять.",
+        "Проект и контракты: " + gdds + " (читать полностью), " + decisions + ", docs/AI_RULES.md; макеты в docs/mockups; эталонные данные и тесты проекта читать, не менять.",
         "Зона файлов (только это): " + ", ".join(zone) + ". Общие файлы не менять: " + ", ".join(plan["rules"]["shared_files_director_only"]) + ".",
         "Никаких секретов и личных данных. Новые функции за флагом, по умолчанию ВЫКЛЮЧЕНЫ, если проект их использует.",
     ]

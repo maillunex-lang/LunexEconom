@@ -15,7 +15,7 @@
 | GET `/api/protocol` | текст протокола для ИИ |
 | GET `/api/master-prompt` | мастер-промпт для ИИ-директора (главная страница) |
 | GET `/api/skeleton.zip` | универсальный скелет репозитория |
-| GET/POST `/api/projects` | список и создание проекта (ответ содержит два промпта) |
+| GET/POST `/api/projects` | список и создание проекта (ответ содержит единый промпт запуска) |
 | GET `/api/projects/{slug}` | проект, план с промптами, состояние, идеи, старт |
 | GET `/api/projects/{slug}/bootstrap`, `/bootstrap.zip` | промпты и скелет |
 | POST `/api/projects/{slug}/plan` | загрузить план (проверка валидатором) |

@@ -66,6 +66,18 @@ class WorkPlan(unittest.TestCase):
         self.assertIn("portal/qa/server/A2.md", a)
         self.assertIn("portal/hooks/**", a)
 
+    def test_prompt_uses_plan_gdd_dir(self):
+        """Задание читает проектные документы из gdd_dir плана (у портала docs/portal), по умолчанию docs/gdd."""
+        plan = copy.deepcopy(self.plan)
+        pid = plan["packages"][0]["id"]
+        self.assertIn("docs/gdd/", wp.prompt(plan, pid))
+        plan["rules"]["gdd_dir"] = "docs/spec"
+        plan["rules"]["decisions_file"] = "docs/spec/DECISIONS.md"
+        out = wp.prompt(plan, pid)
+        self.assertIn("docs/spec/", out)
+        self.assertIn("docs/spec/DECISIONS.md", out)
+        self.assertNotIn("docs/gdd/%s_" % plan["packages"][0]["gdd"][0], out)
+
     def test_render_is_generic_for_other_projects(self):
         """Скелет нового проекта не должен получать тексты чужой игры: ветки, линии и правила берутся из его плана."""
         plan = copy.deepcopy(self.plan)
