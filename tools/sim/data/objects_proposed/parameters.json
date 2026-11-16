@@ -1,0 +1,18 @@
+{
+  "version": "draft-1",
+  "wear": {
+    "rate_bp_per_month": {"farm": 120, "mine": 200, "factory": 150, "store": 80, "warehouse": 60},
+    "capacity_penalty_divisor": 2,
+    "upkeep_penalty_divisor": 2,
+    "repair_cost_bp_of_value": 4000,
+    "max_wear_bp": 10000
+  },
+  "levels": {
+    "1": {"capacity_bp": 10000, "upgrade_cost_bp": 0, "upkeep_bp": 10000},
+    "2": {"capacity_bp": 16000, "upgrade_cost_bp": 7000, "upkeep_bp": 13000},
+    "3": {"capacity_bp": 24000, "upgrade_cost_bp": 14000, "upkeep_bp": 18000}
+  },
+  "deposit": {"slowdown_below_bp": 2000, "slowdown_factor_bp_per_remaining_bp": 5, "survey_cost_rub": 12000},
+  "demolition_refund_bp": 3000,
+  "automation": {"auto_buy_premium_bp": 3000, "min_stock_days_default": 3}
+}
