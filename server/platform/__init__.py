@@ -5,7 +5,7 @@ from . import api, admin, admin_economy, admin_world, admin_server
 
 def migrations():
     base=Path(__file__).resolve().parents[1] / 'migrations'
-    return [base / '202611150900_platform_accounts.sql',base / '202611151000_platform_v201.sql',base / '202611160010_admin_a1.sql',base / '202611160200_admin_a2.sql',base / '202611160201_admin_a2_production.sql']
+    return [base / '202611150900_platform_accounts.sql',base / '202611151000_platform_v201.sql',base / '202611160010_admin_a1.sql',base / '202611160200_admin_a2.sql',base / '202611160201_admin_a2_production.sql',base / '202611160300_platform_refresh_family.sql']
 
 
 def register(registry):
