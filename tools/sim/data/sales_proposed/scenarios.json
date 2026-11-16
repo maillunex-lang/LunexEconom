@@ -1,0 +1,9 @@
+{
+  "balance": "draft", "scenarios": [
+    {"id":"private_mine", "mode":"private", "price_rub":80, "reserve_bp":10000, "mine_quality":78, "mine_reliability":930, "own_need":250, "external_buyers":[{"id":"b1","quality_min":45,"distance":4,"ai":false},{"id":"b2","quality_min":45,"distance":7,"ai":true}]},
+    {"id":"public_fair", "mode":"public", "price_rub":82, "reserve_bp":0, "mine_quality":78, "mine_reliability":930, "own_need":0, "external_buyers":[{"id":"b1","quality_min":45,"distance":3,"ai":false},{"id":"b2","quality_min":45,"distance":4,"ai":true},{"id":"b3","quality_min":45,"distance":6,"ai":true}]},
+    {"id":"public_overpriced", "mode":"public", "price_rub":224, "reserve_bp":0, "mine_quality":78, "mine_reliability":930, "own_need":0, "external_buyers":[{"id":"b1","quality_min":45,"distance":3,"ai":false},{"id":"b2","quality_min":45,"distance":4,"ai":true}]},
+    {"id":"mixed_shortage_ai", "mode":"mixed", "price_rub":78, "reserve_bp":4500, "mine_quality":82, "mine_reliability":930, "own_need":300, "external_buyers":[{"id":"b1","quality_min":45,"distance":2,"ai":true},{"id":"b2","quality_min":45,"distance":4,"ai":true},{"id":"b3","quality_min":45,"distance":7,"ai":false},{"id":"b4","quality_min":45,"distance":9,"ai":true}]},
+    {"id":"invited_contract", "mode":"invited", "price_rub":79, "reserve_bp":0, "mine_quality":83, "mine_reliability":980, "own_need":0, "invited_ids":["b1"], "contract_ids":["b2"], "external_buyers":[{"id":"b1","quality_min":60,"distance":2,"ai":false},{"id":"b2","quality_min":55,"distance":4,"ai":true},{"id":"b3","quality_min":45,"distance":1,"ai":false}]}
+  ]
+}
