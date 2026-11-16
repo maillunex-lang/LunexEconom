@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1920" height="1080" viewBox="0 0 1920 1080">
+  <rect width="1920" height="1080" fill="#0A201B"/>
+  <rect x="0" y="0" width="1920" height="60" fill="#173A30"/>
+  <text x="40" y="40" font-family="sans-serif" font-size="18" fill="#EEF5E8">Выбор здания</text>
+  <rect x="40" y="80" width="800" height="900" rx="12" fill="#173A30"/>
+  <text x="60" y="120" font-family="sans-serif" font-size="16" fill="#EEF5E8">Список зданий (прокрутка)</text>
+  <rect x="900" y="80" width="980" height="400" rx="12" fill="#22483B"/>
+  <text x="920" y="120" font-family="sans-serif" font-size="16" fill="#B7EFA5">План дороги</text>
+  <text x="920" y="160" font-family="sans-serif" font-size="14" fill="#EEF5E8">Дорога: 3 клетки, 12 000 ₽</text>
+  <rect x="900" y="520" width="200" height="48" rx="12" fill="#B7EFA5"/>
+  <text x="1000" y="550" font-family="sans-serif" font-size="14" fill="#0A201B" text-anchor="middle">Подтвердить</text>
+</svg>

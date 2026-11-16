@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1920" height="1080" viewBox="0 0 1920 1080">
+  <rect width="1920" height="1080" fill="#0A201B"/>
+  <rect x="0" y="0" width="1920" height="80" fill="#173A30"/>
+  <text x="40" y="50" font-family="sans-serif" font-size="20" fill="#EEF5E8">Моя компания</text>
+  <text x="1600" y="50" font-family="sans-serif" font-size="16" fill="#B7EFA5">Баланс: 1 250 000 ₽</text>
+  <rect x="40" y="120" width="1840" height="800" rx="18" fill="#173A30"/>
+  <text x="960" y="540" font-family="sans-serif" font-size="18" fill="#A1B9AD" text-anchor="middle">Пока нет предприятий. Постройте первое на карте.</text>
+  <rect x="0" y="980" width="1920" height="100" fill="#22483B"/>
+  <text x="200" y="1040" font-family="sans-serif" font-size="14" fill="#B7EFA5" text-anchor="middle">Штаб</text>
+  <text x="560" y="1040" font-family="sans-serif" font-size="14" fill="#EEF5E8" text-anchor="middle">Карта</text>
+  <text x="920" y="1040" font-family="sans-serif" font-size="14" fill="#EEF5E8" text-anchor="middle">Предприятия</text>
+  <text x="1280" y="1040" font-family="sans-serif" font-size="14" fill="#EEF5E8" text-anchor="middle">Финансы</text>
+  <text x="1640" y="1040" font-family="sans-serif" font-size="14" fill="#EEF5E8" text-anchor="middle">Ещё</text>
+</svg>

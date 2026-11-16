@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1920" height="1080" viewBox="0 0 1920 1080">
+  <rect width="1920" height="1080" fill="#0A201B"/>
+  <rect x="560" y="240" width="800" height="600" rx="18" fill="#173A30" stroke="#386C57" stroke-width="2"/>
+  <text x="960" y="300" font-family="sans-serif" font-size="28" fill="#B7EFA5" text-anchor="middle">Башкирия: Мёд и Нефть</text>
+  <text x="960" y="360" font-family="sans-serif" font-size="16" fill="#EEF5E8" text-anchor="middle">Вход</text>
+  <rect x="620" y="400" width="680" height="48" rx="8" fill="#0A201B" stroke="#386C57"/>
+  <text x="640" y="430" font-family="sans-serif" font-size="16" fill="#A1B9AD">Логин или почта</text>
+  <rect x="620" y="470" width="680" height="48" rx="8" fill="#0A201B" stroke="#386C57"/>
+  <text x="640" y="500" font-family="sans-serif" font-size="16" fill="#A1B9AD">Пароль</text>
+  <rect x="620" y="560" width="680" height="48" rx="12" fill="#B7EFA5"/>
+  <text x="960" y="590" font-family="sans-serif" font-size="16" fill="#0A201B" text-anchor="middle">Войти</text>
+</svg>
