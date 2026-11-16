@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1920" height="1080" viewBox="0 0 1920 1080">
+  <rect width="1920" height="1080" fill="#0A201B"/>
+  <rect x="560" y="200" width="800" height="680" rx="18" fill="#173A30" stroke="#386C57"/>
+  <text x="960" y="260" font-family="sans-serif" font-size="24" fill="#B7EFA5" text-anchor="middle">Обновление</text>
+  <text x="960" y="320" font-family="sans-serif" font-size="16" fill="#EEF5E8" text-anchor="middle">Проверяем обновления...</text>
+  <rect x="620" y="400" width="680" height="20" rx="4" fill="#22483B"/>
+  <rect x="620" y="400" width="340" height="20" rx="4" fill="#B7EFA5"/>
+  <text x="960" y="480" font-family="sans-serif" font-size="14" fill="#A1B9AD" text-anchor="middle">Ресурсы обновлены</text>
+  <rect x="620" y="560" width="300" height="48" rx="12" fill="#B7EFA5"/>
+  <text x="770" y="590" font-family="sans-serif" font-size="14" fill="#0A201B" text-anchor="middle">Скачать</text>
+  <rect x="960" y="560" width="300" height="48" rx="12" fill="#22483B"/>
+  <text x="1110" y="590" font-family="sans-serif" font-size="14" fill="#EEF5E8" text-anchor="middle">Позже</text>
+</svg>

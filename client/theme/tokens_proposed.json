@@ -1,0 +1,95 @@
+{
+  "version": "1.0",
+  "theme": "forest_glass_dark",
+  "spacing": {
+    "xs": 4,
+    "sm": 8,
+    "md": 12,
+    "lg": 16,
+    "xl": 24,
+    "xxl": 32
+  },
+  "font": {
+    "caption": 12,
+    "body_min": 14,
+    "body": 16,
+    "title": 20,
+    "headline": 24,
+    "display": 28,
+    "scale_min": 1.0,
+    "scale_max": 1.5,
+    "scale_base_width": 1280,
+    "scale_base_height": 720
+  },
+  "radius": {
+    "sm": 8,
+    "md": 12,
+    "lg": 18,
+    "xl": 24
+  },
+  "touch": {
+    "min_height_dp": 48,
+    "min_width_dp": 48,
+    "button_padding_h": 16,
+    "button_padding_v": 8
+  },
+  "border": {
+    "thin": 1,
+    "focus": 2
+  },
+  "colors": {
+    "dark": {
+      "background": "0A201B",
+      "surface": "173A30",
+      "surface_secondary": "22483B",
+      "accent": "B7EFA5",
+      "success": "7BC67E",
+      "warning": "E9B85C",
+      "error": "F0A29B",
+      "text_primary": "EEF5E8",
+      "text_secondary": "A1B9AD",
+      "border": "386C57",
+      "focus": "B7EFA5"
+    },
+    "light": {
+      "background": "F7F7F3",
+      "surface": "FFFFFF",
+      "surface_secondary": "E8F0EA",
+      "accent": "1C4630",
+      "success": "2E7D32",
+      "warning": "E65100",
+      "error": "C62828",
+      "text_primary": "1A2118",
+      "text_secondary": "5A6B5E",
+      "border": "B0C4B5",
+      "focus": "1C4630"
+    }
+  },
+  "states": {
+    "normal": 1.0,
+    "pressed": 0.85,
+    "disabled": 0.5,
+    "focus_ring": 2
+  },
+  "animation": {
+    "fast_ms": 120,
+    "normal_ms": 180,
+    "slow_ms": 250,
+    "no_loop_outside_map": true
+  },
+  "icons": [
+    "back",
+    "close",
+    "check",
+    "warning",
+    "error",
+    "info",
+    "map",
+    "building",
+    "coin",
+    "settings",
+    "more",
+    "ai"
+  ],
+  "notes": "Числа целые. Масштаб шрифта = clamp(min(width/1280, height/720), 1.0, 1.5). Контраст проверяется валидатором."
+}

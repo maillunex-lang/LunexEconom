@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1920" height="1080" viewBox="0 0 1920 1080">
+  <rect width="1920" height="1080" fill="#0A201B"/>
+  <rect x="0" y="0" width="1920" height="60" fill="#173A30"/>
+  <text x="40" y="40" font-family="sans-serif" font-size="18" fill="#EEF5E8">Карта Башкирии</text>
+  <rect x="1400" y="80" width="480" height="360" rx="18" fill="#173A30" stroke="#386C57"/>
+  <text x="1420" y="120" font-family="sans-serif" font-size="16" fill="#B7EFA5">Участок 12, 8</text>
+  <text x="1420" y="160" font-family="sans-serif" font-size="14" fill="#EEF5E8">Зона: Промзона</text>
+  <text x="1420" y="200" font-family="sans-serif" font-size="14" fill="#EEF5E8">Цена: 450 000 ₽</text>
+  <rect x="1420" y="280" width="200" height="48" rx="12" fill="#B7EFA5"/>
+  <text x="1520" y="310" font-family="sans-serif" font-size="14" fill="#0A201B" text-anchor="middle">Купить</text>
+  <rect x="0" y="980" width="1920" height="100" fill="#22483B"/>
+  <text x="960" y="1040" font-family="sans-serif" font-size="14" fill="#A1B9AD" text-anchor="middle">Навигация</text>
+</svg>
