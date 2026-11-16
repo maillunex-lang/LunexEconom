@@ -1,0 +1,42 @@
+{
+  "schema": 1,
+  "release": 3,
+  "packs": [
+    {
+      "name": "ui_theme",
+      "kind": "ui_theme",
+      "version": "3",
+      "size": 3145728,
+      "sha256": "c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3",
+      "url": "https://rikagro.ru/lunexeconom/v2/packs/ui_theme-3.pck",
+      "priority": "required",
+      "dependencies": [],
+      "min_version_code": 1001,
+      "label": "Оформление интерфейса"
+    },
+    {
+      "name": "map_tiles",
+      "kind": "map_tiles",
+      "version": "3",
+      "size": 8388608,
+      "sha256": "d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4",
+      "url": "https://rikagro.ru/lunexeconom/v2/packs/map_tiles-3.pck",
+      "priority": "background",
+      "dependencies": [],
+      "min_version_code": 1001,
+      "label": "Плитки карты"
+    },
+    {
+      "name": "season_winter",
+      "kind": "season",
+      "version": "3",
+      "size": 4194304,
+      "sha256": "e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5",
+      "url": "https://rikagro.ru/lunexeconom/v2/packs/season_winter-3.pck",
+      "priority": "background",
+      "dependencies": ["ui_theme", "map_tiles"],
+      "min_version_code": 1001,
+      "label": "Зима"
+    }
+  ]
+}

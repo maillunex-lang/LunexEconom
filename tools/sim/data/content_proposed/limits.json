@@ -1,0 +1,21 @@
+{
+  "base_url": "https://rikagro.ru/lunexeconom/v2",
+  "max_manifest_bytes": 65536,
+  "max_packs": 8,
+  "max_release_bytes": 67108864,
+  "cellular_budget_bytes": 20971520,
+  "cache_bytes": 524288000,
+  "client_pack_ceiling_bytes": 104857600,
+  "min_release": 1,
+  "max_release": 2000000000,
+  "pack_bytes": {
+    "icons_goods": 8388608,
+    "icons_buildings": 8388608,
+    "ui_theme": 12582912,
+    "map_tiles": 33554432,
+    "season": 16777216,
+    "sounds": 16777216
+  },
+  "examples_good": ["icons_goods.json", "ui_theme.json", "season_winter.json"],
+  "examples_bad": ["incompatible.json"]
+}

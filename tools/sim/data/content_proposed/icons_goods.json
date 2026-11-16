@@ -1,0 +1,18 @@
+{
+  "schema": 1,
+  "release": 2,
+  "packs": [
+    {
+      "name": "icons_goods",
+      "kind": "icons_goods",
+      "version": "2",
+      "size": 2097152,
+      "sha256": "a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1",
+      "url": "https://rikagro.ru/lunexeconom/v2/packs/icons_goods-2.pck",
+      "priority": "background",
+      "dependencies": [],
+      "min_version_code": 1001,
+      "label": "Иконки товаров"
+    }
+  ]
+}
