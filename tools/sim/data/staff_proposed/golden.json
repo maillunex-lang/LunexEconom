@@ -1,0 +1,36 @@
+{
+ "variants": [
+  {
+   "id": "market_wage_no_training",
+   "profit": 2256204,
+   "final_level": 1,
+   "quits": 9,
+   "last_month_units": 6144,
+   "wage_last": 2100
+  },
+  {
+   "id": "low_wage",
+   "profit": 1849548,
+   "final_level": 1,
+   "quits": 30,
+   "last_month_units": 5038,
+   "wage_last": 1470
+  },
+  {
+   "id": "market_wage_training",
+   "profit": 1855272,
+   "final_level": 8,
+   "quits": 9,
+   "last_month_units": 8000,
+   "wage_last": 3864
+  },
+  {
+   "id": "high_wage_training",
+   "profit": 1218475,
+   "final_level": 8,
+   "quits": 9,
+   "last_month_units": 8000,
+   "wage_last": 5023
+  }
+ ]
+}
