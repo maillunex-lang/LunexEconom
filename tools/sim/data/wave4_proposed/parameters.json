@@ -1,0 +1,93 @@
+{
+  "version": "draft-1",
+  "brand": {
+    "gain_bp_per_1000_rub": 8,
+    "decay_bp_month": 300,
+    "rating_weight_bp": 2500,
+    "rating_points_max": 100,
+    "revenue_per_rating_point_bp": 450,
+    "months": 24,
+    "base_revenue_month": 800000,
+    "margin_bp": 2500,
+    "budgets": [
+      0,
+      30000,
+      90000
+    ]
+  },
+  "stock": {
+    "shares": 100000,
+    "pe_multiple": 4,
+    "ipo_discount_bp": 1000,
+    "ipo_share_bp": 3000,
+    "payout_bp": 4000,
+    "profit_month": 150000,
+    "equity": 600000,
+    "months": 12
+  },
+  "trade": {
+    "import_premium_bp": 4000,
+    "export_discount_bp": 2500,
+    "tariff_bp": 500,
+    "ref_price": 38,
+    "domestic_prices": [
+      20,
+      30,
+      38,
+      50,
+      70,
+      90
+    ]
+  },
+  "events": {
+    "months": 12,
+    "farm_revenue_month": 300000,
+    "store_revenue_month": 200000,
+    "margin_bp": 3000,
+    "drought": {
+      "month": 4,
+      "duration": 2,
+      "farm_output_bp": 7000
+    },
+    "crisis": {
+      "month": 7,
+      "duration": 3,
+      "demand_bp": 8500
+    },
+    "holiday": {
+      "month": 12,
+      "duration": 1,
+      "demand_bp": 12000
+    }
+  },
+  "logistics": {
+    "truck_cost": 120000,
+    "truck_capacity": 200,
+    "fuel_rub_per_km": 18,
+    "driver_month": 3500,
+    "trips_per_month": 20,
+    "distances_km": [
+      5,
+      20,
+      50,
+      100
+    ],
+    "months": 12,
+    "freight_rub_per_100_unit_km": 40
+  },
+  "service": {
+    "seats": 20,
+    "turns_per_day": 6,
+    "days": 30,
+    "price": 180,
+    "ingredient_cost": 70,
+    "staff_month": 17500,
+    "upkeep_month": 12000,
+    "demand_visits_month": [
+      1200,
+      2400,
+      3600,
+      5000
+    ]
+  }
+}

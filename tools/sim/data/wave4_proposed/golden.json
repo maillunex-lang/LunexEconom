@@ -1,0 +1,120 @@
+{
+ "brand": [
+  {
+   "budget": 0,
+   "final_brand_bp": 0,
+   "profit": 4800000
+  },
+  {
+   "budget": 30000,
+   "final_brand_bp": 3272,
+   "profit": 5097000
+  },
+  {
+   "budget": 90000,
+   "final_brand_bp": 6525,
+   "profit": 5052000
+  }
+ ],
+ "stock": {
+  "valuation": 7800000,
+  "ipo_price_x100": 7020,
+  "proceeds": 2106000,
+  "founder_share_bp": 7000,
+  "dividends_year": 720000,
+  "dividends_to_outside": 216000,
+  "dividend_yield_bp": 923
+ },
+ "trade": {
+  "import_price": 55,
+  "export_price": 26,
+  "rows": [
+   {
+    "domestic": 20,
+    "effective": 26,
+    "mode": "export"
+   },
+   {
+    "domestic": 30,
+    "effective": 30,
+    "mode": "domestic"
+   },
+   {
+    "domestic": 38,
+    "effective": 38,
+    "mode": "domestic"
+   },
+   {
+    "domestic": 50,
+    "effective": 50,
+    "mode": "domestic"
+   },
+   {
+    "domestic": 70,
+    "effective": 55,
+    "mode": "import"
+   },
+   {
+    "domestic": 90,
+    "effective": 55,
+    "mode": "import"
+   }
+  ]
+ },
+ "events": {
+  "calm": 1800000,
+  "with_events": 1690500
+ },
+ "logistics": [
+  {
+   "km": 5,
+   "freight_month": 8000,
+   "own_month": 7100,
+   "payback_months": 133
+  },
+  {
+   "km": 20,
+   "freight_month": 32000,
+   "own_month": 17900,
+   "payback_months": 8
+  },
+  {
+   "km": 50,
+   "freight_month": 80000,
+   "own_month": 39500,
+   "payback_months": 2
+  },
+  {
+   "km": 100,
+   "freight_month": 160000,
+   "own_month": 75500,
+   "payback_months": 1
+  }
+ ],
+ "service": [
+  {
+   "demand": 1200,
+   "sold": 1200,
+   "capacity": 3600,
+   "profit_month": 102500
+  },
+  {
+   "demand": 2400,
+   "sold": 2400,
+   "capacity": 3600,
+   "profit_month": 234500
+  },
+  {
+   "demand": 3600,
+   "sold": 3600,
+   "capacity": 3600,
+   "profit_month": 366500
+  },
+  {
+   "demand": 5000,
+   "sold": 3600,
+   "capacity": 3600,
+   "profit_month": 366500
+  }
+ ]
+}
