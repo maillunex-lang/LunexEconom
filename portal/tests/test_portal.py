@@ -161,6 +161,28 @@ class Portal(unittest.TestCase):
         self.assertIn("owner/demo", calls[0])
         app.close()
 
+    def test_sync_falls_back_to_other_known_plan_path(self):
+        """Если по сохранённому пути плана нет (404), портал пробует другой известный путь и запоминает рабочий."""
+        calls = []
+        def fake(url, token):
+            calls.append(url)
+            if url.endswith("/docs/portal/work_plan.json"):
+                raise OSError("HTTP Error 404")
+            return json.dumps(bootstrap.STARTER_PLAN)
+        app = create_app(self.path, base="/createportal", fetch=fake, launch_enabled=True)
+        r = call(app, "POST", "/createportal/api/login", {"username": "owner", "password": PW}, ip="1.1.1.2")
+        cookie = r["headers"]["Set-Cookie"].split(";")[0]
+        csrf = call(app, "GET", "/createportal/api/me", cookie=cookie)["json"]["csrf"]
+        c = call(app, "POST", "/createportal/api/projects", {"slug": "demo-project", "name": "Demo", "repo": "owner/demo", "plan_path": "docs/portal/work_plan.json"}, cookie=cookie, csrf=csrf)
+        self.assertEqual(c["status"], 201, c)
+        s = call(app, "POST", "/createportal/api/projects/demo-project/sync", {}, cookie=cookie, csrf=csrf)
+        self.assertEqual(s["status"], 200, s)
+        self.assertEqual(len(calls), 2)
+        self.assertTrue(calls[0].endswith("/docs/portal/work_plan.json") and calls[1].endswith("/docs/work_plan.json"))
+        row = db.connect(self.path).execute("SELECT plan_path FROM projects WHERE slug='demo-project'").fetchone()
+        self.assertEqual(row[0], "docs/work_plan.json")
+        app.close()
+
     def test_oversize_body_rejected(self):
         cookie, csrf = self.login()
         env_big = call(self.app, "POST", "/createportal/api/projects", {"slug": "x" * 5, "name": "y" * 2_000_000}, cookie=cookie, csrf=csrf)
@@ -194,16 +216,16 @@ class Portal(unittest.TestCase):
         cookie, csrf = self.login()
         r = self.create_project(cookie, csrf)
         ids = [x["id"] for x in r["json"]["start"]]
-        self.assertEqual(ids, ["repo", "gdd"])
-        gdd = r["json"]["start"][1]["prompt"]
-        for need in ("GDD", "work_plan.json", "docs/gdd/00_OVERVIEW.md", "Критерии приёмки", "симулятор", "Решения для владельца", "owner/demo"):
+        self.assertEqual(ids, ["launch"])
+        gdd = r["json"]["start"][0]["prompt"]
+        for need in ("GDD", "work_plan.json", "docs/gdd/00_OVERVIEW.md", "критерии приёмки", "симуляцию", "решения для владельца", "owner/demo", "Фаза 0", "Фаза 5"):
             self.assertIn(need, gdd)
         base = "/createportal/api/projects/demo-project"
-        self.assertEqual(call(self.app, "POST", base + "/start", {"id": "gdd", "done": True}, cookie=cookie, csrf=csrf)["status"], 200)
+        self.assertEqual(call(self.app, "POST", base + "/start", {"id": "launch", "done": True}, cookie=cookie, csrf=csrf)["status"], 200)
         self.assertEqual(call(self.app, "POST", base + "/start", {"id": "zzz", "done": True}, cookie=cookie, csrf=csrf)["status"], 400)
-        self.assertEqual(call(self.app, "POST", base + "/start", {"id": "gdd", "done": "yes"}, cookie=cookie, csrf=csrf)["status"], 400)
+        self.assertEqual(call(self.app, "POST", base + "/start", {"id": "launch", "done": "yes"}, cookie=cookie, csrf=csrf)["status"], 400)
         d = call(self.app, "GET", base, cookie=cookie)["json"]
-        self.assertEqual([x["done"] for x in d["start"]], [False, True])
+        self.assertEqual([x["done"] for x in d["start"]], [True])
 
     def test_ideas_inbox(self):
         cookie, csrf = self.login()
