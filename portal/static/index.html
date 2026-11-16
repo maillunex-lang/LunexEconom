@@ -122,6 +122,20 @@ details{border-top:1px solid var(--hair);padding-top:8px}summary{cursor:pointer;
 .mini .mt{font-weight:600;font-size:14px;line-height:1.3}.mini.locked{opacity:.8}
 @media(max-width:560px){.bar button span{display:none}.brand span{display:none}.crumb b{max-width:34vw}.bar-in{gap:4px}}
 
+/* B2: настройки и проверка PR/CI */
+.b2-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+.b2-grid .wide{grid-column:1/-1}
+.b2-field{min-width:0;display:flex;flex-direction:column;gap:7px}
+.b2-field input{min-height:48px}
+.b2-switch{display:flex;align-items:center;gap:12px;font-size:15px;color:var(--ink)}
+.b2-switch input{width:22px;height:22px;flex:none;accent-color:var(--accent)}
+.b2-switch input:disabled{opacity:.55}
+.b2-pr{border:1px solid var(--edge);border-radius:18px;padding:14px;display:flex;flex-direction:column;gap:10px;background:var(--glass2);overflow-wrap:anywhere}
+.b2-pr a{color:var(--accent2);overflow-wrap:anywhere}
+.b2-audit-row{padding:10px 0;border-top:1px solid var(--hair);display:flex;gap:12px;flex-wrap:wrap}
+.b2-audit-row time{min-width:140px;color:var(--muted)}
+.b2-state{font-size:13px;color:var(--muted)}
+@media(max-width:720px){.b2-grid{grid-template-columns:minmax(0,1fr)}.b2-grid .wide{grid-column:1}.b2-audit-row{flex-direction:column;gap:3px}}
 /* B1: мобильная лесенка по макету v4 */
 .phone-board{display:none}
 .phone-switch{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:3px;border-radius:999px;padding:4px}
@@ -230,7 +244,7 @@ function api(path,method,body){var o={method:method||'GET',headers:{},credential
 function copy(text){function fb(){var ta=el('textarea');ta.value=text;document.body.appendChild(ta);ta.select();try{document.execCommand('copy');toast('Скопировано')}catch(e){toast('Выделите текст и скопируйте вручную')}ta.remove()}
   if(navigator.clipboard&&navigator.clipboard.writeText)navigator.clipboard.writeText(text).then(function(){toast('Скопировано')},fb);else fb()}
 function fmt(t){if(!t)return '';var d=new Date(t*1000);return d.toLocaleDateString('ru-RU',{day:'numeric',month:'short'})+', '+d.toLocaleTimeString('ru-RU',{hour:'2-digit',minute:'2-digit'})}
-function btn(label,cls,fn,o){o=o||{};var b=el('button',cls||'');b.type='button';if(o.icon)b.appendChild(ic(o.icon));if(label){var s=el('span','',label);b.appendChild(s)}if(o.tip){b.setAttribute('data-tip',o.tip);b.setAttribute('aria-label',label?label+'. '+o.tip:o.tip)}if(fn)b.onclick=fn;if(o.disabled)b.disabled=true;return b}
+function btn(label,cls,fn,o){o=o||{};var b=el('button',cls||'');b.type='button';if(o.icon)b.appendChild(ic(o.icon));if(label){var s=el('span','',label);b.appendChild(s)}b.setAttribute('data-tip',o.tip||label||'Действие');b.title=o.tip||label||'Действие';b.setAttribute('aria-label',label?label+(o.tip?'. '+o.tip:''):o.tip||'Действие');if(fn)b.onclick=fn;if(o.disabled)b.disabled=true;return b}
 function pill(cls,t){return el('span','pill '+cls,t)}
 
 function acceptHandler(p,act){return function(){if(confirmId===p.id){openId=null;act('accepted')()}else{confirmId=p.id;drawBoard();clearTimeout(confirmTimer);confirmTimer=setTimeout(function(){confirmId=null;drawBoard()},4000)}}}
@@ -246,7 +260,7 @@ function drawTabs(){
   if(!ME){nav.hidden=true;nav.classList.remove('show');return}
   nav.hidden=false;nav.classList.add('show');
   var onBoard=!!current&&lastCrumb!=='Проекты';
-  [['Проекты','book',showProjects,!onBoard],['Доска','next',function(){var sl=current?current.slug:lastSlug();if(sl)showBoard(sl);else showProjects()},onBoard],['Идеи','inbox',focusIdeas,false],['Справка','help',showHelp,false]].forEach(function(x){
+  [['Проекты','book',showProjects,!onBoard],['Доска','next',function(){var sl=current?current.slug:lastSlug();if(sl)showBoard(sl);else showProjects()},onBoard],['Идеи','inbox',focusIdeas,false],['Настройки','work',showSettings,false]].forEach(function(x){
     var b=el('button',x[3]?'on':'');b.type='button';b.appendChild(ic(x[1]));b.appendChild(el('span','',x[0]));b.onclick=x[2];b.title=x[0];b.setAttribute('aria-label',x[0]);nav.appendChild(b)});
 }
 function showOffline(){drawBar('');app.textContent='';var c=el('div','card empty');c.appendChild(ic('help'));c.appendChild(el('h2','','Нет связи с порталом'));c.appendChild(el('div','muted','Проверьте интернет. Данные не сохраняются на устройстве, чтобы они не попали в чужие руки.'));c.appendChild(btn('Повторить','primary',function(){location.reload()},{icon:'sync'}));app.appendChild(c)}
@@ -258,7 +272,7 @@ function drawBar(crumb){
   barEl.appendChild(l);
   var r=el('div','row');r.style.flexWrap='nowrap';
   if(ME&&deferredInstall&&!isStandalone)r.appendChild(btn('Установить','',function(){deferredInstall.prompt();deferredInstall=null;drawBar(lastCrumb)},{icon:'upload',tip:'Установить портал на экран телефона как приложение'}));
-  if(ME){r.appendChild(btn('','icon ghost',showHelp,{icon:'help',tip:'Справка: что означают статусы и кнопки'}));
+  if(ME){r.appendChild(btn('','icon ghost',showSettings,{icon:'work',tip:'Настройки и безопасность портала'}));r.appendChild(btn('','icon ghost',showHelp,{icon:'help',tip:'Справка: что означают статусы и кнопки'}));
     r.appendChild(btn('','icon ghost',toggleTheme,{icon:'moon',tip:'Переключить светлую и тёмную тему'}));
     r.appendChild(btn('Выйти','ghost',function(){api('/api/logout','POST',{}).finally(function(){CSRF='';ME='';showLogin()})},{icon:'out',tip:'Завершить сеанс на этом устройстве'}))}
   barEl.appendChild(r);
@@ -356,6 +370,7 @@ function drawBoard(){
   var seg=el('div','seg');var b1=btn('Дорожки','',function(){setView('lanes')},{tip:'Две линии рядом по шагам: видно, что идёт параллельно'});var b2=btn('По шагам','',function(){setView('steps')},{tip:'Задачи по порядку шагов, линии рядом'});b1.className=view==='lanes'?'on':'';b2.className=view==='steps'?'on':'';seg.appendChild(b1);seg.appendChild(b2);tb.appendChild(seg);
   var sync;sync=btn('Синхронизировать','',function(){sync.disabled=true;api('/api/projects/'+current.slug+'/sync','POST',{}).then(function(){toast('План обновлён из репозитория');showBoard(current.slug)}).catch(function(e){toast(e.status===422?'План в репозитории содержит ошибки':'Не удалось получить план: проверьте репозиторий и токен');sync.disabled=false})},{icon:'sync',tip:'Загрузить свежий docs/work_plan.json из репозитория GitHub'});
   tb.appendChild(sync);tb.appendChild(btn('Загрузить план','',showImport,{icon:'upload',tip:'Вставить содержимое work_plan.json вручную, если синхронизация не настроена'}));
+  tb.appendChild(btn('Настройки проекта','',function(){showProjectSettings(current.slug)},{icon:'work',tip:'Автоприёмка, чек-лист и данные проекта'}));
   tb.appendChild(btn('Протокол для ИИ','',showProtocol,{icon:'book',tip:'Инструкция для ИИ-директора: как добавлять этапы и промпты'}));head.appendChild(tb);head.classList.add('board-heading');app.appendChild(head);
   if(P.length){var before=app.children.length;drawSummary(d,P);Array.from(app.children).slice(before).forEach(function(x){x.classList.add('desktop-board-summary')})}
   if(!P.length)drawStart(d);
@@ -372,7 +387,7 @@ function drawBoard(){
 
 /* Мобильная доска B1. Состояния и API всегда берутся из уже загруженного проекта. */
 function drawPhoneBoard(d,P){
-  var root=el('section','phone-board');root.setAttribute('aria-label','Мобильная доска');
+  var root=el('section','phone-board');root.setAttribute('aria-label','Мобильная доска');root.appendChild(btn('Настройки проекта','',function(){showProjectSettings(current.slug)},{tip:'Переключатели автоприёмки и чек-листа проекта'}));
   var switcher=el('div','phone-switch seg');switcher.setAttribute('role','group');switcher.setAttribute('aria-label','Выбор линии');
   [['A','Сервер · A'],['B','Клиент · B'],['both','Обе']].forEach(function(x){
     var b=btn(x[1],phoneLane===x[0]?'on':'',function(){phoneLane=x[0];drawBoard()},{tip:'Показать '+(x[0]==='both'?'обе линии': 'линию '+x[0])});
@@ -429,7 +444,7 @@ function drawPhoneStep(host,p,compact){
     actions.appendChild(btn('Подробнее','ghost',function(){openId=p.id;drawBoard()},{tip:'Открыть подробности задачи '+p.id}));card.appendChild(actions);content.appendChild(card);
   }else{
     var summary=el('div','phone-step-summary');summary.appendChild(el('b','pid',p.id));summary.appendChild(el('span','',ttl(p)));
-    if(kind==='done')summary.appendChild(el('span','small','Принято'));
+    if(kind==='done')summary.appendChild(el('span','small',isAutoAccepted(p)?'Принято автоматически: слито в main, CI зелёный':'Принято'));
     content.appendChild(summary);
   }
   line.appendChild(content);host.appendChild(line);
@@ -486,13 +501,15 @@ function drawIdeas(d,host){
 function mini(p){
   var s=st(p.id),r=ready(p),c=el('div','mini lane-'+p.lane+((s==='planned'&&!r)?' locked':''));c.tabIndex=0;c.setAttribute('role','button');c.setAttribute('aria-label','Задача '+p.id+': '+p.title);
   var t=el('div','mt');t.appendChild(el('span','pid',p.id));t.appendChild(document.createTextNode(ttl(p)));c.appendChild(t);
-  var m=el('div','row');m.style.gap='6px';m.appendChild(el('span','tag','Линия '+p.lane));m.appendChild(el('span','tag','шаг '+p.step));if(p.depends_on.length)m.appendChild(el('span','tag','после '+p.depends_on.join(', ')));c.appendChild(m);
+  var m=el('div','row');m.style.gap='6px';m.appendChild(el('span','tag','Линия '+p.lane));m.appendChild(el('span','tag','шаг '+p.step));if(isAutoAccepted(p))c.appendChild(el('div','small','Принято автоматически: слито в main, CI зелёный'));
+  if(p.depends_on.length)m.appendChild(el('span','tag','после '+p.depends_on.join(', ')));c.appendChild(m);
   function open(){openId=p.id;drawBoard()}c.onclick=open;c.onkeydown=function(e){if(e.key==='Enter'||e.key===' '){e.preventDefault();open()}};return c;
 }
 function node(p){
   var k=st(p.id)==='planned'&&ready(p)?'ready':(st(p.id)==='planned'?'queue':st(p.id));
   var c=el('div','node '+k);c.style.setProperty('--lane','var(--lane'+p.lane+')');c.tabIndex=0;c.setAttribute('role','button');c.setAttribute('aria-label','Задача '+p.id+': '+p.title+'. '+(k==='ready'?LABEL.ready:k==='queue'?LABEL.planned:LABEL[k]));
   var icn={accepted:'✓',submitted:'◔',issued:'●',ready:'→',queue:''}[k];c.appendChild(el('span','ic',icn));c.appendChild(el('b','',p.id));c.appendChild(el('div','t',ttl(p)));
+  if(isAutoAccepted(p))c.appendChild(el('div','small','Принято автоматически: слито в main, CI зелёный'));
   if(p.depends_on.length&&k==='queue')c.appendChild(el('div','muted small','после '+p.depends_on.join(', ')));
   function open(){openId=p.id;drawBoard()}c.onclick=open;c.onkeydown=function(e){if(e.key==='Enter'||e.key===' '){e.preventDefault();open()}};return c;
 }
@@ -543,6 +560,7 @@ function drawDrawer(id){
   var h=el('div','row spread');var l=el('div');l.appendChild(el('div','muted small','Линия '+p.lane+' · '+(d.lanes[p.lane]?d.lanes[p.lane].name+' · '+d.lanes[p.lane].who:'')+' · шаг '+p.step));
   var t=el('h2');t.appendChild(el('span','pid',p.id));t.appendChild(document.createTextNode(p.title));l.appendChild(t);h.appendChild(l);h.appendChild(btn('Закрыть','ghost',function(){openId=null;drawBoard()},{tip:'Закрыть панель задачи'}));c.appendChild(h);
   c.appendChild(pill((s==='planned'&&r)?'ready':s,(s==='planned'&&r)?LABEL.ready:LABEL[s]));
+  drawTaskPR(c,p,s,d);
   c.appendChild(el('p','',p.goal));
   if(p.depends_on.length)c.appendChild(el('div','small muted','Зависит от: '+p.depends_on.join(', ')));
   var cr=el('div');cr.appendChild(el('b','small','Критерии готовности'));var ul=el('ul');ul.style.cssText='margin:6px 0;padding-left:20px;font-size:14px';(p.done_when||[]).forEach(function(x){ul.appendChild(el('li','',x))});cr.appendChild(ul);c.appendChild(cr);
@@ -586,6 +604,56 @@ function showHelp(){
   c.appendChild(el('b','','Кнопки'));
   [['Схема / По шагам','Переключает вид доски: колонки или порядок шагов.'],['Синхронизировать','Берёт свежий план из репозитория GitHub (нужен токен только на чтение).'],['Загрузить план','Ручная вставка work_plan.json, если синхронизация не настроена.'],['Протокол для ИИ','Инструкция директору, как вести план.'],['Скопировать промпт','Копирует текст задания для передачи исполнителю.'],['Отдал исполнителю','Фиксирует, что задание передано.'],['Исполнитель сдал','Фиксирует, что пришёл отчёт.'],['Принято, в архив','Нажмите дважды после подтверждения директора.'],['Учтено','Убирает идею из входящих.']].forEach(function(x){var r=el('div','act');r.appendChild(el('b','small',x[0]));r.appendChild(el('div','help',x[1]));c.appendChild(r)});
   ov.appendChild(c);document.body.appendChild(ov);
+}
+/* B2: исключительно UI, сервер остаётся единственным источником данных. */
+function cardB2(title,detail){var c=el('section','card');c.appendChild(el('h2','',title));if(detail)c.appendChild(el('div','help',detail));return c}
+function b2Message(host,message,kind){host.textContent='';host.appendChild(el('div','b2-state'+(kind==='error'?' err':''),message))}
+function b2Error(e){return e&&e.status===404?'Функция ещё не доступна на сервере.':e&&e.status===403?'Недостаточно прав или истёк сеанс.':e&&e.status===401?'Сеанс завершён. Войдите снова.':'Ошибка соединения с сервером. Повторите попытку.'}
+function b2Field(label,type,autocomplete){var w=el('label','b2-field',label),i=el('input');i.type=type||'text';if(autocomplete)i.autocomplete=autocomplete;w.appendChild(i);return {root:w,input:i}}
+function showSettings(){
+  drawBar('Настройки');app.textContent='';app.appendChild(el('h1','','Настройки'));
+  var grid=el('div','b2-grid');app.appendChild(grid);
+  [['Интеграция с GitHub','Подключение GitHub, вебхуки и проверка доступа появятся после настройки серверной интеграции.'],['Уведомления','Уведомления Telegram, почты и события CI появятся позже.'],['Резервные копии','Создание, расписание и восстановление копий будут доступны позже.'],['Исполнители','Назначение исполнителей и управление доступом появится позже.']].forEach(function(x){var c=cardB2(x[0]);c.appendChild(pill('planned','Скоро'));c.appendChild(el('p','muted',x[1]));grid.appendChild(c)});
+  var sec=cardB2('Доступ и безопасность','Аккаунт: '+ME+'. Для смены пароля требуется текущий пароль, новый должен содержать не менее 14 символов.');sec.classList.add('wide');grid.appendChild(sec);
+  var form=el('form','b2-grid');var old=b2Field('Текущий пароль','password','current-password'),next=b2Field('Новый пароль (14+ символов)','password','new-password'),again=b2Field('Повторите новый пароль','password','new-password');[old,next,again].forEach(function(x){form.appendChild(x.root)});
+  var passwordStatus=el('div','b2-state');passwordStatus.setAttribute('role','status');form.appendChild(passwordStatus);
+  var save=btn('Сменить пароль','primary',null,{tip:'Сохранить новый пароль и завершить остальные сеансы'});save.type='submit';form.appendChild(save);
+  form.addEventListener('submit',function(ev){ev.preventDefault();passwordStatus.textContent='';if(next.input.value.length<14){passwordStatus.textContent='Новый пароль должен содержать не менее 14 символов.';return}if(next.input.value!==again.input.value){passwordStatus.textContent='Новые пароли не совпадают.';return}if(!old.input.value){passwordStatus.textContent='Укажите текущий пароль.';return}
+    save.disabled=true;b2Message(passwordStatus,'Сохранение…');api('/api/password','POST',{current_password:old.input.value,new_password:next.input.value}).then(function(){old.input.value='';next.input.value='';again.input.value='';b2Message(passwordStatus,'Пароль изменён. Остальные сеансы завершены.');}).catch(function(e){b2Message(passwordStatus,e.status===400?'Неверный текущий пароль или новый пароль не подходит.':b2Error(e),'error')}).finally(function(){save.disabled=false});});sec.appendChild(form);
+  var actions=el('div','row');var revoke=btn('Завершить все сеансы','',function(){if(revoke.dataset.confirm!=='yes'){revoke.dataset.confirm='yes';revoke.querySelector('span').textContent='Подтвердить завершение';return}revoke.disabled=true;api('/api/sessions/revoke','POST',{}).then(function(){CSRF='';ME='';current=null;showLogin('Все сеансы завершены. Войдите снова.')}).catch(function(e){revoke.disabled=false;revoke.dataset.confirm='';revoke.querySelector('span').textContent='Завершить все сеансы';toast(b2Error(e))})},{tip:'Два нажатия: завершить все устройства, включая текущее'});actions.appendChild(revoke);actions.appendChild(btn('Обновить журнал','',function(){loadAudit(audit)},{tip:'Получить последние записи аудита с сервера'}));sec.appendChild(actions);
+  var audit=cardB2('Журнал аудита','Последние 200 событий без секретов.');audit.classList.add('wide');grid.appendChild(audit);loadAudit(audit);
+}
+function loadAudit(host){var content=host.querySelector('.b2-audit-content');if(!content){content=el('div','b2-audit-content');host.appendChild(content)}b2Message(content,'Загрузка журнала…');api('/api/audit').then(function(r){content.textContent='';var rows=Array.isArray(r)?r:(r.events||r.audit||r.entries||[]);if(!rows.length){b2Message(content,'Записей пока нет.');return}rows.slice(0,200).forEach(function(item){var row=el('div','b2-audit-row');var date=el('time','',fmtAudit(item.ts||item.created||item.time));row.appendChild(date);row.appendChild(el('div','',String(item.action||item.kind||'Событие')));content.appendChild(row)})}).catch(function(e){b2Message(content,b2Error(e),'error');content.appendChild(btn('Повторить','',function(){loadAudit(host)},{tip:'Повторить загрузку журнала'}))})}
+function fmtAudit(t){if(!t)return 'Дата не указана';var d=new Date(typeof t==='number'?(t<1e12?t*1000:t):t);return isNaN(d.getTime())?'Дата не указана':d.toLocaleString('ru-RU',{dateStyle:'short',timeStyle:'short'})}
+function showProjectSettings(slug){
+  drawBar('Настройки проекта');app.textContent='';app.appendChild(el('h1','','Настройки проекта'));
+  var grid=el('div','b2-grid');app.appendChild(grid),c=cardB2('Автоприёмка','Закрывать задачу после слияния PR в main только при зелёных обязательных проверках CI.');grid.appendChild(c);
+  var enabled=el('input'),check=el('input');enabled.type='checkbox';check.type='checkbox';enabled.disabled=check.disabled=true;
+  [['Автоприёмка при слиянии',enabled],['Требовать чек-лист',check]].forEach(function(x){var label=el('label','b2-switch');label.appendChild(x[1]);label.appendChild(el('span','',x[0]));c.appendChild(label)});
+  c.appendChild(el('p','help','Если CI красный или ещё выполняется, задача остаётся на приёмке. Ошибочное автозакрытие отменяется в задаче кнопкой «Вернуть из архива».'));
+  var msg=el('div','b2-state','Загрузка настроек…');msg.setAttribute('role','status');c.appendChild(msg);
+  var save=btn('Сохранить настройки','primary',function(){save.disabled=true;b2Message(msg,'Сохранение…');api('/api/projects/'+slug+'/settings','POST',{auto_accept:enabled.checked,auto_accept_require_checklist:check.checked}).then(function(r){if(r&&r.settings){enabled.checked=!!r.settings.auto_accept;check.checked=!!r.settings.auto_accept_require_checklist}b2Message(msg,'Настройки сохранены.')}).catch(function(e){b2Message(msg,b2Error(e),'error')}).finally(function(){save.disabled=false})},{tip:'Сохранить переключатели на сервере'});save.disabled=true;c.appendChild(save);
+  api('/api/projects/'+slug+'/settings').then(function(r){var s=r.settings||r;enabled.checked=!!s.auto_accept;check.checked=!!(s.auto_accept_require_checklist||s.require_checklist);enabled.disabled=check.disabled=false;save.disabled=false;b2Message(msg,'Настройки загружены.')}).catch(function(e){b2Message(msg,b2Error(e),'error');c.appendChild(btn('Повторить','',function(){showProjectSettings(slug)},{tip:'Повторить запрос настроек проекта'}))});
+  var repo=cardB2('Репозиторий и план');grid.appendChild(repo);var proj=current&&current.slug===slug?current.d.project:null;repo.appendChild(el('div','',proj&&proj.repo?'Репозиторий: '+proj.repo:'Репозиторий не указан'));repo.appendChild(el('div','', 'Основная ветка: main'));repo.appendChild(el('div','help','Изменение основной ветки и списка обязательных проверок CI: скоро, после появления серверного контракта.'));repo.appendChild(btn('К доске','',function(){showBoard(slug)},{tip:'Вернуться к задачам проекта'}));
+  var danger=cardB2('Опасная зона','Удаление проекта будет доступно позже после реализации подтверждения и серверных проверок. Сейчас удаление отключено.');danger.classList.add('wide');danger.appendChild(pill('planned','Скоро'));grid.appendChild(danger);
+}
+function taskMeta(p){var d=current&&current.d;if(!d)return {};var state=d.state&&d.state[p.id]||{};return {pr:p.pr||state.pr,ci:p.ci||state.ci,merged:!!(state.merged||(p.pr&&p.pr.merged)||(state.pr&&state.pr.merged)),sha:state.sha||p.sha}}
+function ciSuccess(ci){if(!ci)return false;var v=typeof ci==='string'?ci:(ci.state||ci.status||ci.conclusion||'');return /^(success|successful|passed|green|ok)$/i.test(v)}
+function isAutoAccepted(p){var m=taskMeta(p);return st(p.id)==='accepted'&&m.merged&&ciSuccess(m.ci)&&!!((m.pr&&(m.pr.auto_accepted||m.pr.auto_accept))||(current.d.state[p.id]||{}).auto_accepted)}
+function safePR(url){try{var u=new URL(url);return u.protocol==='https:'&&u.hostname==='github.com'&&/^\/[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+\/pull\/\d+\/?$/.test(u.pathname)?u.href:null}catch(e){return null}}
+function drawTaskPR(host,p,s,d){var m=taskMeta(p);if(!m.pr&&!m.ci)return;var card=el('section','b2-pr');card.appendChild(el('h3','','PR и CI'));
+  if(isAutoAccepted(p))card.appendChild(pill('accepted','Принято автоматически: слито в main, CI зелёный'));
+  var pr=m.pr||{};if(typeof pr==='string')pr={url:pr};
+  var n=pr.number||pr.pr_number;if(n)card.appendChild(el('div','','PR #'+String(n)+(m.merged?' · слито в main': '')));
+  if(pr.branch)card.appendChild(el('div','small muted','Ветка: '+String(pr.branch)));
+  var sha=m.sha||pr.sha;if(sha)card.appendChild(el('div','small','SHA: '+String(sha)));
+  if(m.merged&&!n)card.appendChild(pill('accepted','Слито в main'));
+  var url=safePR(pr.url||pr.html_url||'');if(url){var link=el('a','lnk','Открыть PR на GitHub');link.href=url;link.target='_blank';link.rel='noopener noreferrer';link.title='Открыть pull request на GitHub';card.appendChild(link)}
+  var ci=m.ci;if(ci){var overall=typeof ci==='string'?ci:(ci.state||ci.status||ci.conclusion||'');if(s==='submitted'&&/^(pending|queued|waiting|in_progress|running)$/i.test(overall))card.appendChild(pill('submitted','Ждём CI'));else card.appendChild(el('div','small','CI: '+(overall||'статус не указан')));
+    var checks=typeof ci==='object'?(ci.checks||ci.results||[]):[];if(!Array.isArray(checks)&&checks&&typeof checks==='object')checks=Object.keys(checks).map(function(k){return {name:k,status:checks[k]}});if(Array.isArray(checks))checks.forEach(function(x){card.appendChild(el('div','small',String(x.name||x.context||'Проверка')+': '+String(x.conclusion||x.status||x.state||'ожидание')))});
+  }
+  if(isAutoAccepted(p))card.appendChild(el('div','help','Закрыто автоматически. Чтобы отменить автозакрытие, нажмите «Вернуть из архива».'));
+  host.appendChild(card)
 }
 if('serviceWorker' in navigator){navigator.serviceWorker.register(BASE+'/sw.js',{scope:BASE+'/'}).catch(function(){})}
 window.addEventListener('online',function(){toast('Связь восстановлена')});window.addEventListener('offline',function(){toast('Нет сети')});
