@@ -108,7 +108,7 @@ def generate(city, level, catalog, rules, seed, all_cities, districts,
     for dy in range(-6, 7):
         for dx in range(-6, 7):
             x, y = city["x"]+dx, city["y"]+dy
-            obj = dict(id=city["id"] + ":1:hall:0", type_id=hall["id"],
+            obj = dict(id="city:" + city["id"] + ":1:hall:0", type_id=hall["id"],
                        city_id=city["id"], ring=1, x=x, y=y,
                        width=hall["width"], height=hall["height"],
                        district_id=ufa_district(x,y,city,districts) if city["id"]=="ufa"
@@ -158,7 +158,7 @@ def generate(city, level, catalog, rules, seed, all_cities, districts,
                         break
                     pick -= item["weight"]
                 assert chosen is not None
-                obj = dict(id=f'{city["id"]}:{ring}:{slot}:{attempt}', type_id=chosen["id"],
+                obj = dict(id=f'city:{city["id"]}:{ring}:{slot}:{attempt}', type_id=chosen["id"],
                            city_id=city["id"], ring=ring, x=x, y=y,
                            width=chosen["width"], height=chosen["height"],
                            district_id=ufa_district(x,y,city,districts) if city["id"]=="ufa"
@@ -209,6 +209,27 @@ def objects_in_chunk(objects, cx, cy):
             and o["y"] < lo_y + CHUNK_CELLS
             and o["y"] + o["height"] > lo_y)]
 
+def as_map3d_event(obj, catalog, event_id=1, removed=False):
+    """GDD22-conforming building event envelope; city marker only in payload."""
+    spec = next(row for row in catalog["objects"] if row["id"] == obj["type_id"])
+    cells = sorted(footprint(obj))
+    chunks = sorted({(x//CHUNK_CELLS,y//CHUNK_CELLS) for x,y in cells})
+    body = {"event_id":event_id,"version":event_id,
+            "type":"building_removed" if removed else "building_added",
+            "kind":"demolition" if removed else "occupation",
+            "city_id":obj["city_id"],
+            "cx":chunks[0][0] if len(chunks)==1 else None,
+            "cy":chunks[0][1] if len(chunks)==1 else None,
+            "chunks":[{"cx":a,"cy":b} for a,b in chunks],
+            "object":{"object_id":obj["id"],"catalog_id":obj["model_id"],
+                      "owner_ref":"city:"+obj["city_id"],"stage_index":4,
+                      "x":obj["x"],"y":obj["y"],"w":obj["width"],
+                      "h":obj["height"],"color_rgb":spec["color_rgb"]},
+            "payload":{"city_object":True,"catalog_namespace":"city_objects",
+                       "district_id":obj["district_id"],
+                       "cells":[{"x":x,"y":y} for x,y in cells]}}
+    return body
+
 def digest(objects):
     return hashlib.sha256(json.dumps(objects,ensure_ascii=False,sort_keys=True,
                                      separators=(",",":")).encode("utf-8")).hexdigest()
@@ -250,6 +271,10 @@ def validate(data):
         if item["service"] not in ("transport","education","health"):
             errors.append(ident+" unknown service")
         if not item.get("name_ru") or not item.get("model_id"): errors.append(ident+" missing visual id/name")
+        if type(item.get("color_rgb")) is not int or not 0<=item["color_rgb"]<=16777215:
+            errors.append(ident+" invalid fallback RGB")
+        if not item.get("style_id"): errors.append(ident+" missing style id")
+        if item["height_m"] > 30: errors.append(ident+" exceeds GDD22 model height")
     if len(types)!=22 or len(catalog["objects"])!=22:
         errors.append("catalog must contain 22 unique types")
     if set(rules["max_per_type"])!=set(types) or rules["max_per_type"]["city_hall"]!=1:
@@ -304,6 +329,11 @@ def validate(data):
                 errors.append("city object cap")
             taken, instances, cell_counts = set(), defaultdict(int), defaultdict(int)
             for obj in objects:
+                event=as_map3d_event(obj,catalog)
+                if len(json.dumps(event,ensure_ascii=False,separators=(",",":")).encode("utf-8"))>2048:
+                    errors.append("GDD22 event exceeds 2048 bytes")
+                if len(event["chunks"])>16 or not event["payload"].get("city_object"):
+                    errors.append("GDD22 chunk/event contract invalid")
                 cells = footprint(obj)
                 if cells & taken: errors.append("overlapping objects")
                 taken.update(cells)

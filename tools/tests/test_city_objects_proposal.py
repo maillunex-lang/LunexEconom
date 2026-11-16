@@ -6,7 +6,7 @@ import unittest
 from pathlib import Path
 from tools.validate_city_objects_proposal import (
     load_proposal, read_json, validate, generate, digest, footprint,
-    ufa_district, virtual_road, trunk_edges, objects_in_cell, objects_in_chunk, ROOT
+    ufa_district, virtual_road, trunk_edges, objects_in_cell, objects_in_chunk, as_map3d_event, ROOT
 )
 
 class CityProposalTests(unittest.TestCase):
@@ -105,6 +105,24 @@ class CityProposalTests(unittest.TestCase):
             for level in (1,2,3):
                 objs=self._gen(city,level)
                 self.assertEqual(sum(o["type_id"]=="city_hall" for o in objs),1)
+
+    def test_map3d_event_envelope_compatible_with_gdd22(self):
+        schema=read_json(ROOT / "tools/sim/data/map3d_proposed/event.schema.json")
+        city_obj=self._gen(self.cities[0],1)[0]
+        for removed in (False,True):
+            event=as_map3d_event(city_obj,self.data["catalog"],event_id=123,removed=removed)
+            self.assertTrue(set(schema["required"])<=set(event))
+            self.assertEqual(set(event)-set(schema["properties"]),set())
+            self.assertEqual(event["event_id"],event["version"])
+            self.assertIn(event["type"],schema["properties"]["type"]["enum"])
+            self.assertIn(event["kind"],schema["properties"]["kind"]["enum"])
+            self.assertTrue(set(schema["definitions"]["building"]["required"])<=set(event["object"]))
+            self.assertEqual(set(event["object"])-set(schema["definitions"]["building"]["properties"]),set())
+            self.assertEqual(event["object"]["owner_ref"],"city:ufa")
+            self.assertTrue(event["payload"]["city_object"])
+            self.assertEqual(event["payload"]["catalog_namespace"],"city_objects")
+            import json
+            self.assertLessEqual(len(json.dumps(event,ensure_ascii=False,separators=(",",":")).encode()),2048)
 
     def test_catalog_limits_trap(self):
         bad=copy.deepcopy(self.data)

@@ -23,7 +23,9 @@
       "weight": 2,
       "model_id": "city_city_hall",
       "placeholder": "block",
-      "seasonal": false
+      "seasonal": false,
+      "style_id": "civic",
+      "color_rgb": 10987933
     },
     {
       "id": "school",
@@ -46,7 +48,9 @@
       "weight": 3,
       "model_id": "city_school",
       "placeholder": "block",
-      "seasonal": false
+      "seasonal": false,
+      "style_id": "civic",
+      "color_rgb": 10987933
     },
     {
       "id": "hospital",
@@ -69,7 +73,9 @@
       "weight": 1,
       "model_id": "city_hospital",
       "placeholder": "block",
-      "seasonal": false
+      "seasonal": false,
+      "style_id": "civic",
+      "color_rgb": 10987933
     },
     {
       "id": "clinic",
@@ -92,7 +98,9 @@
       "weight": 3,
       "model_id": "city_clinic",
       "placeholder": "block",
-      "seasonal": false
+      "seasonal": false,
+      "style_id": "civic",
+      "color_rgb": 10987933
     },
     {
       "id": "park",
@@ -115,7 +123,9 @@
       "weight": 5,
       "model_id": "city_park",
       "placeholder": "flat",
-      "seasonal": false
+      "seasonal": false,
+      "style_id": "public_green",
+      "color_rgb": 5214810
     },
     {
       "id": "sports_ground",
@@ -138,7 +148,9 @@
       "weight": 5,
       "model_id": "city_sports_ground",
       "placeholder": "flat",
-      "seasonal": false
+      "seasonal": false,
+      "style_id": "public_green",
+      "color_rgb": 5214810
     },
     {
       "id": "bus_stop",
@@ -163,7 +175,9 @@
       "weight": 6,
       "model_id": "city_bus_stop",
       "placeholder": "block",
-      "seasonal": false
+      "seasonal": false,
+      "style_id": "transport",
+      "color_rgb": 7641004
     },
     {
       "id": "station",
@@ -186,7 +200,9 @@
       "weight": 1,
       "model_id": "city_station",
       "placeholder": "block",
-      "seasonal": false
+      "seasonal": false,
+      "style_id": "transport",
+      "color_rgb": 7641004
     },
     {
       "id": "fire_station",
@@ -210,7 +226,9 @@
       "weight": 2,
       "model_id": "city_fire_station",
       "placeholder": "block",
-      "seasonal": false
+      "seasonal": false,
+      "style_id": "industrial_civic",
+      "color_rgb": 6980755
     },
     {
       "id": "police_station",
@@ -234,7 +252,9 @@
       "weight": 2,
       "model_id": "city_police_station",
       "placeholder": "block",
-      "seasonal": false
+      "seasonal": false,
+      "style_id": "civic",
+      "color_rgb": 10987933
     },
     {
       "id": "market",
@@ -258,7 +278,9 @@
       "weight": 3,
       "model_id": "city_market",
       "placeholder": "block",
-      "seasonal": false
+      "seasonal": false,
+      "style_id": "commercial",
+      "color_rgb": 13213790
     },
     {
       "id": "mosque",
@@ -281,7 +303,9 @@
       "weight": 2,
       "model_id": "city_mosque",
       "placeholder": "block",
-      "seasonal": false
+      "seasonal": false,
+      "style_id": "cultural",
+      "color_rgb": 13876624
     },
     {
       "id": "temple",
@@ -304,7 +328,9 @@
       "weight": 2,
       "model_id": "city_temple",
       "placeholder": "block",
-      "seasonal": false
+      "seasonal": false,
+      "style_id": "cultural",
+      "color_rgb": 13876624
     },
     {
       "id": "culture_center",
@@ -327,7 +353,9 @@
       "weight": 2,
       "model_id": "city_culture_center",
       "placeholder": "block",
-      "seasonal": false
+      "seasonal": false,
+      "style_id": "civic",
+      "color_rgb": 10987933
     },
     {
       "id": "housing_block",
@@ -350,7 +378,9 @@
       "weight": 7,
       "model_id": "city_housing_block",
       "placeholder": "block",
-      "seasonal": false
+      "seasonal": false,
+      "style_id": "residential",
+      "color_rgb": 14065791
     },
     {
       "id": "water_works",
@@ -374,7 +404,9 @@
       "weight": 2,
       "model_id": "city_water_works",
       "placeholder": "block",
-      "seasonal": false
+      "seasonal": false,
+      "style_id": "industrial_civic",
+      "color_rgb": 6980755
     },
     {
       "id": "power_substation",
@@ -398,7 +430,9 @@
       "weight": 2,
       "model_id": "city_power_substation",
       "placeholder": "block",
-      "seasonal": false
+      "seasonal": false,
+      "style_id": "industrial_civic",
+      "color_rgb": 6980755
     },
     {
       "id": "gas_station_utility",
@@ -421,7 +455,9 @@
       "weight": 2,
       "model_id": "city_gas_station_utility",
       "placeholder": "block",
-      "seasonal": false
+      "seasonal": false,
+      "style_id": "industrial_civic",
+      "color_rgb": 6980755
     },
     {
       "id": "bridge",
@@ -444,7 +480,9 @@
       "weight": 1,
       "model_id": "city_bridge",
       "placeholder": "flat",
-      "seasonal": false
+      "seasonal": false,
+      "style_id": "transport",
+      "color_rgb": 7641004
     },
     {
       "id": "embankment",
@@ -467,7 +505,9 @@
       "weight": 1,
       "model_id": "city_embankment",
       "placeholder": "flat",
-      "seasonal": false
+      "seasonal": false,
+      "style_id": "public_green",
+      "color_rgb": 5214810
     },
     {
       "id": "office_block",
@@ -491,7 +531,9 @@
       "weight": 3,
       "model_id": "city_office_block",
       "placeholder": "block",
-      "seasonal": false
+      "seasonal": false,
+      "style_id": "commercial",
+      "color_rgb": 13213790
     },
     {
       "id": "shopping_center",
@@ -515,7 +557,9 @@
       "weight": 2,
       "model_id": "city_shopping_center",
       "placeholder": "block",
-      "seasonal": false
+      "seasonal": false,
+      "style_id": "commercial",
+      "color_rgb": 13213790
     }
   ]
 }
