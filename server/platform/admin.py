@@ -195,20 +195,40 @@ def players(body,ctx):
     actor,err=_need(ctx,READ)
     if err:return err
     q=_query(ctx,'q','').strip(); page=max(1,int(_query(ctx,'page','1'))); limit=min(100,max(1,int(_query(ctx,'limit','25')))); like='%'+q+'%'
-    rows=ctx['conn'].execute('SELECT id,username,email,role,is_blocked,created_at FROM accounts WHERE username ILIKE %s OR COALESCE(email,\'\') ILIKE %s ORDER BY id DESC LIMIT %s OFFSET %s',(like,like,limit,(page-1)*limit)).fetchall()
-    return 200,{'page':page,'limit':limit,'items':[{'id':r[0],'username':r[1],'email':r[2],'role':r[3],'blocked':r[4],'registered_at':r[5].isoformat()} for r in rows]}
+    rows=ctx['conn'].execute('SELECT id,username,role,is_blocked,created_at FROM accounts WHERE username ILIKE %s OR COALESCE(email,\'\') ILIKE %s ORDER BY id DESC LIMIT %s OFFSET %s',(like,like,limit,(page-1)*limit)).fetchall()
+    return 200,{'page':page,'limit':limit,'items':[{'id':r[0],'username':r[1],'role':r[2],'blocked':r[3],'registered_at':r[4].isoformat()} for r in rows]}
 
 
 def player_detail(body,ctx):
-    actor,err=_need(ctx,READ)
+    from . import admin_server
+    actor,err=admin_server.guard(ctx)
     if err:return err
-    pid=int(ctx['path_params']['id']); row=ctx['conn'].execute('SELECT id,username,email,role,is_blocked,created_at FROM accounts WHERE id=%s',(pid,)).fetchone()
+    pid=int(ctx['path_params']['id'])
+    row=ctx['conn'].execute('SELECT id,username,role,is_blocked,created_at FROM accounts WHERE id=%s',(pid,)).fetchone()
     if not row:return 404,{'error':'not_found'}
-    wallet=ctx['conn'].execute('SELECT balance FROM ledger_accounts WHERE account_key=%s',('player:'+row[1].lower(),)).fetchone()
-    enterprises=[]
-    if _table(ctx['conn'],'enterprises'): enterprises=[{'id':x[0],'name':x[1],'city_id':x[2],'running':x[3]} for x in ctx['conn'].execute('SELECT id,name,city_id,running FROM enterprises WHERE owner_id=%s AND sold_at IS NULL',(pid,)).fetchall()]
-    parcels=ctx['conn'].execute("SELECT px,py,city_id FROM world_parcels WHERE owner_kind='player' AND owner_ref=%s",(str(pid),)).fetchall() if _table(ctx['conn'],'world_parcels') else []
-    return 200,{'id':row[0],'username':row[1],'email':row[2],'role':row[3],'blocked':row[4],'registered_at':row[5].isoformat(),'wallet':int(wallet[0]) if wallet else 0,'enterprises':enterprises,'parcels':[{'px':x[0],'py':x[1],'city_id':x[2]} for x in parcels]}
+    conn=ctx['conn']
+    wallet=conn.execute('SELECT id,balance FROM ledger_accounts WHERE account_key=%s',('player:'+row[1].lower(),)).fetchone()
+    enterprises=[{'id':r[0],'name':r[1],'city_id':r[2],'running':r[3],
+                  'stage':int(r[4]),'idle':not r[3] or r[4]<4 or bool(r[5]),
+                  'arrears':bool(r[5])} for r in conn.execute('''SELECT e.id,e.name,e.city_id,e.running,e.stage,
+                  EXISTS(SELECT 1 FROM enterprise_arrears ar WHERE ar.enterprise_id=e.id AND ar.paid_at IS NULL)
+                  OR EXISTS(SELECT 1 FROM enterprise_build_waits bw WHERE bw.enterprise_id=e.id)
+                  FROM enterprises e WHERE e.owner_id=%s AND e.sold_at IS NULL ORDER BY e.id DESC LIMIT 100''',(pid,)).fetchall()]
+    parcels=conn.execute("SELECT px,py,city_id FROM world_parcels WHERE owner_kind='player' AND owner_ref=%s ORDER BY px,py LIMIT 100",(str(pid),)).fetchall()
+    entries=[]
+    if wallet:
+        entries=[{'transfer_id':r[0],'amount':int(r[1]),'at':r[2].isoformat()} for r in conn.execute('''SELECT t.id,e.amount,t.created_at
+             FROM ledger_entries e JOIN ledger_transfers t ON t.id=e.transfer_id
+             WHERE e.account_id=%s ORDER BY t.id DESC LIMIT 20''',(wallet[0],)).fetchall()]
+    # Audit payload may contain arbitrary historical data. Return only safe metadata.
+    actions=[{'id':r[0],'actor':r[1],'role':r[2],'action':r[3],
+              'at':r[4].isoformat()} for r in conn.execute('''SELECT id,actor,actor_role,action,created_at FROM audit
+              WHERE target_account_id=%s ORDER BY id DESC LIMIT 20''',(pid,)).fetchall()]
+    return 200,{'id':row[0],'username':row[1],'role':row[2],'blocked':row[3],
+                'registered_at':row[4].isoformat(),'wallet':int(wallet[1]) if wallet else 0,
+                'enterprises':enterprises,
+                'parcels':[{'px':r[0],'py':r[1],'city_id':r[2]} for r in parcels],
+                'wallet_entries':entries,'audit_actions':actions}
 
 
 def block_player(body,ctx):

@@ -56,3 +56,25 @@ textarea { min-height: 84px; resize: vertical; }
 .notice { padding: 13px; border-left: 3px solid var(--amber); color: var(--muted); background: #3d2d1444; }
 @media (max-width: 760px) { .grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } .row { align-items: flex-start; flex-direction: column; } }
 @media (max-width: 390px) { .shell { padding-inline: 11px; } .grid { gap: 9px; } .metric { padding: 13px; } .metric strong { font-size: 22px; } .card { padding: 17px; } }
+
+/* A2: accessible tables, chart and light/dark mobile layouts. */
+.table-scroll { width: 100%; max-width: 100%; overflow-x: auto; margin-bottom: 18px; }
+table { width: 100%; border-collapse: collapse; text-align: left; font-size: 13px; }
+th,td { border-bottom: 1px solid var(--line); padding: 10px 12px; overflow-wrap: anywhere; }
+svg { width: 100%; height: auto; min-height: 120px; }
+#content > .panel { margin-top: 14px; }
+@media (prefers-color-scheme: light) {
+  :root { color-scheme: light; --bg: #eff7f0; --panel: #fff; --panel-soft: #f5f9f5;
+    --line: #c9dbd2; --text: #12372e; --muted: #4a675d; --mint: #287d55;
+    --amber: #a45c10; --danger: #a92d25; }
+  body { background: linear-gradient(130deg,#eaf4ed,#f8fcf8); }
+  input, select, textarea { background: #fff; color: var(--text); }
+  .metric,.panel,.card,.row { box-shadow: 0 8px 24px #12372e10; }
+  .primary,.secondary,.tab.active { color: #fff; }
+}
+@media (max-width: 400px) {
+  .grid { grid-template-columns: minmax(0,1fr) minmax(0,1fr); }
+  .metric strong { font-size: 19px; }
+  .tab { padding: 10px 12px; }
+  .table-scroll table { min-width: 390px; }
+}

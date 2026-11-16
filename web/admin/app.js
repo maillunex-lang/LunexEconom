@@ -3,8 +3,10 @@
   const config = window.ADMIN_CONFIG || {};
   const apiBase = String(config.apiBase || '/lunexeconom/v2/admin-api/').replace(/\/$/, '');
   let token = sessionStorage.getItem('lunex_admin_token') || '';
-  let currentRole = '';
+  let currentRole = sessionStorage.getItem('lunex_admin_role') || '';
 
+  const numberRu = (value) => Number(value || 0).toLocaleString('ru-RU');
+  const dateRu = (value) => value ? new Date(value).toLocaleString('ru-RU') : '—';
   const $ = (selector) => document.querySelector(selector);
   const escapeHtml = (value) => String(value ?? '').replace(/[&<>"']/g, (char) => ({
     '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
@@ -41,6 +43,7 @@
       ${metric('Сверка журнала', reconcileText)}
       ${metric('Версия', data.version)}
     </div>`;
+    refreshAlertsBadge();
   }
 
   function renderPlayers(data) {
@@ -48,7 +51,7 @@
     $('#players-list').innerHTML = items.length ? items.map((player) => `
       <article class="row">
         <div class="row-main"><b>${escapeHtml(player.username)}</b>
-          <div class="hint">${escapeHtml(player.email || 'почта не указана')} · роль ${escapeHtml(player.role)}</div>
+          <div class="hint">Роль: ${escapeHtml(player.role)}</div>
         </div>
         <div class="actions">
           <span class="status ${player.blocked ? 'danger' : ''}">${player.blocked ? 'Заблокирован' : 'Активен'}</span>
@@ -70,7 +73,7 @@
     $('#content').innerHTML = `<div class="panel">
       <button id="back-players" class="button ghost" type="button">← К списку</button>
       <h2>${escapeHtml(player.username)}</h2>
-      <p class="muted">${escapeHtml(player.email || 'почта не указана')} · ${escapeHtml(player.role)}</p>
+      <p class="muted">Роль: ${escapeHtml(player.role)}</p>
       <div class="grid">
         ${metric('Кошелёк', player.wallet)}
         ${metric('Предприятия', (player.enterprises || []).length)}
@@ -81,6 +84,13 @@
         <button id="toggle-block" class="button ${player.blocked ? 'secondary' : 'danger-button'}" type="button">${player.blocked ? 'Разблокировать' : 'Заблокировать'}</button>
         <button id="revoke-player" class="button ghost" type="button">Сбросить сессии</button>
       </div>
+      <hr>
+      <h3>Предприятия</h3>
+      ${table(player.enterprises || [], ['name', 'city_id', 'stage', 'idle'])}
+      <h3>Проводки кошелька</h3>
+      ${table(player.wallet_entries || [], ['transfer_id', 'amount', 'at'])}
+      <h3>Последние действия по игроку</h3>
+      ${table(player.audit_actions || [], ['actor', 'action', 'at'])}
       <hr>
       <h3>Компенсация</h3>
       <form id="compensate-form" class="form">
@@ -148,9 +158,86 @@
     });
   }
 
+  function table(items, fields) {
+    if (!items.length) return '<p class="muted">Данных пока нет.</p>';
+    return `<div class="table-scroll"><table><thead><tr>${fields.map(k => `<th>${escapeHtml(k)}</th>`).join('')}</tr></thead><tbody>${items.map(item => `<tr>${fields.map(k => `<td>${escapeHtml(k === 'at' ? dateRu(item[k]) : item[k])}</td>`).join('')}</tr>`).join('')}</tbody></table></div>`;
+  }
+
+  async function refreshAlertsBadge() {
+    try { const data = await api('/alerts'); $('#alerts-count').textContent = data.count ? `(${numberRu(data.count)})` : ''; }
+    catch { $('#alerts-count').textContent = ''; }
+  }
+
+  async function loadEconomy() {
+    const data = await api('/economy');
+    $('#content').innerHTML = `<div class="grid">
+      ${metric('Деньги игроков', numberRu(data.player_money))}
+      ${metric('Казна', numberRu(data.treasury))}
+      ${metric('Итог ledger', numberRu(data.ledger_total))}
+      ${metric('Сверка', data.reconcile.ok ? 'Сходится' : 'Расхождение')}
+      ${metric('Игроки', numberRu(data.players))}
+      ${metric('Активных 24 ч', numberRu(data.active_24h))}
+      ${metric('Активных 7 дней', numberRu(data.active_7d))}
+      ${metric('Розница за 7 игровых дней', numberRu(data.revenue_7d))}
+      ${metric('НДС за 7 игровых дней', numberRu(data.tax_7d))}
+    </div><section class="panel"><h2>Динамика экономики</h2><div id="economy-chart"></div></section>
+    <section class="panel"><h2>Системные счета</h2>${table(data.system_accounts,['account','balance'])}</section>
+    <section class="panel"><h2>Предприятия по типам</h2>${table(data.enterprises_by_building,['building','count'])}</section>
+    <section class="panel"><h2>Предприятия по стадии</h2>${table(data.enterprises_by_stage,['stage','count'])}</section>
+    <section class="panel"><h2>Продажи по товарам</h2>${table(data.sales_7d,['product','quantity','revenue'])}</section>
+    <section class="panel"><h2>Выпуск продукции</h2><p class="hint">Фактический выпуск по игровым дням после подключения A2.</p>${table(data.production_7d,['product','quantity'])}</section>
+    <section class="panel"><h2>Лидеры по деньгам</h2>${table(data.top_money,['name','money'])}</section>
+    <section class="panel"><h2>Лидеры по предприятиям</h2>${table(data.top_enterprises,['name','count'])}</section>`;
+    const history = await api('/economy/history?days=30');
+    const rows = history.items || [];
+    if (!rows.length) { $('#economy-chart').textContent='Снимков пока нет.'; return; }
+    const max = Math.max(1,...rows.map(row => Number(row.player_money)));
+    const points = rows.map((row,i) => `${20 + i*660/Math.max(1, rows.length-1)},${178 - 155*Number(row.player_money)/max}`).join(' ');
+    $('#economy-chart').innerHTML = `<svg viewBox="0 0 700 200" role="img" aria-label="Деньги игроков по игровым дням" preserveAspectRatio="xMidYMid meet"><title>Динамика денег игроков</title><path d="M20 178 H680" stroke="currentColor" opacity=".4" fill="none"/><polyline points="${points}" fill="none" stroke="var(--mint)" stroke-width="3" stroke-linejoin="round"/></svg>`;
+  }
+
+  async function loadCities(query = '') {
+    const data=await api('/cities?limit=100');
+    const cities=(data.items || []).filter(c=>`${c.name} ${c.id}`.toLocaleLowerCase('ru').includes(query.toLocaleLowerCase('ru')));
+    $('#content').innerHTML = `<div class="toolbar"><input id="city-filter" aria-label="Фильтр города" placeholder="Поиск города" value="${escapeHtml(query)}" /></div><div class="list">${cities.map(c=>`<article class="row"><div class="row-main"><b>${escapeHtml(c.name)}</b><p class="hint">Уровень ${c.level} · радиус ${numberRu(c.radius)} · застройка ${numberRu(c.occupancy_percent)}% · население ${numberRu(c.population)} · зданий ${numberRu(c.buildings)}</p></div><div class="actions"><span class="status ${c.growth_enabled ? '' : 'danger'}">Рост ${c.growth_enabled ? 'включён' : 'выключен'}</span>${['owner','admin'].includes(currentRole) ? `<button class="button secondary" data-city="${escapeHtml(c.id)}" data-enabled="${c.growth_enabled}" type="button">Переключить</button>` : ''}</div></article>`).join('') || '<p>Городов нет.</p>'}</div>`;
+    $('#city-filter').oninput=(event)=>loadCities(event.target.value);
+    document.querySelectorAll('[data-city]').forEach(button=>button.onclick=async()=>{
+      const reason=window.prompt('Укажите причину изменения роста города:');
+      if (!reason?.trim()) return;
+      if (!window.confirm('Подтвердить изменение статуса роста?'))return;
+      const id=button.dataset.city;
+      const requestId = `growth-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+      try { await api(`/cities/${encodeURIComponent(id)}/growth`,{method:'POST',body:JSON.stringify({enabled:button.dataset.enabled !== 'true',reason,request_id:requestId})}); await loadCities(query); }
+      catch(error){window.alert(error.message);}
+    });
+  }
+
+  async function loadEvents(after=0) {
+    const data=await api(`/world/events?limit=50&after=${after}`);
+    $('#content').innerHTML=`<section class="panel"><h2>События мира</h2>${table(data.items,['id','kind','city_id','at'])}<button class="button ghost" id="events-next" type="button" ${data.next_after===null ? 'disabled' : ''}>Следующие события</button></section>`;
+    $('#events-next').onclick=()=>loadEvents(data.next_after);
+  }
+
+  async function loadServer() {
+    const [state,errors]=await Promise.all([api('/server'),api('/errors?limit=50')]);
+    $('#content').innerHTML=`<div class="grid">${metric('Версия',state.version)}${metric('SHA',state.sha)}${metric('Время работы, с',numberRu(state.uptime_seconds))}${metric('Размер БД, байт',numberRu(state.database_size_bytes))}${metric('Активные админ-сессии',numberRu(state.admin_sessions_active))}${metric('Миграции',numberRu(state.migrations.count))}${metric('SHA-256 миграций',state.migrations.sha256_ok?'Совпадает':'Расхождение')}</div><section class="panel"><h2>Последние 50 тиков</h2>${table(state.ticks,['day','duration_ms','completed','error'])}</section><section class="panel"><h2>Ошибки</h2>${table(errors.items,['id','origin','day_index','error_code','at'])}</section>`;
+  }
+
+  async function loadAlerts() {
+    const data=await api('/alerts');
+    $('#content').innerHTML=`<section class="panel"><h2>Алерты (${numberRu(data.count)})</h2><div class="list">${(data.items||[]).map(a=>`<article class="row"><span class="status ${a.level==='crit'?'danger':''}">${escapeHtml(a.level)}</span><div class="row-main"><b>${escapeHtml(a.text)}</b><p class="hint">${escapeHtml(a.code)}</p></div><button class="button ghost" data-open-alert="${escapeHtml(a.link.slice(1))}" type="button">Открыть</button></article>`).join('') || '<p class="muted">Активных предупреждений нет.</p>'}</div></section>`;
+    document.querySelectorAll('[data-open-alert]').forEach(b=>b.onclick=()=>loadTab(b.dataset.openAlert==='ticks'?'server':b.dataset.openAlert));
+    await refreshAlertsBadge();
+  }
+
   async function loadTab(name) {
     document.querySelectorAll('.tab').forEach((tab) => tab.classList.toggle('active', tab.dataset.tab === name));
     try {
+      if (name === 'economy') await loadEconomy();
+      if (name === 'cities') await loadCities();
+      if (name === 'events') await loadEvents();
+      if (name === 'server') await loadServer();
+      if (name === 'alerts') await loadAlerts();
       if (name === 'overview') renderOverview(await api('/overview'));
       if (name === 'players') {
         $('#content').innerHTML = '<div class="toolbar"><input id="player-query" placeholder="Логин или почта"><button id="player-search" class="button primary" type="button">Найти</button></div><div id="players-list" class="list"></div>';
@@ -177,10 +264,11 @@
       token = data.token;
       currentRole = data.role;
       sessionStorage.setItem('lunex_admin_token', token);
+      sessionStorage.setItem('lunex_admin_role', currentRole);
       showLoggedIn();
     } catch (error) { $('#login-error').textContent = error.message; }
   };
   document.querySelectorAll('.tab').forEach((tab) => tab.onclick = () => loadTab(tab.dataset.tab));
-  $('#logout').onclick = async () => { try { await api('/logout', { method: 'POST' }); } finally { sessionStorage.removeItem('lunex_admin_token'); location.reload(); } };
+  $('#logout').onclick = async () => { try { await api('/logout', { method: 'POST' }); } finally { sessionStorage.removeItem('lunex_admin_token'); sessionStorage.removeItem('lunex_admin_role'); location.reload(); } };
   if (token) showLoggedIn();
 })();
