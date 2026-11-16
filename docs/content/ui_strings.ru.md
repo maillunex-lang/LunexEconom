@@ -191,3 +191,12 @@ server.error | Ошибка сервера
 server.maintenance | Сервер на обслуживании
 client.update | Доступно обновление
 client.outdated | Клиент устарел. Обновите приложение
+build.material.missing | Не хватает материала: {name}
+build.material.stage | Нужно на стадию: {name} {needed} шт., на складе {have}
+build.waiting_materials | Стройка ждёт материалы
+build.materials.hold_money | Деньги стадии не списаны: ждём материалы
+supply.fuel.liters | Расход топлива рейса: {liters} л
+supply.fuel.same_city | Внутри города рейс топливо не тратит
+city.gas | Газ для города
+city.gas.need | Городу сегодня нужно {m3} м³ газа
+retail.hardware.note | Эти полки для стройки, не для еды
