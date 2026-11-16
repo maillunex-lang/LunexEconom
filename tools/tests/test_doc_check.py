@@ -37,6 +37,10 @@ class DocCheckTests(unittest.TestCase):
         r = self.run_on("[v2] `docs/future.md`\n`rikagro.ru/createportal/`\n`docs/<id>.md`\nПланируется `a/b.md`\nСкелет: `c/d.md`")
         self.assertEqual(r, [])
 
+    def test_planned_sections_are_skipped_until_next_heading(self):
+        r = self.run_on("## Серверная часть (A9, планируется)\n`/api/ghost/one` `docs/nope.md`\n## Готово\n`/api/ghost/two`")
+        self.assertEqual([(k, t) for _, _, k, t in r], [("route", "/api/ghost/two")])
+
     def test_path_param_segments_ignored_in_routes(self):
         r = self.run_on("`/api/projects/{slug}/login`", blob="/api/projects /login")
         self.assertEqual(r, [])

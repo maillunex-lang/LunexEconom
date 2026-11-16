@@ -50,8 +50,11 @@ def check_file(path, blob):
     findings = []
     text = path.read_text(encoding="utf-8", errors="ignore")
     rel = str(path.relative_to(ROOT))
+    skip_section = False
     for n, line in enumerate(text.splitlines(), 1):
-        if SKIP_LINE.search(line):
+        if line.startswith("#"):
+            skip_section = bool(SKIP_LINE.search(line))
+        if skip_section or SKIP_LINE.search(line):
             continue
         for m in BACKTICK.finditer(line):
             token = m.group(1).strip()
