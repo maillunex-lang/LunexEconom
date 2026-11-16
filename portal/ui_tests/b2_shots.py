@@ -59,7 +59,7 @@ def main():
                             page.get_by_role('button',name='Настройки и безопасность портала').click()
                             page.get_by_role('heading',name='Журнал аудита').wait_for()
                             page.get_by_text('План синхронизирован').wait_for()
-                            assert page.locator('.b2-field input').count()==3
+                            assert page.locator('.b2-field input').count()==4
                             assert page.evaluate('document.documentElement.scrollWidth<=innerWidth')
                             page.screenshot(path=str(args.output/f'b2-settings-{width}x{height}-{theme}.png'))
                             print('OK settings',width,theme)
