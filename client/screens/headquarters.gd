@@ -113,7 +113,7 @@ func _actions() -> Control:
     var buttons := GridContainer.new()
     buttons.columns = 2
     card.add_child(buttons)
-    for key in [["ui2.hq.map","map"],["nav.enterprises","enterprises"],["update.screen.retry","refresh"],["main.menu.settings","settings"],["client.update","updates"],["auth.logout","logout"]]:
+    for key in [["ui2.hq.map","map"],["ui2.hq.enterprises","enterprises"],["update.screen.retry","refresh"],["main.menu.settings","settings"],["client.update","updates"],["auth.logout","logout"]]:
         var button := Components.button(str(key[0]),"secondary")
         button.name = str(key[1]).capitalize()
         button.custom_minimum_size.y = 52
