@@ -1,0 +1,39 @@
+# VPS-ADM: insert the following locations INSIDE the existing rikagro.ru HTTPS server.
+# Add only, preserve all existing locations (especially ^~ /lunexeconom/v2/api/admin/).
+# These blocks MUST NOT be loaded from http-level conf.d as-is.
+#
+# location = /lunexeconom/admin { return 308 /lunexeconom/admin/; }
+location ^~ /lunexeconom/admin/ {
+    alias /var/www/rikagro-game/lunexeconom-admin/;
+    index index.html;
+    autoindex off;
+    try_files $uri $uri/ =404;
+    add_header Cache-Control "no-store" always;
+    add_header X-Robots-Tag "noindex, nofollow" always;
+    add_header X-Frame-Options DENY always;
+    add_header X-Content-Type-Options nosniff always;
+    add_header Referrer-Policy no-referrer always;
+    add_header Content-Security-Policy "default-src 'self'; img-src 'self' data:; style-src 'self'; script-src 'self'; connect-src 'self'; frame-ancestors 'none'" always;
+}
+location = /lunexeconom/v2/admin-api/login {
+    limit_req zone=lunex_admin_login burst=4 nodelay;
+    limit_req_status 429;
+    client_max_body_size 64k;
+    proxy_pass http://127.0.0.1:18777/admin/login;
+    proxy_set_header Host $host;
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_set_header X-Forwarded-For $remote_addr;
+    proxy_read_timeout 15s;
+    add_header Cache-Control "no-store" always;
+}
+location ^~ /lunexeconom/v2/admin-api/ {
+    limit_req zone=lunex_admin burst=10 nodelay;
+    limit_req_status 429;
+    client_max_body_size 64k;
+    proxy_pass http://127.0.0.1:18777/admin/;
+    proxy_set_header Host $host;
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_set_header X-Forwarded-For $remote_addr;
+    proxy_read_timeout 15s;
+    add_header Cache-Control "no-store" always;
+}

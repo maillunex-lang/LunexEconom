@@ -1,0 +1,4 @@
+# VPS-ADM: /etc/nginx/conf.d/lunexeconom-admin-limits.conf
+# nginx.conf includes conf.d/*.conf in the http context.
+limit_req_zone $binary_remote_addr zone=lunex_admin:10m rate=30r/m;
+limit_req_zone $binary_remote_addr zone=lunex_admin_login:10m rate=6r/m;
