@@ -12,9 +12,11 @@ static func margins(viewport_size: Vector2, physical_size: Vector2i, safe: Rect2
     result.bottom = maxi(padding, roundi((physical_size.y - safe.end.y) * ratio_y) + padding)
     return result
 
-static func apply(container: MarginContainer, viewport_size: Vector2) -> void:
+static func apply(container: MarginContainer, viewport_size: Vector2, test_safe: Rect2i = Rect2i(), test_physical: Vector2i = Vector2i.ZERO) -> void:
     var m := {"left":12,"top":12,"right":12,"bottom":12}
-    if OS.has_feature("mobile"):
+    if test_physical != Vector2i.ZERO:
+        m = margins(viewport_size,test_physical,test_safe)
+    elif OS.has_feature("mobile"):
         m = margins(viewport_size,DisplayServer.screen_get_size(),DisplayServer.get_display_safe_area())
     for side in ["left","top","right","bottom"]:
         container.add_theme_constant_override("margin_"+side,m[side])

@@ -268,7 +268,7 @@ func _on_viewport_resized() -> void:
     build_screen.resize_ui(size_now)
     supply_screen.resize_ui(size_now)
     store_screen.resize_ui(size_now)
-    update_screen.resize_ui(size_now)
+    update_screen.resize_panel(size_now)
     if tutorial_guide != null:
         tutorial_guide.set_anchors_and_offsets_preset(Control.PRESET_TOP_RIGHT)
         tutorial_guide.offset_left = -minf(450.0, size_now.x * 0.39)
@@ -406,14 +406,16 @@ func _send_auth(mode: String) -> void:
         status_label.text = Strings.get_text("auth.register.error.weak")
         return
     _auth_busy = true
-    login_screen.set_loading(true)
-    status_label.text = Strings.get_text("ui.auth.loading")
+    status_label.text = Strings.get_text("loading")
+    login_screen.action.disabled = true
+    login_screen.action.text = Strings.get_text("loading")
     var data := {"username":username,"password":password}
     if mode == "register":
         data["email"] = email
     var response: Dictionary = await _api("/auth/" + mode,HTTPClient.METHOD_POST,data)
     _auth_busy = false
-    login_screen.set_loading(false)
+    login_screen.action.disabled = false
+    login_screen.action.text = Strings.get_text("auth.register.button" if mode == "register" else "auth.login.button")
     if response.code != 200 and response.code != 201:
         status_label.text = _auth_error_text(mode, response)
         return

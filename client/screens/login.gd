@@ -2,6 +2,7 @@ extends Control
 signal authenticate(mode: String)
 const Strings = preload("res://i18n/strings.gd")
 const Forest = preload("res://theme/forest_glass.gd")
+const UI = preload("res://ui/components.gd")
 var card: PanelContainer
 var scroll: ScrollContainer
 var form: VBoxContainer
@@ -16,55 +17,49 @@ var tab_register: Button
 var action: Button
 var backdrop: ColorRect
 var brand: VBoxContainer
-var layout: HBoxContainer
-var reveal: Button
-var fields_row: HBoxContainer
+var brand_title: Label
+var content_row: HBoxContainer
+var form_column: VBoxContainer
+var visibility_button: Button
 
 func _ready() -> void:
     set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
     backdrop = ColorRect.new()
-    backdrop.color = Forest.COLORS.background
     backdrop.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+    backdrop.color = Forest.COLORS.background
     backdrop.mouse_filter = Control.MOUSE_FILTER_IGNORE
     add_child(backdrop)
-    # Full-canvas background remains visible beyond every device cutout.
-    var glow := ColorRect.new()
-    glow.color = Color("123e31")
-    glow.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-    glow.mouse_filter = Control.MOUSE_FILTER_IGNORE
-    add_child(glow)
-    var margin := MarginContainer.new()
-    margin.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-    margin.add_theme_constant_override("margin_left",24)
-    margin.add_theme_constant_override("margin_right",24)
-    margin.add_theme_constant_override("margin_top",16)
-    margin.add_theme_constant_override("margin_bottom",16)
-    add_child(margin)
-    layout = HBoxContainer.new()
-    layout.alignment = BoxContainer.ALIGNMENT_CENTER
-    margin.add_child(layout)
+    content_row = HBoxContainer.new()
+    content_row.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+    content_row.add_theme_constant_override("separation",32)
+    add_child(content_row)
     brand = VBoxContainer.new()
     brand.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-    var brand_title := Label.new()
+    brand.alignment = BoxContainer.ALIGNMENT_CENTER
+    content_row.add_child(brand)
+    brand_title = Label.new()
     brand_title.text = Strings.get_text("main.title")
+    brand_title.add_theme_font_size_override("font_size",28)
     brand_title.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
     brand_title.add_theme_color_override("font_color",Forest.COLORS.accent)
     brand.add_child(brand_title)
-    var slogan := Label.new()
-    slogan.text = Strings.get_text("ui.auth.slogan")
-    slogan.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-    brand.add_child(slogan)
-    layout.add_child(brand)
+    var tagline := UI.wrap("ui.auth.tagline")
+    brand.add_child(tagline)
+    form_column = VBoxContainer.new()
+    form_column.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+    content_row.add_child(form_column)
     scroll = ScrollContainer.new()
     scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
     scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
     scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
-    layout.add_child(scroll)
+    form_column.add_child(scroll)
     var align := CenterContainer.new()
     align.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+    align.size_flags_vertical = Control.SIZE_EXPAND_FILL
     scroll.add_child(align)
-    card = PanelContainer.new()
+    card = UI.card()
     align.add_child(card)
+    card.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
     form = VBoxContainer.new()
     card.add_child(form)
     title = Label.new()
@@ -85,19 +80,13 @@ func _ready() -> void:
     username = _field("auth.login.name")
     email = _field("auth.login.email")
     email.virtual_keyboard_type = LineEdit.KEYBOARD_TYPE_EMAIL_ADDRESS
-    fields_row = HBoxContainer.new()
-    form.add_child(fields_row)
-    password = LineEdit.new()
-    password.placeholder_text = Strings.get_text("auth.login.password")
-    password.secret = true
-    password.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-    fields_row.add_child(password)
-    reveal = Button.new()
-    reveal.text = "◉"
-    reveal.tooltip_text = Strings.get_text("ui.auth.password.show")
-    reveal.custom_minimum_size = Vector2(72,48)
-    fields_row.add_child(reveal)
-    reveal.pressed.connect(_toggle_password)
+    password = _field("auth.login.password",true)
+    visibility_button = UI.button("ui.auth.password.show","secondary")
+    form.add_child(visibility_button)
+    visibility_button.pressed.connect(func():
+        password.secret = not password.secret
+        visibility_button.text = Strings.get_text("ui.auth.password.show" if password.secret else "ui.auth.password.hide")
+    )
     action = _button("auth.login.button")
     form.add_child(action)
     action.pressed.connect(func(): authenticate.emit(mode))
@@ -109,14 +98,6 @@ func _ready() -> void:
     for field in [username,email,password]:
         field.focus_entered.connect(_ensure_field_visible.bind(field))
     set_mode("login")
-
-func _toggle_password() -> void:
-    password.secret = not password.secret
-    reveal.tooltip_text = Strings.get_text("ui.auth.password.show" if password.secret else "ui.auth.password.hide")
-
-func set_loading(busy: bool) -> void:
-    action.disabled = busy
-    action.text = Strings.get_text("ui.auth.loading") if busy else Strings.get_text("auth.register.button" if mode == "register" else "auth.login.button")
 
 ## Separate sign-in and registration: sign-in asks only for login (name or email) and password.
 func set_mode(new_mode: String) -> void:
@@ -147,35 +128,32 @@ func _field(key: String, hidden: bool = false) -> LineEdit:
     return field
 
 func _button(key: String) -> Button:
-    var button := Button.new()
-    button.text = Strings.get_text(key)
-    button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-    return button
+    return UI.button(key)
 
 func resize_ui(view_size: Vector2, keyboard_height: float = 0.0) -> void:
-    var scale := Forest.scale_for(view_size)
-    var available_height := maxf(175.0,view_size.y - keyboard_height - 32.0)
-    scroll.custom_minimum_size = Vector2.ZERO
-    # Clamp the real scroll viewport, not just its minimum size.
-    scroll.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-    scroll.custom_minimum_size.y = minf(available_height, 620.0)
-    scroll.size.y = minf(available_height,620.0)
+    # Keyboard height arrives in physical px; caller converts before passing.
     var wide := view_size.x >= 1600.0
     brand.visible = wide
-    title.visible = not wide
-    layout.add_theme_constant_override("separation",roundi(32*scale))
-    scroll.custom_minimum_size.x = minf(720.0, maxf(280.0, view_size.x * (0.40 if wide else 0.75)))
-    card.custom_minimum_size.x = minf(720.0,maxf(280.0,view_size.x * (0.39 if wide else 0.74)))
-    title.add_theme_font_size_override("font_size",roundi(24*scale))
-    var margin := roundi(24*scale)
-    var panel := Forest.rounded(Forest.COLORS.panel,18)
+    content_row.add_theme_constant_override("separation",32 if wide else 0)
+    scroll.custom_minimum_size = Vector2.ZERO
+    var available_height := maxf(175.0,view_size.y - keyboard_height - 32.0)
+    scroll.custom_minimum_size.y = minf(available_height,620.0)
+    scroll.size_flags_vertical = Control.SIZE_SHRINK_CENTER if keyboard_height > 0.0 else Control.SIZE_EXPAND_FILL
+    scroll.size.y = minf(scroll.size.y,available_height) if keyboard_height > 0.0 else scroll.size.y
+    scroll.custom_minimum_size.x = 0.0
+    card.custom_minimum_size.x = minf(720.0,maxf(280.0,view_size.x * (0.35 if wide else 0.7)))
+    title.add_theme_font_size_override("font_size",roundi(24.0 * Forest.scale_for(view_size)))
+    var margin := roundi(Forest.METRICS.padding * Forest.scale_for(view_size))
+    var panel := Forest.rounded(Forest.COLORS.panel,roundi(Forest.METRICS.radius))
     panel.content_margin_left = margin
     panel.content_margin_right = margin
     panel.content_margin_top = margin
     panel.content_margin_bottom = margin
     card.add_theme_stylebox_override("panel",panel)
     Forest.apply_touch(form,view_size)
-    Forest.apply_touch(reveal,view_size)
+    if visibility_button != null:
+        visibility_button.custom_minimum_size.y = Forest.touch_size(view_size)
+        visibility_button.custom_minimum_size.x = Forest.touch_size(view_size)
     if keyboard_height > 0.0:
         call_deferred("_scroll_focused")
 
