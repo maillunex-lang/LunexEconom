@@ -49,9 +49,9 @@ class Registry:
         if handler is None:
             import re
             for (verb, template), candidate in self.routes.items():
-                if verb != method.upper() or '{id}' not in template:
+                if verb != method.upper() or ('{id}' not in template and '{product}' not in template):
                     continue
-                regex = '^' + re.escape(template).replace(re.escape('{id}'), '(?P<id>[1-9][0-9]*)') + '$'
+                regex = '^' + re.escape(template).replace(re.escape('{id}'), '(?P<id>[1-9][0-9]*)').replace(re.escape('{product}'), '(?P<product>[A-Za-z0-9_{}]{1,80})') + '$'
                 match = re.fullmatch(regex,path)
                 if match:
                     context['path_params'] = match.groupdict()

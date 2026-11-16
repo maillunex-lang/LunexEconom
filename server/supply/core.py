@@ -261,6 +261,30 @@ def _buy(conn, day, row, product, quantity, kind, supplier, price,
     buyer_account, buyer_balance = buyer_wallet
     quality, source_city, seller_account = 50, None, None
     if kind == 'enterprise':
+        if flags.get('supply_sales_modes_enabled', False):
+            from server.sales.core import seller_allowed, current_policy
+            active = current_policy(conn, supplier, product, day)
+            if not seller_allowed(conn, supplier, owner, product, day,
+                                  via_market=via_market):
+                return 0
+            if active:
+                from server.sales.core import reserve_for_contracts, quote_score
+                # Legacy direct links cannot defeat contractual or own reserves.
+                seller_owner = conn.execute('SELECT owner_id FROM enterprises WHERE id=%s',
+                                            (supplier,)).fetchone()[0]
+                price = 0 if seller_owner == owner else active['price']
+                if seller_owner != owner:
+                    item = enterprise.stock(conn, supplier).get(product, {})
+                    if quote_score(conn,supplier,buyer_id,product,price,
+                                   item.get('quality',50),day,flags) is None:
+                        return 0
+                    available = item.get('quantity',0)
+                    if active['mode'] == 'mixed':
+                        available -= available * active['reserve_bp']//10000
+                    available -= reserve_for_contracts(conn,supplier,product,day)
+                    quantity = min(quantity,max(0,available))
+                    if not quantity:
+                        return 0
         src = conn.execute(
             'SELECT owner_id,city_id,x,y FROM enterprises '
             'WHERE id=%s AND sold_at IS NULL FOR UPDATE', (supplier,)
@@ -288,7 +312,8 @@ def _buy(conn, day, row, product, quantity, kind, supplier, price,
                 (supplier,)).fetchone()
             approved = bool(seller_policy and seller_policy[
                 1 if via_market else 0])
-            if not approved:
+            if not approved and not (flags.get('supply_sales_modes_enabled', False)
+                                 and active is not None):
                 # Sellers may decline both unsolicited direct links and
                 # implicit city-market liquidation of their inventories.
                 return 0
@@ -414,7 +439,13 @@ def _link_purchases(conn, day, row, product, needed, links, price, flags):
               if link[0] == 'enterprise']
     # A direct link above its max_price cannot deliver; its quota is a
     # shortfall the other direct links may cover.
-    eligible = [index for index in direct if price <= links[index][3]]
+    if flags.get('supply_sales_modes_enabled', False):
+        from server.sales.core import current_policy
+        eligible = [index for index in direct
+                    if (current_policy(conn, links[index][1], product, day) or
+                        {'price':price})['price'] <= links[index][3]]
+    else:
+        eligible = [index for index in direct if price <= links[index][3]]
     target = sum(quotas[index] for index in direct)
     linked = 0
 
@@ -450,11 +481,27 @@ def links_day(conn, day, flags):
     for row in _enterprises(conn):
         eid = row[0]
         for product, needed in sorted(_need(conn, row).items()):
-            conn.execute(
-                """INSERT INTO supply_daily_needs
-                (enterprise_id,product_id,day_index,requested,unfilled)
-                VALUES(%s,%s,%s,%s,%s)""",
-                (eid, product, day, needed, needed))
+            if flags.get('supply_sales_modes_enabled', False):
+                # The pre-link layer already froze demand and may have fulfilled
+                # some of it. Never place an order twice.
+                prior = conn.execute(
+                    'SELECT unfilled FROM supply_daily_needs WHERE enterprise_id=%s '
+                    'AND product_id=%s AND day_index=%s',
+                    (eid, product, day)).fetchone()
+                if prior is None:
+                    conn.execute(
+                        'INSERT INTO supply_daily_needs '
+                        '(enterprise_id,product_id,day_index,requested,unfilled) '
+                        'VALUES(%s,%s,%s,%s,%s)',
+                        (eid, product, day, needed, needed))
+                else:
+                    needed = prior[0]
+            else:
+                conn.execute(
+                    """INSERT INTO supply_daily_needs
+                    (enterprise_id,product_id,day_index,requested,unfilled)
+                    VALUES(%s,%s,%s,%s,%s)""",
+                    (eid, product, day, needed, needed))
             links = conn.execute(
                 """SELECT source_type,source_enterprise_id,share,max_price,
                 min_quality FROM supply_links WHERE enterprise_id=%s
@@ -464,6 +511,12 @@ def links_day(conn, day, flags):
             linked = _link_purchases(conn, day, row, product, needed, links,
                                      prices[product], flags)
             remaining = needed - linked
+            if flags.get('supply_sales_modes_enabled', False):
+                prior_linked = conn.execute(
+                    'SELECT linked FROM supply_daily_needs WHERE enterprise_id=%s '
+                    'AND product_id=%s AND day_index=%s',
+                    (eid,product,day)).fetchone()[0]
+                linked += prior_linked
             conn.execute(
                 """UPDATE supply_daily_needs SET linked=%s,unfilled=%s
                 WHERE enterprise_id=%s AND product_id=%s AND day_index=%s""",
@@ -516,6 +569,10 @@ def market_day(conn, day, flags):
         for product in recipe['outputs']:
             item = enterprise.stock(conn, eid).get(product)
             if item and item['quantity'] > 0:
+                if flags.get('supply_sales_modes_enabled', False):
+                    from server.sales.core import current_policy
+                    if current_policy(conn,eid,product,day):
+                        continue
                 offers[(city, product)].append([eid, item['quantity'], item['quality']])
     products = enterprise.catalog().index['products']
     # Daily quotes exist even for untraded products, as required by market API.
@@ -542,6 +599,10 @@ def market_day(conn, day, flags):
                         if not capacity:
                             break
                         seller_id, on_hand, quality = offer
+                        if flags.get('supply_sales_modes_enabled', False):
+                            from server.sales.core import current_policy
+                            if current_policy(conn,seller_id,product,day):
+                                continue
                         if seller_id == buyer_id or not on_hand or quality < minimum:
                             continue
                         try:
