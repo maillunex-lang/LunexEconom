@@ -29,6 +29,10 @@ def _mine(ctx):
     return actor,row,None
 
 def _detail(ctx,r):
+    payments=core.payment_status(ctx['conn'],r[0],r[4],r[11])
+    materials=(core.materials_status(ctx['conn'],r[0],payments['next_payment']['stage_index'])
+               if ctx.get('settings',{}).get('build_materials_required',0)==1
+               and r[4]<4 and payments['next_payment'] else None)
     return {'id':r[0],'building_id':r[2],'name':r[3],
             'stage':core.STAGES[r[4]],'stage_index':r[4],
             'running':r[5],'staffing_bp':r[6],'load_bp':r[7],
@@ -37,7 +41,8 @@ def _detail(ctx,r):
             'parcel':{'px':r[12],'py':r[13]},
             'position':{'x':r[14],'y':r[15]},
             'inventory':core.stock(ctx['conn'],r[0]),
-            **core.payment_status(ctx['conn'],r[0],r[4],r[11]),
+            **payments,
+            **({'materials_required':materials} if materials is not None else {}),
             'balance':'draft'}
 
 def create(body,ctx):
@@ -59,7 +64,8 @@ def create(body,ctx):
         y=core.integer(body.get('y',py*6),-world.MAX_REQUEST_COORD,world.MAX_REQUEST_COORD)
     except ValueError:
         return 400,{'error':'invalid_coordinates'}
-    return core.place(ctx['conn'],actor,request,building,px,py,x,y)
+    return core.place(ctx['conn'],actor,request,building,px,py,x,y,
+                      ctx.get('settings',{}).get('build_materials_required',0)==1)
 
 def plan(body,ctx):
     actor=authenticate(ctx)
@@ -89,9 +95,15 @@ def list_own(body,ctx):
         'WHERE owner_id=%s AND sold_at IS NULL ORDER BY id',
         (actor['id'],)).fetchall()
     # Preserve the original enterprise ID list for existing Android clients.
-    details=[{'id':eid,'stage_index':stage,
-              **core.payment_status(ctx['conn'],eid,stage,cost)}
-             for eid,stage,cost in rows]
+    details=[]
+    for eid,stage,cost in rows:
+        payment=core.payment_status(ctx['conn'],eid,stage,cost)
+        item={'id':eid,'stage_index':stage,**payment}
+        if (ctx.get('settings',{}).get('build_materials_required',0)==1 and stage<4
+                and payment['next_payment']):
+            item['materials_required']=core.materials_status(
+                ctx['conn'],eid,payment['next_payment']['stage_index'])
+        details.append(item)
     return 200,{'enterprises':[row[0] for row in rows], 'items':details}
 
 def one(body,ctx):

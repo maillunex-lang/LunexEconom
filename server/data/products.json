@@ -410,7 +410,7 @@
   {
     "id": "fuel",
     "name": "Топливо",
-    "description": "Бензин и дизель.",
+    "description": "Бензин и дизель. Меняется: товар потребительский, его берёт АЗС и логистика.",
     "category": "industrial",
     "unit": "liter",
     "type": "industrial",
@@ -420,8 +420,8 @@
       "min": 1,
       "max": 100
     },
-    "consumer": false,
-    "base_demand_per_capita": 0,
+    "consumer": true,
+    "base_demand_per_capita": 1,
     "elasticity": 1,
     "rating_weights": {
       "brand": 25,
@@ -590,6 +590,390 @@
     },
     "consumer": false,
     "base_demand_per_capita": 0,
+    "elasticity": 1,
+    "rating_weights": {
+      "brand": 25,
+      "quality": 35,
+      "price": 40
+    },
+    "vat_category": "draft",
+    "balance": "draft"
+  },
+  {
+    "id": "sugar_beet",
+    "name": "Сахарная свёкла",
+    "description": "Корнеплод с полей юга республики.",
+    "category": "food",
+    "unit": "kg",
+    "type": "raw",
+    "reference_price": 15,
+    "storage_life_factor": 3,
+    "quality_range": {
+      "min": 1,
+      "max": 100
+    },
+    "consumer": false,
+    "base_demand_per_capita": 0,
+    "elasticity": 1,
+    "rating_weights": {
+      "brand": 25,
+      "quality": 35,
+      "price": 40
+    },
+    "vat_category": "draft",
+    "balance": "draft"
+  },
+  {
+    "id": "feed",
+    "name": "Комбикорм",
+    "description": "Зерновая смесь для ферм и птицефабрик.",
+    "category": "food",
+    "unit": "kg",
+    "type": "intermediate",
+    "reference_price": 40,
+    "storage_life_factor": 100,
+    "quality_range": {
+      "min": 1,
+      "max": 100
+    },
+    "consumer": false,
+    "base_demand_per_capita": 0,
+    "elasticity": 1,
+    "rating_weights": {
+      "brand": 25,
+      "quality": 35,
+      "price": 40
+    },
+    "vat_category": "draft",
+    "balance": "draft"
+  },
+  {
+    "id": "flax",
+    "name": "Лён",
+    "description": "Лён с полей, сырьё для пряжи.",
+    "category": "materials",
+    "unit": "kg",
+    "type": "raw",
+    "reference_price": 30,
+    "storage_life_factor": 100,
+    "quality_range": {
+      "min": 1,
+      "max": 100
+    },
+    "consumer": false,
+    "base_demand_per_capita": 0,
+    "elasticity": 1,
+    "rating_weights": {
+      "brand": 25,
+      "quality": 35,
+      "price": 40
+    },
+    "vat_category": "draft",
+    "balance": "draft"
+  },
+  {
+    "id": "yarn",
+    "name": "Пряжа",
+    "description": "Льняная пряжа для ткацкого цеха.",
+    "category": "materials",
+    "unit": "kg",
+    "type": "intermediate",
+    "reference_price": 90,
+    "storage_life_factor": 100,
+    "quality_range": {
+      "min": 1,
+      "max": 100
+    },
+    "consumer": false,
+    "base_demand_per_capita": 0,
+    "elasticity": 1,
+    "rating_weights": {
+      "brand": 25,
+      "quality": 35,
+      "price": 40
+    },
+    "vat_category": "draft",
+    "balance": "draft"
+  },
+  {
+    "id": "boards",
+    "name": "Доски",
+    "description": "Доски с лесопилки для стройки и мебели.",
+    "category": "construction",
+    "unit": "kg",
+    "type": "construction",
+    "reference_price": 2000,
+    "storage_life_factor": 100,
+    "quality_range": {
+      "min": 1,
+      "max": 100
+    },
+    "consumer": false,
+    "base_demand_per_capita": 0,
+    "elasticity": 1,
+    "rating_weights": {
+      "brand": 25,
+      "quality": 35,
+      "price": 40
+    },
+    "vat_category": "draft",
+    "balance": "draft"
+  },
+  {
+    "id": "furniture",
+    "name": "Мебель",
+    "description": "Столы и шкафы местного цеха.",
+    "category": "consumer",
+    "unit": "piece",
+    "type": "consumer",
+    "reference_price": 5000,
+    "storage_life_factor": 100,
+    "quality_range": {
+      "min": 1,
+      "max": 100
+    },
+    "consumer": true,
+    "base_demand_per_capita": 1,
+    "elasticity": 1,
+    "rating_weights": {
+      "brand": 25,
+      "quality": 35,
+      "price": 40
+    },
+    "vat_category": "draft",
+    "balance": "draft"
+  },
+  {
+    "id": "iron_ore",
+    "name": "Железная руда",
+    "description": "Руда для белорецкой стали.",
+    "category": "industrial",
+    "unit": "kg",
+    "type": "raw",
+    "reference_price": 80,
+    "storage_life_factor": 100,
+    "quality_range": {
+      "min": 1,
+      "max": 100
+    },
+    "consumer": false,
+    "base_demand_per_capita": 0,
+    "elasticity": 1,
+    "rating_weights": {
+      "brand": 25,
+      "quality": 35,
+      "price": 40
+    },
+    "vat_category": "draft",
+    "balance": "draft"
+  },
+  {
+    "id": "coal",
+    "name": "Уголь",
+    "description": "Уголь для плавки стали.",
+    "category": "industrial",
+    "unit": "kg",
+    "type": "raw",
+    "reference_price": 50,
+    "storage_life_factor": 100,
+    "quality_range": {
+      "min": 1,
+      "max": 100
+    },
+    "consumer": false,
+    "base_demand_per_capita": 0,
+    "elasticity": 1,
+    "rating_weights": {
+      "brand": 25,
+      "quality": 35,
+      "price": 40
+    },
+    "vat_category": "draft",
+    "balance": "draft"
+  },
+  {
+    "id": "glass",
+    "name": "Стекло",
+    "description": "Листовое стекло для техники и машин.",
+    "category": "materials",
+    "unit": "kg",
+    "type": "intermediate",
+    "reference_price": 180,
+    "storage_life_factor": 100,
+    "quality_range": {
+      "min": 1,
+      "max": 100
+    },
+    "consumer": false,
+    "base_demand_per_capita": 0,
+    "elasticity": 1,
+    "rating_weights": {
+      "brand": 25,
+      "quality": 35,
+      "price": 40
+    },
+    "vat_category": "draft",
+    "balance": "draft"
+  },
+  {
+    "id": "appliances",
+    "name": "Бытовая техника",
+    "description": "Холодильники и плиты местной сборки.",
+    "category": "consumer",
+    "unit": "piece",
+    "type": "consumer",
+    "reference_price": 8000,
+    "storage_life_factor": 100,
+    "quality_range": {
+      "min": 1,
+      "max": 100
+    },
+    "consumer": true,
+    "base_demand_per_capita": 1,
+    "elasticity": 1,
+    "rating_weights": {
+      "brand": 25,
+      "quality": 35,
+      "price": 40
+    },
+    "vat_category": "draft",
+    "balance": "draft"
+  },
+  {
+    "id": "car",
+    "name": "Автомобиль",
+    "description": "Легковой автомобиль местной сборки.",
+    "category": "consumer",
+    "unit": "piece",
+    "type": "consumer",
+    "reference_price": 45000,
+    "storage_life_factor": 100,
+    "quality_range": {
+      "min": 1,
+      "max": 100
+    },
+    "consumer": true,
+    "base_demand_per_capita": 1,
+    "elasticity": 1,
+    "rating_weights": {
+      "brand": 25,
+      "quality": 35,
+      "price": 40
+    },
+    "vat_category": "draft",
+    "balance": "draft"
+  },
+  {
+    "id": "malt",
+    "name": "Солод",
+    "description": "Солод из зерна для кваса.",
+    "category": "food",
+    "unit": "kg",
+    "type": "intermediate",
+    "reference_price": 55,
+    "storage_life_factor": 100,
+    "quality_range": {
+      "min": 1,
+      "max": 100
+    },
+    "consumer": false,
+    "base_demand_per_capita": 0,
+    "elasticity": 1,
+    "rating_weights": {
+      "brand": 25,
+      "quality": 35,
+      "price": 40
+    },
+    "vat_category": "draft",
+    "balance": "draft"
+  },
+  {
+    "id": "kvass",
+    "name": "Квас",
+    "description": "Хлебный квас в бутылках.",
+    "category": "food",
+    "unit": "liter",
+    "type": "consumer",
+    "reference_price": 60,
+    "storage_life_factor": 1,
+    "quality_range": {
+      "min": 1,
+      "max": 100
+    },
+    "consumer": true,
+    "base_demand_per_capita": 2,
+    "elasticity": 1,
+    "rating_weights": {
+      "brand": 25,
+      "quality": 35,
+      "price": 40
+    },
+    "vat_category": "draft",
+    "balance": "draft"
+  },
+  {
+    "id": "kefir",
+    "name": "Кефир",
+    "description": "Кефир с маслосырзавода.",
+    "category": "food",
+    "unit": "liter",
+    "type": "consumer",
+    "reference_price": 90,
+    "storage_life_factor": 1,
+    "quality_range": {
+      "min": 1,
+      "max": 100
+    },
+    "consumer": true,
+    "base_demand_per_capita": 2,
+    "elasticity": 1,
+    "rating_weights": {
+      "brand": 25,
+      "quality": 35,
+      "price": 40
+    },
+    "vat_category": "draft",
+    "balance": "draft"
+  },
+  {
+    "id": "mead",
+    "name": "Медовуха",
+    "description": "Медовуха на башкирском мёде.",
+    "category": "food",
+    "unit": "liter",
+    "type": "consumer",
+    "reference_price": 350,
+    "storage_life_factor": 3,
+    "quality_range": {
+      "min": 1,
+      "max": 100
+    },
+    "consumer": true,
+    "base_demand_per_capita": 2,
+    "elasticity": 1,
+    "rating_weights": {
+      "brand": 25,
+      "quality": 35,
+      "price": 40
+    },
+    "vat_category": "draft",
+    "balance": "draft"
+  },
+  {
+    "id": "smoked_fish",
+    "name": "Копчёная рыба",
+    "description": "Копчёная рыба с реки Белой.",
+    "category": "food",
+    "unit": "kg",
+    "type": "consumer",
+    "reference_price": 480,
+    "storage_life_factor": 3,
+    "quality_range": {
+      "min": 1,
+      "max": 100
+    },
+    "consumer": true,
+    "base_demand_per_capita": 2,
     "elasticity": 1,
     "rating_weights": {
       "brand": 25,

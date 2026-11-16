@@ -41,10 +41,11 @@ class ChainsProposalTests(unittest.TestCase):
         self.assertEqual(len(self.data["recipes"]), 41)
         self.assertEqual(self.data["sinks"]["product_exceptions"], [])
 
-    def test_server_catalog_is_unchanged_snapshot(self):
-        self.assertEqual(len(_server("products")), 25)
-        self.assertEqual(len(_server("buildings")), 20)
-        self.assertEqual(len(_server("recipes")), 17)
+    def test_server_catalog_matches_adopted_proposal(self):
+        # V2-CAT1 replaced server/data with the proposal: same ids and sizes.
+        self.assertEqual(len(_server("products")), 41)
+        self.assertEqual(len(_server("buildings")), 42)
+        self.assertEqual(len(_server("recipes")), 41)
         recipes = {item["id"]: item for item in _server("recipes")}
         self.assertEqual(recipes["field_grain"]["outputs"]["grain"], 100)
         self.assertEqual(recipes["mill_flour"]["inputs"]["grain"], 100)
@@ -58,21 +59,18 @@ class ChainsProposalTests(unittest.TestCase):
             self.assertTrue(old <= new, name)
             self.assertEqual(len(new), len(self.data[name]))
 
-    def test_only_marked_records_differ_from_server(self):
-        for name, changed in (
-            ("products", CHANGED_PRODUCTS),
-            ("buildings", CHANGED_BUILDINGS),
-            ("recipes", CHANGED_RECIPES),
-        ):
-            old = {item["id"]: item for item in _server(name)}
-            new = {item["id"]: item for item in self.data[name]}
-            for ident, before in old.items():
-                if ident in changed:
-                    self.assertNotEqual(before, new[ident], ident)
-                    self.assertIn("Меняется", new[ident]["description"])
-                else:
-                    self.assertEqual(before, new[ident], ident)
-
+    def test_server_ids_and_recipes_equal_proposal(self):
+        # Prices of buildings differ on purpose (owner's 260 permille scale); ids and
+        # recipes of the adopted catalog must still equal the proposal.
+        for name in ("products", "buildings", "recipes"):
+            old = {item["id"] for item in _server(name)}
+            new = {item["id"] for item in self.data[name]}
+            self.assertEqual(old, new, name)
+        old = {item["id"]: item for item in _server("recipes")}
+        new = {item["id"]: item for item in self.data["recipes"]}
+        for ident, before in old.items():
+            self.assertEqual(before["inputs"], new[ident]["inputs"], ident)
+            self.assertEqual(before["outputs"], new[ident]["outputs"], ident)
     def test_m1_bread_path_quantities_stay(self):
         recipes = {item["id"]: item for item in self.data["recipes"]}
         self.assertEqual(recipes["field_grain"]["outputs"], {"grain": 100})

@@ -4,7 +4,7 @@ from . import core, api
 
 def migrations():
     base=Path(__file__).resolve().parents[1] / 'migrations'
-    return [base / '202611152100_enterprises_core.sql', base / '202611152101_enterprises_arrears.sql', base / '202611152350_enterprises_stage_payments.sql']
+    return [base / '202611152100_enterprises_core.sql', base / '202611152101_enterprises_arrears.sql', base / '202611152350_enterprises_stage_payments.sql', base / '202611160900_enterprises_materials.sql']
 
 def register(registry):
     registry.flag('enterprise_enabled', True)
@@ -12,6 +12,7 @@ def register(registry):
     registry.flag('enterprise_salary_worker_draft', 100, 0, 1000000)
     registry.flag('enterprise_wear_month_draft', 1, 0, 100)
     registry.flag('enterprise_admin_stock_draft', False)
+    registry.flag('build_materials_required', 0, 0, 1)
     registry.route('POST','/enterprises',api.create)
     registry.route('GET','/enterprises',api.list_own)
     registry.route('GET','/enterprises/plan',api.plan)
@@ -25,7 +26,7 @@ def register(registry):
         from server.platform.settings import read_settings
         flags=read_settings(conn,registry.flags,registry.flag_constraints)
         if flags['enterprise_enabled']:
-            core.advance_day(conn,day,flags['enterprise_staffing_bp_draft'])
+            core.advance_day(conn,day,flags['enterprise_staffing_bp_draft'],flags['build_materials_required']==1)
     def monthly(conn,month):
         from server.platform.settings import read_settings
         flags=read_settings(conn,registry.flags,registry.flag_constraints)

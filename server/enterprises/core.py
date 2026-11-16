@@ -1,6 +1,10 @@
 """Server-authoritative enterprise construction and production, integer-only."""
 from __future__ import annotations
 
+import json
+from pathlib import Path
+from psycopg.types.json import Jsonb
+
 from server.catalog import Catalog
 from server.ledger.api import account, transfer
 from server.world import core as world
@@ -11,6 +15,34 @@ STAGES = ('foundation','frame','finishing','commissioning','operational')
 # balance: draft (D-10, D-53). Four payments sum to exactly build_cost.
 COST_SHARES_PERMILLE = (300, 400, 200, 100)
 TIME_SHARES_PERMILLE = (250, 350, 300, 100)
+
+_SINKS = Path(__file__).resolve().parents[1] / 'data' / 'sinks.json'
+
+
+def construction_norms(stage, width, height):
+    """Integer per-cell material requirements from the authoritative sink file."""
+    if not 0 <= stage < 4:
+        return {}
+    # The file is immutable within a running release; no schema changes to catalog.
+    with _SINKS.open(encoding='utf-8') as source:
+        rules = json.load(source)['construction']['stages'][STAGES[stage]]
+    return {product: quantity * width * height for product, quantity in rules.items()}
+
+
+def materials_status(conn, eid, next_stage):
+    if next_stage is None or not 0 <= next_stage < 4:
+        return None
+    dimensions = conn.execute('SELECT width,height FROM enterprises WHERE id=%s', (eid,)).fetchone()
+    if dimensions is None:
+        return None
+    required = construction_norms(next_stage, *dimensions)
+    available = stock(conn, eid) if required else {}
+    items = [{'product_id': product, 'needed': needed,
+              'have': available.get(product, {}).get('quantity', 0)}
+             for product, needed in required.items()]
+    return {'stage': STAGES[next_stage], 'items': items,
+            'short': [{'product_id': item['product_id'], 'missing': item['needed'] - item['have']}
+                      for item in items if item['have'] < item['needed']]}
 
 def stage_costs(total):
     """Floor each of the first three shares; final payment takes remainder."""
@@ -96,7 +128,7 @@ def placement(conn, actor_id, px, py, x, y, building):
     city=world.city_at(x,y,states)
     return None,cells,(city['id'] if city else None),road
 
-def place(conn, actor, request_id, building_id, px, py, x, y):
+def place(conn, actor, request_id, building_id, px, py, x, y, materials_required=False):
     building=catalog().index['buildings'].get(building_id)
     if building is None:
         return 404,{'error':'unknown_building'}
@@ -114,11 +146,14 @@ def place(conn, actor, request_id, building_id, px, py, x, y):
     wallet_balance=conn.execute('SELECT balance FROM ledger_accounts WHERE id=%s',(payer,)).fetchone()[0]
     initial_payment = stage_costs(building['build_cost'])[0]
     road_cost = len(road)*world.AUTO_ROAD_CELL_COST
-    if wallet_balance < initial_payment + road_cost:
+    if wallet_balance < (road_cost if materials_required else initial_payment + road_cost):
         return 409,{'error':'insufficient_funds','required':initial_payment+road_cost,
                     'road_cost':road_cost,'shortfall':initial_payment+road_cost-wallet_balance}
     try:
-        transfer_id=transfer(conn,'enterprise:build:'+request_id,payer,treasury,initial_payment)
+        # When materials are required, order first and wait on the foundation.
+        # Otherwise preserve the original order-level payment byte for byte.
+        transfer_id=(None if materials_required else
+                     transfer(conn,'enterprise:build:'+request_id,payer,treasury,initial_payment))
         if road_cost:
             transfer(conn,'enterprise:road:'+request_id,payer,treasury,road_cost)
     except ValueError as exc:
@@ -136,12 +171,17 @@ def place(conn, actor, request_id, building_id, px, py, x, y):
     eid=conn.execute("""INSERT INTO enterprises(owner_id,building_id,px,py,x,y,width,height,city_id,name,build_cost,build_days,upkeep_month,jobs,storage_capacity,started_day,recipe_id,build_request_id,build_transfer_id)
       VALUES(%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s) RETURNING id""",
       (actor['id'],building_id,px,py,x,y,building['size']['width'],building['size']['height'],city_id,building['name'],building['build_cost'],building['build_days'],building['upkeep_month'],building['jobs'],building['storage_capacity'],today(conn),recipe_id,request_id,transfer_id)).fetchone()[0]
-    # First installment and the enterprise are committed in the same transaction.
-    # Stage 0 preserves the old order-level ledger idempotency key.
-    conn.execute("""INSERT INTO enterprise_stage_payments
-      (enterprise_id,stage,amount,request_id,transfer_id)
-      VALUES(%s,0,%s,%s,%s)""",
-      (eid,initial_payment,'enterprise:build:'+request_id,transfer_id))
+    # Stage 0 retains its historic order request_id, including when delayed.
+    if not materials_required:
+        conn.execute("""INSERT INTO enterprise_stage_payments
+          (enterprise_id,stage,amount,request_id,transfer_id)
+          VALUES(%s,0,%s,%s,%s)""",
+          (eid,initial_payment,'enterprise:build:'+request_id,transfer_id))
+    else:
+        # No material exists before an enterprise has its own inventory.
+        # The first daily tick may pay only after the stock is delivered.
+        # Record both possible shortages with the same gate as daily ticks.
+        _pay_build_stage(conn,eid,actor['id'],0,initial_payment,today(conn),True)
     # World mark_occupied currently rejects free land; preserve world tables
     # and use the same sparse occupancy and chunk-event contract for both zones.
     if city_id:
@@ -226,22 +266,27 @@ def production(conn,eid,day,default_staffing_bp=10000):
     conn.execute('UPDATE enterprises SET load_bp=%s,last_production_day=%s WHERE id=%s',(load,day,eid))
     conn.execute('INSERT INTO enterprise_daily_load(enterprise_id,day_index,load_bp) VALUES(%s,%s,%s) ON CONFLICT DO NOTHING',(eid,day,load))
 
-def _record_build_wait(conn, eid, stage, amount, day):
-    """A missed installment is not debt and never generates a debit journal."""
+def _record_build_wait(conn, eid, stage, amount, day, reason='money', missing=None):
+    """Record daily wait once; no debt and no partial ledger or stock writes."""
     conn.execute("""INSERT INTO enterprise_build_waits
-      (enterprise_id,stage,amount,first_wait_day,last_wait_day,waiting_days)
-      VALUES(%s,%s,%s,%s,%s,1)
+      (enterprise_id,stage,amount,first_wait_day,last_wait_day,waiting_days,reason,missing)
+      VALUES(%s,%s,%s,%s,%s,1,%s,%s)
       ON CONFLICT(enterprise_id) DO UPDATE SET
-        stage=EXCLUDED.stage,amount=EXCLUDED.amount,
+        stage=EXCLUDED.stage,amount=EXCLUDED.amount,reason=EXCLUDED.reason,
+        missing=EXCLUDED.missing,
         waiting_days=enterprise_build_waits.waiting_days
           + CASE WHEN EXCLUDED.last_wait_day > enterprise_build_waits.last_wait_day
                  THEN 1 ELSE 0 END,
         last_wait_day=GREATEST(enterprise_build_waits.last_wait_day,EXCLUDED.last_wait_day)""",
-      (eid,stage,amount,day,day))
+      (eid,stage,amount,day,day,reason,Jsonb(missing or {})))
 
 
-def _pay_build_stage(conn, eid, owner, stage, amount, day):
+def _pay_build_stage(conn, eid, owner, stage, amount, day, materials_required=False):
     """Try exactly once per stage (ledger and payment row are transactional)."""
+    # Lock before the paid check: two concurrent ticks must never consume twice.
+    locked=(conn.execute('SELECT width,height,build_request_id FROM enterprises '
+                         'WHERE id=%s FOR UPDATE',(eid,)).fetchone()
+            if materials_required else None)
     if conn.execute('SELECT 1 FROM enterprise_stage_payments WHERE enterprise_id=%s '
                     'AND stage=%s',(eid,stage)).fetchone():
         conn.execute('DELETE FROM enterprise_build_waits WHERE enterprise_id=%s',(eid,))
@@ -252,6 +297,26 @@ def _pay_build_stage(conn, eid, owner, stage, amount, day):
         _record_build_wait(conn,eid,stage,amount,day)
         return False
     request_id=f'enterprise:build:{eid}:{stage}'
+    required={}
+    if materials_required:
+        required=construction_norms(stage,locked[0],locked[1])
+        if stage==0:
+            request_id='enterprise:build:'+locked[2]
+        items=stock(conn,eid)
+        missing={p:qty-items.get(p,{}).get('quantity',0)
+                 for p,qty in required.items() if items.get(p,{}).get('quantity',0)<qty}
+        balance=conn.execute('SELECT balance FROM ledger_accounts WHERE id=%s FOR UPDATE',(payer[0],)).fetchone()[0]
+        short_money=max(0,amount-balance)
+        if missing or short_money:
+            shortage={'materials':missing} if missing else {}
+            if short_money:shortage['money']=short_money
+            _record_build_wait(conn,eid,stage,amount,day,
+                               'money' if short_money else 'materials',shortage)
+            return False
+    if stage==0 and not materials_required:
+        row=conn.execute('SELECT build_request_id,build_transfer_id FROM enterprises WHERE id=%s',(eid,)).fetchone()
+        if row[1] is None:  # CAT1 deferred order, not old synthetic/legacy orders.
+            request_id='enterprise:build:'+row[0]
     transfer_id=None
     if amount:
         try:
@@ -262,15 +327,21 @@ def _pay_build_stage(conn, eid, owner, stage, amount, day):
                 raise
             _record_build_wait(conn,eid,stage,amount,day)
             return False
+    if materials_required:
+        # Same transaction / enterprise row lock as the ledger installment.
+        for product,quantity in required.items():
+            adjust(conn,eid,product,-quantity)
     conn.execute("""INSERT INTO enterprise_stage_payments
       (enterprise_id,stage,amount,request_id,transfer_id)
       VALUES(%s,%s,%s,%s,%s) ON CONFLICT(enterprise_id,stage) DO NOTHING""",
       (eid,stage,amount,request_id,transfer_id))
+    if stage==0:
+        conn.execute('UPDATE enterprises SET build_transfer_id=%s WHERE id=%s AND build_transfer_id IS NULL',(transfer_id,eid))
     conn.execute('DELETE FROM enterprise_build_waits WHERE enterprise_id=%s',(eid,))
     return True
 
 
-def _advance_build(conn, eid, day, info):
+def _advance_build(conn, eid, day, info, materials_required=False):
     owner,cost,days,stage,progress,x,y,width,height,city=info
     durations=stage_day_lengths(days)
     amounts=stage_costs(cost)
@@ -278,6 +349,11 @@ def _advance_build(conn, eid, day, info):
     # Zero-day stages are allowed for short catalogue build_days. The loop
     # advances through them in one daily tick, as the reference simulator does.
     while stage<4:
+        if stage==0 and not conn.execute(
+                'SELECT 1 FROM enterprise_stage_payments WHERE enterprise_id=%s AND stage=0',
+                (eid,)).fetchone():
+            if not _pay_build_stage(conn,eid,owner,0,amounts[0],day,materials_required):
+                break
         duration=durations[stage]
         if duration:
             # Advance time only while the current installment is not stalled.
@@ -287,7 +363,7 @@ def _advance_build(conn, eid, day, info):
                 break
         new_stage=stage+1
         if new_stage<4 and not _pay_build_stage(
-                conn,eid,owner,new_stage,amounts[new_stage],day):
+                conn,eid,owner,new_stage,amounts[new_stage],day,materials_required):
             # Progress is frozen at the boundary until the installment clears.
             progress=duration
             break
@@ -300,7 +376,7 @@ def _advance_build(conn, eid, day, info):
                  'WHERE id=%s',(stage,progress,eid))
 
 
-def advance_day(conn,day,default_staffing_bp=10000):
+def advance_day(conn,day,default_staffing_bp=10000,materials_required=False):
     integer(day)
     integer(default_staffing_bp,0,BP)
     rows=conn.execute('SELECT id FROM enterprises WHERE sold_at IS NULL '
@@ -318,7 +394,7 @@ def advance_day(conn,day,default_staffing_bp=10000):
             # Match simulator: production precedes end-of-day construction.
             production(conn,eid,day,default_staffing_bp)
             if info[3]<4:
-                _advance_build(conn,eid,day,info[:-1])
+                _advance_build(conn,eid,day,info[:-1],materials_required)
 
 
 def close_month(conn,month,salary_per_worker=100,monthly_wear=1):

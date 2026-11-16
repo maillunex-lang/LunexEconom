@@ -106,7 +106,9 @@
   {
     "id": "dairy_milk",
     "building": "dairy",
-    "inputs": {},
+    "inputs": {
+      "feed": 30
+    },
     "outputs": {
       "milk": 90
     },
@@ -115,12 +117,14 @@
     "quality_model": "weighted_inputs_or_base",
     "balance": "draft",
     "name": "Производство молока",
-    "description": "Черновой технологический процесс для игрового каталога."
+    "description": "Меняется: вход комбикорм, раньше вход был пустой."
   },
   {
     "id": "slaughter_meat",
     "building": "slaughter",
-    "inputs": {},
+    "inputs": {
+      "feed": 40
+    },
     "outputs": {
       "meat": 35
     },
@@ -129,7 +133,7 @@
     "quality_model": "weighted_inputs_or_base",
     "balance": "draft",
     "name": "Производство мяса",
-    "description": "Черновой технологический процесс для игрового каталога."
+    "description": "Меняется: вход комбикорм, раньше вход был пустой."
   },
   {
     "id": "quarry_sand",
@@ -162,22 +166,26 @@
   {
     "id": "sawmill_wood",
     "building": "sawmill",
-    "inputs": {},
-    "outputs": {
+    "inputs": {
       "wood": 70
+    },
+    "outputs": {
+      "boards": 50
     },
     "workers": 8,
     "technology_level": 1,
     "quality_model": "weighted_inputs_or_base",
     "balance": "draft",
-    "name": "Заготовка леса",
-    "description": "Черновой технологический процесс для игрового каталога."
+    "name": "Распил на доски",
+    "description": "Меняется: выход доски вместо леса, вход лес. Раньше выход был лес без входа."
   },
   {
     "id": "cement_plant_cement",
     "building": "cement_plant",
     "inputs": {
-      "stone": 70
+      "stone": 70,
+      "sand": 40,
+      "gas": 20
     },
     "outputs": {
       "cement": 55
@@ -187,12 +195,15 @@
     "quality_model": "weighted_inputs_or_base",
     "balance": "draft",
     "name": "Производство цемента",
-    "description": "Черновой технологический процесс для игрового каталога."
+    "description": "Меняется: входы камень, песок и газ. Раньше только камень."
   },
   {
     "id": "steel_mill_steel",
     "building": "steel_mill",
-    "inputs": {},
+    "inputs": {
+      "iron_ore": 80,
+      "coal": 40
+    },
     "outputs": {
       "steel": 35
     },
@@ -201,12 +212,14 @@
     "quality_model": "weighted_inputs_or_base",
     "balance": "draft",
     "name": "Выплавка стали",
-    "description": "Черновой технологический процесс для игрового каталога."
+    "description": "Меняется: входы руда и уголь. Раньше вход был пустой."
   },
   {
     "id": "textile_fabric",
     "building": "textile",
-    "inputs": {},
+    "inputs": {
+      "yarn": 50
+    },
     "outputs": {
       "fabric": 65
     },
@@ -215,7 +228,7 @@
     "quality_model": "weighted_inputs_or_base",
     "balance": "draft",
     "name": "Производство ткани",
-    "description": "Черновой технологический процесс для игрового каталога."
+    "description": "Меняется: вход пряжа. Раньше вход был пустой."
   },
   {
     "id": "textile_clothes",
@@ -236,7 +249,12 @@
   {
     "id": "electronics_plant_electronics",
     "building": "electronics_plant",
-    "inputs": {},
+    "inputs": {
+      "steel": 8,
+      "plastic": 10,
+      "chemicals": 6,
+      "glass": 8
+    },
     "outputs": {
       "electronics": 12
     },
@@ -245,6 +263,385 @@
     "quality_model": "weighted_inputs_or_base",
     "balance": "draft",
     "name": "Сборка электроники",
-    "description": "Черновой технологический процесс для игрового каталога."
+    "description": "Меняется: входы сталь, пластик, химия и стекло. Раньше вход был пустой."
+  },
+  {
+    "id": "field_sugar_beet",
+    "building": "field",
+    "inputs": {},
+    "outputs": {
+      "sugar_beet": 120
+    },
+    "workers": 4,
+    "technology_level": 1,
+    "quality_model": "weighted_inputs_or_base",
+    "balance": "draft",
+    "name": "Выращивание свёклы",
+    "description": "Поле даёт сахарную свёклу."
+  },
+  {
+    "id": "field_flax",
+    "building": "field",
+    "inputs": {},
+    "outputs": {
+      "flax": 70
+    },
+    "workers": 4,
+    "technology_level": 1,
+    "quality_model": "weighted_inputs_or_base",
+    "balance": "draft",
+    "name": "Выращивание льна",
+    "description": "Поле даёт лён для пряжи."
+  },
+  {
+    "id": "logging_wood",
+    "building": "logging_camp",
+    "inputs": {},
+    "outputs": {
+      "wood": 70
+    },
+    "workers": 8,
+    "technology_level": 1,
+    "quality_model": "weighted_inputs_or_base",
+    "balance": "draft",
+    "name": "Заготовка леса",
+    "description": "Лесосека даёт круглый лес."
+  },
+  {
+    "id": "gas_well_gas",
+    "building": "gas_well",
+    "inputs": {},
+    "outputs": {
+      "gas": 200
+    },
+    "workers": 6,
+    "technology_level": 1,
+    "quality_model": "weighted_inputs_or_base",
+    "balance": "draft",
+    "name": "Добыча газа",
+    "description": "Скважина даёт природный газ."
+  },
+  {
+    "id": "mine_iron",
+    "building": "mine",
+    "inputs": {},
+    "outputs": {
+      "iron_ore": 90
+    },
+    "workers": 10,
+    "technology_level": 1,
+    "quality_model": "weighted_inputs_or_base",
+    "balance": "draft",
+    "name": "Добыча руды",
+    "description": "Шахта даёт железную руду."
+  },
+  {
+    "id": "mine_coal",
+    "building": "mine",
+    "inputs": {},
+    "outputs": {
+      "coal": 110
+    },
+    "workers": 10,
+    "technology_level": 1,
+    "quality_model": "weighted_inputs_or_base",
+    "balance": "draft",
+    "name": "Добыча угля",
+    "description": "Шахта даёт уголь."
+  },
+  {
+    "id": "feed_plant_feed",
+    "building": "feed_plant",
+    "inputs": {
+      "grain": 80
+    },
+    "outputs": {
+      "feed": 70
+    },
+    "workers": 8,
+    "technology_level": 1,
+    "quality_model": "weighted_inputs_or_base",
+    "balance": "draft",
+    "name": "Производство комбикорма",
+    "description": "Зерно становится комбикормом."
+  },
+  {
+    "id": "sugar_plant_sugar",
+    "building": "sugar_plant",
+    "inputs": {
+      "sugar_beet": 100
+    },
+    "outputs": {
+      "sugar": 40
+    },
+    "workers": 10,
+    "technology_level": 1,
+    "quality_model": "weighted_inputs_or_base",
+    "balance": "draft",
+    "name": "Варка сахара",
+    "description": "Свёкла становится сахаром."
+  },
+  {
+    "id": "creamery_butter",
+    "building": "creamery",
+    "inputs": {
+      "milk": 50
+    },
+    "outputs": {
+      "butter": 18
+    },
+    "workers": 8,
+    "technology_level": 1,
+    "quality_model": "weighted_inputs_or_base",
+    "balance": "draft",
+    "name": "Сбивание масла",
+    "description": "Молоко становится маслом."
+  },
+  {
+    "id": "creamery_cheese",
+    "building": "creamery",
+    "inputs": {
+      "milk": 50
+    },
+    "outputs": {
+      "cheese": 12
+    },
+    "workers": 8,
+    "technology_level": 1,
+    "quality_model": "weighted_inputs_or_base",
+    "balance": "draft",
+    "name": "Варка сыра",
+    "description": "Молоко становится сыром."
+  },
+  {
+    "id": "creamery_kefir",
+    "building": "creamery",
+    "inputs": {
+      "milk": 40
+    },
+    "outputs": {
+      "kefir": 50
+    },
+    "workers": 6,
+    "technology_level": 1,
+    "quality_model": "weighted_inputs_or_base",
+    "balance": "draft",
+    "name": "Закваска кефира",
+    "description": "Молоко становится кефиром."
+  },
+  {
+    "id": "poultry_eggs",
+    "building": "poultry_farm",
+    "inputs": {
+      "feed": 20
+    },
+    "outputs": {
+      "eggs": 80
+    },
+    "workers": 6,
+    "technology_level": 1,
+    "quality_model": "weighted_inputs_or_base",
+    "balance": "draft",
+    "name": "Производство яиц",
+    "description": "Птицефабрика даёт яйца из комбикорма."
+  },
+  {
+    "id": "fishery_fish",
+    "building": "fishery",
+    "inputs": {},
+    "outputs": {
+      "fish": 25
+    },
+    "workers": 6,
+    "technology_level": 1,
+    "quality_model": "weighted_inputs_or_base",
+    "balance": "draft",
+    "name": "Лов рыбы",
+    "description": "Артель ловит речную рыбу."
+  },
+  {
+    "id": "smokehouse_smoked",
+    "building": "smokehouse",
+    "inputs": {
+      "fish": 20
+    },
+    "outputs": {
+      "smoked_fish": 16
+    },
+    "workers": 5,
+    "technology_level": 1,
+    "quality_model": "weighted_inputs_or_base",
+    "balance": "draft",
+    "name": "Копчение рыбы",
+    "description": "Рыба становится копчёной."
+  },
+  {
+    "id": "spinning_yarn",
+    "building": "spinning_mill",
+    "inputs": {
+      "flax": 60
+    },
+    "outputs": {
+      "yarn": 45
+    },
+    "workers": 8,
+    "technology_level": 1,
+    "quality_model": "weighted_inputs_or_base",
+    "balance": "draft",
+    "name": "Прядение льна",
+    "description": "Лён становится пряжей."
+  },
+  {
+    "id": "malthouse_malt",
+    "building": "malthouse",
+    "inputs": {
+      "grain": 50
+    },
+    "outputs": {
+      "malt": 40
+    },
+    "workers": 6,
+    "technology_level": 1,
+    "quality_model": "weighted_inputs_or_base",
+    "balance": "draft",
+    "name": "Соложение",
+    "description": "Зерно становится солодом."
+  },
+  {
+    "id": "beverage_kvass",
+    "building": "beverage_plant",
+    "inputs": {
+      "malt": 30,
+      "sugar": 10
+    },
+    "outputs": {
+      "kvass": 80
+    },
+    "workers": 8,
+    "technology_level": 1,
+    "quality_model": "weighted_inputs_or_base",
+    "balance": "draft",
+    "name": "Варка кваса",
+    "description": "Солод и сахар становятся квасом."
+  },
+  {
+    "id": "beverage_mead",
+    "building": "beverage_plant",
+    "inputs": {
+      "honey": 8,
+      "sugar": 6
+    },
+    "outputs": {
+      "mead": 20
+    },
+    "workers": 6,
+    "technology_level": 1,
+    "quality_model": "weighted_inputs_or_base",
+    "balance": "draft",
+    "name": "Варка медовухи",
+    "description": "Мёд и сахар становятся медовухой."
+  },
+  {
+    "id": "glass_plant_glass",
+    "building": "glass_plant",
+    "inputs": {
+      "sand": 80,
+      "gas": 30
+    },
+    "outputs": {
+      "glass": 50
+    },
+    "workers": 12,
+    "technology_level": 1,
+    "quality_model": "weighted_inputs_or_base",
+    "balance": "draft",
+    "name": "Варка стекла",
+    "description": "Песок и газ становятся стеклом."
+  },
+  {
+    "id": "refinery_chemicals",
+    "building": "refinery",
+    "inputs": {
+      "oil": 2
+    },
+    "outputs": {
+      "chemicals": 40
+    },
+    "workers": 12,
+    "technology_level": 1,
+    "quality_model": "weighted_inputs_or_base",
+    "balance": "draft",
+    "name": "Нефтехимия",
+    "description": "Нефть становится химией."
+  },
+  {
+    "id": "polymer_plastic",
+    "building": "polymer_plant",
+    "inputs": {
+      "chemicals": 30
+    },
+    "outputs": {
+      "plastic": 35
+    },
+    "workers": 12,
+    "technology_level": 1,
+    "quality_model": "weighted_inputs_or_base",
+    "balance": "draft",
+    "name": "Производство пластика",
+    "description": "Химия становится пластиком."
+  },
+  {
+    "id": "furniture_workshop_furniture",
+    "building": "furniture_workshop",
+    "inputs": {
+      "boards": 12,
+      "fabric": 8
+    },
+    "outputs": {
+      "furniture": 6
+    },
+    "workers": 10,
+    "technology_level": 1,
+    "quality_model": "weighted_inputs_or_base",
+    "balance": "draft",
+    "name": "Сборка мебели",
+    "description": "Доски и ткань становятся мебелью."
+  },
+  {
+    "id": "appliance_plant_appliances",
+    "building": "appliance_plant",
+    "inputs": {
+      "steel": 6,
+      "plastic": 8,
+      "electronics": 2
+    },
+    "outputs": {
+      "appliances": 4
+    },
+    "workers": 16,
+    "technology_level": 1,
+    "quality_model": "weighted_inputs_or_base",
+    "balance": "draft",
+    "name": "Сборка бытовой техники",
+    "description": "Сталь, пластик и электроника становятся техникой."
+  },
+  {
+    "id": "auto_plant_car",
+    "building": "auto_plant",
+    "inputs": {
+      "steel": 20,
+      "plastic": 12,
+      "electronics": 2,
+      "glass": 8
+    },
+    "outputs": {
+      "car": 1
+    },
+    "workers": 18,
+    "technology_level": 1,
+    "quality_model": "weighted_inputs_or_base",
+    "balance": "draft",
+    "name": "Сборка автомобиля",
+    "description": "Сталь, пластик, электроника и стекло становятся автомобилем."
   }
 ]
