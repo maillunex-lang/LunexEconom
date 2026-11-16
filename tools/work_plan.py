@@ -141,12 +141,16 @@ def prompt(plan, pid):
     lane = plan["lanes"][p["lane"]]
     zone = zones(plan, p)
     gdds = ", ".join(f"docs/gdd/{g}_*.md" for g in p["gdd"])
+    proj = plan.get("project", {})
+    repo = proj.get("repo") or "репозиторий проекта"
+    branch = proj.get("branch") or "main"
+    pattern = plan["rules"].get("branch_pattern", "<id>-<кратко>").replace("<id>", pid.lower()).replace("<slug>", "<кратко>")
     rules = [
         "Один большой заход, вопросов не задавать: при неясности выбери простейший безопасный вариант и запиши в docs/qa/%s.md (раздел «Допущения»)." % pid,
-        "Репозиторий maillunex-lang/LunexEconom, ветка main (V2). Работай в ветке v2/%s-<кратко> от свежего main, создай pull request; слияние делает директор." % pid.lower(),
-        "Проект и контракты: " + gdds + " (читать полностью), docs/gdd/DECISIONS_APPROVED.md, docs/AI_RULES.md; макеты в docs/mockups; эталонные симуляторы и golden в tools/sim (читать, не менять).",
+        "Репозиторий %s, ветка %s. Работай в ветке %s от свежего main, создай pull request; слияние делает директор." % (repo, branch, pattern),
+        "Проект и контракты: " + gdds + " (читать полностью), docs/gdd/DECISIONS_APPROVED.md, docs/AI_RULES.md; макеты в docs/mockups; эталонные данные и тесты проекта читать, не менять.",
         "Зона файлов (только это): " + ", ".join(zone) + ". Общие файлы не менять: " + ", ".join(plan["rules"]["shared_files_director_only"]) + ".",
-        "Никаких секретов и личных данных. Новые серверные флаги по умолчанию ВЫКЛЮЧЕНЫ.",
+        "Никаких секретов и личных данных. Новые функции за флагом, по умолчанию ВЫКЛЮЧЕНЫ, если проект их использует.",
     ]
     rules.extend(lane.get("checks", []))
     out = [f"Задание {pid}: {p['title']} (линия {p['lane']}: {lane['name']}, шаг {p['step']}).", "", p["goal"], ""]

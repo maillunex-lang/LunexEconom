@@ -15,6 +15,9 @@ CREATE TABLE IF NOT EXISTS projects(slug TEXT PRIMARY KEY, name TEXT NOT NULL, r
 CREATE TABLE IF NOT EXISTS task_state(project_slug TEXT NOT NULL, pkg_id TEXT NOT NULL, status TEXT NOT NULL DEFAULT 'planned',
   issued_at REAL, submitted_at REAL, accepted_at REAL, merged INTEGER NOT NULL DEFAULT 0, sha TEXT NOT NULL DEFAULT '', note TEXT NOT NULL DEFAULT '',
   PRIMARY KEY(project_slug, pkg_id));
+CREATE TABLE IF NOT EXISTS ideas(id INTEGER PRIMARY KEY, project_slug TEXT NOT NULL, text TEXT NOT NULL, created REAL NOT NULL, done INTEGER NOT NULL DEFAULT 0);
+CREATE INDEX IF NOT EXISTS ideas_project ON ideas(project_slug, done);
+CREATE TABLE IF NOT EXISTS start_state(project_slug TEXT NOT NULL, prompt_id TEXT NOT NULL, done INTEGER NOT NULL DEFAULT 0, ts REAL, PRIMARY KEY(project_slug, prompt_id));
 CREATE TABLE IF NOT EXISTS audit(id INTEGER PRIMARY KEY, ts REAL NOT NULL, action TEXT NOT NULL, payload TEXT NOT NULL);
 """
 

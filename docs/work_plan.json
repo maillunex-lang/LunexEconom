@@ -528,5 +528,10 @@
    "status": "planned",
    "size": "L"
   }
- ]
+ ],
+ "project": {
+  "name": "LunexEconom V2",
+  "repo": "maillunex-lang/LunexEconom",
+  "branch": "main (V2)"
+ }
 }
