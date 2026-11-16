@@ -4,11 +4,32 @@ const CHUNK := 12
 var texture: Texture2D
 var buildings: Array = []
 var enterprise_info: Dictionary = {}
+var event_cells: Dictionary = {}
+var redraw_count := 0
 
 func set_content(tile: Texture2D, cells: Array, metadata: Dictionary) -> void:
     texture = tile
     buildings = cells
-    enterprise_info = metadata
+    event_cells.clear()
+    enterprise_info = metadata.duplicate()
+    queue_redraw()
+
+func update_building_cell(object_id: String,x: int,y: int,details: Dictionary) -> void:
+    var key := "%d,%d" % [x,y]
+    # Replace any snapshot cell with the same footprint instead of duplicating it.
+    buildings = buildings.filter(func(item: Dictionary) -> bool:
+        return not (int(item.get("x",0))==x and int(item.get("y",0))==y))
+    event_cells[key] = {"x":x,"y":y,"ref":object_id}
+    enterprise_info[object_id] = details
+    redraw_count += 1
+    queue_redraw()
+
+func remove_building_cell(object_id: String,x: int,y: int) -> void:
+    var key := "%d,%d" % [x,y]
+    event_cells.erase(key)
+    buildings = buildings.filter(func(item: Dictionary) -> bool:
+        return not (int(item.get("x",0))==x and int(item.get("y",0))==y and str(item.get("ref",""))==object_id))
+    redraw_count += 1
     queue_redraw()
 
 func _draw() -> void:
@@ -19,7 +40,10 @@ func _draw() -> void:
     for i in range(3):
         draw_line(Vector2(i*6,0),Vector2(i*6,12),grid,0.05)
         draw_line(Vector2(0,i*6),Vector2(12,i*6),grid,0.05)
-    for cell in buildings:
+    var all_cells: Array = buildings.filter(func(cell: Dictionary) -> bool:
+        return not event_cells.has("%d,%d" % [int(cell.get("x",0)),int(cell.get("y",0))]))
+    all_cells.append_array(event_cells.values())
+    for cell in all_cells:
         var px := int(cell["x"]) - int(position.x)
         var py := int(cell["y"]) - int(position.y)
         var detail: Dictionary = enterprise_info.get(str(cell.get("ref","")), {})

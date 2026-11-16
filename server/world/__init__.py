@@ -10,6 +10,10 @@ def bootstrap(conn):
 def register(registry):
     # Loading the module validates all 20 descriptors before any database use.
     registry.flag('world_enabled', True)
+    registry.flag('world_events_wait_enabled', False)
+    registry.flag('world_events_retention_enabled', False)
+    registry.flag('world_events_waiter_cap', 12, 1, 12)  # balance: draft
+    registry.flag('world_events_catchup_max_gap', 5000, 1, 500000)  # balance: draft
     registry.flag('world_growth_enabled', True)
     registry.flag('world_growth_threshold_bp', 6000, 1, 10000)
     registry.flag('world_growth_min_buildings', 10, 1, 1000000)

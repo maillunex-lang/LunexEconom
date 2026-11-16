@@ -41,6 +41,7 @@ func attach(source: Node) -> void:
     stream = source
     stream.chunk_ready.connect(_on_chunk)
     stream.chunk_removed.connect(_on_removed)
+    stream.object_delta.connect(_on_object_delta)
     stream.parcels_ready.connect(func(_key: Vector2i,_items: Array):
         if selected.x != 2147483647:
             queue_redraw())
@@ -186,6 +187,60 @@ func _on_chunk(key: Vector2i, snapshot: Dictionary) -> void:
         _sprites[key] = sprite
         _layer.add_child(sprite)
     sprite.set_content(tile,cells,enterprise_info)
+
+func _on_object_delta(event: Dictionary) -> void:
+    var payload: Dictionary = event.get("payload",{})
+    var kind := str(event.get("kind",""))
+    var object_data: Variant = event.get("object",payload.get("object"))
+    var impacted: Dictionary = {}
+    if kind == "road_build":
+        for cell in payload.get("cells",[]):
+            if not cell is Array or cell.size()<2:
+                continue
+            var x := int(cell[0])
+            var y := int(cell[1])
+            var key := Vector2i(Gen.floor_div(x,12),Gen.floor_div(y,12))
+            impacted[key] = true
+            if not stream.chunks.has(key):
+                continue
+            var snapshot: Dictionary = stream.chunks[key]
+            var roads: Array = snapshot.get("roads",[])
+            var local_y := posmod(y,12)
+            var local_x := posmod(x,12)
+            if local_y<roads.size() and local_x<roads[local_y].size():
+                roads[local_y][local_x] = not bool(event.get("removed",payload.get("removed",false)))
+                # Texture changes only for the touched chunk, never neighbours.
+                _texture_lru.erase(key)
+                _on_chunk(key,snapshot)
+    elif object_data is Dictionary:
+        var object_id := str(object_data.get("object_id",""))
+        var x := int(object_data.get("x",0))
+        var y := int(object_data.get("y",0))
+        var w := int(object_data.get("w",1))
+        var h := int(object_data.get("h",1))
+        if w<1 or h<1 or w*h>48:
+            return
+        for yy in range(y,y+h):
+            for xx in range(x,x+w):
+                var key := Vector2i(Gen.floor_div(xx,12),Gen.floor_div(yy,12))
+                impacted[key] = true
+                if not _sprites.has(key):
+                    continue
+                var sprite: Node2D = _sprites[key]
+                if kind == "demolition":
+                    sprite.remove_building_cell(object_id,xx,yy)
+                else:
+                    sprite.update_building_cell(object_id,xx,yy,object_data)
+    elif kind == "land_buy":
+        var px := int(payload.get("px",0))
+        var py := int(payload.get("py",0))
+        var key := Vector2i(Gen.floor_div(px,2),Gen.floor_div(py,2))
+        impacted[key] = true
+    for key in impacted:
+        if stream.chunks.has(key):
+            # Only the authoritative current viewport changes. Snapshot
+            # versions are advanced without recreating unaffected textures.
+            stream.chunks[key]["version"] = maxi(int(stream.chunks[key].get("version",0)),int(event.get("version",0)))
 
 func refresh_buildings() -> void:
     for key in _sprites:
