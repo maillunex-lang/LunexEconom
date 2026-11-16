@@ -40,7 +40,9 @@ def main():
                      notify_token_files=tokens,ops_enabled=enabled("ops","PORTAL_OPS_ENABLED"),backup_dir=os.environ.get("PORTAL_BACKUP_DIR"),
                      launch_enabled=enabled("launch","PORTAL_LAUNCH_ENABLED"),
                      review_a7_enabled=enabled("review_a7","PORTAL_REVIEW_A7_ENABLED"),
-                     github_merge_token_file=os.environ.get("PORTAL_GITHUB_MERGE_TOKEN_FILE"))
+                     github_merge_token_file=os.environ.get("PORTAL_GITHUB_MERGE_TOKEN_FILE"),
+                     memory_enabled=os.environ.get("PORTAL_MEMORY","1")=="1",
+                     memory_root=os.environ.get("PORTAL_REPO_ROOT"))
     stop=threading.Event()
     def worker():
         while not stop.is_set():

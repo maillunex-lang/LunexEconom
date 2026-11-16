@@ -64,6 +64,9 @@ CREATE TABLE IF NOT EXISTS task_returns(id INTEGER PRIMARY KEY,project_slug TEXT
 CREATE TABLE IF NOT EXISTS project_lessons(project_slug TEXT PRIMARY KEY,content TEXT NOT NULL DEFAULT '[]');
 CREATE TABLE IF NOT EXISTS project_prompt_library(project_slug TEXT PRIMARY KEY,content TEXT NOT NULL DEFAULT '[]');
 CREATE TABLE IF NOT EXISTS task_auto_merge(project_slug TEXT NOT NULL,pkg_id TEXT NOT NULL,pr_number INTEGER NOT NULL,due_at REAL NOT NULL,cancelled INTEGER NOT NULL DEFAULT 0,PRIMARY KEY(project_slug,pkg_id));"""),
+    (10, """CREATE TABLE IF NOT EXISTS project_decisions(project_slug TEXT NOT NULL,id TEXT NOT NULL,date TEXT NOT NULL,title TEXT NOT NULL,text TEXT NOT NULL,source TEXT NOT NULL,PRIMARY KEY(project_slug,id));
+CREATE TABLE IF NOT EXISTS context_links(token_hash TEXT PRIMARY KEY,project_slug TEXT NOT NULL,context_text TEXT NOT NULL,expires REAL NOT NULL,revoked INTEGER NOT NULL DEFAULT 0,requests INTEGER NOT NULL DEFAULT 0,created REAL NOT NULL);
+CREATE TABLE IF NOT EXISTS repo_map_cache(project_slug TEXT PRIMARY KEY,items TEXT NOT NULL,updated REAL NOT NULL);"""),
 )
 
 
@@ -84,7 +87,7 @@ def migrate(conn, webhook=False, reports=False, notifications=False):
                 continue
             if version == 6 and not webhook:
                 continue
-            if version in (7, 8, 9) and not webhook:
+            if version in (7, 8, 9, 10) and not webhook:
                 continue
             if version in versions:
                 continue

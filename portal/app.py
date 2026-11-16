@@ -18,6 +18,7 @@ from http.cookies import SimpleCookie
 from pathlib import Path
 
 from . import auth, bootstrap, db
+from .launch import a9
 from . import launch
 from .launch import a7
 from .review import engine as a7_engine, returns as a7_returns, knowledge as a7_knowledge, project_types as a7_types
@@ -37,8 +38,9 @@ def _prompted(plan):
     return [dict(p, prompt=wp.prompt(plan, p["id"])) for p in plan["packages"]]
 
 
-def create_app(db_path, base="", secure_cookie=True, fetch=None, github_token_file=None, security_v2=True, webhook_enabled=False, webhook_secret_file=None, reports_enabled=False, notifications_enabled=False, notify_token_files=None, notify_client=None, notify_clock=None, ops_enabled=False, backup_dir=None, github_api=None, launch_enabled=False, launch_check_repo=None, review_a7_enabled=False, github_merge_token_file=None, review_fetch_json=None, review_fetch_diff=None):
+def create_app(db_path, base="", secure_cookie=True, fetch=None, github_token_file=None, security_v2=True, webhook_enabled=False, webhook_secret_file=None, reports_enabled=False, notifications_enabled=False, notify_token_files=None, notify_client=None, notify_clock=None, ops_enabled=False, backup_dir=None, github_api=None, launch_enabled=False, launch_check_repo=None, review_a7_enabled=False, github_merge_token_file=None, review_fetch_json=None, review_fetch_diff=None, memory_enabled=True, memory_root=None):
     conn = db.connect(db_path, webhook=webhook_enabled or reports_enabled or ops_enabled or launch_enabled or review_a7_enabled, reports=reports_enabled or ops_enabled or launch_enabled or review_a7_enabled, notifications=notifications_enabled or ops_enabled or launch_enabled or review_a7_enabled)
+    a9.ensure_tables(conn)
     notify_token_files = notify_token_files or {}
     notify_client = notify_client or notify.http_json
     clock = notify_clock or time.time
@@ -191,6 +193,9 @@ def create_app(db_path, base="", secure_cookie=True, fetch=None, github_token_fi
         except Exception:
             cookies = SimpleCookie()
         token = cookies[COOKIE].value if COOKIE in cookies else ""
+        if memory_enabled and re.fullmatch(r"/ctx/[A-Za-z0-9_-]{22,64}",path) and method == "GET":
+            value=a9.consume(conn,path.rsplit("/",1)[-1])
+            return respond(start,"200 OK" if value is not None else "404 Not Found",value.encode() if value is not None else {"error":"not_found"},[("Content-Type","text/plain; charset=utf-8")] if value is not None else None)
         if path == "/hook/github" and method == "POST":
             if not webhook_enabled:
                 return respond(start, "404 Not Found", {"error": "not_found"})
@@ -637,6 +642,12 @@ def create_app(db_path, base="", secure_cookie=True, fetch=None, github_token_fi
         row = project_row(slug)
         if not row:
             return respond(start, "404 Not Found", {"error": "no_project"})
+        if memory_enabled and sub in ("/context","/decisions","/context-link","/search","/repo-map"):
+            try:
+                result=a9.dispatch(conn,row,sub,method,environ,read_body,memory_root,base)
+                if result is not None:return respond(start,result[0],result[1])
+            except (ValueError,TypeError):
+                return respond(start,"400 Bad Request",{"error":"invalid_memory_request"})
         if ops_enabled and sub == "/export" and method == "GET":
             return respond(start,"200 OK",backup_core.export_project(conn,slug))
         if ops_enabled and sub == "/export.zip" and method == "GET":
