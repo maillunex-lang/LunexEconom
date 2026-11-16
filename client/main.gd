@@ -59,6 +59,12 @@ var update_screen: Control
 var token := ""
 var refresh_token := ""
 var _auth_busy := false
+var consent_required_version := ""
+var consent_dialog: ConfirmationDialog
+var consent_checkbox: CheckBox
+var delete_dialog: ConfirmationDialog
+var delete_password: LineEdit
+var delete_phrase: LineEdit
 
 func _ready() -> void:
     theme = Forest.create_theme(get_viewport_rect().size)
@@ -145,6 +151,7 @@ func _ready() -> void:
     login_email = login_screen.email
     login_password = login_screen.password
     status_label = login_screen.status
+    _install_consent_ui()
     headquarters = headquarters_screen.get_child(0)
     headquarters.hide()
     hq_status = headquarters_screen.status
@@ -162,6 +169,9 @@ func _ready() -> void:
     presence_timer.start()
 
 func _navigate(screen: String) -> void:
+    if not consent_required_version.is_empty() and screen != "login":
+        _show_consent_update()
+        return
     router.go(screen)
     if screen == "updates":
         update_screen.open()
@@ -353,6 +363,7 @@ func _renew_tokens() -> bool:
         _clear_tokens()
         return false
     var data: Dictionary = response.data
+    consent_required_version = str(data.get("consent_required_version", ""))
     token = str(data.get("access_token",""))
     refresh_token = str(data.get("refresh_token",""))
     if token.is_empty() or refresh_token.is_empty():
@@ -367,9 +378,13 @@ func _restore_session() -> void:
         # Session restoration must not interrupt an explicit screen navigation
         # that happened while the refresh request was in flight.
         if router.current in ["", "login", "headquarters"]:
-            _show_headquarters()
-        _load_hq()
-        _identify_tutorial()
+            if consent_required_version.is_empty():
+                _show_headquarters()
+            else:
+                _show_consent_update()
+        if consent_required_version.is_empty():
+            _load_hq()
+            _identify_tutorial()
 
 func _auth_error_text(mode: String, response: Dictionary) -> String:
     var code := ""
@@ -392,6 +407,8 @@ func _auth_error_text(mode: String, response: Dictionary) -> String:
             return Strings.get_text("auth.register.error.limit")
         "invalid_credentials":
             return Strings.get_text("auth.login.error.invalid")
+        "consent_required":
+            return Strings.get_text("auth.consent.required")
     if int(response.get("code", 0)) == 429:
         return Strings.get_text("auth.register.error.limit")
     if mode == "login" and int(response.get("code", 0)) in [400, 401, 403]:
@@ -412,6 +429,9 @@ func _send_auth(mode: String) -> void:
     elif username.length() < 3 or username.length() > 24 or password.length() < 6 or not email.contains("@"):
         status_label.text = Strings.get_text("auth.register.error.weak")
         return
+    if mode == "register" and not login_screen.consent_checkbox.button_pressed:
+        status_label.text = Strings.get_text("auth.consent.required")
+        return
     _auth_busy = true
     status_label.text = Strings.get_text("loading")
     login_screen.action.disabled = true
@@ -419,9 +439,10 @@ func _send_auth(mode: String) -> void:
     var data := {"username":username,"password":password}
     if mode == "register":
         data["email"] = email
+        data["consent_personal_data"] = login_screen.consent_checkbox.button_pressed
     var response: Dictionary = await _api("/auth/" + mode,HTTPClient.METHOD_POST,data)
     _auth_busy = false
-    login_screen.action.disabled = false
+    login_screen._update_registration_allowed(false)
     login_screen.action.text = Strings.get_text("auth.register.button" if mode == "register" else "auth.login.button")
     if response.code != 200 and response.code != 201:
         status_label.text = _auth_error_text(mode, response)
@@ -437,6 +458,10 @@ func _send_auth(mode: String) -> void:
         return
     _save_refresh(refresh_token)
     account_id = str((response.data as Dictionary).get("account_id", ""))
+    consent_required_version = str((response.data as Dictionary).get("consent_required_version", ""))
+    if not consent_required_version.is_empty():
+        _show_consent_update()
+        return
     _show_headquarters()
     _load_hq()
 
@@ -572,9 +597,109 @@ func _logout() -> void:
     var old := refresh_token
     var old_access := token
     _clear_tokens()
+    consent_required_version = ""
     _show_login()
     status_label.text = Strings.get_text("auth.logout")
     if not old.is_empty():
         token = old_access
         await _api("/auth/logout",HTTPClient.METHOD_POST,{"refresh_token":old},true)
         token = ""
+
+func _install_consent_ui() -> void:
+    consent_dialog = ConfirmationDialog.new()
+    consent_dialog.title = Strings.get_text("auth.consent.update.title")
+    consent_dialog.ok_button_text = Strings.get_text("auth.consent.update.accept")
+    consent_dialog.get_ok_button().disabled = true
+    consent_dialog.canceled.connect(_decline_consent)
+    var consent_content := VBoxContainer.new()
+    consent_dialog.add_child(consent_content)
+    var explanation := Label.new()
+    explanation.text = Strings.get_text("auth.consent.update.description")
+    consent_content.add_child(explanation)
+    var links := HBoxContainer.new()
+    consent_content.add_child(links)
+    for entry in [["auth.consent.policy","policy"],["auth.consent.terms","terms"]]:
+        var link := LinkButton.new()
+        link.text = Strings.get_text(entry[0])
+        link.pressed.connect(login_screen._open_legal.bind(entry[1]))
+        links.add_child(link)
+    consent_checkbox = CheckBox.new()
+    consent_checkbox.text = Strings.get_text("auth.consent.checkbox")
+    consent_content.add_child(consent_checkbox)
+    consent_checkbox.toggled.connect(func(checked: bool): consent_dialog.get_ok_button().disabled = not checked)
+    consent_dialog.confirmed.connect(_accept_updated_consent)
+    add_child(consent_dialog)
+    var delete_button := Button.new()
+    delete_button.text = Strings.get_text("account.delete.button")
+    delete_button.name = "DeleteAccount"
+    delete_button.pressed.connect(_show_delete_dialog)
+    settings_screen.stack.add_child(delete_button)
+    delete_dialog = ConfirmationDialog.new()
+    delete_dialog.title = Strings.get_text("account.delete.title")
+    delete_dialog.ok_button_text = Strings.get_text("account.delete.confirm")
+    var deletion_content := VBoxContainer.new()
+    delete_dialog.add_child(deletion_content)
+    var description := Label.new()
+    description.text = Strings.get_text("account.delete.description")
+    description.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+    deletion_content.add_child(description)
+    delete_password = LineEdit.new()
+    delete_password.secret = true
+    delete_password.placeholder_text = Strings.get_text("account.delete.password")
+    deletion_content.add_child(delete_password)
+    delete_phrase = LineEdit.new()
+    delete_phrase.placeholder_text = Strings.get_text("account.delete.phrase")
+    deletion_content.add_child(delete_phrase)
+    delete_dialog.confirmed.connect(_confirm_delete_account)
+    add_child(delete_dialog)
+
+func _show_consent_update() -> void:
+    if consent_dialog == null:
+        return
+    consent_checkbox.button_pressed = false
+    consent_dialog.get_ok_button().disabled = true
+    if router.current != "login":
+        router.reset("login")
+    consent_dialog.popup_centered(Vector2i(580,300))
+
+func _decline_consent() -> void:
+    _clear_tokens()
+    consent_required_version = ""
+    _show_login()
+
+func _accept_updated_consent() -> void:
+    if not consent_checkbox.button_pressed:
+        _show_consent_update()
+        return
+    var result: Dictionary = await _api("/auth/consent",HTTPClient.METHOD_POST,{"consent_personal_data":true},true)
+    if result.code != 200:
+        status_label.text = Strings.get_text("auth.consent.update.error")
+        _show_consent_update()
+        return
+    consent_required_version = ""
+    _show_headquarters()
+    _load_hq()
+    _identify_tutorial()
+
+func _show_delete_dialog() -> void:
+    delete_password.text = ""
+    delete_phrase.text = ""
+    delete_dialog.popup_centered(Vector2i(600,310))
+
+func _confirm_delete_account() -> void:
+    if delete_password.text.is_empty() or delete_phrase.text != "УДАЛИТЬ АККАУНТ":
+        _show_delete_dialog()
+        return
+    var response: Dictionary = await _api("/account/delete",HTTPClient.METHOD_POST,{"password":delete_password.text,"confirmation_phrase":delete_phrase.text},true)
+    delete_password.text = ""
+    delete_phrase.text = ""
+    if response.code != 200:
+        var error_dialog := AcceptDialog.new()
+        error_dialog.dialog_text = Strings.get_text("account.delete.error")
+        add_child(error_dialog)
+        error_dialog.popup_centered()
+        error_dialog.confirmed.connect(error_dialog.queue_free)
+        return
+    _clear_tokens()
+    _show_login()
+    status_label.text = Strings.get_text("account.delete.scheduled")
