@@ -82,6 +82,11 @@ func _load() -> void:
     var links: Array = payload.get("links", [])
     if inputs.is_empty():
         _label(Words.get_text("supply.no_inputs"))
+    var fuel_failures: Array = payload.get("fuel_failures", [])
+    for failure in fuel_failures:
+        var reason := str(failure.get("reason", ""))
+        if reason in ["fuel_unaffordable", "fuel_missing"]:
+            _label(Words.get_text("error.build." + reason))
     for input in inputs:
         _add_input_row(input, links)
     if row_controls.is_empty():
@@ -138,11 +143,14 @@ func _add_input_row(input: Dictionary, links: Array) -> void:
     var market_label := Label.new()
     market_label.text = Words.get_text("supply.market.loading")
     box.add_child(market_label)
+    var trip_label := Label.new()
+    box.add_child(trip_label)
     var current := {}
     for link in links:
         if str(link.get("product_id", "")) == product_id:
             current = link
             break
+    trip_label.text = trip_info(current)
     _set_option(source, str(current.get("source_type", current.get("source", "market"))))
     priority.value = int(current.get("priority", 1))
     share.value = int(current.get("share", current.get("share_bp", 1000)))
@@ -158,6 +166,17 @@ func _add_input_row(input: Dictionary, links: Array) -> void:
         market_label.text = Words.get_text("supply.market", {"price": Format.money(price), "low": Format.money(low), "high": Format.money(high)})
     else:
         market_label.text = Words.get_text("supply.market.unavailable")
+
+static func trip_info(link: Dictionary) -> String:
+    var liters := int(link.get("fuel_liters", 0))
+    if liters <= 0:
+        return ""
+    var result := ""
+    if link.has("transport_cost"):
+        result = Words.get_text("supply.transport.trip", {"cost": Format.money(link.get("transport_cost", 0))}) + "\n"
+    return result + Words.get_text("supply.fuel.trip", {
+        "liters": Format.number(liters),
+        "cost": Format.money(link.get("fuel_cost", 0))})
 
 func _set_option(option: OptionButton, value: String) -> void:
     for index in range(option.item_count):

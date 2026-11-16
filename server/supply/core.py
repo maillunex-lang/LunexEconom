@@ -199,6 +199,26 @@ def _travel(source_city, dest_city, quantity, per_km_unit):
     return days, cost
 
 
+def fuel_quote(source_city, dest_city, quantity, flags):
+    """Extra fuel for an intercity trip, never a replacement for freight."""
+    if (not flags.get('logistics_fuel_required', False) or quantity <= 0
+            or not source_city or not dest_city or source_city == dest_city):
+        return 0, 0
+    distance = world.routes(source_city, dest_city)['distance_meters']
+    liters = max(1, distance * quantity // 100000)
+    price = enterprise.catalog().index['products']['fuel']['reference_price']
+    cost = integer(liters * price) if flags.get('logistics_fuel_autobuy', True) else 0
+    return liters, cost
+
+
+def _report_failure(conn, buyer, product, day, reason):
+    """Report skipped trades without altering the existing need fields."""
+    conn.execute("""INSERT INTO supply_fuel_failures
+        (enterprise_id,product_id,day_index,reason)
+        VALUES(%s,%s,%s,%s) ON CONFLICT(enterprise_id,product_id,day_index)
+        DO UPDATE SET reason=excluded.reason""", (buyer, product, day, reason))
+
+
 def _port(flags, destination):
     raw = flags['supply_port_city_draft']
     if type(raw) is not str:
@@ -289,8 +309,17 @@ def _buy(conn, day, row, product, quantity, kind, supplier, price,
     if kind == 'port':
         days = max(1, days)
     subtotal = integer(quantity * price)
-    total = integer(subtotal + freight)
+    liters, fuel_cost = fuel_quote(source_city, destination, quantity, flags)
+    total = integer(subtotal + freight + fuel_cost)
+    if liters and not flags.get('logistics_fuel_autobuy', True):
+        fuel_available = enterprise.stock(conn, buyer_id).get(
+            'fuel', {'quantity': 0})['quantity']
+        if fuel_available < liters:
+            _report_failure(conn, buyer_id, product, day, 'fuel_missing')
+            return 0
     if total > buyer_balance:
+        if liters and fuel_cost and subtotal + freight <= buyer_balance:
+            _report_failure(conn, buyer_id, product, day, 'fuel_unaffordable')
         return 0
     key = f'supply:{buyer_id}:{product}:{day}:{kind}-{supplier or "system"}:{sequence}'
     if len(key) > 128:
@@ -298,6 +327,8 @@ def _buy(conn, day, row, product, quantity, kind, supplier, price,
     with conn.transaction():
         if kind == 'enterprise':
             enterprise.adjust(conn, supplier, product, -quantity)
+        if liters and not flags.get('logistics_fuel_autobuy', True):
+            enterprise.adjust(conn, buyer_id, 'fuel', -liters)
         journal = None
         if subtotal:
             if via_market and seller_account != buyer_account:
@@ -312,6 +343,9 @@ def _buy(conn, day, row, product, quantity, kind, supplier, price,
         if freight:
             transfer(conn, key + ':freight', buyer_account,
                      account(conn, 'system:market'), freight)
+        if fuel_cost:
+            transfer(conn, key + ':fuel', buyer_account,
+                     account(conn, 'system:market'), fuel_cost)
         _ship(conn, key, buyer_id, supplier if kind == 'enterprise' else None,
               kind, product, quantity, quality, price, freight, day,
               day + days, journal)

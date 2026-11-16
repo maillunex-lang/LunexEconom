@@ -2,6 +2,7 @@
 from server.platform.api import authenticate
 from server.enterprises import core as enterprise
 from . import core
+from server.platform.settings import read_settings
 
 def _mine(ctx):
     actor=authenticate(ctx)
@@ -16,7 +17,55 @@ def _mine(ctx):
 def get(body,ctx):
     _,row,error=_mine(ctx)
     if error:return error
-    return 200,{'enterprise_id':row[0],'inputs':core.read_links(ctx['conn'],row[0]),'balance':'draft'}
+    conn = ctx['conn']
+    links = core.read_links(conn, row[0])
+    registry = ctx.get('registry')
+    flags = ctx.get('settings')
+    if flags is None:
+        flags = read_settings(conn, registry.flags, registry.flag_constraints) if registry else {}
+    origin = conn.execute('SELECT city_id,x,y FROM enterprises WHERE id=%s', (row[0],)).fetchone()
+    destination = core._city(*origin)
+    enriched = {}
+    for product, entries in links.items():
+        enriched[product] = []
+        for entry in entries:
+            result = dict(entry)
+            kind = entry['source_type']
+            supplier = entry['source_enterprise_id']
+            source = None
+            if kind == 'enterprise':
+                info = conn.execute('SELECT city_id,x,y FROM enterprises WHERE id=%s', (supplier,)).fetchone()
+                if info:
+                    source = core._city(*info)
+            elif kind == 'port':
+                source = core._port(flags, destination)
+            if source:
+                # The actual dispatch quantity is determined at the daily tick.
+                # Quote a full recipe target apportioned by the link share.
+                recipe = core._recipe(row[2])
+                planned = (recipe or {'inputs': {}})['inputs'].get(product, 0)
+                quantity = planned * entry['share'] // 1000
+                liters, cost = core.fuel_quote(source, destination, quantity, flags)
+                result['fuel_liters'] = liters
+                if flags.get('logistics_fuel_autobuy', True):
+                    result['fuel_cost'] = cost
+                if source != destination:
+                    result['transport_cost'] = core._travel(
+                        source, destination, quantity,
+                        flags.get('supply_transport_rub_per_km_unit_draft', 1))[1]
+            else:
+                result['fuel_liters'] = 0
+            enriched[product].append(result)
+    failures = conn.execute("""SELECT product_id,reason FROM supply_fuel_failures
+        WHERE enterprise_id=%s AND day_index=(SELECT max(day_index)
+            FROM supply_fuel_failures WHERE enterprise_id=%s)""",
+        (row[0], row[0])).fetchall()
+    return 200, {'enterprise_id':row[0], 'inputs':links, 'balance':'draft',
+                 'links':[{**item, 'product_id':product}
+                          for product, entries in enriched.items() for item in entries],
+                 'fuel_failures':[{'product_id':product,'reason':reason}
+                                  for product,reason in failures]}
+
 
 def put(body,ctx):
     _,row,error=_mine(ctx)
