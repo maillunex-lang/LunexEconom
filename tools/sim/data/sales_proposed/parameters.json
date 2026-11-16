@@ -1,0 +1,17 @@
+{
+  "schema_version": 1, "balance": "draft", "product_id": "iron_ore",
+  "reference_price_rub": 80, "price_min_bp": 5000, "price_max_bp": 30000,
+  "price_step_rub": 1, "price_change_interval_days": 1,
+  "port_price_rub": 104, "port_min_quality": 50,
+  "port_quality_threshold": 45, "min_acceptable_quality": 45,
+  "quality_score_weight_bp": 2500, "price_score_weight_bp": 4000,
+  "reliability_score_weight_bp": 2000, "distance_score_weight_bp": 1500,
+  "score_cutoff": 570, "max_suppliers_per_input": 3,
+  "market_share_cap_bp": 4000, "ai_purchase_cap_bp": 4000,
+  "month_days": 30, "mine_monthly_capacity": 480, "mine_monthly_fixed_cost": 16000,
+  "mine_unit_cost_rub": 20, "buyers_monthly_need": 220,
+  "buyer_finished_good_value_rub": 170, "buyer_processing_cost_rub": 25,
+  "freight_rub_per_distance_unit": 1, "price_reduction_after_no_sales_days": 30,
+  "monthly_price_reduction_bp": 1000, "initial_wallet_rub": 20000000,
+  "reliability_window_days": 30, "minimum_quality_strict": true
+}
