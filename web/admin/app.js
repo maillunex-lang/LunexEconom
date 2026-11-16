@@ -20,6 +20,37 @@
     return data;
   }
 
+  // The account password is shorter than the admin policy (14+): only a password change is allowed.
+  function showPasswordChange() {
+    const card = $('#login');
+    card.replaceChildren();
+    const title = document.createElement('h2');
+    title.textContent = 'Смена пароля';
+    const note = document.createElement('p');
+    note.textContent = 'Для входа в админку нужен пароль не короче 14 символов. Придумайте новый пароль.';
+    const form = document.createElement('form');
+    form.className = 'form';
+    const input = document.createElement('input');
+    input.type = 'password'; input.minLength = 14; input.required = true; input.autocomplete = 'new-password';
+    input.placeholder = 'Новый пароль (14+ символов)';
+    const button = document.createElement('button');
+    button.type = 'submit'; button.textContent = 'Сменить пароль';
+    const error = document.createElement('p');
+    error.className = 'error'; error.setAttribute('role', 'alert');
+    form.append(input, button, error);
+    form.onsubmit = async (event) => {
+      event.preventDefault();
+      error.textContent = '';
+      try {
+        await api('/password', { method: 'POST', body: JSON.stringify({ password: input.value }) });
+        sessionStorage.setItem('lunex_admin_token', token);
+        sessionStorage.setItem('lunex_admin_role', currentRole);
+        showLoggedIn();
+      } catch (failure) { error.textContent = failure.message; }
+    };
+    card.append(title, note, form);
+  }
+
   function showLoggedIn() {
     $('#login').classList.add('hidden');
     $('#app').classList.remove('hidden');
@@ -283,6 +314,7 @@
       const data = await api('/login', { method: 'POST', body: JSON.stringify({ username: form.get('username'), password: form.get('password') }) });
       token = data.token;
       currentRole = data.role;
+      if (data.password_change_required) { showPasswordChange(); return; }
       sessionStorage.setItem('lunex_admin_token', token);
       sessionStorage.setItem('lunex_admin_role', currentRole);
       showLoggedIn();
