@@ -1,0 +1,45 @@
+{
+  "balance": "draft",
+  "packages": [
+    {
+      "id": "pack_tea",
+      "name": "Чай",
+      "price_rub": 99,
+      "price_rub_min": 49,
+      "price_rub_max": 149,
+      "description": "Разовая благодарность: рамка профиля. На склады, цены, выпуск и игровые рубли не влияет.",
+      "privileges": ["cosmetic_frame"],
+      "cosmetic_ids": ["frame_linen"]
+    },
+    {
+      "id": "pack_honey",
+      "name": "Баночка мёда",
+      "price_rub": 249,
+      "price_rub_min": 199,
+      "price_rub_max": 349,
+      "description": "Рамка, цвет компании и знак «Поддержал проект». Это благодарность, не сила на рынке.",
+      "privileges": ["cosmetic_frame", "cosmetic_company_color", "supporter_badge"],
+      "cosmetic_ids": ["frame_honey", "color_amber", "badge_supporter"]
+    },
+    {
+      "id": "pack_apiary",
+      "name": "Пасека",
+      "price_rub": 499,
+      "price_rub_min": 399,
+      "price_rub_max": 699,
+      "description": "Оформление интерфейса из подписанного пакета ui_theme, рамка и знак поддержки. Нет пакета — остаётся встроенный вид.",
+      "privileges": ["cosmetic_frame", "cosmetic_ui_theme", "supporter_badge"],
+      "cosmetic_ids": ["frame_apiary", "theme_apiary", "badge_supporter"]
+    },
+    {
+      "id": "pack_derrick",
+      "name": "Вышка",
+      "price_rub": 999,
+      "price_rub_min": 799,
+      "price_rub_max": 1499,
+      "description": "Рамка, цвет, тема и знак «Меценат». Игровых рублей и преимущества в торговле нет.",
+      "privileges": ["cosmetic_frame", "cosmetic_company_color", "cosmetic_ui_theme", "supporter_badge", "patron_badge"],
+      "cosmetic_ids": ["frame_derrick", "color_oil", "theme_night_field", "badge_supporter", "badge_patron"]
+    }
+  ]
+}

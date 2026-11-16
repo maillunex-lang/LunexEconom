@@ -1,0 +1,83 @@
+{
+  "balance": "draft",
+  "allowed": [
+    {
+      "id": "automation_slots_bonus",
+      "competitive": 1,
+      "game_money_alternative": "hire_executive_coverage",
+      "title": "Слоты автоматизации сверх бесплатных"
+    },
+    {
+      "id": "construction_accel_token",
+      "competitive": 1,
+      "game_money_alternative": "buy_accel_game_rub",
+      "title": "Жетон ускорения стройки в пределах общего потолка"
+    },
+    {
+      "id": "report_history_days",
+      "competitive": 0,
+      "game_money_alternative": "",
+      "title": "Глубина своих отчётов в реальных сутках"
+    },
+    {
+      "id": "notification_slots",
+      "competitive": 0,
+      "game_money_alternative": "",
+      "title": "Слоты оповещений о своих предприятиях"
+    },
+    {
+      "id": "rule_presets",
+      "competitive": 0,
+      "game_money_alternative": "",
+      "title": "Сохранённые наборы правил"
+    },
+    {
+      "id": "daily_report_push",
+      "competitive": 0,
+      "game_money_alternative": "",
+      "title": "Уведомление с отчётом автоматики за сутки"
+    },
+    {
+      "id": "priority_support",
+      "competitive": 0,
+      "game_money_alternative": "",
+      "title": "Ответ поддержки раньше остальных обращений"
+    },
+    {
+      "id": "plan_label",
+      "competitive": 0,
+      "game_money_alternative": "",
+      "title": "Подпись действующего тарифа в профиле"
+    },
+    {
+      "id": "cosmetic_frame",
+      "competitive": 0,
+      "game_money_alternative": "",
+      "title": "Рамка профиля"
+    },
+    {
+      "id": "cosmetic_company_color",
+      "competitive": 0,
+      "game_money_alternative": "",
+      "title": "Цвет компании"
+    },
+    {
+      "id": "cosmetic_ui_theme",
+      "competitive": 0,
+      "game_money_alternative": "",
+      "title": "Оформление интерфейса из подписанного пакета"
+    },
+    {
+      "id": "supporter_badge",
+      "competitive": 0,
+      "game_money_alternative": "",
+      "title": "Знак «Поддержал проект»"
+    },
+    {
+      "id": "patron_badge",
+      "competitive": 0,
+      "game_money_alternative": "",
+      "title": "Знак «Меценат»"
+    }
+  ]
+}

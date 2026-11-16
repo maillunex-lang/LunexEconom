@@ -1,0 +1,147 @@
+{
+  "balance": "draft",
+  "pack_kind": "ui_theme",
+  "pack_name": "ui_theme",
+  "cosmetics": [
+    {
+      "id": "frame_linen",
+      "name": "Рамка «Лён»",
+      "kind": "profile_frame",
+      "asset_id": "frame_linen",
+      "source": "package",
+      "source_id": "pack_tea",
+      "permanent": 1
+    },
+    {
+      "id": "frame_honey",
+      "name": "Рамка «Мёд»",
+      "kind": "profile_frame",
+      "asset_id": "frame_honey",
+      "source": "package",
+      "source_id": "pack_honey",
+      "permanent": 1
+    },
+    {
+      "id": "color_amber",
+      "name": "Цвет «Янтарь»",
+      "kind": "company_color",
+      "asset_id": "color_amber",
+      "source": "package",
+      "source_id": "pack_honey",
+      "permanent": 1
+    },
+    {
+      "id": "badge_supporter",
+      "name": "Поддержал проект",
+      "kind": "badge",
+      "asset_id": "badge_supporter",
+      "source": "package",
+      "source_id": "pack_honey",
+      "permanent": 1
+    },
+    {
+      "id": "frame_apiary",
+      "name": "Рамка «Пасека»",
+      "kind": "profile_frame",
+      "asset_id": "frame_apiary",
+      "source": "package",
+      "source_id": "pack_apiary",
+      "permanent": 1
+    },
+    {
+      "id": "theme_apiary",
+      "name": "Тема «Пасека»",
+      "kind": "ui_theme_token",
+      "asset_id": "theme_apiary",
+      "source": "package",
+      "source_id": "pack_apiary",
+      "permanent": 1
+    },
+    {
+      "id": "frame_derrick",
+      "name": "Рамка «Вышка»",
+      "kind": "profile_frame",
+      "asset_id": "frame_derrick",
+      "source": "package",
+      "source_id": "pack_derrick",
+      "permanent": 1
+    },
+    {
+      "id": "color_oil",
+      "name": "Цвет «Нефть»",
+      "kind": "company_color",
+      "asset_id": "color_oil",
+      "source": "package",
+      "source_id": "pack_derrick",
+      "permanent": 1
+    },
+    {
+      "id": "theme_night_field",
+      "name": "Тема «Ночное поле»",
+      "kind": "ui_theme_token",
+      "asset_id": "theme_night_field",
+      "source": "package",
+      "source_id": "pack_derrick",
+      "permanent": 1
+    },
+    {
+      "id": "badge_patron",
+      "name": "Меценат",
+      "kind": "badge",
+      "asset_id": "badge_patron",
+      "source": "package",
+      "source_id": "pack_derrick",
+      "permanent": 1
+    },
+    {
+      "id": "frame_start",
+      "name": "Рамка тарифа «Старт»",
+      "kind": "profile_frame",
+      "asset_id": "frame_start",
+      "source": "plan",
+      "source_id": "a_start",
+      "tier": "start",
+      "permanent": 0
+    },
+    {
+      "id": "frame_entrepreneur",
+      "name": "Рамка тарифа «Предприниматель»",
+      "kind": "profile_frame",
+      "asset_id": "frame_entrepreneur",
+      "source": "plan",
+      "source_id": "a_entrepreneur",
+      "tier": "entrepreneur",
+      "permanent": 0
+    },
+    {
+      "id": "color_forest",
+      "name": "Цвет «Лес»",
+      "kind": "company_color",
+      "asset_id": "color_forest",
+      "source": "plan",
+      "source_id": "a_entrepreneur",
+      "tier": "entrepreneur",
+      "permanent": 0
+    },
+    {
+      "id": "frame_magnate",
+      "name": "Рамка тарифа «Магнат»",
+      "kind": "profile_frame",
+      "asset_id": "frame_magnate",
+      "source": "plan",
+      "source_id": "a_magnate",
+      "tier": "magnate",
+      "permanent": 0
+    },
+    {
+      "id": "theme_magnate",
+      "name": "Тема «Магнат»",
+      "kind": "ui_theme_token",
+      "asset_id": "theme_magnate",
+      "source": "plan",
+      "source_id": "a_magnate",
+      "tier": "magnate",
+      "permanent": 0
+    }
+  ]
+}
