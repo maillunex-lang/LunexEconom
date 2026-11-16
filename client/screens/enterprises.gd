@@ -8,6 +8,7 @@ const Catalog = preload("res://enterprises/catalog.gd")
 const Words = preload("res://enterprises/strings.gd")
 const Forest = preload("res://theme/forest_glass.gd")
 const Format = preload("res://i18n/format.gd")
+const UiStrings = preload("res://i18n/strings.gd")
 var service: Node
 var catalog: Node
 var body: VBoxContainer
@@ -109,7 +110,7 @@ func refresh_list() -> void:
         var stage := int(entry.get("stage_index", 0))
         var progress := mini(100, stage*25)
         var stage_text := Words.get_text("construction", {"stage":Words.get_text("stage."+str(entry.get("stage", "foundation"))),"progress":progress}) if stage < 4 else Words.get_text("running" if entry.get("running", false) else "stopped")
-        button.text = "%s  |  %s  |  %s" % [str(entry.get("name", entry.get("building_id", ""))),stage_text,Words.get_text("load",{"percent":int(entry.get("load_bp",0))/100})]
+        button.text = "%s  |  %s  |  %s" % [catalog.building_name(str(entry.get("building_id", ""))),stage_text,Words.get_text("load",{"percent":int(entry.get("load_bp",0))/100})]
         button.pressed.connect(show_detail.bind(int(id)))
         body.add_child(button)
 
@@ -126,9 +127,10 @@ func show_detail(id: int) -> void:
     list_button.text = Words.get_text("title")
     list_button.pressed.connect(func(): current_id = -1; refresh_list())
     body.add_child(list_button)
-    _label(str(current.get("name", "")))
+    _label(catalog.building_name(str(current.get("building_id", ""))))
     var stage := int(current.get("stage_index", 0))
     _label(Words.get_text("construction", {"stage":Words.get_text("stage."+str(current.get("stage", "foundation"))),"progress":mini(100,stage*25)}) if stage < 4 else Words.get_text("running" if current.get("running",false) else "stopped"))
+    _render_materials(current.get("materials_required", null))
     _label(Words.get_text("staff",{"percent":int(current.get("staffing_bp",0))/100}))
     _label(Words.get_text("load",{"percent":int(current.get("load_bp",0))/100}))
     _label(Words.get_text("wear",{"wear":current.get("wear",0)}))
@@ -143,11 +145,7 @@ func show_detail(id: int) -> void:
         _label(Words.get_text("inventory.empty"))
     for product in inventory:
         var stock: Dictionary = inventory[product]
-        var product_name := str(product)
-        for product_entry in catalog.data.get("products", []):
-            if str(product_entry.get("id", "")) == str(product):
-                product_name = str(product_entry.get("name", product))
-                break
+        var product_name: String = catalog.product_name(str(product))
         _label("%s: %s" % [product_name,Words.get_text("quantity",{"quantity":stock.get("quantity",0),"quality":stock.get("quality",0)})])
     running_toggle = CheckButton.new()
     running_toggle.text = Words.get_text("running")
@@ -182,7 +180,7 @@ func show_detail(id: int) -> void:
     supply_button.custom_minimum_size = Vector2(0, 48)
     supply_button.pressed.connect(func(): supply_requested.emit(current_id))
     chain_actions.add_child(supply_button)
-    var is_retail := str(current.get("role", current.get("category", ""))) == "retail" or str(current.get("building_id", "")) in ["grocery_store", "supermarket", "clothing_store", "kiosk"]
+    var is_retail := str(catalog.building(str(current.get("building_id", ""))).get("role", "")) == "retail"
     if is_retail:
         var store_button := Button.new()
         store_button.text = Words.get_text("store.title")
@@ -206,6 +204,37 @@ func show_detail(id: int) -> void:
         sale_dialog.dialog_text = Words.get_text("confirm.sell",{"name":current.get("name","")})
         sale_dialog.popup_centered())
     body.add_child(sell_button)
+
+func _render_materials(value: Variant) -> void:
+    if not (value is Dictionary):
+        return
+    var items: Array = value.get("items", [])
+    if items.is_empty():
+        return
+    _label(Words.get_text("build.materials.title"))
+    var short_ids: Array[String] = []
+    for missing in value.get("short", []):
+        short_ids.append(str(missing.get("product_id", "") if missing is Dictionary else missing))
+    for item in items:
+        if not (item is Dictionary):
+            continue
+        var product_id := str(item.get("product_id", ""))
+        var name: String = catalog.product_name(product_id)
+        var shortage := product_id in short_ids or int(item.get("have", 0)) < int(item.get("needed", 0))
+        _material_label(Words.get_text("build.materials.row", {"name":name,"needed":Format.number(item.get("needed",0)),"have":Format.number(item.get("have",0)),"unit":catalog.product_unit(product_id)}), shortage)
+        if shortage:
+            _material_label(UiStrings.get_text("build.material.missing", {"name":name}), true)
+    if not short_ids.is_empty():
+        _material_label(UiStrings.get_text("build.waiting_materials"), true)
+
+func _material_label(value: String, shortage: bool) -> void:
+    var label := Label.new()
+    label.text = value
+    label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+    label.name = "MaterialShortage" if shortage else "MaterialAvailable"
+    if shortage:
+        label.add_theme_color_override("font_color", Color("f2a8a8"))
+    body.add_child(label)
 
 func _save_settings() -> void:
     var recipe := str(recipe_select.get_item_metadata(recipe_select.selected))

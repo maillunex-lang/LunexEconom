@@ -55,6 +55,22 @@ func building(building_id: String) -> Dictionary:
             return item
     return {}
 
+func product(product_id: String) -> Dictionary:
+    for entry in data.get("products", []):
+        if entry is Dictionary and str(entry.get("id", "")) == product_id:
+            return entry
+    return {}
+
+func product_name(product_id: String) -> String:
+    return str(product(product_id).get("name", product_id))
+
+func building_name(building_id: String) -> String:
+    return str(building(building_id).get("name", building_id))
+
+func product_unit(product_id: String) -> String:
+    var unit := str(product(product_id).get("unit", ""))
+    return "кг" if unit == "kg" else (unit if not unit.is_empty() else "ед.")
+
 func eligible(item: Dictionary, zone: String, free_width: int, free_height: int) -> bool:
     var size: Dictionary = item.get("size", {})
     return zone in item.get("zones", []) and int(size.get("width", 0)) <= free_width and int(size.get("height", 0)) <= free_height and free_width > 0 and free_height > 0
