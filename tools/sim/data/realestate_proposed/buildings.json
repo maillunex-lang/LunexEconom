@@ -1,0 +1,155 @@
+{
+  "balance": "draft",
+  "currency": "game_rub",
+  "buildings": [
+    {
+      "id": "mall_small",
+      "name": "Малый ТЦ",
+      "gross_m2": 1600,
+      "leasable_m2": 1200,
+      "unit_module_m2": 100,
+      "max_units": 12,
+      "traffic_visitors_per_day": 540,
+      "quality_score": 75,
+      "comfort_score": 70,
+      "build_cost_rub": 480000,
+      "upkeep_month_rub": 12000,
+      "zone": "center",
+      "size_cells": {
+        "width": 3,
+        "height": 3
+      },
+      "min_unit_m2": 100,
+      "max_unit_m2": 500,
+      "usable_levels": [
+        "retail",
+        "office"
+      ],
+      "balance": "draft"
+    },
+    {
+      "id": "mall_medium",
+      "name": "Средний ТЦ",
+      "gross_m2": 4000,
+      "leasable_m2": 3000,
+      "unit_module_m2": 100,
+      "max_units": 30,
+      "traffic_visitors_per_day": 1500,
+      "quality_score": 85,
+      "comfort_score": 80,
+      "build_cost_rub": 1200000,
+      "upkeep_month_rub": 26000,
+      "zone": "center",
+      "size_cells": {
+        "width": 4,
+        "height": 4
+      },
+      "min_unit_m2": 100,
+      "max_unit_m2": 500,
+      "usable_levels": [
+        "retail",
+        "office"
+      ],
+      "balance": "draft"
+    },
+    {
+      "id": "mall_large",
+      "name": "Крупный ТЦ",
+      "gross_m2": 8000,
+      "leasable_m2": 6000,
+      "unit_module_m2": 100,
+      "max_units": 60,
+      "traffic_visitors_per_day": 3600,
+      "quality_score": 95,
+      "comfort_score": 90,
+      "build_cost_rub": 2400000,
+      "upkeep_month_rub": 50000,
+      "zone": "center",
+      "size_cells": {
+        "width": 5,
+        "height": 5
+      },
+      "min_unit_m2": 100,
+      "max_unit_m2": 500,
+      "usable_levels": [
+        "retail",
+        "office"
+      ],
+      "balance": "draft"
+    },
+    {
+      "id": "mixed_housing",
+      "name": "Жилой дом с коммерческим этажом",
+      "gross_m2": 2400,
+      "leasable_m2": 400,
+      "unit_module_m2": 50,
+      "max_units": 8,
+      "traffic_visitors_per_day": 300,
+      "quality_score": 65,
+      "comfort_score": 80,
+      "build_cost_rub": 300000,
+      "upkeep_month_rub": 10000,
+      "zone": "residential",
+      "size_cells": {
+        "width": 3,
+        "height": 3
+      },
+      "min_unit_m2": 50,
+      "max_unit_m2": 200,
+      "usable_levels": [
+        "retail",
+        "residential"
+      ],
+      "balance": "draft",
+      "residential_m2": 1600
+    },
+    {
+      "id": "office_tower",
+      "name": "Офисное здание",
+      "gross_m2": 3600,
+      "leasable_m2": 2400,
+      "unit_module_m2": 100,
+      "max_units": 24,
+      "traffic_visitors_per_day": 450,
+      "quality_score": 70,
+      "comfort_score": 80,
+      "build_cost_rub": 650000,
+      "upkeep_month_rub": 18000,
+      "zone": "center",
+      "size_cells": {
+        "width": 3,
+        "height": 3
+      },
+      "min_unit_m2": 100,
+      "max_unit_m2": 600,
+      "usable_levels": [
+        "office"
+      ],
+      "balance": "draft"
+    },
+    {
+      "id": "department_store",
+      "name": "Универмаг",
+      "gross_m2": 2800,
+      "leasable_m2": 2000,
+      "unit_module_m2": 100,
+      "max_units": 20,
+      "traffic_visitors_per_day": 1000,
+      "quality_score": 80,
+      "comfort_score": 75,
+      "build_cost_rub": 850000,
+      "upkeep_month_rub": 20000,
+      "zone": "center",
+      "size_cells": {
+        "width": 3,
+        "height": 3
+      },
+      "min_unit_m2": 100,
+      "max_unit_m2": 500,
+      "usable_levels": [
+        "retail"
+      ],
+      "balance": "draft"
+    }
+  ]
+}

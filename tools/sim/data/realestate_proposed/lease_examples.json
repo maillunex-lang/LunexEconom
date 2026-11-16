@@ -1,0 +1,73 @@
+{
+  "balance": "draft",
+  "leases": [
+    {
+      "id": "lease-a",
+      "city": "ufa",
+      "building_id": "mall_small",
+      "property_id": "prop-1",
+      "unit_id": "prop-1-u1",
+      "landlord": "hold-a",
+      "tenant": "hold-b",
+      "use": "retail",
+      "area_m2": 200,
+      "rate_rub_per_m2_month": 28,
+      "term_months": 12,
+      "deposit_rub": 5600,
+      "indexation_bp_12_months": 800,
+      "start_month": 2,
+      "status": "active"
+    },
+    {
+      "id": "lease-b",
+      "city": "ufa",
+      "building_id": "mall_small",
+      "property_id": "prop-1",
+      "unit_id": "prop-1-u2",
+      "landlord": "hold-a",
+      "tenant": "hold-c",
+      "use": "retail",
+      "area_m2": 100,
+      "rate_rub_per_m2_month": 28,
+      "term_months": 6,
+      "deposit_rub": 2800,
+      "indexation_bp_12_months": 0,
+      "start_month": 2,
+      "status": "active"
+    },
+    {
+      "id": "lease-c",
+      "city": "sterlitamak",
+      "building_id": "mall_medium",
+      "property_id": "prop-2",
+      "unit_id": "prop-2-u1",
+      "landlord": "hold-d",
+      "tenant": "hold-b",
+      "use": "retail",
+      "area_m2": 300,
+      "rate_rub_per_m2_month": 24,
+      "term_months": 12,
+      "deposit_rub": 7200,
+      "indexation_bp_12_months": 1000,
+      "start_month": 3,
+      "status": "active"
+    },
+    {
+      "id": "lease-d",
+      "city": "ufa",
+      "building_id": "mixed_housing",
+      "property_id": "prop-3",
+      "unit_id": "prop-3-u1",
+      "landlord": "hold-e",
+      "tenant": "hold-f",
+      "use": "retail",
+      "area_m2": 100,
+      "rate_rub_per_m2_month": 20,
+      "term_months": 3,
+      "deposit_rub": 2000,
+      "indexation_bp_12_months": 0,
+      "start_month": 4,
+      "status": "active"
+    }
+  ]
+}
