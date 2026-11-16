@@ -1,0 +1,58 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1440" height="900" viewBox="0 0 1440 900">
+<rect width="1440" height="900" fill="#EDF1EA"/>
+<rect x="0" y="0" width="1440" height="64" rx="0" fill="#FFFFFF" stroke="#D2DBD3" stroke-width="1.5"/>
+<text x="40" y="40" font-family="Inter,sans-serif" font-size="18" fill="#13201A" text-anchor="start" font-weight="700">CreatePortal</text>
+<text x="190" y="40" font-family="Inter,sans-serif" font-size="15" fill="#566860" text-anchor="start">/ Моя игра / Задача A1</text>
+<text x="1400" y="40" font-family="Inter,sans-serif" font-size="14" fill="#566860" text-anchor="end">Справка   Тема   Выйти</text>
+<text x="40" y="110" font-family="Inter,sans-serif" font-size="28" fill="#13201A" text-anchor="start" font-weight="700">A1 Глубокие цепочки: сервер</text>
+<rect x="40" y="130" width="96" height="24" rx="12" fill="#DFEBF9"/>
+<text x="88" y="147" font-family="Inter,sans-serif" font-size="12" fill="#13201A" text-anchor="middle" font-weight="600">Ждёт приёмки</text>
+<rect x="40" y="170" width="860" height="320" rx="16" fill="#FFFFFF" stroke="#D2DBD3" stroke-width="1.5"/>
+<text x="60" y="200" font-family="Inter,sans-serif" font-size="17" fill="#13201A" text-anchor="start" font-weight="600">Отчёт исполнителя</text>
+<text x="60" y="232" font-family="Inter,sans-serif" font-size="14" fill="#566860" text-anchor="start">Вставьте отчёт или ссылку на PR. Портал найдёт PR и покажет проверки.</text>
+<rect x="60" y="245" width="820" height="90" rx="10" fill="#F4F7F2" stroke="#D2DBD3" stroke-width="1.5"/>
+<text x="76" y="272" font-family="Inter,sans-serif" font-size="14" fill="#13201A" text-anchor="start">PR #104 · ветка v2/a1-deep-chains · SHA 9f3c2a1</text>
+<text x="76" y="298" font-family="Inter,sans-serif" font-size="14" fill="#566860" text-anchor="start">Серверные тесты: 331, ошибок 0. Допущения: docs/qa/A1.md</text>
+<rect x="60" y="355" width="180" height="40" rx="10" fill="#FFFFFF" stroke="#D2DBD3" stroke-width="1.5"/>
+<text x="150" y="380" font-family="Inter,sans-serif" font-size="14" fill="#13201A" text-anchor="middle" font-weight="600">Открыть PR на GitHub</text>
+<rect x="255" y="355" width="200" height="40" rx="10" fill="#FFFFFF" stroke="#D2DBD3" stroke-width="1.5"/>
+<text x="355" y="380" font-family="Inter,sans-serif" font-size="14" fill="#13201A" text-anchor="middle" font-weight="600">Обновить статус CI</text>
+<text x="60" y="428" font-family="Inter,sans-serif" font-size="15" fill="#13201A" text-anchor="start" font-weight="600">Проверки CI на PR</text>
+<rect x="60" y="440" width="160" height="24" rx="12" fill="#DAF0E3"/>
+<text x="140" y="457" font-family="Inter,sans-serif" font-size="12" fill="#13201A" text-anchor="middle" font-weight="600">server test: успех</text>
+<rect x="236" y="440" width="170" height="24" rx="12" fill="#DAF0E3"/>
+<text x="321" y="457" font-family="Inter,sans-serif" font-size="12" fill="#13201A" text-anchor="middle" font-weight="600">client smoke: успех</text>
+<rect x="422" y="440" width="140" height="24" rx="12" fill="#DAF0E3"/>
+<text x="492" y="457" font-family="Inter,sans-serif" font-size="12" fill="#13201A" text-anchor="middle" font-weight="600">website: успех</text>
+<rect x="920" y="170" width="480" height="320" rx="16" fill="#FFFFFF" stroke="#D2DBD3" stroke-width="1.5"/>
+<text x="940" y="200" font-family="Inter,sans-serif" font-size="17" fill="#13201A" text-anchor="start" font-weight="600">Приёмка директора</text>
+<rect x="940" y="234" width="22" height="22" rx="6" fill="#2B7A52" stroke="#D2DBD3" stroke-width="1.5"/>
+<text x="942" y="250" font-family="Inter,sans-serif" font-size="14" fill="#FFFFFF" text-anchor="start" font-weight="700">✓</text>
+<text x="974" y="250" font-family="Inter,sans-serif" font-size="14.5" fill="#13201A" text-anchor="start">Пробное слияние с main без конфликтов</text>
+<rect x="940" y="276" width="22" height="22" rx="6" fill="#2B7A52" stroke="#D2DBD3" stroke-width="1.5"/>
+<text x="942" y="292" font-family="Inter,sans-serif" font-size="14" fill="#FFFFFF" text-anchor="start" font-weight="700">✓</text>
+<text x="974" y="292" font-family="Inter,sans-serif" font-size="14.5" fill="#13201A" text-anchor="start">Файлы только в зоне линии A</text>
+<rect x="940" y="318" width="22" height="22" rx="6" fill="#2B7A52" stroke="#D2DBD3" stroke-width="1.5"/>
+<text x="942" y="334" font-family="Inter,sans-serif" font-size="14" fill="#FFFFFF" text-anchor="start" font-weight="700">✓</text>
+<text x="974" y="334" font-family="Inter,sans-serif" font-size="14.5" fill="#13201A" text-anchor="start">Серверные тесты у директора: 331 OK</text>
+<rect x="940" y="360" width="22" height="22" rx="6" fill="#2B7A52" stroke="#D2DBD3" stroke-width="1.5"/>
+<text x="942" y="376" font-family="Inter,sans-serif" font-size="14" fill="#FFFFFF" text-anchor="start" font-weight="700">✓</text>
+<text x="974" y="376" font-family="Inter,sans-serif" font-size="14.5" fill="#13201A" text-anchor="start">CI зелёный</text>
+<rect x="940" y="402" width="22" height="22" rx="6" fill="#FFFFFF" stroke="#D2DBD3" stroke-width="1.5"/>
+<text x="942" y="418" font-family="Inter,sans-serif" font-size="14" fill="#FFFFFF" text-anchor="start" font-weight="700"></text>
+<text x="974" y="418" font-family="Inter,sans-serif" font-size="14.5" fill="#13201A" text-anchor="start">Слито в main (squash)</text>
+<rect x="940" y="452" width="200" height="40" rx="10" fill="#2B7A52"/>
+<text x="1040" y="477" font-family="Inter,sans-serif" font-size="14" fill="#FFFFFF" text-anchor="middle" font-weight="600">Принято, в архив</text>
+<text x="1150" y="477" font-family="Inter,sans-serif" font-size="13" fill="#566860" text-anchor="start">доступно после всех пунктов</text>
+<rect x="40" y="510" width="1360" height="150" rx="16" fill="#FFFFFF" stroke="#D2DBD3" stroke-width="1.5"/>
+<text x="60" y="540" font-family="Inter,sans-serif" font-size="17" fill="#13201A" text-anchor="start" font-weight="600">Критерии готовности и самопроверка исполнителя</text>
+<text x="60" y="570" font-family="Inter,sans-serif" font-size="14" fill="#566860" text-anchor="start">✓  Полный набор server/tests проходит на PostgreSQL 16</text>
+<text x="60" y="592" font-family="Inter,sans-serif" font-size="14" fill="#566860" text-anchor="start">✓  Новые флаги по умолчанию выключены</text>
+<text x="60" y="614" font-family="Inter,sans-serif" font-size="14" fill="#566860" text-anchor="start">✓  Деньги только через ledger, идемпотентность</text>
+<text x="60" y="636" font-family="Inter,sans-serif" font-size="14" fill="#566860" text-anchor="start">✓  Менялись только файлы зоны линии A</text>
+<rect x="40" y="680" width="1360" height="190" rx="16" fill="#FFFFFF" stroke="#D2DBD3" stroke-width="1.5"/>
+<text x="60" y="710" font-family="Inter,sans-serif" font-size="17" fill="#13201A" text-anchor="start" font-weight="600">Журнал задачи</text>
+<text x="60" y="742" font-family="Inter,sans-serif" font-size="14" fill="#566860" text-anchor="start">16 ноя 11:42  выдано исполнителю</text>
+<text x="60" y="770" font-family="Inter,sans-serif" font-size="14" fill="#566860" text-anchor="start">16 ноя 14:05  сдано, PR #104 открыт</text>
+<text x="60" y="798" font-family="Inter,sans-serif" font-size="14" fill="#566860" text-anchor="start">16 ноя 14:20  CI зелёный, ждёт приёмки директора</text>
+</svg>
