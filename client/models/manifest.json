@@ -1,0 +1,453 @@
+{
+  "models": {
+    "buildings/apiary.glb": {
+      "bytes": 24384,
+      "height": 1,
+      "sha256": "6d2146f917d4429c02b1cdeabb81d1735ae1a4651ae19b6af8fced8c2ca848f9",
+      "triangles": 252,
+      "width": 1
+    },
+    "buildings/appliance_plant.glb": {
+      "bytes": 17848,
+      "height": 3,
+      "sha256": "98e692eaf6e9815d8dffc6a82cab968b118ddd8d229cd8ce8c49dc2fafa4f179",
+      "triangles": 168,
+      "width": 3
+    },
+    "buildings/auto_plant.glb": {
+      "bytes": 17848,
+      "height": 3,
+      "sha256": "98e692eaf6e9815d8dffc6a82cab968b118ddd8d229cd8ce8c49dc2fafa4f179",
+      "triangles": 168,
+      "width": 3
+    },
+    "buildings/bakery.glb": {
+      "bytes": 18804,
+      "height": 2,
+      "sha256": "f52bf309521a9230e8f3b2f553854e06ddee4ce43588289bbbb4ce556d3fce9a",
+      "triangles": 180,
+      "width": 2
+    },
+    "buildings/beverage_plant.glb": {
+      "bytes": 18804,
+      "height": 2,
+      "sha256": "f52bf309521a9230e8f3b2f553854e06ddee4ce43588289bbbb4ce556d3fce9a",
+      "triangles": 180,
+      "width": 2
+    },
+    "buildings/car_dealer.glb": {
+      "bytes": 17836,
+      "height": 2,
+      "sha256": "bd136fdf1573b7dffe156046836ee5daf5d471edb5deb5c608ec56bf25e23eda",
+      "triangles": 168,
+      "width": 3
+    },
+    "buildings/cement_plant.glb": {
+      "bytes": 18808,
+      "height": 3,
+      "sha256": "eedcfad18c4c87d4dedcfef94548f068251cb06fdd0892714856c75538b7182c",
+      "triangles": 180,
+      "width": 3
+    },
+    "buildings/clothing_store.glb": {
+      "bytes": 18804,
+      "height": 2,
+      "sha256": "d2d476ebd5a969e48faa24b074119036f74336e25c0ae16e93c63a1a183b4556",
+      "triangles": 180,
+      "width": 2
+    },
+    "buildings/creamery.glb": {
+      "bytes": 17860,
+      "height": 2,
+      "sha256": "367560f060a6108fa9398f8c94aa4c10b9a115136651299962f4593c6f9556cc",
+      "triangles": 168,
+      "width": 2
+    },
+    "buildings/dairy.glb": {
+      "bytes": 17840,
+      "height": 2,
+      "sha256": "e80f88bd5fce95b142511124f28caa1d941504f087ce203c07fbabcd9513d2cf",
+      "triangles": 168,
+      "width": 2
+    },
+    "buildings/electronics_plant.glb": {
+      "bytes": 17848,
+      "height": 3,
+      "sha256": "98e692eaf6e9815d8dffc6a82cab968b118ddd8d229cd8ce8c49dc2fafa4f179",
+      "triangles": 168,
+      "width": 3
+    },
+    "buildings/electronics_store.glb": {
+      "bytes": 17868,
+      "height": 2,
+      "sha256": "6dbb62afd1e6c0e6e3f2ec2dac56bc748857023cf3ef15590de3e98845fc873e",
+      "triangles": 168,
+      "width": 2
+    },
+    "buildings/feed_plant.glb": {
+      "bytes": 17860,
+      "height": 2,
+      "sha256": "7ca411d4b544742a8925948c5a8aaf26a6c33b97220374b1509d51bd6e5ed567",
+      "triangles": 168,
+      "width": 2
+    },
+    "buildings/field.glb": {
+      "bytes": 21396,
+      "height": 2,
+      "sha256": "c02ebca7136b704fcee117d7aa017d0914d50f117a16efbeb94b2685781c1a42",
+      "triangles": 216,
+      "width": 2
+    },
+    "buildings/fishery.glb": {
+      "bytes": 17844,
+      "height": 2,
+      "sha256": "9ca3b27712ff0aea069384fdb9843aff74507c4dd12b38d0eaac0b86d472cf6f",
+      "triangles": 168,
+      "width": 2
+    },
+    "buildings/fuel_station.glb": {
+      "bytes": 19688,
+      "height": 2,
+      "sha256": "271ef16ed28e47f9180686a21b2ef0b00b820f62dc14a69a178b1a449aaa3bcc",
+      "triangles": 192,
+      "width": 2
+    },
+    "buildings/furniture_store.glb": {
+      "bytes": 17868,
+      "height": 2,
+      "sha256": "dc93d63b5312693b287ce5e22214444675200308dafb677b003cfe7baad815d9",
+      "triangles": 168,
+      "width": 2
+    },
+    "buildings/furniture_workshop.glb": {
+      "bytes": 22552,
+      "height": 2,
+      "sha256": "f8145c259f88b6cbe2dfccfe07983299179b6ac4b44600f79a7d620498119e0d",
+      "triangles": 228,
+      "width": 2
+    },
+    "buildings/gas_well.glb": {
+      "bytes": 24412,
+      "height": 2,
+      "sha256": "c7b07c8c04c633b56b550c0770a3c10d7ef635c60495bca9c5c3cc28004413ec",
+      "triangles": 252,
+      "width": 2
+    },
+    "buildings/glass_plant.glb": {
+      "bytes": 18832,
+      "height": 2,
+      "sha256": "9b716c620d5d180e1079da9c12304e32a8d66e40141f19b0a39789904e7d9fe3",
+      "triangles": 180,
+      "width": 3
+    },
+    "buildings/grocery_store.glb": {
+      "bytes": 17868,
+      "height": 2,
+      "sha256": "1699bd8148d79bb78d40d3c1aba422d2e092d6d0006fcf0e813278f2ba6a2116",
+      "triangles": 168,
+      "width": 2
+    },
+    "buildings/hardware_store.glb": {
+      "bytes": 18804,
+      "height": 2,
+      "sha256": "121bcfe84a2df3ccdae71cd9c4e2a3c5b6e8ad4010395e9eed39a08063c6f026",
+      "triangles": 180,
+      "width": 2
+    },
+    "buildings/housing.glb": {
+      "bytes": 18792,
+      "height": 3,
+      "sha256": "5251d41f94b5d5574e1e033019c38509a7e1ddb9253a56739c8a67e8ac3c9882",
+      "triangles": 180,
+      "width": 3
+    },
+    "buildings/logging_camp.glb": {
+      "bytes": 22552,
+      "height": 2,
+      "sha256": "ad7f0f89b5a8a1688214d66ee8851d14f2f9576cd5274a7b29d5c694bb5f8cbc",
+      "triangles": 228,
+      "width": 2
+    },
+    "buildings/malthouse.glb": {
+      "bytes": 20696,
+      "height": 2,
+      "sha256": "f1f1660482f88aa35eb8c76e189f88359857b3bfa1e7f231fde57cc586a908f4",
+      "triangles": 204,
+      "width": 2
+    },
+    "buildings/mill.glb": {
+      "bytes": 20696,
+      "height": 2,
+      "sha256": "f1f1660482f88aa35eb8c76e189f88359857b3bfa1e7f231fde57cc586a908f4",
+      "triangles": 204,
+      "width": 2
+    },
+    "buildings/mine.glb": {
+      "bytes": 19696,
+      "height": 3,
+      "sha256": "6b93345878f741bfd13363fd4b9d94779053d49e409e0ba22962b26afe312809",
+      "triangles": 192,
+      "width": 3
+    },
+    "buildings/office.glb": {
+      "bytes": 18820,
+      "height": 2,
+      "sha256": "ebf4d3f48deb27c1c2a148e0c58474755147f1ca5eb80dff6e386d14f4bd6a4e",
+      "triangles": 180,
+      "width": 2
+    },
+    "buildings/oil_well.glb": {
+      "bytes": 24412,
+      "height": 2,
+      "sha256": "c7b07c8c04c633b56b550c0770a3c10d7ef635c60495bca9c5c3cc28004413ec",
+      "triangles": 252,
+      "width": 2
+    },
+    "buildings/polymer_plant.glb": {
+      "bytes": 26268,
+      "height": 2,
+      "sha256": "a7d03f4c4d3fa7a9f654984ff847cd6ba13176d8f14893e821550bc06431d8e5",
+      "triangles": 276,
+      "width": 3
+    },
+    "buildings/poultry_farm.glb": {
+      "bytes": 17840,
+      "height": 2,
+      "sha256": "e80f88bd5fce95b142511124f28caa1d941504f087ce203c07fbabcd9513d2cf",
+      "triangles": 168,
+      "width": 2
+    },
+    "buildings/quarry.glb": {
+      "bytes": 19500,
+      "height": 3,
+      "sha256": "dc6d1df47f234b01c6beeead2ea2d1694270f81b591157a7da09989306ff7e96",
+      "triangles": 192,
+      "width": 3
+    },
+    "buildings/refinery.glb": {
+      "bytes": 26244,
+      "height": 3,
+      "sha256": "492b5be17f075e1942192fa26899ffbb401d6dae522d118dd673d6f5aba3e34c",
+      "triangles": 276,
+      "width": 3
+    },
+    "buildings/sawmill.glb": {
+      "bytes": 22552,
+      "height": 2,
+      "sha256": "f8145c259f88b6cbe2dfccfe07983299179b6ac4b44600f79a7d620498119e0d",
+      "triangles": 228,
+      "width": 2
+    },
+    "buildings/slaughter.glb": {
+      "bytes": 17844,
+      "height": 2,
+      "sha256": "2d8efea88880c1238df602994b66ce48abd0beda91faf9371cff61b12ed69849",
+      "triangles": 168,
+      "width": 2
+    },
+    "buildings/smokehouse.glb": {
+      "bytes": 18804,
+      "height": 2,
+      "sha256": "f52bf309521a9230e8f3b2f553854e06ddee4ce43588289bbbb4ce556d3fce9a",
+      "triangles": 180,
+      "width": 2
+    },
+    "buildings/spinning_mill.glb": {
+      "bytes": 20696,
+      "height": 2,
+      "sha256": "f1f1660482f88aa35eb8c76e189f88359857b3bfa1e7f231fde57cc586a908f4",
+      "triangles": 204,
+      "width": 2
+    },
+    "buildings/steel_mill.glb": {
+      "bytes": 18808,
+      "height": 3,
+      "sha256": "eedcfad18c4c87d4dedcfef94548f068251cb06fdd0892714856c75538b7182c",
+      "triangles": 180,
+      "width": 3
+    },
+    "buildings/sugar_plant.glb": {
+      "bytes": 18804,
+      "height": 2,
+      "sha256": "f52bf309521a9230e8f3b2f553854e06ddee4ce43588289bbbb4ce556d3fce9a",
+      "triangles": 180,
+      "width": 2
+    },
+    "buildings/supermarket.glb": {
+      "bytes": 15972,
+      "height": 3,
+      "sha256": "af198fd397b9f82ea724bb0efd290b657522d8d0a98f7cfaa1aaccf00b4d1a34",
+      "triangles": 144,
+      "width": 3
+    },
+    "buildings/textile.glb": {
+      "bytes": 16936,
+      "height": 2,
+      "sha256": "7be33e4ab3d081d14894dcd357fc13f47a9ca2236730aa6bdd7fd7eae6450642",
+      "triangles": 156,
+      "width": 3
+    },
+    "buildings/warehouse.glb": {
+      "bytes": 17860,
+      "height": 2,
+      "sha256": "7da87a04c8fb1ee705192222a689595426898d40e31e95b093894fcadab71f19",
+      "triangles": 168,
+      "width": 2
+    },
+    "city/bridge.glb": {
+      "bytes": 18628,
+      "height": 3,
+      "sha256": "b6fcde83789440f6c2ba6d3975825231dff8a434d23a2ca41c563d626c9d3503",
+      "triangles": 180,
+      "width": 1
+    },
+    "city/bus_stop.glb": {
+      "bytes": 17796,
+      "height": 1,
+      "sha256": "dc083a85095dcc69100deb9660708bd12d49b851a01533ff02a109dcf54e19c2",
+      "triangles": 168,
+      "width": 1
+    },
+    "city/city_hall.glb": {
+      "bytes": 16932,
+      "height": 2,
+      "sha256": "19f39cb99ce01813395eb78a41f566096ed7be0b8dba631e1a6d74f2446f923c",
+      "triangles": 156,
+      "width": 2
+    },
+    "city/clinic.glb": {
+      "bytes": 16924,
+      "height": 1,
+      "sha256": "7610d5a15267efc002f114f210bc6cb14de62cf9c262aabb6c369b4ebd57c057",
+      "triangles": 156,
+      "width": 2
+    },
+    "city/culture_center.glb": {
+      "bytes": 16004,
+      "height": 2,
+      "sha256": "35642598b5b84bb8963c1b6ec96406e9148941e866091f9fe9522edce5a8dd60",
+      "triangles": 144,
+      "width": 2
+    },
+    "city/embankment.glb": {
+      "bytes": 30428,
+      "height": 1,
+      "sha256": "d6dd4091be88db59f039872340bbc00ff8abb2dc38fc866a37110f662804fcc8",
+      "triangles": 324,
+      "width": 3
+    },
+    "city/fire_station.glb": {
+      "bytes": 16936,
+      "height": 2,
+      "sha256": "77f03d02c3fcc9ef1d62703b1a3d12aa0263a40c29cf25ef257d579ea74453b2",
+      "triangles": 156,
+      "width": 2
+    },
+    "city/gas_station_utility.glb": {
+      "bytes": 26260,
+      "height": 1,
+      "sha256": "d523df9effb8303a623a79f431559e1b11bfd64ebc2e97a92449d329ee2e71c6",
+      "triangles": 276,
+      "width": 2
+    },
+    "city/hospital.glb": {
+      "bytes": 16936,
+      "height": 2,
+      "sha256": "622d5665219fe3986882a7601578d8a4f9d416fcb13617210c722e16da45f802",
+      "triangles": 156,
+      "width": 2
+    },
+    "city/housing_block.glb": {
+      "bytes": 18820,
+      "height": 2,
+      "sha256": "0786b76d1672c0b028c32675f24a561283d232dcf4d5647e67b15f37062dacff",
+      "triangles": 180,
+      "width": 2
+    },
+    "city/market.glb": {
+      "bytes": 16920,
+      "height": 2,
+      "sha256": "d9f0cbbda05eacf4086674cdb39f31627e66c404ed67a366b16e8a9f6b42f4e4",
+      "triangles": 156,
+      "width": 2
+    },
+    "city/mosque.glb": {
+      "bytes": 21300,
+      "height": 2,
+      "sha256": "339c463b48803d3b0611ac3d2635e9f6504d716c33fefa24d99e418a670cfe16",
+      "triangles": 212,
+      "width": 1
+    },
+    "city/office_block.glb": {
+      "bytes": 18820,
+      "height": 2,
+      "sha256": "ebf4d3f48deb27c1c2a148e0c58474755147f1ca5eb80dff6e386d14f4bd6a4e",
+      "triangles": 180,
+      "width": 2
+    },
+    "city/park.glb": {
+      "bytes": 30396,
+      "height": 2,
+      "sha256": "a0e58897fe2744757f518701e80638055ebb13e20506377352027ac93c6d6577",
+      "triangles": 324,
+      "width": 2
+    },
+    "city/police_station.glb": {
+      "bytes": 16924,
+      "height": 1,
+      "sha256": "f685f9d913e0268bb0bf169f235a8ee4e38c741a2638fdda5222679742044708",
+      "triangles": 156,
+      "width": 2
+    },
+    "city/power_substation.glb": {
+      "bytes": 23460,
+      "height": 1,
+      "sha256": "7cde5faa8439bd83b40fc1d0b9e4fb8ff0f099810d5544808d5cff64bbe218cc",
+      "triangles": 240,
+      "width": 2
+    },
+    "city/school.glb": {
+      "bytes": 16004,
+      "height": 2,
+      "sha256": "35642598b5b84bb8963c1b6ec96406e9148941e866091f9fe9522edce5a8dd60",
+      "triangles": 144,
+      "width": 2
+    },
+    "city/shopping_center.glb": {
+      "bytes": 18820,
+      "height": 2,
+      "sha256": "ebf4d3f48deb27c1c2a148e0c58474755147f1ca5eb80dff6e386d14f4bd6a4e",
+      "triangles": 180,
+      "width": 2
+    },
+    "city/sports_ground.glb": {
+      "bytes": 30424,
+      "height": 2,
+      "sha256": "95a4f01a051e5ed965343ac02353e520c68dc0fc4c6b5c42c232314d077cdf23",
+      "triangles": 324,
+      "width": 1
+    },
+    "city/station.glb": {
+      "bytes": 17840,
+      "height": 2,
+      "sha256": "1f55bc9032916e108a0dd2bd4e2558d494c9f844613cf947b9ca83fa1eeb09e6",
+      "triangles": 168,
+      "width": 2
+    },
+    "city/temple.glb": {
+      "bytes": 19392,
+      "height": 2,
+      "sha256": "850de69ebcb08c6d379cd98a2dd9c733bd41aab4c9cc2d34ed14b4336b796293",
+      "triangles": 188,
+      "width": 1
+    },
+    "city/water_works.glb": {
+      "bytes": 26268,
+      "height": 2,
+      "sha256": "cc0460404d347a1f8d4f781c0ba0488cd2a43e3fa220affa499187b69276d5de",
+      "triangles": 276,
+      "width": 2
+    }
+  },
+  "schema": 1
+}

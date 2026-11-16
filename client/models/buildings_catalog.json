@@ -1,0 +1,296 @@
+[
+  {
+    "id": "field",
+    "name": "Поле",
+    "category": "farm",
+    "width": 2,
+    "height": 2
+  },
+  {
+    "id": "apiary",
+    "name": "Пасека",
+    "category": "farm",
+    "width": 1,
+    "height": 1
+  },
+  {
+    "id": "mill",
+    "name": "Мельница",
+    "category": "factory",
+    "width": 2,
+    "height": 2
+  },
+  {
+    "id": "bakery",
+    "name": "Пекарня",
+    "category": "factory",
+    "width": 2,
+    "height": 2
+  },
+  {
+    "id": "oil_well",
+    "name": "Нефтяная скважина",
+    "category": "extraction",
+    "width": 2,
+    "height": 2
+  },
+  {
+    "id": "refinery",
+    "name": "НПЗ",
+    "category": "factory",
+    "width": 3,
+    "height": 3
+  },
+  {
+    "id": "dairy",
+    "name": "Молочная ферма",
+    "category": "farm",
+    "width": 2,
+    "height": 2
+  },
+  {
+    "id": "slaughter",
+    "name": "Бойня",
+    "category": "factory",
+    "width": 2,
+    "height": 2
+  },
+  {
+    "id": "quarry",
+    "name": "Карьер",
+    "category": "extraction",
+    "width": 3,
+    "height": 3
+  },
+  {
+    "id": "sawmill",
+    "name": "Лесопилка",
+    "category": "factory",
+    "width": 2,
+    "height": 2
+  },
+  {
+    "id": "cement_plant",
+    "name": "Цементный завод",
+    "category": "factory",
+    "width": 3,
+    "height": 3
+  },
+  {
+    "id": "steel_mill",
+    "name": "Сталелитейный",
+    "category": "factory",
+    "width": 3,
+    "height": 3
+  },
+  {
+    "id": "textile",
+    "name": "Текстильная фабрика",
+    "category": "factory",
+    "width": 3,
+    "height": 2
+  },
+  {
+    "id": "electronics_plant",
+    "name": "Завод электроники",
+    "category": "factory",
+    "width": 3,
+    "height": 3
+  },
+  {
+    "id": "warehouse",
+    "name": "Склад",
+    "category": "warehouse",
+    "width": 2,
+    "height": 2
+  },
+  {
+    "id": "grocery_store",
+    "name": "Продуктовый магазин",
+    "category": "retail",
+    "width": 2,
+    "height": 2
+  },
+  {
+    "id": "supermarket",
+    "name": "Супермаркет",
+    "category": "retail",
+    "width": 3,
+    "height": 3
+  },
+  {
+    "id": "clothing_store",
+    "name": "Магазин одежды",
+    "category": "retail",
+    "width": 2,
+    "height": 2
+  },
+  {
+    "id": "office",
+    "name": "Офис",
+    "category": "office",
+    "width": 2,
+    "height": 2
+  },
+  {
+    "id": "housing",
+    "name": "Жильё",
+    "category": "housing",
+    "width": 3,
+    "height": 3
+  },
+  {
+    "id": "logging_camp",
+    "name": "Лесосека",
+    "category": "extraction",
+    "width": 2,
+    "height": 2
+  },
+  {
+    "id": "gas_well",
+    "name": "Газовая скважина",
+    "category": "extraction",
+    "width": 2,
+    "height": 2
+  },
+  {
+    "id": "mine",
+    "name": "Шахта",
+    "category": "extraction",
+    "width": 3,
+    "height": 3
+  },
+  {
+    "id": "feed_plant",
+    "name": "Комбикормовый завод",
+    "category": "factory",
+    "width": 2,
+    "height": 2
+  },
+  {
+    "id": "sugar_plant",
+    "name": "Сахарный завод",
+    "category": "factory",
+    "width": 2,
+    "height": 2
+  },
+  {
+    "id": "creamery",
+    "name": "Маслосырзавод",
+    "category": "factory",
+    "width": 2,
+    "height": 2
+  },
+  {
+    "id": "poultry_farm",
+    "name": "Птицефабрика",
+    "category": "farm",
+    "width": 2,
+    "height": 2
+  },
+  {
+    "id": "fishery",
+    "name": "Рыболовецкая артель",
+    "category": "extraction",
+    "width": 2,
+    "height": 2
+  },
+  {
+    "id": "smokehouse",
+    "name": "Коптильня",
+    "category": "factory",
+    "width": 2,
+    "height": 2
+  },
+  {
+    "id": "spinning_mill",
+    "name": "Прядильня",
+    "category": "factory",
+    "width": 2,
+    "height": 2
+  },
+  {
+    "id": "malthouse",
+    "name": "Солодовня",
+    "category": "factory",
+    "width": 2,
+    "height": 2
+  },
+  {
+    "id": "beverage_plant",
+    "name": "Цех напитков",
+    "category": "factory",
+    "width": 2,
+    "height": 2
+  },
+  {
+    "id": "glass_plant",
+    "name": "Стекольный завод",
+    "category": "factory",
+    "width": 3,
+    "height": 2
+  },
+  {
+    "id": "polymer_plant",
+    "name": "Завод полимеров",
+    "category": "factory",
+    "width": 3,
+    "height": 2
+  },
+  {
+    "id": "furniture_workshop",
+    "name": "Мебельный цех",
+    "category": "factory",
+    "width": 2,
+    "height": 2
+  },
+  {
+    "id": "appliance_plant",
+    "name": "Завод бытовой техники",
+    "category": "factory",
+    "width": 3,
+    "height": 3
+  },
+  {
+    "id": "auto_plant",
+    "name": "Автосборочный завод",
+    "category": "factory",
+    "width": 3,
+    "height": 3
+  },
+  {
+    "id": "furniture_store",
+    "name": "Мебельный магазин",
+    "category": "retail",
+    "width": 2,
+    "height": 2
+  },
+  {
+    "id": "electronics_store",
+    "name": "Магазин электроники",
+    "category": "retail",
+    "width": 2,
+    "height": 2
+  },
+  {
+    "id": "fuel_station",
+    "name": "АЗС",
+    "category": "retail",
+    "width": 2,
+    "height": 2
+  },
+  {
+    "id": "car_dealer",
+    "name": "Автосалон",
+    "category": "retail",
+    "width": 3,
+    "height": 2
+  },
+  {
+    "id": "hardware_store",
+    "name": "Магазин стройматериалов",
+    "category": "retail",
+    "width": 2,
+    "height": 2
+  }
+]
