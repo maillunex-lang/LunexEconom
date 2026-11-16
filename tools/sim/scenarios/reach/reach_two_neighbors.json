@@ -1,0 +1,29 @@
+{
+  "id": "reach_two_neighbors",
+  "reach_enabled": true,
+  "days": 1,
+  "city": "ufa",
+  "product": "bread",
+  "stores": [
+    {
+      "id": "alice",
+      "format": "corner",
+      "x": -5,
+      "y": -5,
+      "district": "medovy_kvartal",
+      "area_m2": 100,
+      "cashiers": 2,
+      "fame_permille": 200
+    },
+    {
+      "id": "boris",
+      "format": "corner",
+      "x": -5,
+      "y": -5,
+      "district": "medovy_kvartal",
+      "area_m2": 100,
+      "cashiers": 2,
+      "fame_permille": 200
+    }
+  ]
+}

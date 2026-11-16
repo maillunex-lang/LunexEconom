@@ -1,0 +1,30 @@
+{
+  "id": "reach_corner_vs_mall",
+  "reach_enabled": true,
+  "days": 1,
+  "city": "ufa",
+  "product": "bread",
+  "stores": [
+    {
+      "id": "corner",
+      "format": "corner",
+      "x": -5,
+      "y": -5,
+      "district": "medovy_kvartal",
+      "area_m2": 100,
+      "cashiers": 2
+    },
+    {
+      "id": "mall",
+      "format": "mall_unit",
+      "x": 0,
+      "y": 0,
+      "district": "belaya_naberezhnaya",
+      "area_m2": 300,
+      "cashiers": 6,
+      "fame_permille": 500,
+      "mall_traffic_factor_permille": 1200,
+      "anchor_factor_permille": 1150
+    }
+  ]
+}

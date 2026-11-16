@@ -1,0 +1,30 @@
+{
+  "id": "reach_stockout",
+  "reach_enabled": true,
+  "days": 12,
+  "city": "ufa",
+  "product": "bread",
+  "stores": [
+    {
+      "id": "empty",
+      "format": "corner",
+      "x": -5,
+      "y": -5,
+      "district": "medovy_kvartal",
+      "area_m2": 100,
+      "cashiers": 3,
+      "quality": 85,
+      "stock": 30,
+      "stock_availability_permille": 1000
+    }
+  ],
+  "events": [
+    {
+      "day": 5,
+      "store": "empty",
+      "changes": {
+        "stock": 0
+      }
+    }
+  ]
+}

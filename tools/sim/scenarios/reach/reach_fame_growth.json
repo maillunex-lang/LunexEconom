@@ -1,0 +1,24 @@
+{
+  "id": "reach_fame_growth",
+  "reach_enabled": true,
+  "days": 30,
+  "city": "ufa",
+  "product": "bread",
+  "stores": [
+    {
+      "id": "advertiser",
+      "format": "supermarket",
+      "x": -5,
+      "y": -5,
+      "district": "medovy_kvartal",
+      "area_m2": 300,
+      "cashiers": 12,
+      "fame_permille": 120,
+      "ad_spend_rub": 500,
+      "ad_reach_permille": 600,
+      "quality": 95,
+      "price": 81,
+      "stock": 1000000
+    }
+  ]
+}

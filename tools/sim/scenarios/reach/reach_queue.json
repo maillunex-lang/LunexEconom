@@ -1,0 +1,20 @@
+{
+  "id": "reach_queue",
+  "reach_enabled": true,
+  "days": 1,
+  "city": "ufa",
+  "product": "bread",
+  "stores": [
+    {
+      "id": "busy",
+      "format": "supermarket",
+      "x": -5,
+      "y": -5,
+      "district": "medovy_kvartal",
+      "area_m2": 300,
+      "cashiers": 1,
+      "stock": 1000000,
+      "fame_permille": 700
+    }
+  ]
+}

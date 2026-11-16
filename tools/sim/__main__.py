@@ -9,6 +9,7 @@ from pathlib import Path
 from tools.sim.catalog import repo_root
 from tools.sim.engine import load_scenario, render_table, simulate
 from tools.sim.balance import render as render_balance
+from tools.sim.reach import simulate_reach
 
 
 def _write(path: Path, report: dict) -> None:
@@ -26,9 +27,12 @@ def golden_dir() -> Path:
 
 def rebuild_golden() -> list[Path]:
     written = []
-    for path in sorted(scenarios_dir().glob("*.json")):
-        report = simulate(load_scenario(path))
-        target = golden_dir().joinpath(path.stem + ".json")
+    all_scenarios = list(scenarios_dir().glob("*.json")) + list(scenarios_dir().joinpath("reach").glob("*.json"))
+    for path in sorted(all_scenarios):
+        scenario = load_scenario(path)
+        is_reach = scenario.get("reach_enabled", False)
+        report = simulate_reach(scenario) if is_reach else simulate(scenario)
+        target = golden_dir().joinpath("reach", path.stem + ".json") if is_reach else golden_dir().joinpath(path.stem + ".json")
         _write(target, report)
         written.append(target)
     return written
@@ -57,8 +61,12 @@ def main(argv: list[str] | None = None) -> int:
         print("нужен путь к сценарию", file=sys.stderr)
         return 2
     scenario = load_scenario(Path(args.scenario))
-    report = simulate(scenario, days=args.days)
-    sys.stdout.write(render_table(report))
+    if scenario.get("reach_enabled", False):
+        report = simulate_reach(scenario, days=args.days)
+        sys.stdout.write(json.dumps(report, ensure_ascii=False, sort_keys=True, indent=2) + "\n")
+    else:
+        report = simulate(scenario, days=args.days)
+        sys.stdout.write(render_table(report))
     return 0
 
 

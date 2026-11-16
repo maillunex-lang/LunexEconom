@@ -1,0 +1,14 @@
+{
+  "balance": "draft",
+  "city_id": "ufa",
+  "spatial_mode": "district_centroid_proxy",
+  "note": "Точки условные в клетках 20 м. Население M2 не умножается на число клеток.",
+  "district_cells": [
+    {"id": "belaya_naberezhnaya", "x": 0, "y": 0},
+    {"id": "medovy_kvartal", "x": -5, "y": -5},
+    {"id": "neftyanoy_holm", "x": 7, "y": -7},
+    {"id": "yuzhnaya_okraina", "x": 0, "y": 10},
+    {"id": "centralny_rynok", "x": 7, "y": 1},
+    {"id": "vokzalny_krug", "x": -9, "y": 0}
+  ]
+}
