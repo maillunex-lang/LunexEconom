@@ -1,0 +1,53 @@
+{
+  "balance": "draft",
+  "product_exceptions": [],
+  "building_exceptions": [
+    {
+      "id": "warehouse",
+      "reason": "Склад хранит товар и не является звеном рецепта."
+    },
+    {
+      "id": "office",
+      "reason": "Офис — штаб компании, товар не выпускает."
+    },
+    {
+      "id": "housing",
+      "reason": "Жильё даёт население, а не товар."
+    }
+  ],
+  "construction": {
+    "enabled_flag": "build_materials_required",
+    "default": 0,
+    "unit": "per_cell",
+    "money_unchanged": true,
+    "stages": {
+      "foundation": {
+        "cement": 20,
+        "stone": 30
+      },
+      "frame": {
+        "steel": 8,
+        "wood": 10
+      },
+      "finishing": {
+        "fabric": 4,
+        "boards": 12
+      },
+      "commissioning": {}
+    }
+  },
+  "logistics": {
+    "enabled_flag": "logistics_fuel_required",
+    "autobuy_flag": "logistics_fuel_autobuy",
+    "default": 0,
+    "autobuy_default": 1,
+    "product": "fuel",
+    "divisor": 100000
+  },
+  "utility": {
+    "enabled_flag": "city_gas_utility",
+    "default": 0,
+    "product": "gas",
+    "population_divisor": 10000
+  }
+}
