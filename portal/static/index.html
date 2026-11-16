@@ -517,8 +517,7 @@ function drawBoard(){
   tb.appendChild(btn('Граф','',function(){showGraph(current.slug)},{icon:'map',tip:'Открыть граф зависимостей и критический путь'}));tb.appendChild(btn('Поиск','',function(){showSearch(current.slug)},{icon:'book',tip:'Найти задачу или идею'}));tb.appendChild(btn('Настройки проекта','',function(){showProjectSettings(current.slug)},{icon:'work',tip:'Автоприёмка, чек-лист и данные проекта'}));
   tb.appendChild(btn('Протокол для ИИ','',showProtocol,{icon:'book',tip:'Инструкция для ИИ-директора: как добавлять этапы и промпты'}));head.appendChild(tb);head.classList.add('board-heading');app.appendChild(head);
   if(P.length){var before=app.children.length;drawSummary(d,P);Array.from(app.children).slice(before).forEach(function(x){x.classList.add('desktop-board-summary')})}
-  if(!P.length)drawStart(d);
-  if(!P.length){drawA6EmptyPlan(d);var n=el('div','card empty');n.appendChild(ic('map'));n.appendChild(el('h2','','План ещё не загружен'));n.appendChild(el('div','muted','Вы можете выбрать файл JSON с телефона, вставить текст JSON или синхронизировать план из GitHub. После проверки появятся задачи.'));app.appendChild(n);drawIdeas(d,app);return}
+  if(!P.length){drawA6EmptyPlan(d);drawStart(d);var n=el('div','card empty');n.appendChild(ic('map'));n.appendChild(el('h2','','План ещё не загружен'));n.appendChild(el('div','muted','Вы можете выбрать файл JSON с телефона, вставить текст JSON или синхронизировать план из GitHub. После проверки появятся задачи.'));app.appendChild(n);drawIdeas(d,app);return}
   var desktopStart=app.children.length;
   if(view==='lanes'){drawLanes(d,P);var rowb=el('div','row');rowb.style.alignItems='flex-start';drawIdeas(d,app)}else drawSteps(d,P);
   Array.from(app.children).slice(desktopStart).forEach(function(x){x.classList.add('desktop-board')});

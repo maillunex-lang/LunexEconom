@@ -1,12 +1,13 @@
 """A6 real local WSGI -> browser: launch, create, more, mobile header, offline fallback."""
 import argparse
+import json
 import os
 import tempfile
 import threading
 from pathlib import Path
 from wsgiref.simple_server import make_server
 
-from portal import auth, db
+from portal import auth, db, bootstrap
 from portal.app import create_app
 from portal.ui_tests.shots import Quiet
 from playwright.sync_api import sync_playwright
@@ -51,6 +52,8 @@ def main():
                             assert page.locator('#a6-slug').input_value()==repo_name
                             page.locator('#a6-slug').fill('TEST-ABC')
                             assert page.locator('#a6-slug').input_value()=='test-abc'
+                            page.locator('#a6-slug').fill('invalid_slug')
+                            assert 'a6-invalid' in page.locator('#a6-slug').get_attribute('class')
                             page.locator('#a6-slug').fill(repo_name)
                             page.locator('#a6-wish').fill('Кооперативная игра на 4 игроков для Android')
                             page.locator('#a6-plan-path').select_option('docs/portal/work_plan.json')
@@ -76,7 +79,9 @@ def main():
                             buttons=page.locator('.a6-quick button')
                             assert buttons.count()==3
                             for button in buttons.all():
-                                assert button.bounding_box()['y'] < 844 if width==390 else True
+                                box=button.bounding_box()
+                                if width==390:
+                                    assert box['y']+box['height'] < page.locator('#tabs').bounding_box()['y'], 'Кнопка закрыта нижней навигацией'
                             page.screenshot(path=str(opts.output/f'a6-empty-board-{width}x{height}-{theme}.png'))
                             page.get_by_role('button',name='Вставить план текстом').click()
                             page.locator('#a6-plan-text').wait_for(state='visible')
@@ -110,13 +115,25 @@ def main():
                             page.locator('#tabs').get_by_role('button',name='Ещё').click()
                             page.get_by_role('button',name='Развитие портала').click()
                             page.get_by_text('Инструкция не загружена',exact=False).wait_for()
+                            page.locator('#tabs').get_by_role('button',name='Доска').click()
+                            page.locator('#a6-plan-file').wait_for(state='attached')
+                            raw=json.dumps(bootstrap.STARTER_PLAN,ensure_ascii=False).encode('utf-8')
+                            page.locator('#a6-plan-file').set_input_files({'name':'work_plan.json','mimeType':'application/json','buffer':raw})
+                            page.get_by_role('heading',name='План ещё не загружен').wait_for(state='detached')
+                            page.screenshot(path=str(opts.output/f'a6-file-import-{width}x{height}-{theme}.png'))
                             print('A6 OK',width,height,theme)
+                            # Isolate screenshots: importing an actual plan must not change next viewport's Today scenario.
+                            test_conn=db.connect(dbpath,webhook=True,reports=True,notifications=True)
+                            try:
+                                test_conn.execute('DELETE FROM projects WHERE slug=?',(repo_name,))
+                            finally:
+                                test_conn.close()
                             context.close()
                 finally:
                     browser.close()
         finally:
             server.shutdown();server.server_close();thread.join(timeout=3);app.close()
     if errors:raise RuntimeError('JS errors: '+'; '.join(errors))
-    print('A6 browser: 28 snapshots, no uncaught JS errors')
+    print('A6 browser: 32 snapshots, no uncaught JS errors')
 
 if __name__=='__main__':main()
