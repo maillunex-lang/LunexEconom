@@ -40,10 +40,19 @@ CREATE TABLE IF NOT EXISTS ci_checks(project_slug TEXT NOT NULL, sha TEXT NOT NU
 CREATE TABLE IF NOT EXISTS task_reviews(project_slug TEXT NOT NULL,pkg_id TEXT NOT NULL,items TEXT NOT NULL DEFAULT '[]',ci_state TEXT NOT NULL DEFAULT 'unknown',revision_count INTEGER NOT NULL DEFAULT 0,remarks TEXT NOT NULL DEFAULT '',updated REAL NOT NULL,PRIMARY KEY(project_slug,pkg_id));
 CREATE INDEX IF NOT EXISTS task_reviews_project ON task_reviews(project_slug);"""),
 
+    (5, """CREATE TABLE IF NOT EXISTS notify_channels(channel TEXT PRIMARY KEY,enabled INTEGER NOT NULL DEFAULT 0,chat_id TEXT,code_hash TEXT,expires REAL);
+CREATE TABLE IF NOT EXISTS notify_preferences(channel TEXT NOT NULL,event TEXT NOT NULL,enabled INTEGER NOT NULL DEFAULT 1,PRIMARY KEY(channel,event));
+CREATE TABLE IF NOT EXISTS notify_jobs(id INTEGER PRIMARY KEY,channel TEXT NOT NULL,event TEXT NOT NULL,event_key TEXT NOT NULL,message TEXT NOT NULL,created REAL NOT NULL,next_at REAL NOT NULL,attempts INTEGER NOT NULL DEFAULT 0,status TEXT NOT NULL);
+CREATE INDEX IF NOT EXISTS notify_jobs_due ON notify_jobs(status,next_at);
+CREATE INDEX IF NOT EXISTS notify_jobs_quiet ON notify_jobs(channel,event,event_key,created);
+CREATE TABLE IF NOT EXISTS notify_log(id INTEGER PRIMARY KEY,ts REAL NOT NULL,channel TEXT NOT NULL,event TEXT NOT NULL,event_key TEXT NOT NULL,result TEXT NOT NULL,attempt INTEGER NOT NULL);
+CREATE TABLE IF NOT EXISTS notify_inbound(channel TEXT NOT NULL,update_id TEXT NOT NULL,PRIMARY KEY(channel,update_id));
+CREATE TABLE IF NOT EXISTS notify_devices(fingerprint TEXT PRIMARY KEY,created REAL NOT NULL);"""),
+
 )
 
 
-def migrate(conn, webhook=False, reports=False):
+def migrate(conn, webhook=False, reports=False, notifications=False):
     conn.execute("BEGIN IMMEDIATE")
     try:
         conn.execute("CREATE TABLE IF NOT EXISTS schema_versions(version INTEGER PRIMARY KEY, applied_at REAL NOT NULL)")
@@ -52,9 +61,11 @@ def migrate(conn, webhook=False, reports=False):
         if versions - supported or versions != set(range(1, max(versions, default=0) + 1)):
             raise RuntimeError("unsupported or non-sequential schema version")
         for version, script in MIGRATIONS:
-            if version == 3 and not (webhook or reports):
+            if version == 3 and not (webhook or reports or notifications):
                 continue
-            if version == 4 and not reports:
+            if version == 4 and not (reports or notifications):
+                continue
+            if version == 5 and not notifications:
                 continue
             if version in versions:
                 continue
@@ -110,13 +121,13 @@ def recent_audit(conn, limit=200):
     return output
 
 
-def connect(path, webhook=False, reports=False):
+def connect(path, webhook=False, reports=False, notifications=False):
     conn = sqlite3.connect(path, isolation_level=None, timeout=10, check_same_thread=False)
     try:
         conn.row_factory = sqlite3.Row
         conn.execute("PRAGMA journal_mode=WAL")
         conn.execute("PRAGMA foreign_keys=ON")
-        migrate(conn, webhook=webhook, reports=reports)
+        migrate(conn, webhook=webhook, reports=reports, notifications=notifications)
         return conn
     except Exception:
         conn.close()

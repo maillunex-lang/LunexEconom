@@ -16,6 +16,7 @@ from pathlib import Path
 
 from . import auth, bootstrap, db
 from .hooks import github
+from . import notify
 from tools import work_plan as wp  # общие проверка плана и генерация промптов
 
 MAX_BODY = 1_000_000
@@ -28,8 +29,23 @@ def _prompted(plan):
     return [dict(p, prompt=wp.prompt(plan, p["id"])) for p in plan["packages"]]
 
 
-def create_app(db_path, base="", secure_cookie=True, fetch=None, github_token_file=None, security_v2=True, webhook_enabled=False, webhook_secret_file=None, reports_enabled=False):
-    conn = db.connect(db_path, webhook=webhook_enabled or reports_enabled, reports=reports_enabled)
+def create_app(db_path, base="", secure_cookie=True, fetch=None, github_token_file=None, security_v2=True, webhook_enabled=False, webhook_secret_file=None, reports_enabled=False, notifications_enabled=False, notify_token_files=None, notify_client=None, notify_clock=None):
+    conn = db.connect(db_path, webhook=webhook_enabled or reports_enabled, reports=reports_enabled, notifications=notifications_enabled)
+    notify_token_files = notify_token_files or {}
+    notify_client = notify_client or notify.http_json
+    clock = notify_clock or time.time
+    def queue_notification(event, key, message):
+        if notifications_enabled:
+            notify.enqueue(conn, event, key, message, now=clock())
+    def notify_events(before_id):
+        if not notifications_enabled:
+            return
+        for ev in conn.execute("SELECT e.id,e.project_slug,e.pkg_id,e.kind,p.name FROM events e JOIN projects p ON p.slug=e.project_slug WHERE e.id>? ORDER BY e.id", (before_id,)).fetchall():
+            kind = {"pr.open":"task.submitted","ci.failed":"ci.failed","plan.sync_failed":"plan.sync_failed"}.get(ev["kind"])
+            if kind:
+                key = f'{ev["project_slug"]}:{ev["pkg_id"] or "plan"}:{ev["kind"]}'
+                label = {"task.submitted":"сдано, ждёт приёмки","ci.failed":"CI упал","plan.sync_failed":"ошибка обновления плана"}[kind]
+                queue_notification(kind, key, f'{ev["name"]}: {ev["pkg_id"] or "план"} {label}. https://rikagro.ru/createportal/')
     base = base.rstrip("/")
 
     review_template = ["Пробное слияние без конфликтов", "Изменены только файлы зоны", "Тесты директора прошли", "CI зелёный", "Слито в main"]
@@ -170,7 +186,16 @@ def create_app(db_path, base="", secure_cookie=True, fetch=None, github_token_fi
                 return respond(start, "400 Bad Request", {"error": "invalid_event"})
             try:
                 payload = json.loads(raw)
+                before = conn.execute("SELECT COALESCE(MAX(id),0) FROM events").fetchone()[0] if notifications_enabled else 0
                 result = github.process(conn, kind, payload, delivery, fetch_plan=fetch_plan)
+                notify_events(before)
+                if notifications_enabled and kind in ("check_suite", "workflow_run"):
+                    run = payload.get(kind, {})
+                    if isinstance(run,dict) and run.get("status") == "completed" and run.get("conclusion") not in ("success","neutral","skipped"):
+                        sha = run.get("head_sha")
+                        if isinstance(sha,str) and re.fullmatch("[0-9a-f]{40}",sha):
+                            for pr in conn.execute("SELECT l.project_slug,l.pkg_id,p.name FROM pr_links l JOIN projects p ON p.slug=l.project_slug JOIN task_state t ON t.project_slug=l.project_slug AND t.pkg_id=l.pkg_id WHERE l.sha=? AND t.status IN ('issued','submitted')",(sha,)).fetchall():
+                                queue_notification("ci.failed",pr["project_slug"]+":"+pr["pkg_id"]+":"+sha, f'{pr["name"]}: {pr["pkg_id"]} CI упал. https://rikagro.ru/createportal/')
             except (ValueError, TypeError, KeyError):
                 return respond(start, "400 Bad Request", {"error": "invalid_payload"})
             return respond(start, "200 OK", {"ok": True, "result": result})
@@ -220,6 +245,14 @@ def create_app(db_path, base="", secure_cookie=True, fetch=None, github_token_fi
             t, csrf = res
             attrs = f"{COOKIE}={t}; Path={base or '/'}; HttpOnly; SameSite=Strict; Max-Age={auth.SESSION_TTL}" + ("; Secure" if secure_cookie else "")
             db.audit(conn, "login", {"ip": ip})
+            if notifications_enabled:
+                # Fingerprint is a keyed digest, never the raw IP or user agent.
+                ua = str(environ.get("HTTP_USER_AGENT", ""))[:256]
+                device = hashlib.sha256((str(sess["user_id"]) if sess else "owner") .encode() + b"|" + ip.encode() + b"|" + ua.encode()).hexdigest()
+                known = conn.execute("SELECT 1 FROM notify_devices WHERE fingerprint=?", (device,)).fetchone()
+                conn.execute("INSERT OR IGNORE INTO notify_devices(fingerprint,created) VALUES(?,?)", (device,clock()))
+                if not known and conn.execute("SELECT COUNT(*) FROM notify_devices").fetchone()[0] > 1:
+                    queue_notification("login.new_device", device, "CreatePortal: вход с нового устройства. https://rikagro.ru/createportal/")
             return respond(start, "200 OK", {"ok": True, "csrf": csrf}, [("Set-Cookie", attrs)])
         if not sess:
             return respond(start, "401 Unauthorized", {"error": "unauthorized"})
@@ -248,6 +281,70 @@ def create_app(db_path, base="", secure_cookie=True, fetch=None, github_token_fi
             return respond(start, "200 OK", {"ok": True}, [("Set-Cookie", attrs)])
         if security_v2 and path == "/api/audit" and method == "GET":
             return respond(start, "200 OK", {"entries": db.recent_audit(conn)})
+        if notifications_enabled and path.startswith("/api/notifications"):
+            if path == "/api/notifications/settings" and method == "GET":
+                return respond(start, "200 OK", {"channels": notify.settings(conn)})
+            if path == "/api/notifications/settings" and method == "POST":
+                body = read_body(environ)
+                if body is None or set(body) != {"channel","enabled","events"} or body["channel"] not in notify.CHANNELS or type(body["enabled"]) is not bool or not isinstance(body["events"],dict) or any(k not in notify.EVENTS or type(v) is not bool for k,v in body["events"].items()):
+                    return respond(start,"400 Bad Request",{"error":"invalid_settings"})
+                channel = body["channel"]
+                row = conn.execute("SELECT chat_id FROM notify_channels WHERE channel=?", (channel,)).fetchone()
+                if body["enabled"] and (not row or not row["chat_id"]):
+                    return respond(start,"409 Conflict",{"error":"channel_not_linked"})
+                conn.execute("INSERT OR IGNORE INTO notify_channels(channel,enabled) VALUES(?,0)", (channel,))
+                conn.execute("UPDATE notify_channels SET enabled=? WHERE channel=?", (int(body["enabled"]),channel))
+                for event,enabled in body["events"].items():
+                    conn.execute("INSERT INTO notify_preferences(channel,event,enabled) VALUES(?,?,?) ON CONFLICT(channel,event) DO UPDATE SET enabled=excluded.enabled",(channel,event,int(enabled)))
+                return respond(start,"200 OK",{"channels":notify.settings(conn)})
+            if path == "/api/notifications/code" and method == "POST":
+                body = read_body(environ)
+                if body is None or set(body) != {"channel"} or body["channel"] not in notify.CHANNELS:
+                    return respond(start,"400 Bad Request",{"error":"invalid_channel"})
+                code = notify.create_code(conn,body["channel"],clock())
+                return respond(start,"200 OK",{"code":code,"expires_in_seconds":600})
+            if path == "/api/notifications/poll" and method == "POST":
+                body = read_body(environ)
+                if body is None or set(body) != {"channel"} or body["channel"] not in notify.CHANNELS:
+                    return respond(start,"400 Bad Request",{"error":"invalid_channel"})
+                try:
+                    count = notify.poll_bindings(conn,body["channel"],notify_token_files,notify_client,clock())
+                except (ValueError,OSError,TimeoutError,TypeError):
+                    return respond(start,"502 Bad Gateway",{"error":"poll_failed"})
+                return respond(start,"200 OK",{"linked":count>0})
+            if path == "/api/notifications/unlink" and method == "POST":
+                body = read_body(environ)
+                if body is None or set(body) != {"channel"} or body["channel"] not in notify.CHANNELS:
+                    return respond(start,"400 Bad Request",{"error":"invalid_channel"})
+                conn.execute("UPDATE notify_channels SET enabled=0,chat_id=NULL,code_hash=NULL,expires=NULL WHERE channel=?", (body["channel"],))
+                return respond(start,"200 OK",{"ok":True})
+            if path == "/api/notifications/test" and method == "POST":
+                body = read_body(environ)
+                if body is None or set(body) != {"channel"} or body["channel"] not in notify.CHANNELS:
+                    return respond(start,"400 Bad Request",{"error":"invalid_channel"})
+                channel = body["channel"]
+                row = conn.execute("SELECT enabled,chat_id FROM notify_channels WHERE channel=?", (channel,)).fetchone()
+                if not row or not row["enabled"] or not row["chat_id"]:
+                    return respond(start,"409 Conflict",{"error":"channel_not_ready"})
+                try:
+                    notify.send(channel,notify.token_from_file(channel,notify_token_files),row["chat_id"],"CreatePortal: тестовое уведомление.",notify_client)
+                except (ValueError,OSError,TimeoutError,TypeError):
+                    return respond(start,"502 Bad Gateway",{"error":"delivery_failed"})
+                return respond(start,"200 OK",{"ok":True})
+            if path == "/api/notifications/process" and method == "POST":
+                body = read_body(environ)
+                if body is None or body:
+                    return respond(start,"400 Bad Request",{"error":"bad_request"})
+                # Explicit authenticated maintenance trigger, no external request in tests unless injected.
+                overdue = conn.execute("SELECT s.project_slug,s.pkg_id,p.name FROM task_state s JOIN projects p ON p.slug=s.project_slug WHERE s.status='submitted' AND s.submitted_at<?",(clock()-86400,)).fetchall()
+                for task in overdue:
+                    queue_notification("review.overdue",task["project_slug"]+":"+task["pkg_id"],f'{task["name"]}: {task["pkg_id"]} ждёт приёмки более суток. https://rikagro.ru/createportal/')
+                count = notify.deliver_due(conn,notify_token_files,notify_client,clock())
+                return respond(start,"200 OK",{"processed":count})
+            if path == "/api/notifications/log" and method == "GET":
+                entries = [dict(r) for r in conn.execute("SELECT ts,channel,event,result,attempt FROM notify_log ORDER BY id DESC LIMIT 100")]
+                return respond(start,"200 OK",{"entries":entries})
+            return respond(start,"404 Not Found",{"error":"not_found"})
         if reports_enabled and path == "/api/metrics" and method == "GET":
             return respond(start, "200 OK", {"metrics": metrics()})
         if path == "/api/me" and method == "GET":
