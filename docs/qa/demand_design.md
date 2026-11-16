@@ -26,7 +26,7 @@
 ## Запуск
 
 ```bash
-python3 -c 'from tools.sim.demand import rebuild_golden; print(rebuild_golden())'
+python3 -c 'from tools.sim.demand_layers import rebuild_golden; print(rebuild_golden())'
 python3 -m unittest tools.tests.test_demand_sim -v
 python3 -m unittest discover -s tools/tests -q
 git diff --exit-code origin/main -- tools/sim/golden/

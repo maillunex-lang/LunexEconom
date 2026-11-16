@@ -6,8 +6,8 @@ import json
 import unittest
 from pathlib import Path
 
-from tools.sim.demand import load_inputs, market_demand, migrate_shares, rebuild_golden, run
-from tools.sim.demand.model import _income, _matrix_population
+from tools.sim.demand_layers import load_inputs, migrate_shares, rebuild_golden, run
+from tools.sim.demand_layers.model import _income, _matrix_population
 
 ROOT = Path(__file__).resolve().parents[2]
 DATA = ROOT / "tools" / "sim" / "data" / "demand_proposed"
@@ -68,6 +68,7 @@ class DemandDesignTests(unittest.TestCase):
         self.assertGreater(migrate_shares(shares, 750, self.params)["poor"], shares["poor"])
 
     def test_legacy_m1_import_still_works(self):
+        from tools.sim.demand import market_demand
         self.assertTrue(callable(market_demand))
 
     def test_goldens_deterministic(self):
@@ -111,7 +112,7 @@ class DemandDesignTests(unittest.TestCase):
         recursive(self.profiles)
         recursive(self.cities)
         recursive(self.params)
-        for source in (ROOT / "tools/sim/demand").glob("*.py"):
+        for source in (ROOT / "tools/sim/demand_layers").glob("*.py"):
             tree = ast.parse(source.read_text(encoding="utf-8"))
             for node in ast.walk(tree):
                 self.assertFalse(isinstance(node, ast.Constant) and isinstance(node.value, float))
