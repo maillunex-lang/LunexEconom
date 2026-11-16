@@ -1,0 +1,63 @@
+{
+  "balance": "draft",
+  "generator_version": "city-objects-v1",
+  "seed_salt": 13294277618805,
+  "anchors_per_ring": 64,
+  "attempts_per_anchor": 7,
+  "max_objects_per_city": 120,
+  "max_objects_per_chunk": 18,
+  "max_generated_footprint_cells_per_chunk": 80,
+  "publish_lead_days": 7,
+  "land_effect_cap_bp": 1500,
+  "land_effect_floor_bp": -800,
+  "land_base_price_rub": 15000,
+  "service_kinds": [
+    "transport",
+    "education",
+    "health"
+  ],
+  "city_level_radius": [
+    12,
+    15,
+    19,
+    24,
+    30,
+    38
+  ],
+  "selection_modulus": 10000,
+  "acceptance_threshold": 8000,
+  "public_utility_reserved_only": true,
+  "seasonal_visuals": [
+    "snow",
+    "rain",
+    "green"
+  ],
+  "special_structures": "manual_only",
+  "ownership_policy": "free_unowned_only",
+  "candidate_rejection": "stable_no_reflow",
+  "economic_effects": "non_authoritative_draft",
+  "max_per_type": {
+    "city_hall": 1,
+    "school": 8,
+    "hospital": 2,
+    "clinic": 5,
+    "park": 8,
+    "sports_ground": 6,
+    "bus_stop": 18,
+    "station": 1,
+    "fire_station": 2,
+    "police_station": 2,
+    "market": 3,
+    "mosque": 1,
+    "temple": 1,
+    "culture_center": 2,
+    "housing_block": 30,
+    "water_works": 2,
+    "power_substation": 3,
+    "gas_station_utility": 2,
+    "bridge": 0,
+    "embankment": 0,
+    "office_block": 5,
+    "shopping_center": 2
+  }
+}

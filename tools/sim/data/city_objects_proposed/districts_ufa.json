@@ -1,0 +1,96 @@
+{
+  "balance": "draft",
+  "city_id": "ufa",
+  "districts": [
+    {
+      "id": "belaya_naberezhnaya",
+      "name": "Белая набережная",
+      "type": "центр",
+      "sector": "center",
+      "pop_permille": 180,
+      "traffic": 80,
+      "appeal_permille": 1200,
+      "layers_permille": {
+        "low": 200,
+        "mid": 400,
+        "high": 300,
+        "premium": 100
+      }
+    },
+    {
+      "id": "medovy_kvartal",
+      "name": "Медовый квартал",
+      "type": "жилой",
+      "sector": "north_west_residential",
+      "pop_permille": 450,
+      "traffic": 40,
+      "appeal_permille": 1000,
+      "layers_permille": {
+        "low": 350,
+        "mid": 400,
+        "high": 200,
+        "premium": 50
+      }
+    },
+    {
+      "id": "neftyanoy_holm",
+      "name": "Нефтяной холм",
+      "type": "промзона",
+      "sector": "industrial",
+      "pop_permille": 200,
+      "traffic": 30,
+      "appeal_permille": 900,
+      "layers_permille": {
+        "low": 500,
+        "mid": 350,
+        "high": 130,
+        "premium": 20
+      }
+    },
+    {
+      "id": "yuzhnaya_okraina",
+      "name": "Южная окраина",
+      "type": "окраина",
+      "sector": "south_outer",
+      "pop_permille": 120,
+      "traffic": 15,
+      "appeal_permille": 800,
+      "layers_permille": {
+        "low": 550,
+        "mid": 320,
+        "high": 110,
+        "premium": 20
+      }
+    },
+    {
+      "id": "centralny_rynok",
+      "name": "Центральный рынок",
+      "type": "рынок",
+      "sector": "east_residential",
+      "pop_permille": 30,
+      "traffic": 100,
+      "appeal_permille": 1500,
+      "layers_permille": {
+        "low": 300,
+        "mid": 420,
+        "high": 200,
+        "premium": 80
+      }
+    },
+    {
+      "id": "vokzalny_krug",
+      "name": "Вокзальный круг",
+      "type": "вокзал",
+      "sector": "west_residential",
+      "pop_permille": 20,
+      "traffic": 70,
+      "appeal_permille": 1100,
+      "layers_permille": {
+        "low": 320,
+        "mid": 400,
+        "high": 220,
+        "premium": 60
+      }
+    }
+  ]
+}
