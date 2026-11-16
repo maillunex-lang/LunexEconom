@@ -1,0 +1,82 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1920" height="1080" viewBox="0 0 1920 1080">
+<rect width="1920" height="1080" fill="#0A201B"/>
+<rect x="0" y="0" width="1920" height="80" rx="0" fill="#173A30"/>
+<text x="40" y="50" font-family="sans-serif" font-size="22" fill="#EEF5E8" text-anchor="start">Молочный завод · Уфа</text>
+<text x="1500" y="50" font-family="sans-serif" font-size="16" fill="#B7EFA5" text-anchor="start">Баланс: 300 000 ₽ · Год 2027 · Месяц 2 · День 7</text>
+<rect x="0" y="980" width="1920" height="100" rx="0" fill="#22483B"/>
+<text x="200" y="1040" font-family="sans-serif" font-size="15" fill="#EEF5E8" text-anchor="middle">Штаб</text>
+<text x="560" y="1040" font-family="sans-serif" font-size="15" fill="#EEF5E8" text-anchor="middle">Карта</text>
+<text x="920" y="1040" font-family="sans-serif" font-size="15" fill="#B7EFA5" text-anchor="middle">Предприятия</text>
+<text x="1280" y="1040" font-family="sans-serif" font-size="15" fill="#EEF5E8" text-anchor="middle">Финансы</text>
+<text x="1640" y="1040" font-family="sans-serif" font-size="15" fill="#EEF5E8" text-anchor="middle">Ещё</text>
+<rect x="40" y="110" width="900" height="400" rx="18" fill="#173A30"/>
+<text x="64" y="150" font-family="sans-serif" font-size="20" fill="#B7EFA5" text-anchor="start">Производство</text>
+<text x="64" y="190" font-family="sans-serif" font-size="16" fill="#A1B9AD" text-anchor="start">Активный рецепт:</text>
+<rect x="240" y="160" width="360" height="56" rx="12" fill="#B7EFA5"/>
+<text x="420" y="194" font-family="sans-serif" font-size="16" fill="#0A201B" text-anchor="middle">Молоко в бутылках ▾</text>
+<rect x="620" y="160" width="280" height="56" rx="12" fill="#22483B" stroke="#2E5A4B" stroke-width="2"/>
+<text x="760" y="194" font-family="sans-serif" font-size="16" fill="#EEF5E8" text-anchor="middle">Сменить рецепт</text>
+<text x="64" y="250" font-family="sans-serif" font-size="14" fill="#A1B9AD" text-anchor="start">Вход</text>
+<text x="284" y="250" font-family="sans-serif" font-size="14" fill="#A1B9AD" text-anchor="start">Нужно/сутки</text>
+<text x="484" y="250" font-family="sans-serif" font-size="14" fill="#A1B9AD" text-anchor="start">Запас</text>
+<text x="664" y="250" font-family="sans-serif" font-size="14" fill="#A1B9AD" text-anchor="start">Поставщик</text>
+<text x="64" y="290" font-family="sans-serif" font-size="15" fill="#EEF5E8" text-anchor="start">Молоко</text>
+<text x="284" y="290" font-family="sans-serif" font-size="15" fill="#EEF5E8" text-anchor="start">400 л</text>
+<text x="484" y="290" font-family="sans-serif" font-size="15" fill="#EEF5E8" text-anchor="start">820 л</text>
+<text x="664" y="290" font-family="sans-serif" font-size="15" fill="#EEF5E8" text-anchor="start">Своя ферма</text>
+<text x="64" y="330" font-family="sans-serif" font-size="15" fill="#F2C14E" text-anchor="start">Бутылка</text>
+<text x="284" y="330" font-family="sans-serif" font-size="15" fill="#F2C14E" text-anchor="start">400 шт</text>
+<text x="484" y="330" font-family="sans-serif" font-size="15" fill="#F2C14E" text-anchor="start">90 шт</text>
+<text x="664" y="330" font-family="sans-serif" font-size="15" fill="#F2C14E" text-anchor="start">Стеклозавод №2</text>
+<text x="64" y="370" font-family="sans-serif" font-size="15" fill="#EEF5E8" text-anchor="start">Этикетка</text>
+<text x="284" y="370" font-family="sans-serif" font-size="15" fill="#EEF5E8" text-anchor="start">400 шт</text>
+<text x="484" y="370" font-family="sans-serif" font-size="15" fill="#EEF5E8" text-anchor="start">1 200 шт</text>
+<text x="664" y="370" font-family="sans-serif" font-size="15" fill="#EEF5E8" text-anchor="start">Рынок</text>
+<rect x="64" y="460" width="400" height="18" rx="9" fill="#0A201B"/>
+<rect x="64" y="460" width="328" height="18" rx="9" fill="#7BD88F"/>
+<text x="64" y="452" font-family="sans-serif" font-size="14" fill="#A1B9AD" text-anchor="start">Загрузка мощности: 82 %</text>
+<text x="500" y="458" font-family="sans-serif" font-size="15" fill="#EEF5E8" text-anchor="start">Выпуск: 328 бутылок в сутки</text>
+<rect x="960" y="110" width="920" height="400" rx="18" fill="#173A30"/>
+<text x="984" y="150" font-family="sans-serif" font-size="20" fill="#B7EFA5" text-anchor="start">Прибыль и цены</text>
+<text x="984" y="190" font-family="sans-serif" font-size="16" fill="#EEF5E8" text-anchor="start">Выручка/мес: 1 240 000 ₽   Затраты: 910 000 ₽   Прибыль: 330 000 ₽</text>
+<rect x="984" y="400" width="64" height="80" rx="6" fill="#2E5A4B"/>
+<rect x="1080" y="370" width="64" height="110" rx="6" fill="#2E5A4B"/>
+<rect x="1176" y="384" width="64" height="96" rx="6" fill="#2E5A4B"/>
+<rect x="1272" y="340" width="64" height="140" rx="6" fill="#2E5A4B"/>
+<rect x="1368" y="316" width="64" height="164" rx="6" fill="#2E5A4B"/>
+<rect x="1464" y="328" width="64" height="152" rx="6" fill="#2E5A4B"/>
+<rect x="1560" y="300" width="64" height="180" rx="6" fill="#2E5A4B"/>
+<rect x="1656" y="312" width="64" height="168" rx="6" fill="#2E5A4B"/>
+<rect x="1752" y="288" width="64" height="192" rx="6" fill="#B7EFA5"/>
+<text x="984" y="500" font-family="sans-serif" font-size="13" fill="#A1B9AD" text-anchor="start">Прибыль по месяцам (график)</text>
+<rect x="40" y="530" width="900" height="420" rx="18" fill="#173A30"/>
+<text x="64" y="570" font-family="sans-serif" font-size="20" fill="#B7EFA5" text-anchor="start">Склад готовой продукции</text>
+<text x="64" y="610" font-family="sans-serif" font-size="14" fill="#A1B9AD" text-anchor="start">Товар</text>
+<text x="324" y="610" font-family="sans-serif" font-size="14" fill="#A1B9AD" text-anchor="start">Запас</text>
+<text x="484" y="610" font-family="sans-serif" font-size="14" fill="#A1B9AD" text-anchor="start">Цена продажи</text>
+<text x="704" y="610" font-family="sans-serif" font-size="14" fill="#A1B9AD" text-anchor="start">Режим</text>
+<text x="64" y="650" font-family="sans-serif" font-size="15" fill="#EEF5E8" text-anchor="start">Молоко 1 л, стекло</text>
+<text x="324" y="650" font-family="sans-serif" font-size="15" fill="#EEF5E8" text-anchor="start">1 640</text>
+<text x="484" y="650" font-family="sans-serif" font-size="15" fill="#EEF5E8" text-anchor="start">62 ₽</text>
+<text x="704" y="650" font-family="sans-serif" font-size="15" fill="#EEF5E8" text-anchor="start">Для всех</text>
+<text x="64" y="694" font-family="sans-serif" font-size="15" fill="#EEF5E8" text-anchor="start">Кефир 0,9 л</text>
+<text x="324" y="694" font-family="sans-serif" font-size="15" fill="#EEF5E8" text-anchor="start">420</text>
+<text x="484" y="694" font-family="sans-serif" font-size="15" fill="#EEF5E8" text-anchor="start">58 ₽</text>
+<text x="704" y="694" font-family="sans-serif" font-size="15" fill="#EEF5E8" text-anchor="start">Смешанный</text>
+<text x="64" y="738" font-family="sans-serif" font-size="15" fill="#EEF5E8" text-anchor="start">Сыворотка</text>
+<text x="324" y="738" font-family="sans-serif" font-size="15" fill="#EEF5E8" text-anchor="start">180 л</text>
+<text x="484" y="738" font-family="sans-serif" font-size="15" fill="#EEF5E8" text-anchor="start">—</text>
+<text x="704" y="738" font-family="sans-serif" font-size="15" fill="#EEF5E8" text-anchor="start">Только себе</text>
+<rect x="64" y="800" width="280" height="56" rx="12" fill="#B7EFA5"/>
+<text x="204" y="834" font-family="sans-serif" font-size="16" fill="#0A201B" text-anchor="middle">Куда продавать</text>
+<rect x="360" y="800" width="280" height="56" rx="12" fill="#22483B" stroke="#2E5A4B" stroke-width="2"/>
+<text x="500" y="834" font-family="sans-serif" font-size="16" fill="#EEF5E8" text-anchor="middle">Цены и режимы</text>
+<rect x="960" y="530" width="920" height="420" rx="18" fill="#173A30"/>
+<text x="984" y="570" font-family="sans-serif" font-size="20" fill="#B7EFA5" text-anchor="start">Персонал и здание</text>
+<text x="984" y="610" font-family="sans-serif" font-size="16" fill="#EEF5E8" text-anchor="start">Рабочих: 25 из 25   Квалификация: 3   Зарплата: 2 100 ₽/мес</text>
+<text x="984" y="650" font-family="sans-serif" font-size="16" fill="#EEF5E8" text-anchor="start">Содержание: 38 000 ₽/мес   Износ: 12 %</text>
+<rect x="984" y="880" width="260" height="56" rx="12" fill="#B7EFA5"/>
+<text x="1114" y="914" font-family="sans-serif" font-size="16" fill="#0A201B" text-anchor="middle">Сотрудники</text>
+<rect x="1264" y="880" width="260" height="56" rx="12" fill="#22483B" stroke="#2E5A4B" stroke-width="2"/>
+<text x="1394" y="914" font-family="sans-serif" font-size="16" fill="#EEF5E8" text-anchor="middle">Снести</text>
+</svg>
