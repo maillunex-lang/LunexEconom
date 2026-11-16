@@ -23,7 +23,7 @@ def _prompted(plan):
     return [dict(p, prompt=wp.prompt(plan, p["id"])) for p in plan["packages"]]
 
 
-def create_app(db_path, base="", secure_cookie=True, fetch=None, github_token_file=None):
+def create_app(db_path, base="", secure_cookie=True, fetch=None, github_token_file=None, security_v2=False):
     conn = db.connect(db_path)
     base = base.rstrip("/")
 
@@ -94,11 +94,15 @@ def create_app(db_path, base="", secure_cookie=True, fetch=None, github_token_fi
         path = environ.get("PATH_INFO", "/")
         if base and path.startswith(base):
             path = path[len(base):] or "/"
-        ip = (environ.get("HTTP_X_REAL_IP") or environ.get("REMOTE_ADDR") or "-")[:64]
-        cookies = SimpleCookie(environ.get("HTTP_COOKIE", ""))
+        ip = (environ.get("REMOTE_ADDR") or "-")[:64]  # never trust client-supplied forwarding headers
+        try:
+            cookies = SimpleCookie(environ.get("HTTP_COOKIE", "")[:4096])
+        except Exception:
+            cookies = SimpleCookie()
         token = cookies[COOKIE].value if COOKIE in cookies else ""
         if path == "/health" and method == "GET":
-            return respond(start, "200 OK", {"ok": True})
+            healthy = db.check_health(conn)
+            return respond(start, "200 OK" if healthy else "503 Service Unavailable", {"ok": healthy})
         if method == "GET" and path in ("/", "/index.html"):
             nonce = secrets.token_urlsafe(12)
             html = (STATIC / "index.html").read_text(encoding="utf-8").replace("__NONCE__", nonce).replace("__BASE__", base)
@@ -124,12 +128,20 @@ def create_app(db_path, base="", secure_cookie=True, fetch=None, github_token_fi
         sess = auth.session(conn, token)
         if path == "/api/login" and method == "POST":
             body = read_body(environ)
-            if body is None:
+            if body is None or set(body) != {"username", "password"} or any(type(v) is not str for v in body.values()):
                 return respond(start, "400 Bad Request", {"error": "bad_request"})
-            res = auth.login(conn, str(body.get("username", ""))[:80], str(body.get("password", ""))[:300], ip)
+            res = auth.login(conn, str(body.get("username", ""))[:80], str(body.get("password", ""))[:300], ip, hourly_limit=security_v2)
+            if res == "locked":
+                db.audit(conn, "login.locked", {"ip": ip})
+                return respond(start, "429 Too Many Requests", {"error": "rate_limited"})
             if res == "rate":
+                db.audit(conn, "login.rate_limited", {"ip": ip})
                 return respond(start, "429 Too Many Requests", {"error": "rate_limited"})
             if not res:
+                db.audit(conn, "login.failure", {"ip": ip})
+                if security_v2 and auth.hourly_locked(conn, ip):
+                    db.audit(conn, "login.locked", {"ip": ip})
+                    return respond(start, "429 Too Many Requests", {"error": "rate_limited"})
                 return respond(start, "401 Unauthorized", {"error": "invalid_credentials"})
             t, csrf = res
             attrs = f"{COOKIE}={t}; Path={base or '/'}; HttpOnly; SameSite=Strict; Max-Age={auth.SESSION_TTL}" + ("; Secure" if secure_cookie else "")
@@ -142,6 +154,26 @@ def create_app(db_path, base="", secure_cookie=True, fetch=None, github_token_fi
         if path == "/api/logout" and method == "POST":
             auth.logout(conn, token)
             return respond(start, "200 OK", {"ok": True})
+        if security_v2 and path == "/api/password" and method == "POST":
+            body = read_body(environ)
+            if body is None or set(body) != {"current_password", "new_password"} or any(type(v) is not str for v in body.values()):
+                return respond(start, "400 Bad Request", {"error": "bad_request"})
+            result, new_csrf = auth.change_password(conn, sess["user_id"], body["current_password"], body["new_password"], token)
+            if result == "wrong":
+                return respond(start, "401 Unauthorized", {"error": "invalid_credentials"})
+            if result != "ok":
+                return respond(start, "400 Bad Request", {"error": "invalid_password"})
+            return respond(start, "200 OK", {"ok": True, "csrf": new_csrf})
+        if security_v2 and path == "/api/sessions/revoke" and method == "POST":
+            body = read_body(environ)
+            if body is None or set(body) != {"current_password"} or type(body["current_password"]) is not str:
+                return respond(start, "400 Bad Request", {"error": "bad_request"})
+            if not auth.revoke_sessions(conn, sess["user_id"], body["current_password"]):
+                return respond(start, "401 Unauthorized", {"error": "invalid_credentials"})
+            attrs = f"{COOKIE}=; Path={base or '/'}; HttpOnly; SameSite=Strict; Max-Age=0" + ("; Secure" if secure_cookie else "")
+            return respond(start, "200 OK", {"ok": True}, [("Set-Cookie", attrs)])
+        if security_v2 and path == "/api/audit" and method == "GET":
+            return respond(start, "200 OK", {"entries": db.recent_audit(conn)})
         if path == "/api/me" and method == "GET":
             return respond(start, "200 OK", {"user": sess["username"], "csrf": sess["csrf"]})
         if path == "/api/master-prompt" and method == "GET":
