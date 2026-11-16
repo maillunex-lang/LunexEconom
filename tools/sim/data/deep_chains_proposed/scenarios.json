@@ -1,0 +1,375 @@
+[
+  {
+    "initial_recipe": "dairy_processing_glass_milk",
+    "recipes": [
+      {
+        "id": "dairy_processing_glass_milk",
+        "inputs": {
+          "milk": 40,
+          "glass_bottle": 40,
+          "paper_label": 40
+        },
+        "outputs": {
+          "milk_glass_bottle": 40
+        },
+        "output_cost_allocation_bp": {
+          "milk_glass_bottle": 10000
+        },
+        "minimum_input_quality": {}
+      },
+      {
+        "id": "dairy_processing_carton_milk",
+        "inputs": {
+          "milk": 40,
+          "milk_carton": 40
+        },
+        "outputs": {
+          "milk_carton_pack": 40
+        },
+        "output_cost_allocation_bp": {
+          "milk_carton_pack": 10000
+        },
+        "minimum_input_quality": {}
+      },
+      {
+        "id": "dairy_processing_cheese",
+        "inputs": {
+          "milk": 60,
+          "paperboard": 8
+        },
+        "outputs": {
+          "cheese": 14,
+          "whey": 38
+        },
+        "output_cost_allocation_bp": {
+          "cheese": 9000,
+          "whey": 1000
+        },
+        "minimum_input_quality": {}
+      }
+    ],
+    "starting_cash_rub": 20000000,
+    "storage_capacity": 6000,
+    "initial_stock": {},
+    "daily_supplies": {
+      "milk": 40,
+      "glass_bottle": 40,
+      "paper_label": 40,
+      "milk_carton": 40,
+      "paperboard": 8
+    },
+    "input_prices_rub": {
+      "milk": 35,
+      "glass_bottle": 12,
+      "paper_label": 2,
+      "milk_carton": 8,
+      "paperboard": 12
+    },
+    "input_quality": {
+      "milk": 75,
+      "glass_bottle": 70,
+      "paper_label": 90,
+      "milk_carton": 80,
+      "paperboard": 60
+    },
+    "wages_per_batch_rub": 100,
+    "fixed_upkeep_month_rub": 2000,
+    "variable_upkeep_month_rub": 6000,
+    "disposal_fee_rub": 3,
+    "sale_prices_rub": {
+      "milk_glass_bottle": 95,
+      "milk_carton_pack": 80,
+      "cheese": 320,
+      "whey": 5
+    },
+    "daily_demand": {
+      "milk_glass_bottle": 40,
+      "milk_carton_pack": 40,
+      "cheese": 14,
+      "whey": 38
+    },
+    "id": "single_recipe"
+  },
+  {
+    "initial_recipe": "dairy_processing_glass_milk",
+    "recipes": [
+      {
+        "id": "dairy_processing_glass_milk",
+        "inputs": {
+          "milk": 40,
+          "glass_bottle": 40,
+          "paper_label": 40
+        },
+        "outputs": {
+          "milk_glass_bottle": 40
+        },
+        "output_cost_allocation_bp": {
+          "milk_glass_bottle": 10000
+        },
+        "minimum_input_quality": {}
+      },
+      {
+        "id": "dairy_processing_carton_milk",
+        "inputs": {
+          "milk": 40,
+          "milk_carton": 40
+        },
+        "outputs": {
+          "milk_carton_pack": 40
+        },
+        "output_cost_allocation_bp": {
+          "milk_carton_pack": 10000
+        },
+        "minimum_input_quality": {}
+      },
+      {
+        "id": "dairy_processing_cheese",
+        "inputs": {
+          "milk": 60,
+          "paperboard": 8
+        },
+        "outputs": {
+          "cheese": 14,
+          "whey": 38
+        },
+        "output_cost_allocation_bp": {
+          "cheese": 9000,
+          "whey": 1000
+        },
+        "minimum_input_quality": {}
+      }
+    ],
+    "starting_cash_rub": 20000000,
+    "storage_capacity": 20000,
+    "initial_stock": {},
+    "daily_supplies": {
+      "milk": 40,
+      "glass_bottle": 40,
+      "paper_label": 40,
+      "milk_carton": 40,
+      "paperboard": 8
+    },
+    "input_prices_rub": {
+      "milk": 35,
+      "glass_bottle": 12,
+      "paper_label": 2,
+      "milk_carton": 8,
+      "paperboard": 12
+    },
+    "input_quality": {
+      "milk": 75,
+      "glass_bottle": 70,
+      "paper_label": 90,
+      "milk_carton": 80,
+      "paperboard": 60
+    },
+    "wages_per_batch_rub": 100,
+    "fixed_upkeep_month_rub": 2000,
+    "variable_upkeep_month_rub": 6000,
+    "disposal_fee_rub": 3,
+    "sale_prices_rub": {
+      "milk_glass_bottle": 95,
+      "milk_carton_pack": 80,
+      "cheese": 320,
+      "whey": 5
+    },
+    "daily_demand": {
+      "milk_glass_bottle": 40,
+      "milk_carton_pack": 40,
+      "cheese": 14,
+      "whey": 38
+    },
+    "id": "recipe_switch",
+    "switches": [
+      {
+        "month": 9,
+        "recipe": "dairy_processing_carton_milk"
+      },
+      {
+        "month": 17,
+        "recipe": "dairy_processing_glass_milk"
+      }
+    ]
+  },
+  {
+    "initial_recipe": "dairy_processing_cheese",
+    "recipes": [
+      {
+        "id": "dairy_processing_glass_milk",
+        "inputs": {
+          "milk": 40,
+          "glass_bottle": 40,
+          "paper_label": 40
+        },
+        "outputs": {
+          "milk_glass_bottle": 40
+        },
+        "output_cost_allocation_bp": {
+          "milk_glass_bottle": 10000
+        },
+        "minimum_input_quality": {}
+      },
+      {
+        "id": "dairy_processing_carton_milk",
+        "inputs": {
+          "milk": 40,
+          "milk_carton": 40
+        },
+        "outputs": {
+          "milk_carton_pack": 40
+        },
+        "output_cost_allocation_bp": {
+          "milk_carton_pack": 10000
+        },
+        "minimum_input_quality": {}
+      },
+      {
+        "id": "dairy_processing_cheese",
+        "inputs": {
+          "milk": 60,
+          "paperboard": 8
+        },
+        "outputs": {
+          "cheese": 14,
+          "whey": 38
+        },
+        "output_cost_allocation_bp": {
+          "cheese": 9000,
+          "whey": 1000
+        },
+        "minimum_input_quality": {}
+      }
+    ],
+    "starting_cash_rub": 20000000,
+    "storage_capacity": 150,
+    "initial_stock": {},
+    "daily_supplies": {
+      "milk": 60,
+      "paperboard": 8
+    },
+    "input_prices_rub": {
+      "milk": 35,
+      "glass_bottle": 12,
+      "paper_label": 2,
+      "milk_carton": 8,
+      "paperboard": 12
+    },
+    "input_quality": {
+      "milk": 75,
+      "glass_bottle": 70,
+      "paper_label": 90,
+      "milk_carton": 80,
+      "paperboard": 60
+    },
+    "wages_per_batch_rub": 100,
+    "fixed_upkeep_month_rub": 2000,
+    "variable_upkeep_month_rub": 6000,
+    "disposal_fee_rub": 3,
+    "sale_prices_rub": {
+      "milk_glass_bottle": 95,
+      "milk_carton_pack": 80,
+      "cheese": 320,
+      "whey": 5
+    },
+    "daily_demand": {
+      "cheese": 14,
+      "whey": 0
+    },
+    "id": "byproduct_storage",
+    "dispose_products": [
+      "whey"
+    ]
+  },
+  {
+    "initial_recipe": "dairy_processing_glass_milk",
+    "recipes": [
+      {
+        "id": "dairy_processing_glass_milk",
+        "inputs": {
+          "milk": 40,
+          "glass_bottle": 40,
+          "paper_label": 40
+        },
+        "outputs": {
+          "milk_glass_bottle": 40
+        },
+        "output_cost_allocation_bp": {
+          "milk_glass_bottle": 10000
+        },
+        "minimum_input_quality": {}
+      },
+      {
+        "id": "dairy_processing_carton_milk",
+        "inputs": {
+          "milk": 40,
+          "milk_carton": 40
+        },
+        "outputs": {
+          "milk_carton_pack": 40
+        },
+        "output_cost_allocation_bp": {
+          "milk_carton_pack": 10000
+        },
+        "minimum_input_quality": {}
+      },
+      {
+        "id": "dairy_processing_cheese",
+        "inputs": {
+          "milk": 60,
+          "paperboard": 8
+        },
+        "outputs": {
+          "cheese": 14,
+          "whey": 38
+        },
+        "output_cost_allocation_bp": {
+          "cheese": 9000,
+          "whey": 1000
+        },
+        "minimum_input_quality": {}
+      }
+    ],
+    "starting_cash_rub": 20000000,
+    "storage_capacity": 6000,
+    "initial_stock": {},
+    "daily_supplies": {
+      "milk": 10,
+      "glass_bottle": 40,
+      "paper_label": 40
+    },
+    "input_prices_rub": {
+      "milk": 35,
+      "glass_bottle": 12,
+      "paper_label": 2,
+      "milk_carton": 8,
+      "paperboard": 12
+    },
+    "input_quality": {
+      "milk": 75,
+      "glass_bottle": 70,
+      "paper_label": 90,
+      "milk_carton": 80,
+      "paperboard": 60
+    },
+    "wages_per_batch_rub": 100,
+    "fixed_upkeep_month_rub": 2000,
+    "variable_upkeep_month_rub": 6000,
+    "disposal_fee_rub": 3,
+    "sale_prices_rub": {
+      "milk_glass_bottle": 95,
+      "milk_carton_pack": 80,
+      "cheese": 320,
+      "whey": 5
+    },
+    "daily_demand": {
+      "milk_glass_bottle": 40,
+      "milk_carton_pack": 40,
+      "cheese": 14,
+      "whey": 38
+    },
+    "id": "packaging_bottleneck",
+    "limited_supplies": {
+      "glass_bottle": 2500
+    }
+  }
+]

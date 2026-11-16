@@ -1,0 +1,892 @@
+{
+  "products_added": [
+    {
+      "id": "quartz",
+      "name": "Кварцевое сырьё",
+      "description": "Предложение V2 deep chains: кварцевое сырьё.",
+      "category": "materials",
+      "unit": "kg",
+      "type": "raw",
+      "reference_price": 38,
+      "storage_life_factor": 100,
+      "quality_range": {
+        "min": 1,
+        "max": 100
+      },
+      "consumer": false,
+      "base_demand_per_capita": 0,
+      "elasticity": 1,
+      "rating_weights": {
+        "brand": 25,
+        "quality": 35,
+        "price": 40
+      },
+      "vat_category": "draft",
+      "balance": "draft"
+    },
+    {
+      "id": "glass_bottle",
+      "name": "Стеклянная бутылка",
+      "description": "Предложение V2 deep chains: стеклянная бутылка.",
+      "category": "industrial",
+      "unit": "piece",
+      "type": "intermediate",
+      "reference_price": 34,
+      "storage_life_factor": 100,
+      "quality_range": {
+        "min": 1,
+        "max": 100
+      },
+      "consumer": false,
+      "base_demand_per_capita": 0,
+      "elasticity": 1,
+      "rating_weights": {
+        "brand": 25,
+        "quality": 35,
+        "price": 40
+      },
+      "vat_category": "draft",
+      "balance": "draft"
+    },
+    {
+      "id": "milk_carton",
+      "name": "Молочный пакет",
+      "description": "Предложение V2 deep chains: молочный пакет.",
+      "category": "industrial",
+      "unit": "piece",
+      "type": "intermediate",
+      "reference_price": 22,
+      "storage_life_factor": 100,
+      "quality_range": {
+        "min": 1,
+        "max": 100
+      },
+      "consumer": false,
+      "base_demand_per_capita": 0,
+      "elasticity": 1,
+      "rating_weights": {
+        "brand": 25,
+        "quality": 35,
+        "price": 40
+      },
+      "vat_category": "draft",
+      "balance": "draft"
+    },
+    {
+      "id": "tin_can",
+      "name": "Жестяная банка",
+      "description": "Предложение V2 deep chains: жестяная банка.",
+      "category": "industrial",
+      "unit": "piece",
+      "type": "intermediate",
+      "reference_price": 32,
+      "storage_life_factor": 100,
+      "quality_range": {
+        "min": 1,
+        "max": 100
+      },
+      "consumer": false,
+      "base_demand_per_capita": 0,
+      "elasticity": 1,
+      "rating_weights": {
+        "brand": 25,
+        "quality": 35,
+        "price": 40
+      },
+      "vat_category": "draft",
+      "balance": "draft"
+    },
+    {
+      "id": "cardboard_box",
+      "name": "Картонная коробка",
+      "description": "Предложение V2 deep chains: картонная коробка.",
+      "category": "industrial",
+      "unit": "piece",
+      "type": "intermediate",
+      "reference_price": 15,
+      "storage_life_factor": 100,
+      "quality_range": {
+        "min": 1,
+        "max": 100
+      },
+      "consumer": false,
+      "base_demand_per_capita": 0,
+      "elasticity": 1,
+      "rating_weights": {
+        "brand": 25,
+        "quality": 35,
+        "price": 40
+      },
+      "vat_category": "draft",
+      "balance": "draft"
+    },
+    {
+      "id": "paper_label",
+      "name": "Этикетка",
+      "description": "Предложение V2 deep chains: этикетка.",
+      "category": "industrial",
+      "unit": "piece",
+      "type": "intermediate",
+      "reference_price": 3,
+      "storage_life_factor": 100,
+      "quality_range": {
+        "min": 1,
+        "max": 100
+      },
+      "consumer": false,
+      "base_demand_per_capita": 0,
+      "elasticity": 1,
+      "rating_weights": {
+        "brand": 25,
+        "quality": 35,
+        "price": 40
+      },
+      "vat_category": "draft",
+      "balance": "draft"
+    },
+    {
+      "id": "paperboard",
+      "name": "Бумажный картон",
+      "description": "Предложение V2 deep chains: бумажный картон.",
+      "category": "industrial",
+      "unit": "kg",
+      "type": "intermediate",
+      "reference_price": 120,
+      "storage_life_factor": 100,
+      "quality_range": {
+        "min": 1,
+        "max": 100
+      },
+      "consumer": false,
+      "base_demand_per_capita": 0,
+      "elasticity": 1,
+      "rating_weights": {
+        "brand": 25,
+        "quality": 35,
+        "price": 40
+      },
+      "vat_category": "draft",
+      "balance": "draft"
+    },
+    {
+      "id": "milk_glass_bottle",
+      "name": "Молоко в стеклянной бутылке",
+      "description": "Предложение V2 deep chains: молоко в стеклянной бутылке.",
+      "category": "food",
+      "unit": "piece",
+      "type": "consumer",
+      "reference_price": 145,
+      "storage_life_factor": 1,
+      "quality_range": {
+        "min": 1,
+        "max": 100
+      },
+      "consumer": true,
+      "base_demand_per_capita": 2,
+      "elasticity": 1,
+      "rating_weights": {
+        "brand": 25,
+        "quality": 35,
+        "price": 40
+      },
+      "vat_category": "draft",
+      "balance": "draft"
+    },
+    {
+      "id": "milk_carton_pack",
+      "name": "Молоко в пакете",
+      "description": "Предложение V2 deep chains: молоко в пакете.",
+      "category": "food",
+      "unit": "piece",
+      "type": "consumer",
+      "reference_price": 110,
+      "storage_life_factor": 1,
+      "quality_range": {
+        "min": 1,
+        "max": 100
+      },
+      "consumer": true,
+      "base_demand_per_capita": 2,
+      "elasticity": 1,
+      "rating_weights": {
+        "brand": 25,
+        "quality": 35,
+        "price": 40
+      },
+      "vat_category": "draft",
+      "balance": "draft"
+    },
+    {
+      "id": "kefir_bottle",
+      "name": "Кефир в бутылке",
+      "description": "Предложение V2 deep chains: кефир в бутылке.",
+      "category": "food",
+      "unit": "piece",
+      "type": "consumer",
+      "reference_price": 155,
+      "storage_life_factor": 1,
+      "quality_range": {
+        "min": 1,
+        "max": 100
+      },
+      "consumer": true,
+      "base_demand_per_capita": 2,
+      "elasticity": 1,
+      "rating_weights": {
+        "brand": 25,
+        "quality": 35,
+        "price": 40
+      },
+      "vat_category": "draft",
+      "balance": "draft"
+    },
+    {
+      "id": "fruit_yogurt",
+      "name": "Фруктовый йогурт",
+      "description": "Предложение V2 deep chains: фруктовый йогурт.",
+      "category": "food",
+      "unit": "piece",
+      "type": "consumer",
+      "reference_price": 185,
+      "storage_life_factor": 1,
+      "quality_range": {
+        "min": 1,
+        "max": 100
+      },
+      "consumer": true,
+      "base_demand_per_capita": 2,
+      "elasticity": 1,
+      "rating_weights": {
+        "brand": 25,
+        "quality": 35,
+        "price": 40
+      },
+      "vat_category": "draft",
+      "balance": "draft"
+    },
+    {
+      "id": "cocoa_milk",
+      "name": "Молоко с какао",
+      "description": "Предложение V2 deep chains: молоко с какао.",
+      "category": "food",
+      "unit": "piece",
+      "type": "consumer",
+      "reference_price": 165,
+      "storage_life_factor": 1,
+      "quality_range": {
+        "min": 1,
+        "max": 100
+      },
+      "consumer": true,
+      "base_demand_per_capita": 2,
+      "elasticity": 1,
+      "rating_weights": {
+        "brand": 25,
+        "quality": 35,
+        "price": 40
+      },
+      "vat_category": "draft",
+      "balance": "draft"
+    },
+    {
+      "id": "whey",
+      "name": "Молочная сыворотка",
+      "description": "Предложение V2 deep chains: молочная сыворотка.",
+      "category": "food",
+      "unit": "kg",
+      "type": "intermediate",
+      "reference_price": 12,
+      "storage_life_factor": 2,
+      "quality_range": {
+        "min": 1,
+        "max": 100
+      },
+      "consumer": false,
+      "base_demand_per_capita": 0,
+      "elasticity": 1,
+      "rating_weights": {
+        "brand": 25,
+        "quality": 35,
+        "price": 40
+      },
+      "vat_category": "draft",
+      "balance": "draft"
+    },
+    {
+      "id": "fruit_puree",
+      "name": "Фруктовое пюре",
+      "description": "Предложение V2 deep chains: фруктовое пюре.",
+      "category": "food",
+      "unit": "kg",
+      "type": "intermediate",
+      "reference_price": 95,
+      "storage_life_factor": 3,
+      "quality_range": {
+        "min": 1,
+        "max": 100
+      },
+      "consumer": false,
+      "base_demand_per_capita": 0,
+      "elasticity": 1,
+      "rating_weights": {
+        "brand": 25,
+        "quality": 35,
+        "price": 40
+      },
+      "vat_category": "draft",
+      "balance": "draft"
+    },
+    {
+      "id": "cocoa_powder",
+      "name": "Какао-порошок",
+      "description": "Предложение V2 deep chains: какао-порошок.",
+      "category": "food",
+      "unit": "kg",
+      "type": "intermediate",
+      "reference_price": 180,
+      "storage_life_factor": 100,
+      "quality_range": {
+        "min": 1,
+        "max": 100
+      },
+      "consumer": false,
+      "base_demand_per_capita": 0,
+      "elasticity": 1,
+      "rating_weights": {
+        "brand": 25,
+        "quality": 35,
+        "price": 40
+      },
+      "vat_category": "draft",
+      "balance": "draft"
+    },
+    {
+      "id": "animal_hides",
+      "name": "Шкуры",
+      "description": "Предложение V2 deep chains: шкуры.",
+      "category": "industrial",
+      "unit": "kg",
+      "type": "intermediate",
+      "reference_price": 110,
+      "storage_life_factor": 100,
+      "quality_range": {
+        "min": 1,
+        "max": 100
+      },
+      "consumer": false,
+      "base_demand_per_capita": 0,
+      "elasticity": 1,
+      "rating_weights": {
+        "brand": 25,
+        "quality": 35,
+        "price": 40
+      },
+      "vat_category": "draft",
+      "balance": "draft"
+    },
+    {
+      "id": "offal",
+      "name": "Субпродукты",
+      "description": "Предложение V2 deep chains: субпродукты.",
+      "category": "food",
+      "unit": "kg",
+      "type": "consumer",
+      "reference_price": 190,
+      "storage_life_factor": 2,
+      "quality_range": {
+        "min": 1,
+        "max": 100
+      },
+      "consumer": true,
+      "base_demand_per_capita": 2,
+      "elasticity": 1,
+      "rating_weights": {
+        "brand": 25,
+        "quality": 35,
+        "price": 40
+      },
+      "vat_category": "draft",
+      "balance": "draft"
+    }
+  ],
+  "buildings_added": [
+    {
+      "id": "dairy_processing_plant",
+      "name": "Молочный комбинат",
+      "description": "Новый объект для исследовательской цепочки: молочный комбинат.",
+      "category": "factory",
+      "role": "factory",
+      "size": {
+        "width": 2,
+        "height": 3
+      },
+      "build_cost": 95000,
+      "build_days": 12,
+      "build_months": 1,
+      "upkeep_month": 4500,
+      "jobs": 25,
+      "storage_capacity": 6000,
+      "zones": [
+        "industrial"
+      ],
+      "production": true,
+      "balance": "draft"
+    },
+    {
+      "id": "packaging_plant",
+      "name": "Упаковочный завод",
+      "description": "Новый объект для исследовательской цепочки: упаковочный завод.",
+      "category": "factory",
+      "role": "factory",
+      "size": {
+        "width": 2,
+        "height": 2
+      },
+      "build_cost": 70000,
+      "build_days": 12,
+      "build_months": 1,
+      "upkeep_month": 4500,
+      "jobs": 20,
+      "storage_capacity": 5000,
+      "zones": [
+        "industrial"
+      ],
+      "production": true,
+      "balance": "draft"
+    },
+    {
+      "id": "pulp_paper_plant",
+      "name": "Бумажный комбинат",
+      "description": "Новый объект для исследовательской цепочки: бумажный комбинат.",
+      "category": "factory",
+      "role": "factory",
+      "size": {
+        "width": 3,
+        "height": 2
+      },
+      "build_cost": 90000,
+      "build_days": 12,
+      "build_months": 1,
+      "upkeep_month": 4500,
+      "jobs": 25,
+      "storage_capacity": 6000,
+      "zones": [
+        "industrial"
+      ],
+      "production": true,
+      "balance": "draft"
+    },
+    {
+      "id": "quartz_mine",
+      "name": "Кварцевый рудник",
+      "description": "Новый объект для исследовательской цепочки: кварцевый рудник.",
+      "category": "extraction",
+      "role": "extraction",
+      "size": {
+        "width": 3,
+        "height": 3
+      },
+      "build_cost": 125000,
+      "build_days": 12,
+      "build_months": 1,
+      "upkeep_month": 4500,
+      "jobs": 25,
+      "storage_capacity": 9000,
+      "zones": [
+        "industrial"
+      ],
+      "production": true,
+      "balance": "draft"
+    },
+    {
+      "id": "fruit_processing_plant",
+      "name": "Фруктовый цех",
+      "description": "Новый объект для исследовательской цепочки: фруктовый цех.",
+      "category": "factory",
+      "role": "factory",
+      "size": {
+        "width": 2,
+        "height": 2
+      },
+      "build_cost": 72000,
+      "build_days": 12,
+      "build_months": 1,
+      "upkeep_month": 4500,
+      "jobs": 20,
+      "storage_capacity": 4000,
+      "zones": [
+        "industrial"
+      ],
+      "production": true,
+      "balance": "draft"
+    },
+    {
+      "id": "cocoa_processing_plant",
+      "name": "Какао-цех",
+      "description": "Новый объект для исследовательской цепочки: какао-цех.",
+      "category": "factory",
+      "role": "factory",
+      "size": {
+        "width": 2,
+        "height": 2
+      },
+      "build_cost": 85000,
+      "build_days": 12,
+      "build_months": 1,
+      "upkeep_month": 4500,
+      "jobs": 20,
+      "storage_capacity": 4000,
+      "zones": [
+        "industrial"
+      ],
+      "production": true,
+      "balance": "draft"
+    }
+  ],
+  "recipes_added": [
+    {
+      "id": "quartz_mine_quartz",
+      "building": "quartz_mine",
+      "inputs": {},
+      "outputs": {
+        "quartz": 100
+      },
+      "workers": 5,
+      "technology_level": 1,
+      "quality_model": "weighted_inputs_or_base",
+      "balance": "draft",
+      "name": "Quartz mine quartz",
+      "description": "Предложение глубоких цепочек; баланс черновой.",
+      "alternative_recipe": false
+    },
+    {
+      "id": "glass_plant_silicate_glass",
+      "building": "glass_plant",
+      "inputs": {
+        "sand": 70,
+        "quartz": 20,
+        "gas": 15
+      },
+      "outputs": {
+        "glass": 55
+      },
+      "workers": 12,
+      "technology_level": 1,
+      "quality_model": "weighted_inputs_or_base",
+      "balance": "draft",
+      "name": "Glass plant silicate glass",
+      "description": "Предложение глубоких цепочек; баланс черновой.",
+      "alternative_recipe": true
+    },
+    {
+      "id": "glass_plant_bottles",
+      "building": "glass_plant",
+      "inputs": {
+        "glass": 30
+      },
+      "outputs": {
+        "glass_bottle": 40
+      },
+      "workers": 12,
+      "technology_level": 1,
+      "quality_model": "weighted_inputs_or_base",
+      "balance": "draft",
+      "name": "Glass plant bottles",
+      "description": "Предложение глубоких цепочек; баланс черновой.",
+      "alternative_recipe": true
+    },
+    {
+      "id": "packaging_milk_carton",
+      "building": "packaging_plant",
+      "inputs": {
+        "plastic": 10,
+        "paperboard": 20
+      },
+      "outputs": {
+        "milk_carton": 60
+      },
+      "workers": 9,
+      "technology_level": 1,
+      "quality_model": "weighted_inputs_or_base",
+      "balance": "draft",
+      "name": "Packaging milk carton",
+      "description": "Предложение глубоких цепочек; баланс черновой.",
+      "alternative_recipe": false
+    },
+    {
+      "id": "packaging_tin_can",
+      "building": "packaging_plant",
+      "inputs": {
+        "steel": 20
+      },
+      "outputs": {
+        "tin_can": 40
+      },
+      "workers": 9,
+      "technology_level": 1,
+      "quality_model": "weighted_inputs_or_base",
+      "balance": "draft",
+      "name": "Packaging tin can",
+      "description": "Предложение глубоких цепочек; баланс черновой.",
+      "alternative_recipe": true
+    },
+    {
+      "id": "packaging_box",
+      "building": "packaging_plant",
+      "inputs": {
+        "paperboard": 30
+      },
+      "outputs": {
+        "cardboard_box": 60
+      },
+      "workers": 9,
+      "technology_level": 1,
+      "quality_model": "weighted_inputs_or_base",
+      "balance": "draft",
+      "name": "Packaging box",
+      "description": "Предложение глубоких цепочек; баланс черновой.",
+      "alternative_recipe": true
+    },
+    {
+      "id": "packaging_label",
+      "building": "packaging_plant",
+      "inputs": {
+        "paperboard": 3
+      },
+      "outputs": {
+        "paper_label": 100
+      },
+      "workers": 9,
+      "technology_level": 1,
+      "quality_model": "weighted_inputs_or_base",
+      "balance": "draft",
+      "name": "Packaging label",
+      "description": "Предложение глубоких цепочек; баланс черновой.",
+      "alternative_recipe": true
+    },
+    {
+      "id": "pulp_paperboard",
+      "building": "pulp_paper_plant",
+      "inputs": {
+        "wood": 20
+      },
+      "outputs": {
+        "paperboard": 40
+      },
+      "workers": 8,
+      "technology_level": 1,
+      "quality_model": "weighted_inputs_or_base",
+      "balance": "draft",
+      "name": "Pulp paperboard",
+      "description": "Предложение глубоких цепочек; баланс черновой.",
+      "alternative_recipe": false
+    },
+    {
+      "id": "fruit_puree_recipe",
+      "building": "fruit_processing_plant",
+      "inputs": {
+        "vegetables": 25,
+        "sugar": 5
+      },
+      "outputs": {
+        "fruit_puree": 20
+      },
+      "workers": 8,
+      "technology_level": 1,
+      "quality_model": "weighted_inputs_or_base",
+      "balance": "draft",
+      "name": "Fruit puree recipe",
+      "description": "Предложение глубоких цепочек; баланс черновой.",
+      "alternative_recipe": false
+    },
+    {
+      "id": "cocoa_powder_recipe",
+      "building": "cocoa_processing_plant",
+      "inputs": {
+        "chemicals": 10
+      },
+      "outputs": {
+        "cocoa_powder": 8
+      },
+      "workers": 8,
+      "technology_level": 1,
+      "quality_model": "weighted_inputs_or_base",
+      "balance": "draft",
+      "name": "Cocoa powder recipe",
+      "description": "Предложение глубоких цепочек; баланс черновой.",
+      "alternative_recipe": false
+    },
+    {
+      "id": "dairy_processing_glass_milk",
+      "building": "dairy_processing_plant",
+      "inputs": {
+        "milk": 40,
+        "glass_bottle": 40,
+        "paper_label": 40
+      },
+      "outputs": {
+        "milk_glass_bottle": 40
+      },
+      "workers": 12,
+      "technology_level": 1,
+      "quality_model": "weighted_inputs_or_base",
+      "balance": "draft",
+      "name": "Dairy processing glass milk",
+      "description": "Предложение глубоких цепочек; баланс черновой.",
+      "alternative_recipe": false
+    },
+    {
+      "id": "dairy_processing_carton_milk",
+      "building": "dairy_processing_plant",
+      "inputs": {
+        "milk": 40,
+        "milk_carton": 40
+      },
+      "outputs": {
+        "milk_carton_pack": 40
+      },
+      "workers": 12,
+      "technology_level": 1,
+      "quality_model": "weighted_inputs_or_base",
+      "balance": "draft",
+      "name": "Dairy processing carton milk",
+      "description": "Предложение глубоких цепочек; баланс черновой.",
+      "alternative_recipe": true
+    },
+    {
+      "id": "dairy_processing_kefir",
+      "building": "dairy_processing_plant",
+      "inputs": {
+        "milk": 40,
+        "glass_bottle": 40,
+        "paper_label": 40
+      },
+      "outputs": {
+        "kefir_bottle": 40
+      },
+      "workers": 12,
+      "technology_level": 1,
+      "quality_model": "weighted_inputs_or_base",
+      "balance": "draft",
+      "name": "Dairy processing kefir",
+      "description": "Предложение глубоких цепочек; баланс черновой.",
+      "alternative_recipe": true
+    },
+    {
+      "id": "dairy_processing_yogurt",
+      "building": "dairy_processing_plant",
+      "inputs": {
+        "milk": 40,
+        "fruit_puree": 8,
+        "milk_carton": 40
+      },
+      "outputs": {
+        "fruit_yogurt": 40
+      },
+      "workers": 12,
+      "technology_level": 1,
+      "quality_model": "weighted_inputs_or_base",
+      "balance": "draft",
+      "name": "Dairy processing yogurt",
+      "description": "Предложение глубоких цепочек; баланс черновой.",
+      "alternative_recipe": true,
+      "minimum_input_quality": {
+        "milk": 45
+      },
+      "ingredient_shares_bp": {
+        "milk": 4546,
+        "fruit_puree": 909,
+        "milk_carton": 4545
+      }
+    },
+    {
+      "id": "dairy_processing_cheese",
+      "building": "dairy_processing_plant",
+      "inputs": {
+        "milk": 60,
+        "paperboard": 8
+      },
+      "outputs": {
+        "cheese": 14,
+        "whey": 38
+      },
+      "workers": 12,
+      "technology_level": 1,
+      "quality_model": "weighted_inputs_or_base",
+      "balance": "draft",
+      "name": "Dairy processing cheese",
+      "description": "Предложение глубоких цепочек; баланс черновой.",
+      "alternative_recipe": true,
+      "output_cost_allocation_bp": {
+        "cheese": 9000,
+        "whey": 1000
+      }
+    },
+    {
+      "id": "dairy_processing_cocoa_milk",
+      "building": "dairy_processing_plant",
+      "inputs": {
+        "milk": 40,
+        "cocoa_powder": 4,
+        "glass_bottle": 40,
+        "paper_label": 40
+      },
+      "outputs": {
+        "cocoa_milk": 40
+      },
+      "workers": 12,
+      "technology_level": 1,
+      "quality_model": "weighted_inputs_or_base",
+      "balance": "draft",
+      "name": "Dairy processing cocoa milk",
+      "description": "Предложение глубоких цепочек; баланс черновой.",
+      "alternative_recipe": true,
+      "minimum_input_quality": {
+        "milk": 45
+      },
+      "ingredient_shares_bp": {
+        "milk": 3228,
+        "cocoa_powder": 322,
+        "glass_bottle": 3225,
+        "paper_label": 3225
+      }
+    },
+    {
+      "id": "slaughter_joint_outputs",
+      "building": "slaughter",
+      "inputs": {
+        "feed": 40
+      },
+      "outputs": {
+        "meat": 35,
+        "animal_hides": 6,
+        "offal": 8
+      },
+      "workers": 7,
+      "technology_level": 1,
+      "quality_model": "weighted_inputs_or_base",
+      "balance": "draft",
+      "name": "Slaughter joint outputs",
+      "description": "Предложение глубоких цепочек; баланс черновой.",
+      "alternative_recipe": true,
+      "output_cost_allocation_bp": {
+        "meat": 8300,
+        "animal_hides": 1000,
+        "offal": 700
+      }
+    }
+  ],
+  "recipes_existing_alternatives": [
+    "creamery_kefir",
+    "creamery_cheese",
+    "creamery_butter"
+  ],
+  "retail_added_goods": [
+    "milk_glass_bottle",
+    "milk_carton_pack",
+    "kefir_bottle",
+    "fruit_yogurt",
+    "cocoa_milk",
+    "offal"
+  ]
+}
