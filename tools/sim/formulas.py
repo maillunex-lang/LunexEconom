@@ -133,6 +133,30 @@ def clamp(value: int, low: int, high: int) -> int:
     return value
 
 
+def demand_breakdown(
+    population: int,
+    per_capita: int,
+    layer_share_permille: int,
+    income_index: int,
+    price: int,
+    reference: int,
+    elasticity: int,
+    avg_rating: int,
+    ad_factor_permille: int,
+) -> tuple[int, int]:
+    """Спрос и остаток числителя. Одно деление в конце, как в 07_POPULATION.md."""
+    base = (population * per_capita * layer_share_permille) // 1000
+    income_factor = 600 + (400 * income_index) // 1000
+    if reference <= 0:
+        price_delta_bp = 0
+    else:
+        price_delta_bp = ((price - reference) * LOAD_FULL_BP) // reference
+    price_sens = clamp(1000 - elasticity * price_delta_bp // 100, 300, 1500)
+    rating_factor = 700 + (300 * avg_rating) // 100
+    numerator = base * income_factor * price_sens * rating_factor * ad_factor_permille
+    return numerator // DEMAND_DENOM, numerator % DEMAND_DENOM
+
+
 def demand_units(
     population: int,
     per_capita: int,
@@ -145,16 +169,18 @@ def demand_units(
     ad_factor_permille: int,
 ) -> int:
     """Один район и один слой. Одно деление в конце, как в 07_POPULATION.md."""
-    base = (population * per_capita * layer_share_permille) // 1000
-    income_factor = 600 + (400 * income_index) // 1000
-    if reference <= 0:
-        price_delta_bp = 0
-    else:
-        price_delta_bp = ((price - reference) * LOAD_FULL_BP) // reference
-    price_sens = clamp(1000 - elasticity * price_delta_bp // 100, 300, 1500)
-    rating_factor = 700 + (300 * avg_rating) // 100
-    numerator = base * income_factor * price_sens * rating_factor * ad_factor_permille
-    return numerator // DEMAND_DENOM
+    units, _lost = demand_breakdown(
+        population,
+        per_capita,
+        layer_share_permille,
+        income_index,
+        price,
+        reference,
+        elasticity,
+        avg_rating,
+        ad_factor_permille,
+    )
+    return units
 
 
 def corridor(reference: int) -> tuple[int, int]:
