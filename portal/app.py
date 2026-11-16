@@ -28,9 +28,40 @@ def _prompted(plan):
     return [dict(p, prompt=wp.prompt(plan, p["id"])) for p in plan["packages"]]
 
 
-def create_app(db_path, base="", secure_cookie=True, fetch=None, github_token_file=None, security_v2=True, webhook_enabled=False, webhook_secret_file=None):
-    conn = db.connect(db_path, webhook=webhook_enabled)
+def create_app(db_path, base="", secure_cookie=True, fetch=None, github_token_file=None, security_v2=True, webhook_enabled=False, webhook_secret_file=None, reports_enabled=False):
+    conn = db.connect(db_path, webhook=webhook_enabled or reports_enabled, reports=reports_enabled)
     base = base.rstrip("/")
+
+    review_template = ["Пробное слияние без конфликтов", "Изменены только файлы зоны", "Тесты директора прошли", "CI зелёный", "Слито в main"]
+
+    def task_exists(row, pid):
+        if not row["plan_json"]:
+            return False
+        return any(p.get("id") == pid for p in json.loads(row["plan_json"]).get("packages", []))
+
+    def record_event(slug, pid, kind, payload=None):
+        # Never store arbitrary user text, credentials or tokens in the event log.
+        safe = {k: v for k, v in (payload or {}).items() if k in ("count", "manual", "status") and (type(v) in (int, bool) or (isinstance(v, str) and v in STATUSES))}
+        conn.execute("INSERT INTO events(project_slug,pkg_id,ts,kind,source,payload) VALUES(?,?,?,?,?,?)",
+                     (slug, pid, time.time(), kind, "portal", json.dumps(safe)))
+
+    def metrics(slug=None):
+        where = " WHERE project_slug=?" if slug else ""
+        args = (slug,) if slug else ()
+        tasks = conn.execute("SELECT project_slug,pkg_id,status,issued_at,submitted_at,accepted_at FROM task_state" + where, args).fetchall()
+        reviews = conn.execute("SELECT project_slug,pkg_id,revision_count,ci_state FROM task_reviews" + where, args).fetchall()
+        now = time.time()
+        durations_submit = [r["submitted_at"]-r["issued_at"] for r in tasks if r["submitted_at"] is not None and r["issued_at"] is not None and r["submitted_at"] >= r["issued_at"]]
+        durations_accept = [r["accepted_at"]-r["submitted_at"] for r in tasks if r["accepted_at"] is not None and r["submitted_at"] is not None and r["accepted_at"] >= r["submitted_at"]]
+        accepted = sum(r["status"] == "accepted" and r["accepted_at"] is not None and r["accepted_at"] >= now-7*86400 for r in tasks)
+        returned = sum(r["revision_count"] > 0 for r in reviews)
+        reviewed = {(r["project_slug"], r["pkg_id"]): r for r in reviews}
+        total = len({(r["project_slug"], r["pkg_id"]) for r in tasks} | set(reviewed))
+        return {"accepted_week": accepted, "avg_issue_to_submit_seconds": sum(durations_submit)/len(durations_submit) if durations_submit else None,
+                "avg_submit_to_accept_seconds": sum(durations_accept)/len(durations_accept) if durations_accept else None,
+                "return_rate": returned/total if total else 0, "returned_tasks": returned, "total_tasks": total,
+                "awaiting_owner": sum(r["status"] == "submitted" for r in tasks),
+                "red_ci": sum(r["ci_state"] in ("failure", "failed", "red") for r in reviews) + conn.execute("SELECT COUNT(*) FROM pr_links WHERE ci_state IN ('failure','failed','red')" + (" AND project_slug=?" if slug else ""), args).fetchone()[0]}
 
     def respond(start, status, body, headers=None, nonce=None):
         data = body if isinstance(body, bytes) else json.dumps(body, ensure_ascii=False).encode()
@@ -217,6 +248,8 @@ def create_app(db_path, base="", secure_cookie=True, fetch=None, github_token_fi
             return respond(start, "200 OK", {"ok": True}, [("Set-Cookie", attrs)])
         if security_v2 and path == "/api/audit" and method == "GET":
             return respond(start, "200 OK", {"entries": db.recent_audit(conn)})
+        if reports_enabled and path == "/api/metrics" and method == "GET":
+            return respond(start, "200 OK", {"metrics": metrics()})
         if path == "/api/me" and method == "GET":
             return respond(start, "200 OK", {"user": sess["username"], "csrf": sess["csrf"]})
         if path == "/api/master-prompt" and method == "GET":
@@ -242,6 +275,65 @@ def create_app(db_path, base="", secure_cookie=True, fetch=None, github_token_fi
             db.audit(conn, "project.create", {"slug": slug})
             return respond(start, "201 Created", {"ok": True, "slug": slug, "prompt": bootstrap.director_prompt(name, repo, desc),
                                                   "start": bootstrap.start_prompts(name, repo, desc)})
+        if reports_enabled:
+            task_match = re.fullmatch(r"/api/projects/([a-z][a-z0-9-]{1,38}[a-z0-9])/tasks/([A-Za-z][A-Za-z0-9_-]{0,39})/(report|review)", path)
+            if task_match:
+                slug, pid, kind = task_match.groups()
+                project = project_row(slug)
+                if not project or not task_exists(project, pid):
+                    return respond(start, "404 Not Found", {"error": "task_not_found"})
+                if method == "GET":
+                    if kind == "report":
+                        r = conn.execute("SELECT body,pr_url,updated FROM task_reports WHERE project_slug=? AND pkg_id=?", (slug,pid)).fetchone()
+                        return respond(start, "200 OK", {"report": dict(r) if r else None})
+                    r = conn.execute("SELECT items,ci_state,revision_count,remarks,updated FROM task_reviews WHERE project_slug=? AND pkg_id=?", (slug,pid)).fetchone()
+                    return respond(start, "200 OK", {"review": {**dict(r), "items": json.loads(r["items"])} if r else {"items": [{"text": x, "checked": False} for x in review_template], "ci_state": "unknown", "revision_count": 0, "remarks": ""}})
+                if method != "POST":
+                    return respond(start, "405 Method Not Allowed", {"error": "method_not_allowed"})
+                body = read_body(environ)
+                if body is None:
+                    return respond(start, "400 Bad Request", {"error": "bad_request"})
+                now = time.time()
+                if kind == "report":
+                    if not set(body) <= {"text", "pr_url"} or not body:
+                        return respond(start, "400 Bad Request", {"error": "invalid_report"})
+                    txt, url = body.get("text", ""), body.get("pr_url", "")
+                    if type(txt) is not str or len(txt) > 20000 or type(url) is not str or len(url) > 300 or (url and not re.fullmatch(r"https://github\.com/[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+/pull/[1-9][0-9]*", url)) or not (txt.strip() or url):
+                        return respond(start, "400 Bad Request", {"error": "invalid_report"})
+                    conn.execute("INSERT INTO task_reports(project_slug,pkg_id,body,pr_url,updated) VALUES(?,?,?,?,?) ON CONFLICT(project_slug,pkg_id) DO UPDATE SET body=excluded.body,pr_url=excluded.pr_url,updated=excluded.updated", (slug,pid,txt,url,now))
+                    record_event(slug,pid,"task.report")
+                    return respond(start, "200 OK", {"ok": True})
+                if not set(body) <= {"items", "ci_state", "return", "remarks"} or not body:
+                    return respond(start, "400 Bad Request", {"error": "invalid_review"})
+                old = conn.execute("SELECT * FROM task_reviews WHERE project_slug=? AND pkg_id=?", (slug,pid)).fetchone()
+                items = body.get("items", json.loads(old["items"]) if old else [{"text": x, "checked": False} for x in review_template])
+                ci = body.get("ci_state", old["ci_state"] if old else "unknown")
+                returning = body.get("return", False)
+                remarks = body.get("remarks", old["remarks"] if old else "")
+                if (not isinstance(items,list) or not 1 <= len(items) <= 30 or any(not isinstance(x,dict) or set(x)!={"text","checked"} or type(x["text"]) is not str or not 1 <= len(x["text"]) <= 150 or type(x["checked"]) is not bool for x in items)
+                    or ci not in ("unknown", "pending", "success", "failure", "red", "failed") or type(ci) is not str or type(returning) is not bool or type(remarks) is not str or len(remarks) > 3000):
+                    return respond(start, "400 Bad Request", {"error": "invalid_review"})
+                if returning and not remarks.strip():
+                    return respond(start, "400 Bad Request", {"error": "remarks_required"})
+                if returning:
+                    cur = conn.execute("SELECT status FROM task_state WHERE project_slug=? AND pkg_id=?", (slug,pid)).fetchone()
+                    if not cur or cur["status"] != "submitted":
+                        return respond(start, "409 Conflict", {"error": "task_not_submitted"})
+                count = (old["revision_count"] if old else 0) + int(returning)
+                conn.execute("INSERT INTO task_reviews(project_slug,pkg_id,items,ci_state,revision_count,remarks,updated) VALUES(?,?,?,?,?,?,?) ON CONFLICT(project_slug,pkg_id) DO UPDATE SET items=excluded.items,ci_state=excluded.ci_state,revision_count=excluded.revision_count,remarks=excluded.remarks,updated=excluded.updated", (slug,pid,json.dumps(items,ensure_ascii=False),ci,count,remarks,now))
+                if returning:
+                    conn.execute("UPDATE task_state SET status='issued',submitted_at=NULL,accepted_at=NULL WHERE project_slug=? AND pkg_id=?", (slug,pid))
+                    db.audit(conn,"task.revision",{"slug":slug,"id":pid,"count":count})
+                    record_event(slug,pid,"task.revision",{"count":count})
+                else:
+                    record_event(slug,pid,"task.review")
+                return respond(start, "200 OK", {"ok": True, "revision_count": count})
+            metric_match = re.fullmatch(r"/api/projects/([a-z][a-z0-9-]{1,38}[a-z0-9])/metrics", path)
+            if metric_match and method == "GET":
+                slug = metric_match.group(1)
+                if not project_row(slug):
+                    return respond(start,"404 Not Found",{"error":"no_project"})
+                return respond(start,"200 OK",{"metrics":metrics(slug)})
         m = re.fullmatch(r"/api/projects/([a-z][a-z0-9-]{1,38}[a-z0-9])(/[a-z.]+)?", path)
         if not m:
             return respond(start, "404 Not Found", {"error": "not_found"})
@@ -254,7 +346,7 @@ def create_app(db_path, base="", secure_cookie=True, fetch=None, github_token_fi
             return respond(start, "200 OK", {"project": summary(row), "lanes": plan["lanes"] if plan else {}, "packages": _prompted(plan) if plan else [],
                                              "state": states(slug), "plan_updated": row["plan_updated"],
                                              "start": start_list(row), "ideas": ideas_list(slug)})
-        if webhook_enabled and sub == "/events" and method == "GET":
+        if (webhook_enabled or reports_enabled) and sub == "/events" and method == "GET":
             entries = []
             for e in conn.execute('SELECT id,pkg_id,ts,kind,source,payload FROM events WHERE project_slug=? ORDER BY id DESC LIMIT 200', (slug,)):
                 entries.append({'id': e['id'], 'pkg_id': e['pkg_id'], 'ts': e['ts'], 'kind': e['kind'],
@@ -347,6 +439,21 @@ def create_app(db_path, base="", secure_cookie=True, fetch=None, github_token_fi
             done = {k for k, v in states(slug).items() if v["status"] == "accepted"}
             if status == "issued" and cur["status"] == "planned" and not all(d in done for d in ids[pid]["depends_on"]):
                 return respond(start, "409 Conflict", {"error": "dependencies_not_accepted"})
+            if reports_enabled and status == "accepted" and cur["status"] != "accepted":
+                manual = body.get("manual", False)
+                if type(manual) is not bool:
+                    return respond(start, "400 Bad Request", {"error": "invalid_manual"})
+                review = conn.execute("SELECT items,ci_state FROM task_reviews WHERE project_slug=? AND pkg_id=?", (slug,pid)).fetchone()
+                if not manual:
+                    if not review or not all(x.get("checked") is True for x in json.loads(review["items"])):
+                        return respond(start, "409 Conflict", {"error": "checklist_incomplete", "reason": "Отметьте все пункты приёмки"})
+                    red = review["ci_state"] in ("failure", "failed", "red")
+                    linked = conn.execute("SELECT 1 FROM pr_links WHERE project_slug=? AND pkg_id=? AND ci_state IN ('failure','failed','red') LIMIT 1", (slug,pid)).fetchone()
+                    if red or linked:
+                        return respond(start, "409 Conflict", {"error": "ci_red", "reason": "CI красный: исправьте проверки или примите вручную"})
+                else:
+                    db.audit(conn,"task.manual_accept",{"slug":slug,"id":pid,"manual":1})
+                    record_event(slug,pid,"task.manual_accept",{"manual":True})
             now = time.time()
             conn.execute("INSERT OR IGNORE INTO task_state(project_slug,pkg_id) VALUES(?,?)", (slug, pid))
             sets = {"status": status}
@@ -366,6 +473,8 @@ def create_app(db_path, base="", secure_cookie=True, fetch=None, github_token_fi
                 sets["note"] = body["note"][:300]
             conn.execute("UPDATE task_state SET " + ",".join(f"{k}=?" for k in sets) + " WHERE project_slug=? AND pkg_id=?", (*sets.values(), slug, pid))
             db.audit(conn, "task.status", {"slug": slug, "id": pid, "status": status})
+            if reports_enabled:
+                record_event(slug,pid,"task.status",{"status":status})
             return respond(start, "200 OK", {"ok": True})
         return respond(start, "404 Not Found", {"error": "not_found"})
 
