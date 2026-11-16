@@ -113,8 +113,18 @@ class AdminDatabaseTests(unittest.TestCase):
         self.assertEqual(request(self.application, 'POST', '/admin/login', {'username': username, 'password': password[:10]}, ip='10.79.0.1')['status'], 401)
         short_id, short_name, _, _ = self.account(password='ShortPass1')
         short = request(self.application, 'POST', '/admin/login', {'username': short_name, 'password': 'ShortPass1'}, ip='10.79.0.2')
-        self.assertEqual(short['status'], 400)
-        self.assertIn('14', short['body']['message'])
+        # A short account password opens only a restricted session that can change the password.
+        self.assertEqual(short['status'], 200, short)
+        self.assertTrue(short['body'].get('password_change_required'))
+        short_token = short['body']['token']
+        blocked = request(self.application, 'GET', '/admin/overview', token=short_token)
+        self.assertEqual(blocked['status'], 403)
+        self.assertEqual(blocked['body'].get('error'), 'password_change_required')
+        self.assertEqual(request(self.application, 'POST', '/admin/password', {'password': 'tooshort'}, token=short_token)['status'], 400)
+        changed_short = request(self.application, 'POST', '/admin/password', {'password': 'LongEnoughPassword!789'}, token=short_token)
+        self.assertEqual(changed_short['status'], 200, changed_short)
+        self.assertEqual(request(self.application, 'GET', '/admin/overview', token=short_token)['status'], 200)
+        self.assertEqual(request(self.application, 'POST', '/admin/login', {'username': short_name, 'password': 'LongEnoughPassword!789'}, ip='10.79.0.9')['status'], 200)
         for index in range(8):
             self.assertEqual(request(self.application, 'POST', '/admin/login', {'username': 'missing-' + uuid4().hex, 'password': 'wrong'}, ip='10.79.0.3')['status'], 401)
         self.assertEqual(request(self.application, 'POST', '/admin/login', {'username': 'last', 'password': 'wrong'}, ip='10.79.0.3')['status'], 429)

@@ -48,7 +48,7 @@ def _actor(ctx, minimum=READ):
     if not isinstance(auth,str) or not auth.startswith('Bearer '):
         return None
     value = auth[7:]
-    row = ctx['conn'].execute('''SELECT s.account_id,a.username,a.role,a.is_blocked,s.expires_at,s.absolute_expires_at
+    row = ctx['conn'].execute('''SELECT s.account_id,a.username,a.role,a.is_blocked,s.expires_at,s.absolute_expires_at,s.must_change_password
         FROM admin_sessions s JOIN accounts a ON a.id=s.account_id
         WHERE s.token_hash=%s AND s.revoked_at IS NULL
           AND s.expires_at>now() AND s.absolute_expires_at>now()
@@ -56,16 +56,19 @@ def _actor(ctx, minimum=READ):
     if not row or row[2] not in minimum:
         return None
     ctx['conn'].execute('UPDATE admin_sessions SET last_seen_at=now(), expires_at=LEAST(now()+interval \'60 minutes\', absolute_expires_at) WHERE token_hash=%s',(token_hash(value),))
-    return {'id':row[0],'username':row[1],'role':row[2],'emergency':False}
+    return {'id':row[0],'username':row[1],'role':row[2],'emergency':False,'restricted':bool(row[6])}
 
 
-def _need(ctx, roles):
+def _need(ctx, roles, allow_restricted=False):
     # Distinguish an unauthenticated request from an authenticated role without permission.
     actor = _actor(ctx, READ)
     if not actor:
         return None, (403, {'error':'forbidden'})
     if actor['role'] not in roles:
         return None, (403, {'error':'forbidden'})
+    if actor.get('restricted') and not allow_restricted:
+        # A session opened with a short password may only change the password.
+        return None, (403, {'error':'password_change_required','message':'Сначала смените пароль: не короче 14 символов'})
     return actor, None
 
 
@@ -85,13 +88,17 @@ def login(body,ctx):
     row=ctx['conn'].execute('SELECT id,username,password_hash,role,is_blocked,blocked_until FROM accounts WHERE lower(username)=lower(%s) OR email=%s',(identifier,identifier.lower())).fetchone()
     # Deliberately identical for unknown, blocked and wrong password.
     if not row or (row[4] and not (row[5] is not None and row[5] <= __import__('datetime').datetime.now(__import__('datetime').timezone.utc))) or row[3] not in ROLES or not verify_password(password,row[2]): return 401,{'error':'invalid_credentials'}
-    if len(password)<14: return 400,{'error':'admin_password_too_short','message':'задайте пароль не короче 14 символов'}
+    # A password shorter than 14 characters may be valid for the game account but not for the admin panel:
+    # the session is restricted to changing the password until a 14+ character one is set.
+    must_change=len(password)<14
     token=new_token()
     with ctx['conn'].transaction():
-        ctx['conn'].execute('INSERT INTO admin_sessions(token_hash,account_id,ip,expires_at,absolute_expires_at) VALUES(%s,%s,%s,now()+interval \'60 minutes\',now()+interval \'8 hours\')',(token_hash(token),row[0],ip))
+        ctx['conn'].execute('INSERT INTO admin_sessions(token_hash,account_id,ip,expires_at,absolute_expires_at,must_change_password) VALUES(%s,%s,%s,now()+interval \'60 minutes\',now()+interval \'8 hours\',%s)',(token_hash(token),row[0],ip,must_change))
         ctx['conn'].execute('DELETE FROM admin_sessions WHERE account_id=%s AND (revoked_at IS NOT NULL OR expires_at<now())',(row[0],))
         actor={'id':row[0],'username':row[1],'role':row[3]}; _audit(ctx,actor,'admin.login',{})
-    return 200,{'token':token,'expires_in':3600,'role':row[3],'account_id':row[0]}
+    result={'token':token,'expires_in':3600,'role':row[3],'account_id':row[0]}
+    if must_change: result['password_change_required']=True
+    return 200,result
 
 
 def _admin_attempt(conn,identifier,ip):
@@ -113,12 +120,17 @@ def logout(body,ctx):
 
 
 def password(body,ctx):
-    actor,err=_need(ctx,READ)
+    actor,err=_need(ctx,READ,allow_restricted=True)
     if err:return err
     value=body.get('password')
     if not isinstance(value,str) or len(value)<14:return 400,{'error':'admin_password_too_short','message':'задайте пароль не короче 14 символов'}
     if actor['id'] is None:return 400,{'error':'emergency_token_no_password'}
-    ctx['conn'].execute('UPDATE accounts SET password_hash=%s WHERE id=%s',(hash_password(value),actor['id'])); _audit(ctx,actor,'admin.password',{},target=actor['id'],old={'password_changed':False},new={'password_changed':True}); return 200,{'ok':True}
+    ctx['conn'].execute('UPDATE accounts SET password_hash=%s WHERE id=%s',(hash_password(value),actor['id']))
+    # The new password satisfies the admin policy: lift the restriction on this session, end all others.
+    current=token_hash(ctx.get('authorization','')[7:])
+    ctx['conn'].execute('UPDATE admin_sessions SET must_change_password=false WHERE token_hash=%s',(current,))
+    ctx['conn'].execute('UPDATE admin_sessions SET revoked_at=now() WHERE account_id=%s AND token_hash<>%s AND revoked_at IS NULL',(actor['id'],current))
+    _audit(ctx,actor,'admin.password',{},target=actor['id'],old={'password_changed':False},new={'password_changed':True}); return 200,{'ok':True}
 
 
 def overview(body,ctx):
