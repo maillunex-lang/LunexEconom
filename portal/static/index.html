@@ -6,238 +6,364 @@
 <title>CreatePortal</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Space+Grotesk:wght@500;600;700&display=swap">
 <style>
-:root{--bg:#EEF1EC;--surface:#fff;--surface2:#F5F8F4;--ink:#14201A;--muted:#58695F;--line:#D3DCD4;--accent:#2C7A52;--accent-ink:#fff;--warn:#A86A00;--warn-bg:#FBEFD5;--info:#235FA6;--info-bg:#DEEAF8;--ok:#1F6B45;--ok-bg:#DDF1E5;--lock:#7A867F;--err:#B3261E}
-@media (prefers-color-scheme:dark){:root{--bg:#0D1814;--surface:#14231D;--surface2:#101D18;--ink:#E8F0EA;--muted:#9AB0A2;--line:#24372E;--accent:#7BD88F;--accent-ink:#0D1814;--warn:#F2C14E;--warn-bg:#3A3015;--info:#8DB8F0;--info-bg:#16283D;--ok:#7BD88F;--ok-bg:#16301F;--lock:#7F938A;--err:#F2B8B5;color-scheme:dark}}
+:root{--bg:#EDF1EA;--bg2:#E3EAE0;--surface:#FFFFFF;--surface2:#F4F7F2;--ink:#13201A;--muted:#566860;--line:#D2DBD3;--accent:#2B7A52;--accent2:#1E5C3D;--accent-ink:#fff;--warn:#9A6200;--warn-bg:#FBEED2;--info:#1F5FA6;--info-bg:#DFEBF9;--ok:#1E6B45;--ok-bg:#DAF0E3;--lock:#74827B;--err:#B3261E;--shadow:0 1px 2px rgba(19,32,26,.06),0 6px 20px rgba(19,32,26,.07);--laneA:#2B7A52;--laneB:#1F5FA6;--laneC:#9A6200}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0C1713;--bg2:#101E18;--surface:#13231C;--surface2:#0F1D17;--ink:#E7F0EA;--muted:#98AEA1;--line:#233A2F;--accent:#6FD08A;--accent2:#8FE3A6;--accent-ink:#0C1713;--warn:#F0C04C;--warn-bg:#392F14;--info:#8DB8F0;--info-bg:#15273C;--ok:#7BD88F;--ok-bg:#153020;--lock:#7F938A;--err:#F2B8B5;--shadow:0 1px 2px rgba(0,0,0,.4),0 8px 24px rgba(0,0,0,.35);--laneA:#6FD08A;--laneB:#8DB8F0;--laneC:#F0C04C;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#0C1713;--bg2:#101E18;--surface:#13231C;--surface2:#0F1D17;--ink:#E7F0EA;--muted:#98AEA1;--line:#233A2F;--accent:#6FD08A;--accent2:#8FE3A6;--accent-ink:#0C1713;--warn:#F0C04C;--warn-bg:#392F14;--info:#8DB8F0;--info-bg:#15273C;--ok:#7BD88F;--ok-bg:#153020;--lock:#7F938A;--err:#F2B8B5;--shadow:0 1px 2px rgba(0,0,0,.4),0 8px 24px rgba(0,0,0,.35);--laneA:#6FD08A;--laneB:#8DB8F0;--laneC:#F0C04C;color-scheme:dark}
 *{box-sizing:border-box}
-body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 Inter,system-ui,sans-serif;padding:20px max(16px,env(safe-area-inset-right,0px)) 48px max(16px,env(safe-area-inset-left,0px))}
-h1,h2,h3{font-family:"Space Grotesk",system-ui,sans-serif;margin:0;text-wrap:balance}
-h1{font-size:26px}h2{font-size:18px}h3{font-size:16px;line-height:1.3}
-.wrap{max-width:1180px;margin:0 auto;display:flex;flex-direction:column;gap:18px}
-.top{display:flex;flex-wrap:wrap;gap:10px 18px;align-items:center;justify-content:space-between}
-.muted{color:var(--muted)}.small{font-size:13px}
-.card{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:14px;display:flex;flex-direction:column;gap:10px;min-width:0}
-.card.locked{background:var(--surface2)}
-.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px}
-.pair{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
-@media(max-width:780px){.pair{grid-template-columns:minmax(0,1fr)}}
-button,input,textarea{font:inherit}
-button{font-weight:600;font-size:14px;min-height:44px;padding:8px 14px;border-radius:10px;border:1px solid var(--line);background:var(--surface);color:var(--ink);cursor:pointer}
-button.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
-button.ghost{background:transparent;color:var(--muted)}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:radial-gradient(1200px 500px at 85% -10%,var(--bg2),transparent),var(--bg);color:var(--ink);font:15px/1.55 Inter,system-ui,sans-serif;padding:0 0 56px}
+h1,h2,h3{font-family:"Space Grotesk",system-ui,sans-serif;margin:0;text-wrap:balance;letter-spacing:-.01em}
+h1{font-size:28px;line-height:1.15}h2{font-size:18px}h3{font-size:16px;line-height:1.3}
+.muted{color:var(--muted)}.small{font-size:13px}.err{color:var(--err)}
+.bar{position:sticky;top:0;z-index:10;background:color-mix(in srgb,var(--bg) 88%,transparent);backdrop-filter:blur(10px);border-bottom:1px solid var(--line);padding:10px max(16px,env(safe-area-inset-right,0px)) 10px max(16px,env(safe-area-inset-left,0px));padding-top:calc(10px + env(safe-area-inset-top,0px))}
+.bar-in{max-width:1240px;margin:0 auto;display:flex;align-items:center;gap:10px;justify-content:space-between}
+.brand{display:flex;align-items:center;gap:10px;font-family:"Space Grotesk",system-ui,sans-serif;font-weight:700;font-size:17px;cursor:pointer;border:0;background:none;color:var(--ink);padding:4px;min-height:44px}
+.brand svg{width:26px;height:26px}
+.crumb{color:var(--muted);font-weight:500;font-size:14px;display:flex;gap:6px;align-items:center;min-width:0}
+.crumb b{color:var(--ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:36vw}
+main{max-width:1240px;margin:0 auto;padding:22px max(16px,env(safe-area-inset-right,0px)) 0 max(16px,env(safe-area-inset-left,0px));display:flex;flex-direction:column;gap:20px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:16px;box-shadow:var(--shadow);display:flex;flex-direction:column;gap:12px;min-width:0}
+.row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.spread{justify-content:space-between}
+button,input,textarea,.lnk{font:inherit}
+button,.lnk{display:inline-flex;align-items:center;gap:8px;font-weight:600;font-size:14px;min-height:44px;padding:8px 14px;border-radius:12px;border:1px solid var(--line);background:var(--surface);color:var(--ink);cursor:pointer;text-decoration:none;position:relative}
+button svg,.lnk svg{width:18px;height:18px;flex:none}
+button:hover{border-color:var(--accent)}
+button.primary,.lnk.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+button.primary:hover{background:var(--accent2);border-color:var(--accent2)}
+button.ghost{background:transparent;color:var(--muted);border-color:transparent}
+button.ghost:hover{border-color:var(--line)}
 button.confirm{background:var(--warn);color:var(--surface);border-color:var(--warn)}
-button:disabled{opacity:.5;cursor:not-allowed}
-button:focus-visible,input:focus-visible,textarea:focus-visible,summary:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
-input,textarea{width:100%;padding:10px 12px;border-radius:10px;border:1px solid var(--line);background:var(--surface);color:var(--ink)}
+button.icon{padding:8px;min-width:44px;justify-content:center}
+button:disabled{opacity:.55;cursor:not-allowed}
+button:focus-visible,input:focus-visible,textarea:focus-visible,summary:focus-visible,.mini:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+[data-tip]:hover::after,[data-tip]:focus-visible::after{content:attr(data-tip);position:absolute;z-index:30;left:50%;top:calc(100% + 8px);transform:translateX(-50%);width:max-content;max-width:min(280px,70vw);background:var(--ink);color:var(--bg);font-size:12.5px;font-weight:500;line-height:1.4;padding:8px 10px;border-radius:8px;white-space:normal;text-align:left;pointer-events:none;box-shadow:var(--shadow)}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:12px;overflow:hidden;background:var(--surface)}
+.seg button{border:0;border-radius:0;min-height:40px}
+.seg button.on{background:var(--accent);color:var(--accent-ink)}
+input,textarea{width:100%;padding:11px 12px;border-radius:12px;border:1px solid var(--line);background:var(--surface);color:var(--ink)}
 label{display:flex;flex-direction:column;gap:4px;font-size:13px;color:var(--muted)}
-.row{display:flex;flex-wrap:wrap;gap:8px}
-.pill{align-self:flex-start;font-size:12px;font-weight:600;padding:3px 9px;border-radius:999px;white-space:nowrap}
+.help{font-size:13px;color:var(--muted)}
+/* плитки */
+.tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
+.tile{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:12px 14px;display:flex;flex-direction:column;gap:2px;box-shadow:var(--shadow);position:relative}
+.tile b{font-family:"Space Grotesk",system-ui,sans-serif;font-size:26px;line-height:1.1;font-variant-numeric:tabular-nums}
+.tile span{font-size:13px;color:var(--muted)}
+.tile svg{position:absolute;right:12px;top:12px;width:20px;height:20px;color:var(--muted)}
+.hero{display:grid;grid-template-columns:auto 1fr;gap:18px;align-items:center}
+@media(max-width:560px){.hero{grid-template-columns:1fr}}
+.ring{width:96px;height:96px;position:relative}
+.ring svg{width:96px;height:96px;transform:rotate(-90deg)}
+.ring b{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-family:"Space Grotesk",system-ui,sans-serif;font-size:20px}
+.now{border:1px solid var(--accent);background:linear-gradient(135deg,color-mix(in srgb,var(--accent) 10%,var(--surface)),var(--surface))}
+.now h2{display:flex;gap:8px;align-items:center}
+.now .step{display:flex;flex-wrap:wrap;gap:8px 12px;align-items:center;justify-content:space-between;padding:10px 0;border-top:1px solid var(--line)}
+.now .step:first-of-type{border-top:0}
+.now .step div{min-width:0;flex:1 1 260px}
+/* статусы */
+.pill{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:600;padding:3px 10px;border-radius:999px;white-space:nowrap;align-self:flex-start}
+.pill::before{content:"";width:7px;height:7px;border-radius:50%;background:currentColor}
 .pill.planned{background:var(--surface2);color:var(--lock);border:1px solid var(--line)}
 .pill.ready,.pill.accepted{background:var(--ok-bg);color:var(--ok)}
 .pill.issued{background:var(--warn-bg);color:var(--warn)}
 .pill.submitted{background:var(--info-bg);color:var(--info)}
 .pid{font-family:"Space Grotesk",system-ui,sans-serif;font-weight:700;color:var(--accent);margin-right:6px}
-pre{white-space:pre-wrap;word-break:break-word;background:var(--surface2);border:1px solid var(--line);border-radius:10px;padding:12px;font:12.5px/1.5 ui-monospace,Menlo,Consolas,monospace;max-height:340px;overflow:auto;margin:8px 0}
-details{border-top:1px solid var(--line);padding-top:8px}summary{cursor:pointer;font-weight:600;font-size:14px;padding:4px 0}
-.bar{height:10px;border-radius:6px;background:var(--line);overflow:hidden}.bar>i{display:block;height:100%;background:var(--accent)}
-.err{color:var(--err)}.notice{background:var(--warn-bg);border:1px solid var(--warn);border-radius:10px;padding:10px 14px;font-size:14px}
-.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(16px + env(safe-area-inset-bottom,0px));background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:10px;font-size:14px;max-width:calc(100% - 32px)}
-.kan{display:flex;gap:12px;overflow-x:auto;padding-bottom:8px;align-items:flex-start;scroll-snap-type:x proximity}
-.col{flex:0 0 270px;display:flex;flex-direction:column;gap:8px;scroll-snap-align:start}
-.col>h2{font-size:15px}
-.mini{background:var(--surface);border:1px solid var(--line);border-left:4px solid var(--accent);border-radius:12px;padding:10px 12px;cursor:pointer;display:flex;flex-direction:column;gap:2px;min-width:0}
-.mini.lane-B{border-left-color:var(--info)}.mini.lane-C{border-left-color:var(--warn)}
-.mini.locked{background:var(--surface2);opacity:.85}
-.mini:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+/* канбан */
+.kan{display:flex;gap:12px;overflow-x:auto;padding:2px 2px 10px;align-items:flex-start;scroll-snap-type:x proximity}
+.col{flex:0 0 276px;display:flex;flex-direction:column;gap:8px;scroll-snap-align:start;background:var(--surface2);border:1px solid var(--line);border-radius:16px;padding:12px}
+.col>.ch{display:flex;align-items:center;gap:8px}
+.col>.ch svg{width:18px;height:18px}
+.col>.ch .n{margin-left:auto;background:var(--surface);border:1px solid var(--line);border-radius:999px;font-size:12px;font-weight:600;padding:1px 9px}
+.col.k-next{border-color:var(--accent)}
+.mini{background:var(--surface);border:1px solid var(--line);border-left:4px solid var(--laneA);border-radius:12px;padding:10px 12px;cursor:pointer;display:flex;flex-direction:column;gap:3px;min-width:0;box-shadow:var(--shadow)}
+.mini:hover{border-color:var(--accent)}
+.mini.lane-B{border-left-color:var(--laneB)}.mini.lane-C{border-left-color:var(--laneC)}
+.mini.locked{background:transparent;box-shadow:none;opacity:.85}
 .mini .mt{font-weight:600;font-size:14px;line-height:1.3}
+.tag{font-size:11.5px;font-weight:600;padding:1px 8px;border-radius:6px;background:var(--surface2);border:1px solid var(--line);color:var(--muted)}
 .idea{border-top:1px solid var(--line);padding-top:8px;display:flex;flex-direction:column;gap:4px}
-.ov{position:fixed;inset:0;background:rgba(0,0,0,.45);display:flex;justify-content:flex-end;align-items:stretch;z-index:20}
-.drawer{background:var(--surface);width:min(560px,100%);height:100%;overflow:auto;padding:18px max(16px,env(safe-area-inset-right,0px)) calc(24px + env(safe-area-inset-bottom,0px)) 16px;display:flex;flex-direction:column;gap:12px}
-@media(max-width:700px){.ov{align-items:flex-end}.drawer{height:88%;border-radius:16px 16px 0 0;width:100%}}
+pre{white-space:pre-wrap;word-break:break-word;background:var(--surface2);border:1px solid var(--line);border-radius:12px;padding:12px;font:12.5px/1.5 ui-monospace,Menlo,Consolas,monospace;max-height:340px;overflow:auto;margin:8px 0}
+details{border-top:1px solid var(--line);padding-top:8px}summary{cursor:pointer;font-weight:600;font-size:14px;padding:4px 0}
+/* панель */
+.ov{position:fixed;inset:0;background:rgba(5,12,9,.5);display:flex;justify-content:flex-end;align-items:stretch;z-index:40}
+.drawer{background:var(--surface);width:min(580px,100%);height:100%;overflow:auto;padding:20px max(16px,env(safe-area-inset-right,0px)) calc(28px + env(safe-area-inset-bottom,0px)) 18px;display:flex;flex-direction:column;gap:14px}
+@media(max-width:700px){.ov{align-items:flex-end}.drawer{height:90%;border-radius:20px 20px 0 0;width:100%}}
+.act{display:flex;gap:12px;align-items:flex-start;padding:10px 0;border-top:1px solid var(--line)}
+.act:first-child{border-top:0}
+.act .help{flex:1;min-width:0}
+.log{display:flex;flex-direction:column;gap:6px}
+.log div{display:flex;gap:10px;font-size:13.5px}
+.log time{color:var(--muted);flex:none;font-variant-numeric:tabular-nums;min-width:118px}
+.notice{background:var(--warn-bg);border:1px solid var(--warn);border-radius:12px;padding:10px 14px;font-size:14px}
+.empty{text-align:center;padding:30px 16px;display:flex;flex-direction:column;gap:10px;align-items:center}
+.empty svg{width:72px;height:72px;color:var(--accent)}
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(16px + env(safe-area-inset-bottom,0px));background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:12px;font-size:14px;max-width:calc(100% - 32px);z-index:60}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:14px}
+.pair{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+@media(max-width:780px){.pair{grid-template-columns:minmax(0,1fr)}}
+.stp{display:flex;flex-direction:column;gap:10px}
+h2>span>svg,h3>span>svg{width:20px;height:20px}
+.row>span>svg{width:22px;height:22px}
 [hidden]{display:none!important}
+@media (prefers-reduced-motion:no-preference){.drawer{animation:slide .18s ease-out}@keyframes slide{from{transform:translateX(24px);opacity:.6}}.ring circle.v{transition:stroke-dashoffset .5s}}
 </style>
 </head>
 <body>
-<div class="wrap" id="app"></div>
+<div class="bar"><div class="bar-in" id="bar"></div></div>
+<main id="app"></main>
 <div class="toast" id="toast" hidden></div>
 <script nonce="__NONCE__">
 (function(){
-var BASE="__BASE__", CSRF="", ME="", app=document.getElementById('app');
-var LABEL={planned:'В очереди',ready:'Можно выдавать',issued:'У исполнителя',submitted:'Сдано, жду приёмки',accepted:'Принято'};
-var confirmId=null, confirmTimer=null, current=null;
+var BASE="__BASE__", CSRF="", ME="", app=document.getElementById('app'), barEl=document.getElementById('bar'), current=null, openId=null, confirmId=null, confirmTimer=null, showAll=false;
+var LABEL={planned:'В очереди',ready:'Можно выдавать',issued:'У исполнителя',submitted:'Ждёт приёмки',accepted:'Принято'};
+var IC={
+ logo:'<svg viewBox="0 0 32 32" fill="none"><rect x="2" y="2" width="28" height="28" rx="8" fill="currentColor" opacity=".14"/><path d="M9 21l5-10 4 7 2-4 3 7" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+ inbox:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-6l-2 3h-4l-2-3H2"/><path d="M5.5 5h13L22 12v6a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2v-6z"/></svg>',
+ queue:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>',
+ next:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>',
+ work:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a4 4 0 0 0 5 5L10 21a2.8 2.8 0 0 1-4-4z"/></svg>',
+ review:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>',
+ done:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M8 12.5l3 3 5-6"/></svg>',
+ copy:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V6a2 2 0 0 1 2-2h9"/></svg>',
+ help:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M9.5 9a2.5 2.5 0 1 1 3.5 2.3c-.7.4-1 1-1 1.7M12 17h.01"/></svg>',
+ sync:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 0 0-15-6.7L3 8M3 3v5h5M3 12a9 9 0 0 0 15 6.7L21 16M21 21v-5h-5"/></svg>',
+ upload:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 16V4m0 0l-4 4m4-4l4 4M4 16v3a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-3"/></svg>',
+ book:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5a2 2 0 0 1 2-2h13v16H6a2 2 0 0 0-2 2z"/><path d="M4 19V5"/></svg>',
+ plus:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>',
+ out:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/></svg>',
+ moon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 13A9 9 0 1 1 11 3a7 7 0 0 0 10 10z"/></svg>',
+ flag:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 21V4M5 4h12l-2 4 2 4H5"/></svg>',
+ map:'<svg viewBox="0 0 72 72" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><rect x="8" y="14" width="56" height="44" rx="10" opacity=".25"/><path d="M20 44l10-16 8 12 6-8 8 12"/><circle cx="48" cy="26" r="4"/></svg>'
+};
+function ic(n){var s=document.createElement('span');s.style.cssText='display:inline-flex';s.innerHTML=IC[n]||'';return s}
 function el(t,c,x){var n=document.createElement(t);if(c)n.className=c;if(x!=null)n.textContent=x;return n}
-function toast(m){var t=document.getElementById('toast');t.textContent=m;t.hidden=false;clearTimeout(toast.t);toast.t=setTimeout(function(){t.hidden=true},2600)}
-function api(path,method,body){
-  var o={method:method||'GET',headers:{},credentials:'same-origin'};
-  if(body!==undefined){o.headers['Content-Type']='application/json';o.body=JSON.stringify(body)}
-  if(o.method!=='GET')o.headers['X-CSRF-Token']=CSRF;
-  return fetch(BASE+path,o).then(function(r){return r.json().catch(function(){return {}}).then(function(j){if(!r.ok){var e=new Error(j.error||('http_'+r.status));e.data=j;e.status=r.status;throw e}return j})});
+function toast(m){var t=document.getElementById('toast');t.textContent=m;t.hidden=false;clearTimeout(toast.t);toast.t=setTimeout(function(){t.hidden=true},2800)}
+function api(path,method,body){var o={method:method||'GET',headers:{},credentials:'same-origin'};if(body!==undefined){o.headers['Content-Type']='application/json';o.body=JSON.stringify(body)}if(o.method!=='GET')o.headers['X-CSRF-Token']=CSRF;
+  return fetch(BASE+path,o).then(function(r){return r.json().catch(function(){return {}}).then(function(j){if(!r.ok){var e=new Error(j.error||('http_'+r.status));e.data=j;e.status=r.status;throw e}return j})})}
+function copy(text){function fb(){var ta=el('textarea');ta.value=text;document.body.appendChild(ta);ta.select();try{document.execCommand('copy');toast('Скопировано')}catch(e){toast('Выделите текст и скопируйте вручную')}ta.remove()}
+  if(navigator.clipboard&&navigator.clipboard.writeText)navigator.clipboard.writeText(text).then(function(){toast('Скопировано')},fb);else fb()}
+function fmt(t){if(!t)return '';var d=new Date(t*1000);return d.toLocaleDateString('ru-RU',{day:'numeric',month:'short'})+', '+d.toLocaleTimeString('ru-RU',{hour:'2-digit',minute:'2-digit'})}
+function btn(label,cls,fn,o){o=o||{};var b=el('button',cls||'');b.type='button';if(o.icon)b.appendChild(ic(o.icon));if(label){var s=el('span','',label);b.appendChild(s)}if(o.tip){b.setAttribute('data-tip',o.tip);b.setAttribute('aria-label',label?label+'. '+o.tip:o.tip)}if(fn)b.onclick=fn;if(o.disabled)b.disabled=true;return b}
+function pill(cls,t){return el('span','pill '+cls,t)}
+/* ---------- верхняя панель ---------- */
+function drawBar(crumb){
+  barEl.textContent='';
+  var l=el('div','row');l.style.flexWrap='nowrap';var b=el('button','brand');b.type='button';b.appendChild(ic('logo'));b.appendChild(el('span','','CreatePortal'));b.onclick=function(){ME?showProjects():null};l.appendChild(b);
+  if(crumb){var c=el('div','crumb');c.appendChild(document.createTextNode('/'));c.appendChild(el('b','',crumb));l.appendChild(c)}
+  barEl.appendChild(l);
+  var r=el('div','row');r.style.flexWrap='nowrap';
+  if(ME){r.appendChild(btn('','icon ghost',showHelp,{icon:'help',tip:'Справка: что означают статусы и кнопки'}));
+    r.appendChild(btn('','icon ghost',toggleTheme,{icon:'moon',tip:'Переключить светлую и тёмную тему'}));
+    r.appendChild(btn('Выйти','ghost',function(){api('/api/logout','POST',{}).finally(function(){CSRF='';ME='';showLogin()})},{icon:'out',tip:'Завершить сеанс на этом устройстве'}))}
+  barEl.appendChild(r);
 }
-function copy(text){
-  function fb(){var ta=el('textarea');ta.value=text;document.body.appendChild(ta);ta.select();try{document.execCommand('copy');toast('Скопировано')}catch(e){toast('Выделите и скопируйте вручную')}ta.remove()}
-  if(navigator.clipboard&&navigator.clipboard.writeText)navigator.clipboard.writeText(text).then(function(){toast('Скопировано')},fb);else fb();
-}
-function fmt(t){if(!t)return '';var d=new Date(t*1000);return d.toLocaleDateString('ru-RU',{day:'numeric',month:'long'})+' '+d.toLocaleTimeString('ru-RU',{hour:'2-digit',minute:'2-digit'})}
-function head(title,sub,extra){
-  var t=el('div','top'),l=el('div');l.appendChild(el('h1','',title));if(sub)l.appendChild(el('div','muted',sub));t.appendChild(l);
-  var r=el('div','row');(extra||[]).forEach(function(x){r.appendChild(x)});
-  var lo=el('button','ghost','Выйти ('+ME+')');lo.onclick=function(){api('/api/logout','POST',{}).finally(function(){CSRF='';showLogin()})};r.appendChild(lo);t.appendChild(r);return t;
-}
-function btn(label,cls,fn){var b=el('button',cls||'',label);b.type='button';b.onclick=fn;return b}
+function toggleTheme(){var r=document.documentElement,cur=r.getAttribute('data-theme');var dark=cur?cur==='dark':window.matchMedia('(prefers-color-scheme: dark)').matches;var nx=dark?'light':'dark';r.setAttribute('data-theme',nx);try{localStorage.setItem('portalTheme',nx)}catch(e){}}
+try{var th=localStorage.getItem('portalTheme');if(th)document.documentElement.setAttribute('data-theme',th)}catch(e){}
 /* ---------- вход ---------- */
 function showLogin(msg){
-  app.textContent='';
-  var c=el('div','card');c.style.maxWidth='380px';c.style.margin='12vh auto 0';
-  c.appendChild(el('h1','','CreatePortal'));c.appendChild(el('div','muted','Портал проектов. Вход только для владельца.'));
-  var u=el('input');u.id='u';u.autocomplete='username';u.placeholder='Логин';
-  var p=el('input');p.id='p';p.type='password';p.autocomplete='current-password';p.placeholder='Пароль';
+  drawBar('');app.textContent='';
+  var c=el('div','card');c.style.cssText+='max-width:400px;margin:8vh auto 0';
+  var h=el('div','row');h.appendChild(ic('logo'));h.firstChild.style.cssText='display:inline-flex;width:34px;height:34px;color:var(--accent)';h.firstChild.firstChild.style.cssText='width:34px;height:34px';h.appendChild(el('h1','','CreatePortal'));c.appendChild(h);
+  c.appendChild(el('div','muted','Портал проектов: этапы, готовые промпты для исполнителей и приёмка работы в одном месте. Вход только для владельца.'));
+  var u=el('input');u.id='u';u.autocomplete='username';u.placeholder='Логин';u.setAttribute('aria-label','Логин');
+  var p=el('input');p.id='p';p.type='password';p.autocomplete='current-password';p.placeholder='Пароль';p.setAttribute('aria-label','Пароль');
   var e=el('div','err small',msg||'');
-  var go=btn('Войти','primary',function(){
-    go.disabled=true;
+  var go=btn('Войти','primary',function(){go.disabled=true;
     api('/api/login','POST',{username:u.value,password:p.value}).then(function(r){CSRF=r.csrf;return api('/api/me')}).then(function(m){ME=m.user;CSRF=m.csrf;showProjects()})
-    .catch(function(x){e.textContent=x.status===429?'Слишком много попыток. Подождите 15 минут.':'Неверный логин или пароль.';go.disabled=false});
-  });
+    .catch(function(x){e.textContent=x.status===429?'Слишком много попыток. Подождите 15 минут.':'Неверный логин или пароль.';go.disabled=false})},{tip:'Войти в портал'});
   p.onkeydown=function(ev){if(ev.key==='Enter')go.click()};
   [u,p,go,e].forEach(function(x){c.appendChild(x)});app.appendChild(c);
 }
+/* ---------- кольцо прогресса ---------- */
+function ring(pct,size){
+  var r=el('div','ring');var ns='http://www.w3.org/2000/svg',s=document.createElementNS(ns,'svg');s.setAttribute('viewBox','0 0 36 36');
+  var c1=document.createElementNS(ns,'circle');c1.setAttribute('cx','18');c1.setAttribute('cy','18');c1.setAttribute('r','15.5');c1.setAttribute('fill','none');c1.setAttribute('stroke','var(--line)');c1.setAttribute('stroke-width','4');s.appendChild(c1);
+  var c2=document.createElementNS(ns,'circle');c2.setAttribute('class','v');c2.setAttribute('cx','18');c2.setAttribute('cy','18');c2.setAttribute('r','15.5');c2.setAttribute('fill','none');c2.setAttribute('stroke','var(--accent)');c2.setAttribute('stroke-width','4');c2.setAttribute('stroke-linecap','round');
+  var L=2*Math.PI*15.5;c2.setAttribute('stroke-dasharray',L);c2.setAttribute('stroke-dashoffset',L*(1-pct/100));s.appendChild(c2);r.appendChild(s);r.appendChild(el('b','',Math.round(pct)+'%'));
+  if(size){r.style.width=r.style.height=size+'px';s.style.width=s.style.height=size+'px'}return r;
+}
 /* ---------- проекты ---------- */
 function showProjects(){
-  app.textContent='';
-  app.appendChild(head('Проекты','Мои проекты и их задачи',[btn('Новый проект','primary',showNew)]));
+  current=null;drawBar('Проекты');app.textContent='';
+  var top=el('div','row spread');var l=el('div');l.appendChild(el('h1','','Мои проекты'));l.appendChild(el('div','muted','Здесь все ваши проекты. Откройте проект, чтобы увидеть задачи и промпты для исполнителей.'));top.appendChild(l);
+  top.appendChild(btn('Новый проект','primary',showNew,{icon:'plus',tip:'Мастер создаст проект и выдаст стартовые промпты для ИИ-директора'}));app.appendChild(top);
   var g=el('div','grid');app.appendChild(g);
   api('/api/projects').then(function(r){
-    if(!r.projects.length)g.appendChild(el('div','muted','Проектов пока нет. Нажмите «Новый проект».'));
+    if(!r.projects.length){var e=el('div','card empty');e.appendChild(ic('map'));e.appendChild(el('h2','','Пока нет ни одного проекта'));e.appendChild(el('div','muted','Нажмите «Новый проект». Портал выдаст два готовых промпта: как организовать репозиторий и как разработать полный GDD (описание игры или продукта). Дальше работа идёт по задачам на доске.'));
+      e.appendChild(btn('Создать первый проект','primary',showNew,{icon:'plus'}));app.appendChild(e);return}
     r.projects.forEach(function(p){
-      var c=el('div','card');c.appendChild(el('h3','',p.name));c.appendChild(el('div','muted small',p.repo||'репозиторий не указан'));
-      if(p.description)c.appendChild(el('div','small',p.description));
-      var b=el('div','bar');var i=el('i');i.style.width=(p.total?100*p.accepted/p.total:0)+'%';b.appendChild(i);c.appendChild(b);
-      c.appendChild(el('div','muted small',p.has_plan?('Принято '+p.accepted+' из '+p.total):'План ещё не загружен'));
-      c.appendChild(btn('Открыть','primary',function(){showBoard(p.slug)}));g.appendChild(c);
-    });
+      var c=el('div','card');var h=el('div','row spread');var t=el('div');t.appendChild(el('h3','',p.name));t.appendChild(el('div','muted small',p.repo||'репозиторий не указан'));h.appendChild(t);h.appendChild(ring(p.total?100*p.accepted/p.total:0,56));c.appendChild(h);
+      if(p.description)c.appendChild(el('div','small muted',p.description));
+      c.appendChild(el('div','small',p.has_plan?('Принято '+p.accepted+' из '+p.total+' задач'):'План ещё не загружен: сначала «Старт проекта»'));
+      c.appendChild(btn('Открыть доску','primary',function(){showBoard(p.slug)},{icon:'next',tip:'Задачи проекта: что выдавать, что в работе, что ждёт приёмки'}));g.appendChild(c)});
   }).catch(function(){showLogin()});
 }
 /* ---------- новый проект ---------- */
 function showNew(){
-  app.textContent='';app.appendChild(head('Новый проект','Мастер: создаёт запись и выдаёт промпт для ИИ-директора и скелет репозитория',[btn('К проектам','',showProjects)]));
+  drawBar('Новый проект');app.textContent='';
+  var hd=el('div');hd.appendChild(el('h1','','Новый проект'));hd.appendChild(el('div','muted','Три шага: заполните форму, скачайте скелет репозитория, отдайте директору два промпта.'));app.appendChild(hd);
   var c=el('div','card');
-  function field(id,label,ph,area){var l=el('label','',label);var i=el(area?'textarea':'input');i.id=id;i.placeholder=ph||'';if(area)i.rows=3;l.appendChild(i);c.appendChild(l);return i}
-  var name=field('n','Название проекта','Например: Мой новый проект'),slug=field('s','Короткий адрес (латиница, цифры, дефис)','my-project'),repo=field('r','Репозиторий GitHub (необязательно)','владелец/репозиторий'),desc=field('d','Описание','Что это за проект',true);
-  var out=el('div'),err=el('div','err small');
-  var go=btn('Создать проект','primary',function(){
+  function field(id,label,ph,help,area){var l=el('label','',label);var i=el(area?'textarea':'input');i.id=id;i.placeholder=ph||'';if(area)i.rows=3;l.appendChild(i);if(help)l.appendChild(el('span','help',help));c.appendChild(l);return i}
+  var name=field('n','Название проекта','Например: Моя игра','Как проект будет называться в списке.'),slug=field('s','Короткий адрес','my-game','Только строчные латинские буквы, цифры и дефис, не короче 3 знаков.'),repo=field('r','Репозиторий GitHub (по желанию)','владелец/репозиторий','Если указать, промпты и задания будут ссылаться на него.'),desc=field('d','О чём проект','Что это за проект, для кого','Пара предложений: директор использует это как стартовый контекст.',true);
+  var out=el('div'),err=el('div','err small');var go;
+  go=btn('Создать проект','primary',function(){
     err.textContent='';go.disabled=true;
     api('/api/projects','POST',{name:name.value,slug:slug.value,repo:repo.value,description:desc.value}).then(function(r){
-      out.textContent='';out.appendChild(el('h2','','Проект создан. Что дальше'));
-      out.appendChild(el('p','muted','1) Скачайте скелет репозитория и положите в корень нового репозитория. 2) Отдайте ИИ-директору по порядку два промпта ниже: сначала организация репозитория, затем разработка полного GDD. 3) Когда в репозитории появится docs/work_plan.json, нажмите «Синхронизировать» на доске проекта.'));
-      var row=el('div','row');var a=el('a');a.href=BASE+'/api/projects/'+r.slug+'/bootstrap.zip';a.textContent='Скачать скелет репозитория';a.style.cssText='display:inline-flex;align-items:center;min-height:44px;padding:8px 14px;border-radius:10px;background:var(--accent);color:var(--accent-ink);font-weight:600;text-decoration:none';row.appendChild(a);
-      row.appendChild(btn('Открыть доску','',function(){showBoard(r.slug)}));out.appendChild(row);
-      (r.start||[]).forEach(function(x){var b=el('div','card');b.appendChild(el('h3','',x.title));b.appendChild(btn('Скопировать промпт','primary',function(){copy(x.prompt)}));var pd=el('details');pd.appendChild(el('summary','','Показать текст'));pd.appendChild(el('pre','',x.prompt));b.appendChild(pd);out.appendChild(b)});go.hidden=true;
+      out.textContent='';var ok=el('div','card');ok.appendChild(el('h2','','Проект создан. Что дальше'));
+      [['1','Скачайте скелет репозитория и положите его в корень нового репозитория.'],['2','Отдайте ИИ-директору по порядку два промпта ниже: сначала организация репозитория, затем разработка полного GDD.'],['3','Когда в репозитории появится docs/work_plan.json, нажмите «Синхронизировать» на доске проекта.']].forEach(function(x){var s=el('div','row');s.style.flexWrap='nowrap';var n=el('b','pill ready',x[0]);n.style.cssText='min-width:26px;justify-content:center';n.className='tag';s.appendChild(n);s.appendChild(el('span','',x[1]));ok.appendChild(s)});
+      var row=el('div','row');var a=el('a','lnk primary');a.href=BASE+'/api/projects/'+r.slug+'/bootstrap.zip';a.appendChild(ic('upload'));a.appendChild(el('span','','Скачать скелет репозитория'));a.title='Архив с README, правилами для ИИ, планом работ и инструментами';row.appendChild(a);
+      row.appendChild(btn('Открыть доску','',function(){showBoard(r.slug)},{icon:'next'}));ok.appendChild(row);out.appendChild(ok);
+      (r.start||[]).forEach(function(x){var b=el('div','card');b.appendChild(el('h3','',x.title));b.appendChild(btn('Скопировать промпт','primary',function(){copy(x.prompt)},{icon:'copy',tip:'Скопировать текст и вставить его ИИ-директору'}));var pd=el('details');pd.appendChild(el('summary','','Показать текст'));pd.appendChild(el('pre','',x.prompt));b.appendChild(pd);out.appendChild(b)});go.hidden=true;
     }).catch(function(x){err.textContent=x.message==='exists'?'Такой адрес уже занят.':'Проверьте поля: адрес из латиницы и цифр, репозиторий в виде владелец/имя.';go.disabled=false});
-  });
+  },{icon:'plus',tip:'Создать запись проекта и получить стартовые промпты'});
   c.appendChild(go);c.appendChild(err);app.appendChild(c);app.appendChild(out);
 }
 /* ---------- доска ---------- */
-function showBoard(slug){
-  app.textContent='';
-  api('/api/projects/'+slug).then(function(d){current={slug:slug,d:d};drawBoard()}).catch(function(){showLogin()});
-}
+function showBoard(slug){drawBar('…');app.textContent='';api('/api/projects/'+slug).then(function(d){current={slug:slug,d:d};drawBoard()}).catch(function(){showLogin()})}
 function st(id){var s=current.d.state[id];return s?s.status:'planned'}
 function ready(p){return st(p.id)==='planned'&&p.depends_on.every(function(x){return st(x)==='accepted'})}
-function setStatus(id,status){api('/api/projects/'+current.slug+'/status','POST',{id:id,status:status}).then(function(){return api('/api/projects/'+current.slug)}).then(function(d){current.d=d;confirmId=null;drawBoard()}).catch(function(e){toast(e.message==='dependencies_not_accepted'?'Сначала нужно принять предыдущие шаги':'Не удалось сохранить')})}
-var view=(function(){try{return localStorage.getItem('portalView')||'scheme'}catch(e){return 'scheme'}})(), openId=null;
+function refresh(then){return api('/api/projects/'+current.slug).then(function(d){current.d=d;confirmId=null;drawBoard();if(then)then()})}
+var view=(function(){try{return localStorage.getItem('portalView')||'scheme'}catch(e){return 'scheme'}})();
 function setView(v){view=v;try{localStorage.setItem('portalView',v)}catch(e){}drawBoard()}
-function refresh(then){api('/api/projects/'+current.slug).then(function(d){current.d=d;confirmId=null;drawBoard();if(then)then()})}
+function byId(id){return current.d.packages.filter(function(x){return x.id===id})[0]}
 function drawBoard(){
-  var d=current.d,P=d.packages;app.textContent='';
-  var sync=btn('Синхронизировать с GitHub','',function(){sync.disabled=true;api('/api/projects/'+current.slug+'/sync','POST',{}).then(function(){toast('План обновлён');showBoard(current.slug)}).catch(function(e){toast(e.status===422?'План в репозитории содержит ошибки':'Не удалось получить план');sync.disabled=false})});
-  var tg=btn(view==='scheme'?'Вид: схема GTD':'Вид: шаги','',function(){setView(view==='scheme'?'steps':'scheme')});
-  app.appendChild(head(d.project.name,d.project.repo||'',[tg,sync,btn('Загрузить план (JSON)','',showImport),btn('Протокол для ИИ','',showProtocol),btn('Все проекты','',showProjects)]));
+  var d=current.d,P=d.packages;drawBar(d.project.name);app.textContent='';
+  var head=el('div','row spread');var l=el('div');l.appendChild(el('h1','',d.project.name));l.appendChild(el('div','muted',d.project.repo?d.project.repo:'Репозиторий не указан'));head.appendChild(l);
+  var tb=el('div','row');
+  var seg=el('div','seg');var b1=btn('Схема','',function(){setView('scheme')},{tip:'Колонки: от очереди до готовых задач'});var b2=btn('По шагам','',function(){setView('steps')},{tip:'Задачи по порядку шагов, линии рядом'});b1.className=view==='scheme'?'on':'';b2.className=view==='steps'?'on':'';seg.appendChild(b1);seg.appendChild(b2);tb.appendChild(seg);
+  var sync;sync=btn('Синхронизировать','',function(){sync.disabled=true;api('/api/projects/'+current.slug+'/sync','POST',{}).then(function(){toast('План обновлён из репозитория');showBoard(current.slug)}).catch(function(e){toast(e.status===422?'План в репозитории содержит ошибки':'Не удалось получить план: проверьте репозиторий и токен');sync.disabled=false})},{icon:'sync',tip:'Загрузить свежий docs/work_plan.json из репозитория GitHub'});
+  tb.appendChild(sync);tb.appendChild(btn('Загрузить план','',showImport,{icon:'upload',tip:'Вставить содержимое work_plan.json вручную, если синхронизация не настроена'}));
+  tb.appendChild(btn('Протокол для ИИ','',showProtocol,{icon:'book',tip:'Инструкция для ИИ-директора: как добавлять этапы и промпты'}));head.appendChild(tb);app.appendChild(head);
+  if(P.length)drawSummary(d,P);
   drawStart(d);
-  if(!P.length){app.appendChild(el('div','notice','План ещё не загружен. Положите docs/work_plan.json в репозиторий и нажмите «Синхронизировать» или загрузите файл вручную. Сначала выполните «Старт проекта» выше: директор разработает GDD и составит план.'));drawIdeas(d,app);return}
-  var cnt={accepted:0,submitted:0,issued:0,ready:0};P.forEach(function(p){var s=st(p.id);if(s==='planned'&&ready(p))cnt.ready++;else if(cnt[s]!==undefined)cnt[s]++});
-  var top=el('div','card'),b=el('div','bar'),i=el('i');i.style.width=(100*cnt.accepted/P.length)+'%';b.appendChild(i);top.appendChild(b);
-  top.appendChild(el('div','muted small','Принято '+cnt.accepted+' из '+P.length+' · ждёт приёмки '+cnt.submitted+' · у исполнителей '+cnt.issued+' · можно выдавать '+cnt.ready));app.appendChild(top);
+  if(!P.length){var n=el('div','card empty');n.appendChild(ic('map'));n.appendChild(el('h2','','План ещё не загружен'));n.appendChild(el('div','muted','Сначала выполните «Старт проекта»: ИИ-директор организует репозиторий и разработает GDD, после этого появится файл docs/work_plan.json. Тогда нажмите «Синхронизировать» (или «Загрузить план») и здесь появятся задачи с готовыми промптами.'));app.appendChild(n);drawIdeas(d,app);return}
   if(view==='scheme')drawScheme(d,P);else drawSteps(d,P);
+  drawLog(d,P);
   if(openId)drawDrawer(openId);
 }
+function drawSummary(d,P){
+  var cnt={accepted:0,submitted:0,issued:0,ready:0};P.forEach(function(p){var s=st(p.id);if(s==='planned'&&ready(p))cnt.ready++;else if(cnt[s]!==undefined)cnt[s]++});
+  var hero=el('div','card hero');hero.appendChild(ring(100*cnt.accepted/P.length,96));
+  var tl=el('div','tiles');
+  [['Принято',cnt.accepted,'done','Задачи, принятые директором и влитые в main'],['Ждёт приёмки',cnt.submitted,'review','Исполнитель сдал, директор проверяет'],['У исполнителей',cnt.issued,'work','Задачи, выданные исполнителям и ещё не сданные'],['Можно выдавать',cnt.ready,'next','Готовы к выдаче: предыдущие шаги приняты']].forEach(function(x){
+    var t=el('div','tile');t.title=x[3];t.appendChild(ic(x[2]));t.appendChild(el('b','',x[1]));t.appendChild(el('span','',x[0]));tl.appendChild(t)});
+  hero.appendChild(tl);app.appendChild(hero);
+  drawNow(d,P,cnt);
+}
+function drawNow(d,P,cnt){
+  var steps=[];
+  P.filter(function(p){return st(p.id)==='submitted'}).forEach(function(p){steps.push({p:p,text:'Исполнитель сдал работу. Директор проверяет её и сливает в main. Когда директор сообщит, что слито, нажмите «Принято, в архив».',btn:'Открыть задачу',cls:''})});
+  Object.keys(d.lanes).sort().forEach(function(l){
+    var busy=P.filter(function(p){return p.lane===l&&st(p.id)==='issued'})[0];
+    var rd=P.filter(function(p){return p.lane===l&&ready(p)})[0];
+    if(busy)steps.push({p:busy,text:'У исполнителя линии '+l+'. Когда он пришлёт отчёт, нажмите «Исполнитель сдал».',btn:'Открыть задачу',cls:''});
+    else if(rd)steps.push({p:rd,text:'Можно выдавать исполнителю линии '+l+'. Скопируйте промпт, отдайте ему и нажмите «Отдал исполнителю».',btn:'Взять промпт',cls:'primary'})});
+  if(!steps.length)return;
+  var c=el('div','card now');var h=el('h2');h.appendChild(ic('flag'));h.appendChild(document.createTextNode('Что делать сейчас'));c.appendChild(h);
+  steps.slice(0,4).forEach(function(s){var r=el('div','step');var t=el('div');var b=el('div');b.appendChild(el('span','pid',s.p.id));b.appendChild(document.createTextNode(s.p.title));t.appendChild(b);t.appendChild(el('div','muted small',s.text));r.appendChild(t);
+    r.appendChild(btn(s.btn,s.cls,function(){openId=s.p.id;drawBoard()},{icon:s.cls?'copy':'next'}));c.appendChild(r)});
+  app.appendChild(c);
+}
 function drawStart(d){
-  var det=el('details','card');var sm=el('summary','','Старт проекта: промпты директору ('+d.start.filter(function(x){return x.done}).length+' из '+d.start.length+' выполнено)');det.appendChild(sm);
+  var done=d.start.filter(function(x){return x.done}).length;
+  var det=el('details','card');det.style.borderTop='1px solid var(--line)';var sm=el('summary','','Старт проекта: промпты директору ('+done+' из '+d.start.length+' выполнено)');det.appendChild(sm);
   if(!d.packages.length)det.open=true;
-  d.start.forEach(function(x){var b=el('div');b.style.cssText='border-top:1px solid var(--line);padding-top:10px;margin-top:10px';
-    var t=el('h3','',(x.done?'✓ ':'')+x.title);b.appendChild(t);var r=el('div','row');
-    r.appendChild(btn('Скопировать промпт','primary',function(){copy(x.prompt)}));
-    r.appendChild(btn(x.done?'Вернуть в работу':'Отметить выполненным','ghost',function(){api('/api/projects/'+current.slug+'/start','POST',{id:x.id,done:!x.done}).then(function(){refresh()})}));b.appendChild(r);
-    var pd=el('details');pd.appendChild(el('summary','','Показать текст'));pd.appendChild(el('pre','',x.prompt));b.appendChild(pd);det.appendChild(b)});
+  det.appendChild(el('div','help','Эти два промпта отдаются ИИ-директору один раз в начале. После выполнения отметьте их.'));
+  d.start.forEach(function(x){var b=el('div','act');var m=el('div');m.style.flex='1';m.appendChild(el('h3','',(x.done?'✓ ':'')+x.title));
+    var pd=el('details');pd.appendChild(el('summary','','Показать текст'));pd.appendChild(el('pre','',x.prompt));m.appendChild(pd);b.appendChild(m);
+    var r=el('div','row');r.style.flexDirection='column';r.style.alignItems='stretch';
+    r.appendChild(btn('Копировать','primary',function(){copy(x.prompt)},{icon:'copy',tip:'Скопировать текст промпта'}));
+    r.appendChild(btn(x.done?'Вернуть':'Выполнено','ghost',function(){api('/api/projects/'+current.slug+'/start','POST',{id:x.id,done:!x.done}).then(function(){refresh()})},{tip:x.done?'Снять отметку выполнения':'Отметить, что директор выполнил этот промпт'}));b.appendChild(r);det.appendChild(b)});
   app.appendChild(det);
 }
 function drawIdeas(d,host){
-  var c=el('div','card');c.appendChild(el('h3','','Входящие идеи'));c.appendChild(el('div','muted small','Записывайте мысли по ходу работы. Директор превратит их в пакеты плана.'));
-  var ta=el('textarea');ta.rows=2;ta.maxLength=500;ta.placeholder='Идея, пожелание, замечание…';ta.id='idea';c.appendChild(ta);
-  c.appendChild(btn('Добавить','primary',function(){var t=ta.value.trim();if(!t)return;api('/api/projects/'+current.slug+'/ideas','POST',{text:t}).then(function(){refresh()}).catch(function(){toast('Не удалось добавить')})}));
-  (d.ideas||[]).forEach(function(x){var r=el('div','idea');r.appendChild(el('div','small',x.text));
-    var row=el('div','row');row.appendChild(el('span','muted small',fmt(x.created)));row.appendChild(btn('Учтено','ghost',function(){api('/api/projects/'+current.slug+'/ideas','POST',{id:x.id,done:true}).then(function(){refresh()})}));r.appendChild(row);c.appendChild(r)});
+  var c=el('div','card');var h=el('div','row');h.appendChild(ic('inbox'));h.appendChild(el('h3','','Входящие идеи'));c.appendChild(h);c.appendChild(el('div','help','Записывайте мысли по ходу работы. Директор превратит их в задачи плана, а вы потом отметите «Учтено».'));
+  var ta=el('textarea');ta.rows=2;ta.maxLength=500;ta.placeholder='Идея, пожелание, замечание…';ta.id='idea';ta.setAttribute('aria-label','Новая идея');c.appendChild(ta);
+  c.appendChild(btn('Добавить идею','primary',function(){var t=ta.value.trim();if(!t)return;api('/api/projects/'+current.slug+'/ideas','POST',{text:t}).then(function(){refresh()}).catch(function(){toast('Не удалось добавить')})},{icon:'plus',tip:'Сохранить идею во входящих'}));
+  (d.ideas||[]).forEach(function(x){var r=el('div','idea');r.appendChild(el('div','small',x.text));var row=el('div','row spread');row.appendChild(el('span','muted small',fmt(x.created)));row.appendChild(btn('Учтено','ghost',function(){api('/api/projects/'+current.slug+'/ideas','POST',{id:x.id,done:true}).then(function(){refresh()})},{tip:'Идея учтена в плане или не нужна: убрать из входящих'}));r.appendChild(row);c.appendChild(r)});
   host.appendChild(c);return c;
 }
 function mini(p){
-  var s=st(p.id),r=ready(p),c=el('div','mini lane-'+p.lane+((s==='planned'&&!r)?' locked':''));c.tabIndex=0;c.setAttribute('role','button');
+  var s=st(p.id),r=ready(p),c=el('div','mini lane-'+p.lane+((s==='planned'&&!r)?' locked':''));c.tabIndex=0;c.setAttribute('role','button');c.setAttribute('aria-label','Задача '+p.id+': '+p.title);
   var t=el('div','mt');t.appendChild(el('span','pid',p.id));t.appendChild(document.createTextNode(p.title));c.appendChild(t);
-  var m=[];m.push('Линия '+p.lane);if(p.depends_on.length)m.push('после '+p.depends_on.join(', '));c.appendChild(el('div','muted small',m.join(' · ')));
+  var m=el('div','row');m.style.gap='6px';m.appendChild(el('span','tag','Линия '+p.lane));m.appendChild(el('span','tag','шаг '+p.step));if(p.depends_on.length)m.appendChild(el('span','tag','после '+p.depends_on.join(', ')));c.appendChild(m);
   function open(){openId=p.id;drawBoard()}c.onclick=open;c.onkeydown=function(e){if(e.key==='Enter'||e.key===' '){e.preventDefault();open()}};return c;
 }
 function drawScheme(d,P){
-  var cols=[['queue','Очередь','ждут предыдущие шаги'],['next','Следующее','можно выдавать'],['issued','У исполнителя','в работе'],['review','Ждёт приёмки','проверяет директор'],['done','Готово','принято']];
+  var cols=[['queue','Очередь','Ждут, пока приняты предыдущие шаги','queue'],['next','Следующее','Можно выдавать исполнителю','next'],['issued','У исполнителя','Выдано, работа идёт','work'],['review','Ждёт приёмки','Сдано, директор проверяет и сливает','review'],['done','Готово','Принято и влито в main','done']];
   var wrapc=el('div','kan');
-  var inbox=el('div','col');inbox.appendChild(el('h2','','Идеи'));inbox.appendChild(el('div','muted small','входящие'));drawIdeas(d,inbox);wrapc.appendChild(inbox);
+  var inbox=el('div','col');var ih=el('div','ch');ih.appendChild(ic('inbox'));ih.appendChild(el('h2','','Идеи'));inbox.appendChild(ih);drawIdeas(d,inbox);wrapc.appendChild(inbox);
   cols.forEach(function(cd){
     var items=P.filter(function(p){var s=st(p.id),r=ready(p);return cd[0]==='queue'?(s==='planned'&&!r):cd[0]==='next'?(s==='planned'&&r):cd[0]==='issued'?s==='issued':cd[0]==='review'?s==='submitted':s==='accepted'});
-    if(cd[0]==='done')items.sort(function(a,b){return ((d.state[b.id]||{}).accepted_at||0)-((d.state[a.id]||{}).accepted_at||0)});
-    else items.sort(function(a,b){return a.step-b.step||a.lane.localeCompare(b.lane)});
-    var col=el('div','col');var h=el('h2','',cd[1]+' · '+items.length);col.appendChild(h);col.appendChild(el('div','muted small',cd[2]));
-    var shown=cd[0]==='done'&&!showAll?items.slice(0,5):items;
-    shown.forEach(function(p){col.appendChild(mini(p))});
-    if(!items.length)col.appendChild(el('div','muted small','пусто'));
-    if(cd[0]==='done'&&items.length>5){col.appendChild(btn(showAll?'Свернуть архив':'Весь архив ('+items.length+')','ghost',function(){showAll=!showAll;drawBoard()}))}
+    if(cd[0]==='done')items.sort(function(a,b){return ((d.state[b.id]||{}).accepted_at||0)-((d.state[a.id]||{}).accepted_at||0)});else items.sort(function(a,b){return a.step-b.step||a.lane.localeCompare(b.lane)});
+    var col=el('div','col'+(cd[0]==='next'?' k-next':''));var h=el('div','ch');h.appendChild(ic(cd[3]));h.appendChild(el('h2','',cd[1]));h.appendChild(el('span','n',String(items.length)));col.appendChild(h);col.appendChild(el('div','help',cd[2]));
+    var shown=cd[0]==='done'&&!showAll?items.slice(0,5):items;shown.forEach(function(p){col.appendChild(mini(p))});
+    if(!items.length)col.appendChild(el('div','help','Пусто'));
+    if(cd[0]==='done'&&items.length>5)col.appendChild(btn(showAll?'Свернуть архив':'Весь архив ('+items.length+')','ghost',function(){showAll=!showAll;drawBoard()},{tip:'Показать или скрыть все принятые задачи'}));
     wrapc.appendChild(col)});
   app.appendChild(wrapc);
 }
-var showAll=false;
 function drawSteps(d,P){
   var steps=Array.from(new Set(P.map(function(p){return p.step}))).sort(function(a,b){return a-b});
   steps.filter(function(n){return P.some(function(p){return p.step===n&&st(p.id)!=='accepted'})}).forEach(function(n){
-    var sec=el('section');sec.style.cssText='display:flex;flex-direction:column;gap:10px';sec.appendChild(el('h2','','Шаг '+n));
-    var pair=el('div','pair');Object.keys(d.lanes).sort().forEach(function(l){P.filter(function(p){return p.step===n&&p.lane===l&&st(p.id)!=='accepted'}).forEach(function(p){pair.appendChild(mini(p))})});
+    var sec=el('section','stp');sec.appendChild(el('h2','','Шаг '+n));
+    var pair=el('div','pair');Object.keys(d.lanes).sort().forEach(function(l){P.filter(function(p){return p.step===n&&p.lane===l&&st(p.id)!=='accepted'}).forEach(function(p){var c=mini(p);var s=st(p.id);c.appendChild(pill((s==='planned'&&ready(p))?'ready':s,(s==='planned'&&ready(p))?LABEL.ready:LABEL[s]));pair.appendChild(c)})});
     sec.appendChild(pair);app.appendChild(sec)});
   drawIdeas(d,app);
 }
+function drawLog(d,P){
+  var ev=[];P.forEach(function(p){var s=d.state[p.id]||{};[['issued_at','выдано'],['submitted_at','сдано'],['accepted_at','принято']].forEach(function(k){if(s[k[0]])ev.push({t:s[k[0]],txt:p.id+' '+p.title+': '+k[1]})})});
+  if(!ev.length)return;ev.sort(function(a,b){return b.t-a.t});
+  var c=el('div','card');c.appendChild(el('h3','','Последние события'));var lg=el('div','log');ev.slice(0,8).forEach(function(e){var r=el('div');r.appendChild(el('time','',fmt(e.t)));r.appendChild(el('span','',e.txt));lg.appendChild(r)});c.appendChild(lg);app.appendChild(c);
+}
+function actionRow(p,s,r){
+  var box=el('div');
+  function act(status){return function(){api('/api/projects/'+current.slug+'/status','POST',{id:p.id,status:status}).then(function(){return refresh()}).catch(function(e){toast(e.message==='dependencies_not_accepted'?'Сначала нужно принять предыдущие шаги':'Не удалось сохранить')})}}
+  function line(b,h){var a=el('div','act');a.appendChild(b);a.appendChild(el('div','help',h));box.appendChild(a)}
+  if(s==='planned'){if(r)line(btn('Отдал исполнителю','primary',act('issued')),'Нажмите после того, как передали промпт исполнителю. Задача перейдёт в «У исполнителя».');
+    else{var w=btn('Пока недоступно','',null,{disabled:true});line(w,'Ждёт приёмки задач: '+p.depends_on.filter(function(x){return st(x)!=='accepted'}).join(', ')+'.')}}
+  else if(s==='issued'){line(btn('Исполнитель сдал','primary',act('submitted')),'Нажмите, когда исполнитель прислал отчёт. Задача перейдёт в «Ждёт приёмки», директор её проверит.');line(btn('Вернуть в очередь','ghost',act('planned')),'Отозвать задачу у исполнителя: она вернётся в очередь.')}
+  else if(s==='submitted'){var ok=btn(confirmId===p.id?'Точно принято? Нажмите ещё раз':'Принято, в архив',confirmId===p.id?'confirm':'primary',function(){if(confirmId===p.id){openId=null;act('accepted')()}else{confirmId=p.id;drawBoard();clearTimeout(confirmTimer);confirmTimer=setTimeout(function(){confirmId=null;drawBoard()},4000)}});
+    line(ok,'Нажмите, когда директор подтвердит, что работа проверена и влита в main. Задача уйдёт в архив. Нужно нажать дважды.');line(btn('Вернуть исполнителю','ghost',act('issued')),'Если нужны доработки: задача вернётся в «У исполнителя».')}
+  else if(s==='accepted'){line(btn('Вернуть из архива','ghost',act('planned')),'Снять приёмку, если принято по ошибке.')}
+  return box;
+}
 function drawDrawer(id){
-  var p=current.d.packages.filter(function(x){return x.id===id})[0];if(!p){openId=null;return}
+  var p=byId(id);if(!p){openId=null;return}
   var d=current.d,s=st(p.id),r=ready(p);
   var ov=el('div','ov');ov.onclick=function(e){if(e.target===ov){openId=null;drawBoard()}};
   var c=el('div','drawer');c.setAttribute('role','dialog');c.setAttribute('aria-label',p.title);
-  var h=el('div','row');h.style.justifyContent='space-between';var l=el('div');l.appendChild(el('div','muted small','Линия '+p.lane+' · '+(d.lanes[p.lane]?d.lanes[p.lane].name+' · '+d.lanes[p.lane].who:'')+' · шаг '+p.step));
-  var t=el('h2');t.appendChild(el('span','pid',p.id));t.appendChild(document.createTextNode(p.title));l.appendChild(t);h.appendChild(l);h.appendChild(btn('Закрыть','ghost',function(){openId=null;drawBoard()}));c.appendChild(h);
-  c.appendChild(el('span','pill '+((s==='planned'&&r)?'ready':s),(s==='planned'&&r)?LABEL.ready:LABEL[s]));
-  c.appendChild(el('p','muted',p.goal));
-  if(p.depends_on.length)c.appendChild(el('div','small','Зависит от: '+p.depends_on.join(', ')));
+  var h=el('div','row spread');var l=el('div');l.appendChild(el('div','muted small','Линия '+p.lane+' · '+(d.lanes[p.lane]?d.lanes[p.lane].name+' · '+d.lanes[p.lane].who:'')+' · шаг '+p.step));
+  var t=el('h2');t.appendChild(el('span','pid',p.id));t.appendChild(document.createTextNode(p.title));l.appendChild(t);h.appendChild(l);h.appendChild(btn('Закрыть','ghost',function(){openId=null;drawBoard()},{tip:'Закрыть панель задачи'}));c.appendChild(h);
+  c.appendChild(pill((s==='planned'&&r)?'ready':s,(s==='planned'&&r)?LABEL.ready:LABEL[s]));
+  c.appendChild(el('p','',p.goal));
+  if(p.depends_on.length)c.appendChild(el('div','small muted','Зависит от: '+p.depends_on.join(', ')));
   var cr=el('div');cr.appendChild(el('b','small','Критерии готовности'));var ul=el('ul');ul.style.cssText='margin:6px 0;padding-left:20px;font-size:14px';(p.done_when||[]).forEach(function(x){ul.appendChild(el('li','',x))});cr.appendChild(ul);c.appendChild(cr);
-  var det=el('details');det.open=true;det.appendChild(el('summary','','Промпт для исполнителя'));det.appendChild(el('pre','',p.prompt));det.appendChild(btn('Скопировать промпт','',function(){copy(p.prompt)}));c.appendChild(det);
-  var row=el('div','row');
-  function act(status){return function(){api('/api/projects/'+current.slug+'/status','POST',{id:p.id,status:status}).then(function(){return refresh()}).catch(function(e){toast(e.message==='dependencies_not_accepted'?'Сначала примите предыдущие шаги':'Не удалось сохранить')})}}
-  if(s==='planned'){if(r)row.appendChild(btn('Отдал исполнителю','primary',act('issued')));else{var w=btn('Ждёт: '+p.depends_on.filter(function(x){return st(x)!=='accepted'}).join(', '),'',null);w.disabled=true;row.appendChild(w)}}
-  else if(s==='issued'){row.appendChild(btn('Исполнитель сдал','primary',act('submitted')));row.appendChild(btn('Вернуть в очередь','ghost',act('planned')))}
-  else if(s==='submitted'){var ok=btn(confirmId===p.id?'Точно принято? Нажмите ещё раз':'Принято, в архив',confirmId===p.id?'confirm':'primary',function(){if(confirmId===p.id){openId=null;act('accepted')()}else{confirmId=p.id;drawBoard();clearTimeout(confirmTimer);confirmTimer=setTimeout(function(){confirmId=null;drawBoard()},4000)}});row.appendChild(ok);row.appendChild(btn('Вернуть исполнителю','ghost',act('issued')))}
-  else if(s==='accepted'){row.appendChild(btn('Вернуть из архива','ghost',act('planned')))}
-  c.appendChild(row);
+  var det=el('details');det.open=true;det.appendChild(el('summary','','Промпт для исполнителя'));det.appendChild(el('pre','',p.prompt));det.appendChild(btn('Скопировать промпт','primary',function(){copy(p.prompt)},{icon:'copy',tip:'Скопировать весь текст задания, чтобы передать исполнителю'}));c.appendChild(det);
+  c.appendChild(el('b','small','Действия'));c.appendChild(actionRow(p,s,r));
   var si=d.state[p.id];if(si){var m=[];if(si.issued_at)m.push('выдано '+fmt(si.issued_at));if(si.submitted_at)m.push('сдано '+fmt(si.submitted_at));if(si.accepted_at)m.push('принято '+fmt(si.accepted_at));if(m.length)c.appendChild(el('div','muted small',m.join(' · ')));if(si.merged)c.appendChild(el('div','muted small','Влито в main'+(si.sha?' ('+si.sha+')':'')+(si.note?' · '+si.note:'')))}
   ov.appendChild(c);app.appendChild(ov);
 }
 function showImport(){
-  app.textContent='';app.appendChild(head('Загрузка плана','Вставьте содержимое docs/work_plan.json',[btn('Назад','',function(){showBoard(current.slug)})]));
-  var c=el('div','card');var ta=el('textarea');ta.rows=14;ta.placeholder='{"rules": ..., "lanes": ..., "packages": [...]}';var e=el('div','err small');
-  c.appendChild(ta);c.appendChild(btn('Загрузить','primary',function(){var plan;try{plan=JSON.parse(ta.value)}catch(x){e.textContent='Это не JSON.';return}
-    api('/api/projects/'+current.slug+'/plan','POST',{plan:plan}).then(function(){toast('План загружен');showBoard(current.slug)}).catch(function(x){e.textContent=x.data&&x.data.details?x.data.details.join('; '):'План не принят.'})}));c.appendChild(e);app.appendChild(c);
+  drawBar('Загрузка плана');app.textContent='';var hd=el('div');hd.appendChild(el('h1','','Загрузка плана'));hd.appendChild(el('div','muted','Вставьте содержимое файла docs/work_plan.json из репозитория проекта. Портал проверит его и покажет ошибки, если они есть.'));app.appendChild(hd);
+  var c=el('div','card');var ta=el('textarea');ta.rows=14;ta.placeholder='{"rules": ..., "lanes": ..., "packages": [...]}';ta.setAttribute('aria-label','JSON плана');var e=el('div','err small');
+  c.appendChild(ta);var row=el('div','row');row.appendChild(btn('Загрузить','primary',function(){var plan;try{plan=JSON.parse(ta.value)}catch(x){e.textContent='Это не JSON.';return}
+    api('/api/projects/'+current.slug+'/plan','POST',{plan:plan}).then(function(){toast('План загружен');showBoard(current.slug)}).catch(function(x){e.textContent=x.data&&x.data.details?x.data.details.join('; '):'План не принят.'})},{icon:'upload',tip:'Проверить и сохранить план'}));row.appendChild(btn('Назад','',function(){showBoard(current.slug)}));c.appendChild(row);c.appendChild(e);app.appendChild(c);
 }
 function showProtocol(){
-  app.textContent='';app.appendChild(head('Протокол для ИИ','Как добавлять этапы и промпты в портал',[btn('Назад','',function(){current?showBoard(current.slug):showProjects()})]));
-  api('/api/protocol').then(function(r){var c=el('div','card');c.appendChild(btn('Скопировать протокол','',function(){copy(r.markdown)}));c.appendChild(el('pre','',r.markdown));app.appendChild(c)});
+  drawBar('Протокол для ИИ');app.textContent='';var hd=el('div');hd.appendChild(el('h1','','Протокол для ИИ'));hd.appendChild(el('div','muted','Как ИИ-директор добавляет этапы и промпты в портал. Этот текст попадает в каждый новый проект.'));app.appendChild(hd);
+  api('/api/protocol').then(function(r){var c=el('div','card');var row=el('div','row');row.appendChild(btn('Скопировать протокол','primary',function(){copy(r.markdown)},{icon:'copy'}));row.appendChild(btn('Назад','',function(){current?showBoard(current.slug):showProjects()}));c.appendChild(row);c.appendChild(el('pre','',r.markdown));app.appendChild(c)});
+}
+function showHelp(){
+  var ov=el('div','ov');ov.onclick=function(e){if(e.target===ov)ov.remove()};var c=el('div','drawer');c.setAttribute('role','dialog');c.setAttribute('aria-label','Справка');
+  var h=el('div','row spread');h.appendChild(el('h2','','Справка'));h.appendChild(btn('Закрыть','ghost',function(){ov.remove()}));c.appendChild(h);
+  c.appendChild(el('b','','Как это работает'));
+  var ol=el('ol');ol.style.cssText='margin:6px 0;padding-left:20px';['Создайте проект и отдайте ИИ-директору два стартовых промпта: он организует репозиторий и разработает GDD.','Директор составит план работ. Нажмите «Синхронизировать», и задачи появятся на доске.','Откройте задачу, скопируйте промпт, передайте исполнителю и нажмите «Отдал исполнителю».','Когда исполнитель сдал, нажмите «Исполнитель сдал». Директор проверит и сольёт работу.','Когда директор подтвердит, нажмите «Принято, в архив». Откроется следующая задача.'].forEach(function(x){ol.appendChild(el('li','',x))});c.appendChild(ol);
+  c.appendChild(el('b','','Статусы задач'));
+  [['planned','В очереди','Ждёт, пока будут приняты предыдущие шаги. Выдать нельзя.'],['ready','Можно выдавать','Все предыдущие шаги приняты. Можно брать промпт и отдавать исполнителю.'],['issued','У исполнителя','Вы отдали задачу, исполнитель работает.'],['submitted','Ждёт приёмки','Исполнитель сдал. Директор проверяет и сливает в main.'],['accepted','Принято','Проверено и влито в main. Лежит в архиве.']].forEach(function(x){var r=el('div','act');r.appendChild(pill(x[0],x[1]));r.appendChild(el('div','help',x[2]));c.appendChild(r)});
+  c.appendChild(el('b','','Кнопки'));
+  [['Схема / По шагам','Переключает вид доски: колонки или порядок шагов.'],['Синхронизировать','Берёт свежий план из репозитория GitHub (нужен токен только на чтение).'],['Загрузить план','Ручная вставка work_plan.json, если синхронизация не настроена.'],['Протокол для ИИ','Инструкция директору, как вести план.'],['Скопировать промпт','Копирует текст задания для передачи исполнителю.'],['Отдал исполнителю','Фиксирует, что задание передано.'],['Исполнитель сдал','Фиксирует, что пришёл отчёт.'],['Принято, в архив','Нажмите дважды после подтверждения директора.'],['Учтено','Убирает идею из входящих.']].forEach(function(x){var r=el('div','act');r.appendChild(el('b','small',x[0]));r.appendChild(el('div','help',x[1]));c.appendChild(r)});
+  ov.appendChild(c);document.body.appendChild(ov);
 }
 api('/api/me').then(function(m){ME=m.user;CSRF=m.csrf;showProjects()}).catch(function(){showLogin()});
 })();
