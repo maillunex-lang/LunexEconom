@@ -273,3 +273,35 @@ class Portal(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class RealServerThreadingTest(unittest.TestCase):
+    """Реальный сервер обрабатывает запросы в других потоках: соединение SQLite не должно падать."""
+
+    def test_health_and_login_work_across_threads(self):
+        import json, os, tempfile, threading, urllib.request, urllib.error
+        from wsgiref.simple_server import make_server, WSGIRequestHandler
+        from socketserver import ThreadingMixIn
+        from wsgiref.simple_server import WSGIServer
+        from portal.app import create_app
+
+        class T(ThreadingMixIn, WSGIServer):
+            daemon_threads = True
+
+        class Q(WSGIRequestHandler):
+            def log_message(self, *a):
+                pass
+
+        d = tempfile.mkdtemp()
+        srv = make_server("127.0.0.1", 0, create_app(os.path.join(d, "t.sqlite")), server_class=T, handler_class=Q)
+        threading.Thread(target=srv.serve_forever, daemon=True).start()
+        try:
+            url = "http://127.0.0.1:%d" % srv.server_port
+            self.assertEqual(json.load(urllib.request.urlopen(url + "/health"))["ok"], True)
+            req = urllib.request.Request(url + "/api/login", data=b'{"username":"a","password":"b"}', headers={"Content-Type": "application/json"})
+            try:
+                urllib.request.urlopen(req)
+            except urllib.error.HTTPError as e:
+                self.assertIn(e.code, (400, 401, 403, 429))
+        finally:
+            srv.shutdown()

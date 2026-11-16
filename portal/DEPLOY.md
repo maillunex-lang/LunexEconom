@@ -5,6 +5,9 @@
 ## Состав
 Один процесс Python 3.12 (только стандартная библиотека), SQLite, слушает 127.0.0.1:18790. Наружу через nginx по HTTPS на `/createportal/`. Данные: `/var/lib/createportal/portal.sqlite` (права 0700, пользователь `createportal`).
 
+## Быстрая установка (одна команда)
+На VPS от root: скачать `portal/deploy/install.sh` из репозитория и выполнить `sudo bash install.sh`. Скрипт сам создаёт пользователя, копирует код, ставит сервис и ежедневные копии, проверяет `/health`, один раз спросит пароль владельца (ввод скрыт) и сохранит предыдущую версию для отката. Повторный запуск = обновление (перед ним делается копия базы). Остаётся только шаг 6 (nginx). Ниже те же шаги вручную.
+
 ## Шаги
 1. Пользователь без входа: `useradd --system --home /opt/createportal --shell /usr/sbin/nologin createportal`.
 2. Код: клонировать репозиторий maillunex-lang/LunexEconom (ветка main) во временную папку, скопировать в `/opt/createportal` каталог `portal/` и файл `tools/work_plan.py` с пакетами `tools/__init__.py`: структура `/opt/createportal/portal/...` и `/opt/createportal/tools/work_plan.py`. Права: владелец root, чтение для createportal.

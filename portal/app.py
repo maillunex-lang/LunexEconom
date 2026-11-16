@@ -1,6 +1,8 @@
 """WSGI-приложение портала CreatePortal. Префикс (например /createportal) срезается; JSON API под /api, одна HTML-страница."""
 from __future__ import annotations
 
+import threading
+
 import json
 import hmac
 import hashlib
@@ -100,7 +102,7 @@ def create_app(db_path, base="", secure_cookie=True, fetch=None, github_token_fi
         with urllib.request.urlopen(req, timeout=15) as r:
             return r.read(MAX_BODY).decode()
 
-    def app(environ, start):
+    def handle(environ, start):
         method = environ.get("REQUEST_METHOD", "GET")
         path = environ.get("PATH_INFO", "/")
         if base and path.startswith(base):
@@ -366,6 +368,12 @@ def create_app(db_path, base="", secure_cookie=True, fetch=None, github_token_fi
             db.audit(conn, "task.status", {"slug": slug, "id": pid, "status": status})
             return respond(start, "200 OK", {"ok": True})
         return respond(start, "404 Not Found", {"error": "not_found"})
+
+    lock = threading.Lock()  # одно соединение SQLite на все потоки сервера: запросы обрабатываются по очереди (владелец один)
+
+    def app(environ, start):
+        with lock:
+            return handle(environ, start)
 
     app.close = conn.close
     return app
