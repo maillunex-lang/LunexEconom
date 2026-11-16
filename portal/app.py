@@ -11,12 +11,17 @@ import re
 import secrets
 import time
 import urllib.request
+import urllib.parse
+import io
+import zipfile
 from http.cookies import SimpleCookie
 from pathlib import Path
 
 from . import auth, bootstrap, db
 from .hooks import github
 from . import notify
+from .backup import core as backup_core
+from .backup import sync as github_sync
 from tools import work_plan as wp  # общие проверка плана и генерация промптов
 
 MAX_BODY = 1_000_000
@@ -29,8 +34,8 @@ def _prompted(plan):
     return [dict(p, prompt=wp.prompt(plan, p["id"])) for p in plan["packages"]]
 
 
-def create_app(db_path, base="", secure_cookie=True, fetch=None, github_token_file=None, security_v2=True, webhook_enabled=False, webhook_secret_file=None, reports_enabled=False, notifications_enabled=False, notify_token_files=None, notify_client=None, notify_clock=None):
-    conn = db.connect(db_path, webhook=webhook_enabled or reports_enabled, reports=reports_enabled, notifications=notifications_enabled)
+def create_app(db_path, base="", secure_cookie=True, fetch=None, github_token_file=None, security_v2=True, webhook_enabled=False, webhook_secret_file=None, reports_enabled=False, notifications_enabled=False, notify_token_files=None, notify_client=None, notify_clock=None, ops_enabled=False, backup_dir=None, github_api=None):
+    conn = db.connect(db_path, webhook=webhook_enabled or reports_enabled or ops_enabled, reports=reports_enabled or ops_enabled, notifications=notifications_enabled or ops_enabled)
     notify_token_files = notify_token_files or {}
     notify_client = notify_client or notify.http_json
     clock = notify_clock or time.time
@@ -46,6 +51,11 @@ def create_app(db_path, base="", secure_cookie=True, fetch=None, github_token_fi
                 key = f'{ev["project_slug"]}:{ev["pkg_id"] or "plan"}:{ev["kind"]}'
                 label = {"task.submitted":"сдано, ждёт приёмки","ci.failed":"CI упал","plan.sync_failed":"ошибка обновления плана"}[kind]
                 queue_notification(kind, key, f'{ev["name"]}: {ev["pkg_id"] or "план"} {label}. https://rikagro.ru/createportal/')
+    backup_dir = backup_dir or os.environ.get("PORTAL_BACKUP_DIR", "/var/backups/createportal")
+    github_api = github_api or github_sync.github_get
+    if ops_enabled:
+        for table in ("audit","events"):
+            conn.execute(f"DELETE FROM {table} WHERE ts<?",(time.time()-90*86400,))
     base = base.rstrip("/")
 
     review_template = ["Пробное слияние без конфликтов", "Изменены только файлы зоны", "Тесты директора прошли", "CI зелёный", "Слито в main"]
@@ -187,7 +197,16 @@ def create_app(db_path, base="", secure_cookie=True, fetch=None, github_token_fi
             try:
                 payload = json.loads(raw)
                 before = conn.execute("SELECT COALESCE(MAX(id),0) FROM events").fetchone()[0] if notifications_enabled else 0
-                result = github.process(conn, kind, payload, delivery, fetch_plan=fetch_plan)
+                if ops_enabled:
+                    result=github_sync.guarded_process(conn,kind,payload,delivery,fetch_plan=fetch_plan,
+                                                      token=github_sync.read_token(github_token_file),fetch=github_api)
+                else:
+                    result=github.process(conn,kind,payload,delivery,fetch_plan=fetch_plan)
+                if ops_enabled:
+                    repository=payload.get("repository",{}) if isinstance(payload,dict) else {}
+                    if isinstance(repository,dict) and isinstance(repository.get("full_name"),str):
+                        for project in conn.execute("SELECT slug FROM projects WHERE repo=?",(repository["full_name"],)):
+                            conn.execute("INSERT INTO project_sync(project_slug,last_webhook) VALUES(?,?) ON CONFLICT(project_slug) DO UPDATE SET last_webhook=excluded.last_webhook",(project["slug"],time.time()))
                 notify_events(before)
                 if notifications_enabled and kind in ("check_suite", "workflow_run"):
                     run = payload.get(kind, {})
@@ -199,6 +218,13 @@ def create_app(db_path, base="", secure_cookie=True, fetch=None, github_token_fi
             except (ValueError, TypeError, KeyError):
                 return respond(start, "400 Bad Request", {"error": "invalid_payload"})
             return respond(start, "200 OK", {"ok": True, "result": result})
+        if ops_enabled and path == "/share" and method == "GET":
+            # GET is read-only: return a share draft. The owner explicitly saves via POST /ideas with CSRF.
+            query=urllib.parse.parse_qs(environ.get("QUERY_STRING",""),keep_blank_values=True)
+            draft={k:query.get(k,[""])[0][:500] for k in ("title","text","url")}
+            if sum(len(v) for v in draft.values())>1000:
+                return respond(start,"400 Bad Request",{"error":"share_too_long"})
+            return respond(start,"200 OK",{"draft":draft,"requires_login":True,"save_via":"POST /api/share with slug and CSRF"})
         if path == "/health" and method == "GET":
             healthy = db.check_health(conn)
             return respond(start, "200 OK" if healthy else "503 Service Unavailable", {"ok": healthy})
@@ -256,7 +282,7 @@ def create_app(db_path, base="", secure_cookie=True, fetch=None, github_token_fi
             return respond(start, "200 OK", {"ok": True, "csrf": csrf}, [("Set-Cookie", attrs)])
         if not sess:
             return respond(start, "401 Unauthorized", {"error": "unauthorized"})
-        if method == "POST" and environ.get("HTTP_X_CSRF_TOKEN") != sess["csrf"] and path != "/api/logout":
+        if method in ("POST","DELETE") and environ.get("HTTP_X_CSRF_TOKEN") != sess["csrf"] and path != "/api/logout":
             return respond(start, "403 Forbidden", {"error": "csrf"})
         if path == "/api/logout" and method == "POST":
             auth.logout(conn, token)
@@ -345,6 +371,52 @@ def create_app(db_path, base="", secure_cookie=True, fetch=None, github_token_fi
                 entries = [dict(r) for r in conn.execute("SELECT ts,channel,event,result,attempt FROM notify_log ORDER BY id DESC LIMIT 100")]
                 return respond(start,"200 OK",{"entries":entries})
             return respond(start,"404 Not Found",{"error":"not_found"})
+        if ops_enabled and path == "/api/share" and method == "POST":
+            body=read_body(environ)
+            if body is None or not set(body)<= {"slug","title","text","url"} or "slug" not in body or any(type(v) is not str for v in body.values()):
+                return respond(start,"400 Bad Request",{"error":"invalid_share"})
+            slug=body["slug"]
+            if not re.fullmatch(r"[a-z][a-z0-9-]{1,38}[a-z0-9]",slug) or not project_row(slug):
+                return respond(start,"404 Not Found",{"error":"no_project"})
+            parts=[body.get(k,"").strip() for k in ("title","text","url")]
+            if any(len(x)>500 for x in parts):
+                return respond(start,"400 Bad Request",{"error":"invalid_share"})
+            value=" | ".join(x for x in parts if x)[:500]
+            if not value:return respond(start,"400 Bad Request",{"error":"empty_share"})
+            if conn.execute("SELECT count(*) FROM ideas WHERE project_slug=? AND done=0",(slug,)).fetchone()[0]>=200:
+                return respond(start,"409 Conflict",{"error":"too_many_ideas"})
+            cur=conn.execute("INSERT INTO ideas(project_slug,text,created) VALUES(?,?,?)",(slug,value,time.time()))
+            return respond(start,"201 Created",{"id":cur.lastrowid,"slug":slug})
+        if ops_enabled and path == "/api/version" and method == "GET":
+            versions=[r[0] for r in conn.execute("SELECT version FROM schema_versions ORDER BY version")]
+            return respond(start,"200 OK",{"version":"A5","migrations":versions,"features":{"webhook":webhook_enabled,"reports":reports_enabled,"notifications":notifications_enabled,"ops":ops_enabled}})
+        if ops_enabled and path == "/api/today" and method == "GET":
+            waiting=[{"slug":r["project_slug"],"id":r["pkg_id"],"status":r["status"]} for r in conn.execute("SELECT project_slug,pkg_id,status FROM task_state WHERE status IN ('submitted','issued') ORDER BY CASE status WHEN 'submitted' THEN 0 ELSE 1 END,project_slug,pkg_id LIMIT 100")]
+            return respond(start,"200 OK",{"action":waiting[0] if waiting else None,"queue":waiting})
+        if ops_enabled and path == "/api/backup" and method == "POST":
+            body=read_body(environ)
+            if body is None or body:
+                return respond(start,"400 Bad Request",{"error":"bad_request"})
+            try:
+                dest=backup_core.create_backup(db_path,backup_dir)
+                return respond(start,"200 OK",{"name":Path(dest).name,"verified":backup_core.verify_backup(dest)})
+            except (OSError,backup_core.BackupError):
+                return respond(start,"503 Service Unavailable",{"error":"backup_failed"})
+        if ops_enabled and path == "/api/backup/status" and method == "GET":
+            return respond(start,"200 OK",{"backups":backup_core.list_backups(backup_dir)[:14]})
+        if ops_enabled and path == "/api/backup/latest" and method == "GET":
+            dest=backup_core.latest_backup(backup_dir)
+            if not dest:return respond(start,"404 Not Found",{"error":"backup_missing"})
+            return respond(start,"200 OK",Path(dest).read_bytes(),[("Content-Type","application/octet-stream"),("Content-Disposition",'attachment; filename="'+Path(dest).name+'"')])
+        if ops_enabled and path == "/api/projects/import" and method == "POST":
+            body=read_body(environ)
+            if body is None or set(body) not in ({"data"},{"data","slug"}):
+                return respond(start,"400 Bad Request",{"error":"invalid_import"})
+            try:
+                slug=backup_core.import_project(conn,body["data"],body.get("slug"))
+            except (backup_core.BackupError,ValueError,TypeError,KeyError):
+                return respond(start,"409 Conflict",{"error":"import_rejected"})
+            return respond(start,"201 Created",{"slug":slug})
         if reports_enabled and path == "/api/metrics" and method == "GET":
             return respond(start, "200 OK", {"metrics": metrics()})
         if path == "/api/me" and method == "GET":
@@ -431,13 +503,55 @@ def create_app(db_path, base="", secure_cookie=True, fetch=None, github_token_fi
                 if not project_row(slug):
                     return respond(start,"404 Not Found",{"error":"no_project"})
                 return respond(start,"200 OK",{"metrics":metrics(slug)})
-        m = re.fullmatch(r"/api/projects/([a-z][a-z0-9-]{1,38}[a-z0-9])(/[a-z.]+)?", path)
+        m = re.fullmatch(r"/api/projects/([a-z][a-z0-9-]{1,38}[a-z0-9])(/[a-z.-]+)?", path)
         if not m:
             return respond(start, "404 Not Found", {"error": "not_found"})
         slug, sub = m.group(1), m.group(2) or ""
         row = project_row(slug)
         if not row:
             return respond(start, "404 Not Found", {"error": "no_project"})
+        if ops_enabled and sub == "/export" and method == "GET":
+            return respond(start,"200 OK",backup_core.export_project(conn,slug))
+        if ops_enabled and sub == "/export.zip" and method == "GET":
+            output=io.BytesIO()
+            with zipfile.ZipFile(output,"w",zipfile.ZIP_DEFLATED) as z:
+                z.writestr("project.json",json.dumps(backup_core.export_project(conn,slug),ensure_ascii=False))
+            return respond(start,"200 OK",output.getvalue(),[("Content-Type","application/zip"),("Content-Disposition",'attachment; filename="project.zip"')])
+        if ops_enabled and sub == "/graph" and method == "GET":
+            if not row["plan_json"]:return respond(start,"409 Conflict",{"error":"plan_missing"})
+            return respond(start,"200 OK",backup_core.graph(json.loads(row["plan_json"]),{k:v["status"] for k,v in states(slug).items()}))
+        if ops_enabled and sub == "" and method == "DELETE":
+            body=read_body(environ)
+            if body is None or set(body)!={"confirm"} or body["confirm"]!=slug:
+                return respond(start,"409 Conflict",{"error":"slug_confirmation_required"})
+            try: removed=backup_core.delete_project(conn,slug,body["confirm"])
+            except backup_core.BackupError:return respond(start,"409 Conflict",{"error":"delete_failed"})
+            db.audit(conn,"project.delete",{"slug":slug})
+            return respond(start,"200 OK",{"deleted":slug,"removed":removed})
+        if ops_enabled and sub == "/search" and method == "GET":
+            q=urllib.parse.parse_qs(environ.get("QUERY_STRING","")).get("q",[""])[0].strip()
+            if not 2<=len(q)<=100:return respond(start,"400 Bad Request",{"error":"invalid_query"})
+            pattern="%"+q.replace("!","!!").replace("%","!%").replace("_","!_")+"%"
+            results=[]
+            for r in conn.execute("SELECT text FROM ideas WHERE project_slug=? AND text LIKE ? ESCAPE '!' LIMIT 30",(slug,pattern)):results.append({"type":"idea","text":r["text"][:300]})
+            for r in conn.execute("SELECT pkg_id,kind FROM events WHERE project_slug=? AND (kind LIKE ? ESCAPE '!' OR pkg_id LIKE ? ESCAPE '!') LIMIT 30",(slug,pattern,pattern)):results.append({"type":"event","id":r["pkg_id"],"kind":r["kind"]})
+            if reports_enabled:
+                for r in conn.execute("SELECT pkg_id,body FROM task_reports WHERE project_slug=? AND body LIKE ? ESCAPE '!' LIMIT 30",(slug,pattern)):results.append({"type":"report","id":r["pkg_id"],"text":r["body"][:300]})
+            if row["plan_json"]:
+                for task in json.loads(row["plan_json"]).get("packages",[]):
+                    if q.casefold() in (task.get("id","")+" "+task.get("title","")).casefold():results.append({"type":"task","id":task["id"],"title":task.get("title","")})
+            return respond(start,"200 OK",{"results":results[:50]})
+        if ops_enabled and sub == "/sync-status" and method == "GET":
+            status=conn.execute("SELECT * FROM project_sync WHERE project_slug=?",(slug,)).fetchone()
+            return respond(start,"200 OK",{"mode":row["sync_mode"],"poll_minutes":row["poll_minutes"],"last_poll":status["last_poll"] if status else None,"last_webhook":status["last_webhook"] if status else None,"error":status["error"] if status else "","webhook_seen":bool(status and status["last_webhook"])})
+        if ops_enabled and sub == "/sync-settings":
+            if method=="GET":return respond(start,"200 OK",{"sync_mode":row["sync_mode"],"poll_minutes":row["poll_minutes"]})
+            if method=="POST":
+                body=read_body(environ)
+                if body is None or set(body)!={"sync_mode","poll_minutes"} or body["sync_mode"] not in ("webhook","polling","both") or type(body["poll_minutes"]) is not int or body["poll_minutes"] not in (5,10,30):
+                    return respond(start,"400 Bad Request",{"error":"invalid_sync_settings"})
+                conn.execute("UPDATE projects SET sync_mode=?,poll_minutes=? WHERE slug=?",(body["sync_mode"],body["poll_minutes"],slug))
+                return respond(start,"200 OK",{"ok":True})
         if sub == "" and method == "GET":
             plan = json.loads(row["plan_json"]) if row["plan_json"] else None
             return respond(start, "200 OK", {"project": summary(row), "lanes": plan["lanes"] if plan else {}, "packages": _prompted(plan) if plan else [],
