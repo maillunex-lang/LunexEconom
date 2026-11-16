@@ -237,3 +237,23 @@ class LibraryTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class ProjectTypesTests(unittest.TestCase):
+    def test_every_template_passes_plan_validation(self):
+        from tools import work_plan as wp
+        from portal.review import project_types as pt
+        for item in pt.catalog():
+            plan = pt.starter_plan(item["id"], "Демо", "o/demo")
+            self.assertEqual(wp.validate(plan), [], item["id"])
+            self.assertEqual({p["lane"] for p in plan["packages"]}, {"A", "B"})
+
+    def test_unknown_type_and_isolated_copies(self):
+        from portal.review import project_types as pt
+        with self.assertRaises(KeyError):
+            pt.starter_plan("nope", "x")
+        a = pt.starter_plan("bot", "A")
+        a["lanes"]["A"]["zone"].append("x/**")
+        self.assertNotIn("x/**", pt.starter_plan("bot", "B")["lanes"]["A"]["zone"])
+        self.assertIn("Демо", pt.gdd_outline("Демо"))
+        self.assertTrue(pt.as_json("game", "G").endswith("\n"))
