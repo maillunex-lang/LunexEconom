@@ -148,10 +148,7 @@ def prompt(plan, pid):
         "Зона файлов (только это): " + ", ".join(zone) + ". Общие файлы не менять: " + ", ".join(plan["rules"]["shared_files_director_only"]) + ".",
         "Никаких секретов и личных данных. Новые серверные флаги по умолчанию ВЫКЛЮЧЕНЫ.",
     ]
-    if p["lane"] == "B":
-        rules.append("Перед сдачей прогони ВСЕ клиентские проверки из .github/workflows/client-check.yml локально на Godot 4.7.2 (скачать Godot_v4.7.2-stable_linux.x86_64 из godot-builds, как в CI) с таймаутом (timeout 90), так как при провале assert Godot не завершается сам; приложи результаты. Строки интерфейса только в docs/content/ui_strings.ru.md, затем python tools/build_strings.py.")
-    else:
-        rules.append("Перед сдачей прогони полный набор server/tests на изолированной PostgreSQL 16 (LUNEX_TEST_DATABASE_URL) и приложи результат; существующие тесты должны проходить без изменений (если новое обязательное поле ломает старые тесты, обнови их).")
+    rules.extend(lane.get("checks", []))
     out = [f"Задание {pid}: {p['title']} (линия {p['lane']}: {lane['name']}, шаг {p['step']}).", "", p["goal"], ""]
     out += ["Правила:"] + [f"{i}. {r}" for i, r in enumerate(rules, 1)]
     out += ["", "Критерии готовности:"] + [f"- {c}" for c in p["done_when"]]
