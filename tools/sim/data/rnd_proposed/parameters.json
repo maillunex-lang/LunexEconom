@@ -1,0 +1,15 @@
+{
+  "version": "draft-1",
+  "rp_per_1000_rub": 8,
+  "rp_staff_bonus_bp_per_level": 1500,
+  "tech_nodes": [
+    {"id": "food_q2", "branch": "food", "cost_rp": 400, "requires": [], "quality_cap_bp": 2500},
+    {"id": "food_q3", "branch": "food", "cost_rp": 1200, "requires": ["food_q2"], "quality_cap_bp": 5000},
+    {"id": "food_q4", "branch": "food", "cost_rp": 3200, "requires": ["food_q3"], "quality_cap_bp": 7500},
+    {"id": "food_q5", "branch": "food", "cost_rp": 8000, "requires": ["food_q4"], "quality_cap_bp": 10000}
+  ],
+  "base_quality_cap_bp": 0,
+  "quality_scale": {"base_quality": 50, "quality_per_cap_bp": 5, "premium_bp_per_quality_point": 60},
+  "obsolescence": {"generation_months": 24, "demand_decay_bp_per_month": 150, "floor_bp": 6000},
+  "license": {"royalty_bp": 300, "min_fee_rub": 20000}
+}

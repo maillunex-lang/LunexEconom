@@ -1,0 +1,94 @@
+{
+ "variants": [
+  {
+   "id": "no_rnd",
+   "profit": 4104000,
+   "tech_done": [],
+   "unlock_month": {},
+   "final_quality": 50,
+   "final_price": 38,
+   "rd_spent": 0,
+   "license_fee": 0
+  },
+  {
+   "id": "rnd_small",
+   "profit": 4840000,
+   "tech_done": [
+    "food_q2",
+    "food_q3",
+    "food_q4"
+   ],
+   "unlock_month": {
+    "food_q2": 3,
+    "food_q3": 9,
+    "food_q4": 27
+   },
+   "final_quality": 87,
+   "final_price": 46,
+   "rd_spent": 720000,
+   "license_fee": 0
+  },
+  {
+   "id": "rnd_large",
+   "profit": 4416000,
+   "tech_done": [
+    "food_q2",
+    "food_q3",
+    "food_q4",
+    "food_q5"
+   ],
+   "unlock_month": {
+    "food_q2": 1,
+    "food_q3": 3,
+    "food_q4": 8,
+    "food_q5": 21
+   },
+   "final_quality": 100,
+   "final_price": 49,
+   "rd_spent": 2160000,
+   "license_fee": 0
+  },
+  {
+   "id": "licensed",
+   "profit": 5264000,
+   "tech_done": [
+    "food_q2",
+    "food_q3"
+   ],
+   "unlock_month": {
+    "food_q2": 3,
+    "food_q3": 3
+   },
+   "final_quality": 75,
+   "final_price": 43,
+   "rd_spent": 0,
+   "license_fee": 200000
+  }
+ ],
+ "obsolescence": [
+  [
+   12,
+   10000
+  ],
+  [
+   24,
+   10000
+  ],
+  [
+   30,
+   9100
+  ],
+  [
+   36,
+   8200
+  ],
+  [
+   48,
+   6400
+  ],
+  [
+   60,
+   6000
+  ]
+ ]
+}

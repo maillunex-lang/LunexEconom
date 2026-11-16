@@ -1,0 +1,10 @@
+{
+  "months": 36,
+  "business": {"units_month": 8000, "base_price": 38, "unit_cost": 20, "fixed_month": 30000},
+  "variants": [
+    {"id": "no_rnd", "budget_month": 0, "staff_level": 1},
+    {"id": "rnd_small", "budget_month": 20000, "staff_level": 2},
+    {"id": "rnd_large", "budget_month": 60000, "staff_level": 3},
+    {"id": "licensed", "budget_month": 0, "staff_level": 1, "license_nodes": ["food_q2", "food_q3"], "license_month": 3}
+  ]
+}
