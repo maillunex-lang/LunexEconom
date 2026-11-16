@@ -32,9 +32,13 @@ def main():
                                 url=route.request.url
                                 if url.endswith('/api/metrics'):
                                     route.fulfill(status=200,content_type='application/json',body=json.dumps({'attention':[{'project_name':'Тестовая доска','project_slug':'fixture-board','task_id':'B2','reason':'Ждёт приёмки'}],'metrics':{'accepted_week':3,'avg_issue_to_submit':'2 дня','avg_issue_to_accept':'3 дня','return_rate':'20 %','waiting_owner':1,'red_ci':0,'weekly':[{'week':'1','count':1},{'week':'2','count':3}]}}));return
+                                if url.endswith('/api/projects/fixture-board/status') and route.request.method=='POST' and route.request.post_data_json.get('status')=='accepted':
+                                    calls.append(('status',route.request.post_data_json));route.fulfill(status=200,content_type='application/json',body='{}');return
+                                if '/tasks/B2/review' in url and route.request.method=='GET':
+                                    route.fulfill(status=200,content_type='application/json',body=json.dumps({'review':{'items':[], 'revision_count':2, 'ci_state':'success'}}));return
                                 if '/tasks/B2/report' in url:
                                     if route.request.method=='POST':calls.append(('report',route.request.post_data_json));route.fulfill(status=200,content_type='application/json',body='{"ok":true}');return
-                                    route.fulfill(status=200,content_type='application/json',body=json.dumps({'report':{'text':'PR: проверено в тестовой среде'},'checks':[],'revisions':2}));return
+                                    route.fulfill(status=200,content_type='application/json',body=json.dumps({'report':{'body':'PR: проверено в тестовой среде'}}));return
                                 if '/tasks/B2/review' in url:
                                     calls.append(('review',route.request.post_data_json));route.fulfill(status=200,content_type='application/json',body='{"ok":true}');return
                                 route.continue_()
@@ -49,7 +53,7 @@ def main():
                             page.locator('.node').first.wait_for(state='attached',timeout=6000);page.screenshot(path=str(args.output/f'b6-board-{width}x{height}-{theme}.png'))
                             page.evaluate("() => [...document.querySelectorAll('.node')].find(e=>e.textContent.includes('B2'))?.click()")
                             page.get_by_role('heading',name='Чек-лист приёмки').wait_for()
-                            page.get_by_text('Доработок: 2').wait_for()
+                            page.get_by_text('Доработок: 2').wait_for(timeout=6000)
                             assert page.locator('.b3-review button').filter(has_text='Принять').first.is_disabled()
                             page.screenshot(path=str(args.output/f'b6-review-{width}x{height}-{theme}.png'))
                             for cb in page.locator('.b3-check input').all():cb.check()
@@ -62,13 +66,13 @@ def main():
                             page.get_by_role('button',name='Сохранить отчёт').click();page.get_by_text('Отчёт сохранён.').wait_for()
                             assert calls and calls[-1][0]=='report'
                             page.get_by_role('button',name='Принять вручную').click();page.wait_for_timeout(150)
-                            assert any(k=='review' and v.get('manual') is True for k,v in calls)
+                            assert any(k=='review' and 'items' in v for k,v in calls)
                             page.evaluate("() => [...document.querySelectorAll('.node')].find(e=>e.textContent.includes('B2'))?.click()")
-                            page.get_by_text('Доработок: 2').wait_for()
+                            page.get_by_text('Доработок: 2').wait_for(timeout=6000)
                             page.locator('.b3-review textarea').last.fill('Доработать тесты')
                             page.get_by_role('button',name='Вернуть исполнителю').last.click()
                             page.wait_for_timeout(150)
-                            assert any(k=='review' and v.get('action')=='return' and v.get('notes')=='Доработать тесты' for k,v in calls)
+                            assert any(k=='review' and v.get('return') is True and v.get('remarks')=='Доработать тесты' for k,v in calls)
                             page.get_by_role('button',name='Закрыть').last.click(force=True);page.locator('#tabs').get_by_role('button',name='Ещё').click();page.get_by_role('heading',name='Ещё').wait_for();page.locator('.b6-more').get_by_role('button',name='Настройки').wait_for();page.screenshot(path=str(args.output/f'b6-more-{width}x{height}-{theme}.png'));print('OK',width,height,theme)
                             ctx.close()
                 finally:browser.close()
