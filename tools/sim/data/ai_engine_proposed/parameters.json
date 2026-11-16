@@ -1,0 +1,16 @@
+{
+  "version": "draft-1",
+  "ref_price": 38,
+  "market_demand_units": 12000,
+  "price_elasticity_bp_per_ref_pct": 150,
+  "capacity_cost_per_unit": 12,
+  "fixed_month": 6000,
+  "max_market_share_bp": 4000,
+  "max_below_cost_months": 1,
+  "ai_profit_cap_bp_of_human": 12000,
+  "archetypes": {
+    "cautious_saver": {"price_markup_bp": 300, "reinvest_bp": 3000, "debt_threshold_bp": 2000},
+    "aggressive_expander": {"price_markup_bp": -500, "reinvest_bp": 8000, "debt_threshold_bp": 7000},
+    "price_dumper": {"price_markup_bp": -2500, "reinvest_bp": 4000, "debt_threshold_bp": 6000}
+  }
+}

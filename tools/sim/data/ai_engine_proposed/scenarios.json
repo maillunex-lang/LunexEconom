@@ -1,0 +1,9 @@
+{
+  "months": 24,
+  "scenarios": [
+    {"id": "humans_only", "unit_cost": 20, "players": [{"id": "h1", "kind": "human", "capacity": 4000}, {"id": "h2", "kind": "human", "capacity": 4000}]},
+    {"id": "with_balanced_ai", "unit_cost": 20, "players": [{"id": "h1", "kind": "human", "capacity": 4000}, {"id": "h2", "kind": "human", "capacity": 4000}, {"id": "ai1", "kind": "ai", "archetype": "cautious_saver", "capacity": 4000}]},
+    {"id": "with_aggressive_ai", "unit_cost": 20, "players": [{"id": "h1", "kind": "human", "capacity": 4000}, {"id": "h2", "kind": "human", "capacity": 4000}, {"id": "ai1", "kind": "ai", "archetype": "aggressive_expander", "capacity": 4000}]},
+    {"id": "with_dumper_high_cost", "unit_cost": 33, "players": [{"id": "h1", "kind": "human", "capacity": 4000}, {"id": "h2", "kind": "human", "capacity": 4000}, {"id": "ai1", "kind": "ai", "archetype": "price_dumper", "capacity": 4000}]}
+  ]
+}

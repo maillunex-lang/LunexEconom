@@ -1,0 +1,62 @@
+{
+ "scenarios": [
+  {
+   "id": "humans_only",
+   "profits": [
+    1915200,
+    1915200
+   ],
+   "capacity_end": [
+    83800,
+    83800
+   ],
+   "ai_to_human_profit_bp": 0,
+   "ai_share_end_bp": 0
+  },
+  {
+   "id": "with_balanced_ai",
+   "profits": [
+    1598076,
+    1598076,
+    1649410
+   ],
+   "capacity_end": [
+    70575,
+    70575,
+    45218
+   ],
+   "ai_to_human_profit_bp": 10321,
+   "ai_share_end_bp": 3275
+  },
+  {
+   "id": "with_aggressive_ai",
+   "profits": [
+    1617948,
+    1617948,
+    1505712
+   ],
+   "capacity_end": [
+    71403,
+    71403,
+    104374
+   ],
+   "ai_to_human_profit_bp": 9306,
+   "ai_share_end_bp": 3454
+  },
+  {
+   "id": "with_dumper_high_cost",
+   "profits": [
+    390510,
+    390510,
+    -164000
+   ],
+   "capacity_end": [
+    20269,
+    20269,
+    4000
+   ],
+   "ai_to_human_profit_bp": -4200,
+   "ai_share_end_bp": 3089
+  }
+ ]
+}
