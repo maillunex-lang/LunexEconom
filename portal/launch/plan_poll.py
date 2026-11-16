@@ -30,7 +30,7 @@ def fetch_text(url, token):
     return raw.decode("utf-8")
 
 
-def poll_plans(conn, token_file=None, *, now=None, fetch=None, max_projects=10):
+def poll_plans(conn, token_file=None, *, now=None, fetch=None, max_projects=10, memory_enabled=True, memory_root=None, github_fetch=None):
     """Retrieve only due projects, using *each project's* plan_path.
 
     GitHub failures are non-destructive and retried on the next configured interval.
@@ -75,6 +75,15 @@ def poll_plans(conn, token_file=None, *, now=None, fetch=None, max_projects=10):
                 if isinstance(pkg,dict) and pkg.get('status')=='done' and isinstance(pkg.get('id'),str):
                     conn.execute('INSERT OR IGNORE INTO task_state(project_slug,pkg_id) VALUES(?,?)',(row['slug'],pkg['id']))
                     conn.execute("UPDATE task_state SET status='accepted',accepted_at=COALESCE(accepted_at,?),merged=1 WHERE project_slug=? AND pkg_id=? AND status='planned'",(now,row['slug'],pkg['id']))
+            if memory_enabled:
+                from portal.launch import a9
+                a9.ensure_tables(conn)
+                project=conn.execute("SELECT * FROM projects WHERE slug=?",(row['slug'],)).fetchone()
+                # Memory ingestion is best-effort: never invalidate a successful plan poll.
+                try:
+                    a9.sync_decisions(conn,row['slug'],a9.root_for(project,memory_root),project['repo'],project['branch'],token_file,github_fetch or a9.github_get)
+                except (OSError,ValueError,TypeError,KeyError):
+                    pass
             state = "ok"
         except (OSError, ValueError, TypeError, KeyError, UnicodeError):
             pass
