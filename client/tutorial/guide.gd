@@ -26,7 +26,7 @@ func _ready() -> void:
     hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
     hint.custom_minimum_size.x = 260
     body.add_child(hint)
-    var controls := HBoxContainer.new()
+    var controls := HFlowContainer.new()
     body.add_child(controls)
     toggle = Button.new()
     toggle.text = Words.get_text("tutorial.collapse")
@@ -74,6 +74,7 @@ func redraw() -> void:
     skip.disabled = not progress.can_skip()
     toggle.text = Words.get_text("tutorial.expand" if progress.collapsed else "tutorial.collapse")
     custom_minimum_size.y = 56 if progress.collapsed else 150
+    clip_contents = true
 
 func _toggle() -> void:
     if progress == null:

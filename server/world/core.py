@@ -4,6 +4,7 @@ from __future__ import annotations
 import hashlib
 import heapq
 import json
+import re
 from collections import deque
 from pathlib import Path
 
@@ -26,7 +27,7 @@ GROWTH_DEFAULTS = dict(threshold_bp=6000, min_buildings=10, population_step=1000
 
 
 def migrations():
-    return [Path(__file__).resolve().parents[1] / 'migrations' / '202611151700_world_core.sql']
+    return [Path(__file__).resolve().parents[1] / 'migrations' / name for name in ('202611151700_world_core.sql', '202611161730_world_event_chunks.sql')]
 
 
 def bootstrap(conn):
@@ -148,19 +149,89 @@ def _chunks_for_cells(cells):
     return {(x//CHUNK_CELLS,y//CHUNK_CELLS) for x,y in cells}
 
 
-def _touch(conn,chunks,kind,city_id,payload):
-    """Version each affected chunk and append one global ordered event atomically."""
-    chunks=sorted(set(chunks))
+# balance: draft. Public event objects carry no private account attributes.
+EVENT_TYPES = {'occupation':'building_added', 'enterprise_construction':'building_added',
+               'enterprise_stage':'building_stage_changed', 'demolition':'building_removed',
+               'road_build':'road_added', 'land_buy':'parcel_owner_changed',
+               'city_growth':'city_growth'}
+MAX_EVENT_BYTES = 2048
+
+
+def _object_for_event(conn, kind, payload):
+    """Build the public render object from the enterprise row when it exists."""
+    ref = payload.get('building_ref')
+    eid = payload.get('enterprise_id')
+    if ref is None and isinstance(eid, int):
+        ref = 'enterprise:' + str(eid)
+    if not isinstance(ref, str) or not re.fullmatch(r'enterprise:[1-9][0-9]{0,17}', ref):
+        return None
+    number = int(ref.split(':', 1)[1])
+    row = conn.execute(
+        'SELECT building_id,owner_id,stage,x,y,width,height FROM enterprises WHERE id=%s',
+        (number,)).fetchone()
+    if not row:
+        return None
+    catalog, owner, stage, x, y, width, height = row
+    if kind in ('occupation','enterprise_construction'):
+        stage = 0
+    elif kind == 'enterprise_stage':
+        stage = payload.get('stage_index', stage)
+    return dict(object_id=ref[:64], catalog_id=catalog, owner_ref=str(owner),
+                stage_index=int(stage), x=x, y=y, w=width, h=height,
+                color_rgb=14658145 if stage == 4 else 10855585)
+
+
+def _touch(conn, chunks, kind, city_id, payload):
+    """Atomically version chunks, insert one event and index all its chunks."""
+    chunks = sorted(set(chunks))
+    payload = dict(payload)
+    # The legacy column names and event kinds are kept unchanged.
+    if kind in ('occupation', 'enterprise_construction', 'enterprise_stage', 'demolition'):
+        obj = _object_for_event(conn,kind,payload)
+        if obj:
+            payload['object'] = obj
+            payload['cells'] = [[x,y] for y in range(obj['y'],obj['y']+obj['h'])
+                                      for x in range(obj['x'],obj['x']+obj['w'])]
+        elif kind in ('occupation','demolition') and 'building_ref' in payload:
+            # Preserve exact affected cells even for non-enterprise occupancy.
+            ref = payload['building_ref']
+            if kind == 'occupation':
+                rows = conn.execute('SELECT x,y FROM world_occupied_cells WHERE building_ref=%s', (ref,)).fetchall()
+                payload['cells'] = [list(cell) for cell in rows]
+    if kind == 'road_build':
+        payload['cells'] = [list(cell) for cell in payload.get('cells', [])]
+    if kind == 'land_buy':
+        payload.setdefault('owner_kind','player')
+        payload.setdefault('owner_ref',str(payload.get('buyer_id','')))
+    # Keep legacy source payload intact; only additive public render fields.
+    if kind == 'demolition' and 'cells' not in payload:
+        payload['cells'] = []
+    # Event size includes the HTTP envelope, not just stored JSONB.
+    envelope = dict(event_id=2**63-1,version=2**63-1,
+                    type=EVENT_TYPES.get(kind,'unknown'),kind=kind,city_id=city_id,
+                    cx=chunks[0][0] if len(chunks)==1 else None,
+                    cy=chunks[0][1] if len(chunks)==1 else None,
+                    chunks=[{'cx':x,'cy':y} for x,y in chunks[:16]],
+                    object=payload.get('object'),payload=payload)
+    if len(chunks)>16:
+        envelope['chunks_truncated'] = True
+    if len(json.dumps(envelope,ensure_ascii=False,separators=(',',':')).encode())>MAX_EVENT_BYTES:
+        raise ValueError('world_event_too_large')
     for cx,cy in chunks:
-        conn.execute('''INSERT INTO world_chunk_versions(cx,cy,version) VALUES(%s,%s,1)
+        conn.execute("""INSERT INTO world_chunk_versions(cx,cy,version) VALUES(%s,%s,1)
                         ON CONFLICT(cx,cy) DO UPDATE
-                        SET version=world_chunk_versions.version+1''',(cx,cy))
-    return conn.execute(
-        '''INSERT INTO world_events(kind,city_id,cx,cy,payload)
-           VALUES(%s,%s,%s,%s,%s) RETURNING version''',
+                        SET version=world_chunk_versions.version+1""",(cx,cy))
+    version=conn.execute(
+        """INSERT INTO world_events(kind,city_id,cx,cy,payload)
+           VALUES(%s,%s,%s,%s,%s) RETURNING version""",
         (kind,city_id,chunks[0][0] if len(chunks)==1 else None,
          chunks[0][1] if len(chunks)==1 else None,Jsonb(payload))
     ).fetchone()[0]
+    if chunks:
+        with conn.cursor() as cursor:
+            cursor.executemany('INSERT INTO world_event_chunks(event_id,cx,cy) VALUES(%s,%s,%s)',
+                               [(version,cx,cy) for cx,cy in chunks])
+    return version
 
 
 def ring_cells(c,old_radius,new_radius):
@@ -296,7 +367,8 @@ def clear_occupied(conn,building_ref):
                       (building_ref,)).fetchall()
     if not rows:return None
     return _touch(conn,_chunks_for_cells((x,y) for x,y,_ in rows),'demolition',rows[0][2],
-                  {'building_ref':building_ref,'cell_count':len(rows)})
+                  {'building_ref':building_ref,'cell_count':len(rows),
+                   'cells':[[x,y] for x,y,_ in rows]})
 
 
 def parcel_origin(px,py):

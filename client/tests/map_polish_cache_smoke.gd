@@ -67,7 +67,7 @@ func _run() -> void:
     var before := ready_events
     mock.calls.clear()
     mock.versions["0,0"]=4
-    mock.growth_events.append({"version":10,"kind":"road_build","cx":null,"cy":null,"payload":{"cells":[[0,0]]}})
+    mock.growth_events.append({"version":10,"kind":"land_buy","cx":0,"cy":0,"payload":{}})
     await restored.poll_events()
     for i in range(24):
         await process_frame
@@ -77,7 +77,7 @@ func _run() -> void:
     before=ready_events
     mock.calls.clear()
     var not_modified_before: int=mock.not_modified
-    mock.growth_events.append({"version":11,"kind":"road_build","cx":0,"cy":0,"payload":{"cells":[[0,0]]}})
+    mock.growth_events.append({"version":11,"kind":"land_buy","cx":0,"cy":0,"payload":{}})
     await restored.poll_events()
     for i in range(24):
         await process_frame

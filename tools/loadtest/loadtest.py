@@ -5,6 +5,7 @@ import math
 import time
 from collections import Counter
 from concurrent.futures import ThreadPoolExecutor
+from threading import Event, Thread, Lock
 from ipaddress import ip_address
 from urllib.parse import urlparse
 from urllib.request import Request, urlopen
@@ -101,10 +102,66 @@ def run(args):
     return summary
 
 
+def listen_events(args):
+    """Isolated local-only MAP-RT1 delivery probe. No remote opt-out exists."""
+    if not is_local(args.dry_url):
+        raise SystemExit('REFUSED: event listeners require a loopback test server')
+    if not 1 <= args.listeners <= 500:
+        raise SystemExit('listeners must be 1..500')
+    stop=Event()
+    delivered=[]
+    codes=Counter()
+    results_lock=Lock()
+    base=args.dry_url.rstrip('/')
+    token=args.listener_token or None
+    path='/world/events?chunks=0,0&after='
+    start_at=request(base,'GET',path+'0',token=token)[2].get('tip',0)
+    started_at=time.perf_counter()
+
+    def listener():
+        cursor=start_at
+        while not stop.is_set():
+            code,ms,payload,error=request(base,'GET',path+str(cursor),token=token,timeout=7)
+            with results_lock:
+                codes[str(code)]+=1
+            if code==429:
+                stop.wait(1.0)
+                continue
+            if code==200:
+                cursor=max(cursor,int(payload.get('next_after',cursor)))
+                with results_lock:
+                    for event in payload.get('events',[]):
+                        if event.get('kind') in ('road_build','occupation','demolition'):
+                            delivered.append((time.perf_counter()-started_at)*1000)
+            stop.wait(2.0)
+
+    workers=[Thread(target=listener,daemon=True) for _ in range(args.listeners)]
+    for worker in workers:worker.start()
+    # Builder hook: a local test fixture can inject events with a separate
+    # authenticated account; never fabricate a production mutation.
+    if args.builder_path:
+        code,ms,payload,error=request(base,'POST',args.builder_path,{},token=token)
+        codes['builder:'+str(code)]+=1
+    stop.wait(args.seconds)
+    stop.set()
+    for worker in workers:worker.join(timeout=1)
+    summary={'listeners':args.listeners,'elapsed_seconds':args.seconds,
+             'delivery_ms':{k:percentile(delivered,p) for k,p in [('p50',50),('p95',95),('p99',99)]},
+             'responses':dict(codes),'empty_responses':codes.get('200',0)-len(delivered),
+             'status':'no delivery sample' if not delivered else 'measured'}
+    print(json.dumps(summary,ensure_ascii=False,indent=2))
+    return summary
+
+
 def main():
     ap=argparse.ArgumentParser(description='SEC1 local-only game API load test')
     ap.add_argument('--dry-url',default='http://127.0.0.1:18777')
     ap.add_argument('--players',type=int,default=100)
+    ap.add_argument('--event-listeners',action='store_true')
+    ap.add_argument('--listeners',type=int,default=100)
+    ap.add_argument('--listener-token',default='')
+    ap.add_argument('--builder-path',default='')
+    ap.add_argument('--seconds',type=int,default=10)
     ap.add_argument('--concurrency',type=int,default=10)
     ap.add_argument('--seed',type=int,default=20261116)
     ap.add_argument('--simulate-ips',action='store_true',help='Only local test server with LUNEX_TRUST_PROXY_REAL_IP=1')
@@ -113,6 +170,9 @@ def main():
     args=ap.parse_args()
     if not 1<=args.players<=10000 or not 1<=args.concurrency<=100:
         ap.error('players must be 1..10000 and concurrency 1..100')
-    run(args)
+    if args.event_listeners:
+        listen_events(args)
+    else:
+        run(args)
 
 if __name__=='__main__':main()

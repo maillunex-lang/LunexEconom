@@ -42,7 +42,7 @@ func _ready() -> void:
     if preferences.load("user://update_settings.cfg") == OK:
         wifi_toggle.button_pressed = bool(preferences.get_value("download", "wifi_only", false))
     _sync_manifest_info()
-    hide()
+    # Visibility is owned by the screen router, not by the panel itself.
 
 func _make_layout() -> void:
     var background := ColorRect.new()
