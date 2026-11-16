@@ -1,0 +1,798 @@
+{
+  "industries": [
+    {
+      "id": "clothing_footwear",
+      "name": "Одежда и обувь",
+      "products_new": 23,
+      "buildings_new": 6,
+      "reuse_products": [
+        "flax",
+        "yarn",
+        "fabric",
+        "clothes",
+        "chemicals",
+        "plastic",
+        "feed"
+      ],
+      "complexity": "medium",
+      "income_layers": [
+        "poor",
+        "lower_middle",
+        "middle",
+        "affluent"
+      ],
+      "ages": [
+        "youth",
+        "families",
+        "pensioners"
+      ],
+      "score": 66,
+      "sources": [
+        "https://roschart.ru/en/dataset/cpr-gr-tov-rf-2026-struktura-potrebitelskih-rashodov-naselen",
+        "https://70.rosstat.gov.ru/storage/mediabank/%D1%86%D0%B5%D0%BD%D1%8B%D0%A2%D0%9E_%D1%8F%D0%BD%D0%B2%D0%B0%D1%80%D1%8C2026.pdf",
+        "https://www.business.ru/article/7256-minimalnaya-nacenka-pri-prodazhe-statbru",
+        "https://www.business.ru/article/7685-dopustimaya-nacenka-na-tovar-pravovye-ramki-raschet-i-nalogovye-riski-dlya-biznesa-statbru",
+        "https://www.business.ru/article/7659-normalnaya-nacenka-na-tovar-orientiry-dlya-biznesa-statbru",
+        "https://uzex.uz/ru/News/uzex-weekly-digest-october-19-25-2026",
+        "https://agroru.com/doska/sherst/ct-66863-p1.htm",
+        "https://agroru.com/doska/kozha-shkury/",
+        "https://exportv.ru/zavod/poliefirnoe-volokno-ot-proizvoditelya.html"
+      ]
+    },
+    {
+      "id": "electronics_appliances",
+      "name": "Бытовая техника и электроника по классам",
+      "products_new": 14,
+      "buildings_new": 3,
+      "reuse_products": [
+        "electronics",
+        "appliances",
+        "plastic",
+        "glass",
+        "steel",
+        "chemicals"
+      ],
+      "complexity": "medium",
+      "income_layers": [
+        "lower_middle",
+        "middle",
+        "affluent"
+      ],
+      "ages": [
+        "youth",
+        "families"
+      ],
+      "score": 49,
+      "sources": [
+        "https://roschart.ru/en/dataset/cpr-gr-tov-rf-2026-struktura-potrebitelskih-rashodov-naselen",
+        "https://70.rosstat.gov.ru/storage/mediabank/%D1%86%D0%B5%D0%BD%D1%8B%D0%A2%D0%9E_%D1%8F%D0%BD%D0%B2%D0%B0%D1%80%D1%8C2026.pdf",
+        "https://www.business.ru/article/7256-minimalnaya-nacenka-pri-prodazhe-statbru"
+      ]
+    },
+    {
+      "id": "foodservice",
+      "name": "Общепит",
+      "products_new": 10,
+      "buildings_new": 4,
+      "reuse_products": [
+        "bread",
+        "meat",
+        "vegetables",
+        "milk",
+        "fish",
+        "eggs",
+        "flour",
+        "sugar",
+        "butter",
+        "cheese",
+        "kvass"
+      ],
+      "complexity": "high",
+      "income_layers": [
+        "lower_middle",
+        "middle",
+        "affluent"
+      ],
+      "ages": [
+        "youth",
+        "families"
+      ],
+      "score": 54,
+      "sources": [
+        "https://roschart.ru/en/dataset/cpr-gr-tov-rf-2026-struktura-potrebitelskih-rashodov-naselen",
+        "https://70.rosstat.gov.ru/storage/mediabank/%D1%86%D0%B5%D0%BD%D1%8B%D0%A2%D0%9E_%D1%8F%D0%BD%D0%B2%D0%B0%D1%80%D1%8C2026.pdf"
+      ]
+    },
+    {
+      "id": "consumer_services",
+      "name": "Бытовые и личные услуги",
+      "products_new": 10,
+      "buildings_new": 5,
+      "reuse_products": [
+        "chemicals",
+        "appliances",
+        "car",
+        "fuel"
+      ],
+      "complexity": "high",
+      "income_layers": [
+        "poor",
+        "lower_middle",
+        "middle",
+        "affluent"
+      ],
+      "ages": [
+        "youth",
+        "families",
+        "pensioners"
+      ],
+      "score": 39,
+      "sources": [
+        "https://roschart.ru/en/dataset/cpr-gr-tov-rf-2026-struktura-potrebitelskih-rashodov-naselen",
+        "https://70.rosstat.gov.ru/storage/mediabank/%D1%86%D0%B5%D0%BD%D1%8B%D0%A2%D0%9E_%D1%8F%D0%BD%D0%B2%D0%B0%D1%80%D1%8C2026.pdf"
+      ]
+    },
+    {
+      "id": "pharma_medical",
+      "name": "Фармацевтика и медтовары",
+      "products_new": 14,
+      "buildings_new": 3,
+      "reuse_products": [
+        "chemicals",
+        "plastic",
+        "glass",
+        "sugar",
+        "electronics"
+      ],
+      "complexity": "high",
+      "income_layers": [
+        "poor",
+        "lower_middle",
+        "middle",
+        "affluent"
+      ],
+      "ages": [
+        "families",
+        "pensioners"
+      ],
+      "score": 43,
+      "sources": [
+        "https://roschart.ru/en/dataset/cpr-gr-tov-rf-2026-struktura-potrebitelskih-rashodov-naselen",
+        "https://70.rosstat.gov.ru/storage/mediabank/%D1%86%D0%B5%D0%BD%D1%8B%D0%A2%D0%9E_%D1%8F%D0%BD%D0%B2%D0%B0%D1%80%D1%8C2026.pdf",
+        "https://journals.eco-vector.com/2307-9266/article/view/111312",
+        "https://www.business.ru/article/7659-normalnaya-nacenka-na-tovar-orientiry-dlya-biznesa-statbru"
+      ]
+    },
+    {
+      "id": "chemicals_fertilizers",
+      "name": "Базовая химия, удобрения и краски",
+      "products_new": 8,
+      "buildings_new": 3,
+      "reuse_products": [
+        "oil",
+        "gas",
+        "chemicals",
+        "coal",
+        "sand",
+        "grain"
+      ],
+      "complexity": "medium",
+      "income_layers": [
+        "middle",
+        "affluent"
+      ],
+      "ages": [
+        "families"
+      ],
+      "score": 39,
+      "sources": [
+        "https://roschart.ru/en/dataset/cpr-gr-tov-rf-2026-struktura-potrebitelskih-rashodov-naselen",
+        "https://rtholding.ru/catalog/natr-edkiy/kausticheskaya-soda-sukhoy-natr/",
+        "https://70.rosstat.gov.ru/storage/mediabank/%D1%86%D0%B5%D0%BD%D1%8B%D0%A2%D0%9E_%D1%8F%D0%BD%D0%B2%D0%B0%D1%80%D1%8C2026.pdf"
+      ]
+    },
+    {
+      "id": "cosmetics_household",
+      "name": "Косметика и бытовая химия",
+      "products_new": 14,
+      "buildings_new": 3,
+      "reuse_products": [
+        "chemicals",
+        "plastic",
+        "glass",
+        "oil",
+        "honey"
+      ],
+      "complexity": "low",
+      "income_layers": [
+        "poor",
+        "lower_middle",
+        "middle",
+        "affluent"
+      ],
+      "ages": [
+        "youth",
+        "families",
+        "pensioners"
+      ],
+      "score": 66,
+      "sources": [
+        "https://roschart.ru/en/dataset/cpr-gr-tov-rf-2026-struktura-potrebitelskih-rashodov-naselen",
+        "https://70.rosstat.gov.ru/storage/mediabank/%D1%86%D0%B5%D0%BD%D1%8B%D0%A2%D0%9E_%D1%8F%D0%BD%D0%B2%D0%B0%D1%80%D1%8C2026.pdf",
+        "https://moycalc.ru/biznes/marzhinalnost"
+      ]
+    },
+    {
+      "id": "dairy_fats",
+      "name": "Молочная и масложировая переработка",
+      "products_new": 18,
+      "buildings_new": 3,
+      "reuse_products": [
+        "milk",
+        "sugar",
+        "butter",
+        "cheese",
+        "kefir",
+        "feed",
+        "plastic",
+        "eggs"
+      ],
+      "complexity": "low",
+      "income_layers": [
+        "poor",
+        "lower_middle",
+        "middle",
+        "affluent"
+      ],
+      "ages": [
+        "youth",
+        "families",
+        "pensioners"
+      ],
+      "score": 69,
+      "sources": [
+        "https://roschart.ru/en/dataset/cpr-gr-tov-rf-2026-struktura-potrebitelskih-rashodov-naselen",
+        "https://02.rosstat.gov.ru/storage/mediabank/ceny-01-2026.pdf",
+        "https://70.rosstat.gov.ru/storage/mediabank/%D1%86%D0%B5%D0%BD%D1%8B%D0%A2%D0%9E_%D1%8F%D0%BD%D0%B2%D0%B0%D1%80%D1%8C2026.pdf",
+        "https://www.business.ru/article/7685-dopustimaya-nacenka-na-tovar-pravovye-ramki-raschet-i-nalogovye-riski-dlya-biznesa-statbru",
+        "https://www.business.ru/article/7659-normalnaya-nacenka-na-tovar-orientiry-dlya-biznesa-statbru",
+        "https://agro-radar.ru/app/ceny/podsolnechnik/2026-11-12"
+      ]
+    },
+    {
+      "id": "meat_processing",
+      "name": "Мясопереработка",
+      "products_new": 18,
+      "buildings_new": 4,
+      "reuse_products": [
+        "meat",
+        "feed",
+        "flour",
+        "eggs",
+        "steel",
+        "plastic",
+        "chemicals",
+        "glass"
+      ],
+      "complexity": "low",
+      "income_layers": [
+        "poor",
+        "lower_middle",
+        "middle",
+        "affluent"
+      ],
+      "ages": [
+        "youth",
+        "families",
+        "pensioners"
+      ],
+      "score": 69,
+      "sources": [
+        "https://roschart.ru/en/dataset/cpr-gr-tov-rf-2026-struktura-potrebitelskih-rashodov-naselen",
+        "https://02.rosstat.gov.ru/storage/mediabank/ceny-01-2026.pdf",
+        "https://70.rosstat.gov.ru/storage/mediabank/%D1%86%D0%B5%D0%BD%D1%8B%D0%A2%D0%9E_%D1%8F%D0%BD%D0%B2%D0%B0%D1%80%D1%8C2026.pdf",
+        "https://www.business.ru/article/7685-dopustimaya-nacenka-na-tovar-pravovye-ramki-raschet-i-nalogovye-riski-dlya-biznesa-statbru"
+      ]
+    },
+    {
+      "id": "confectionery",
+      "name": "Кондитерские изделия",
+      "products_new": 12,
+      "buildings_new": 2,
+      "reuse_products": [
+        "sugar",
+        "flour",
+        "butter",
+        "eggs",
+        "milk",
+        "honey",
+        "sugar_beet"
+      ],
+      "complexity": "low",
+      "income_layers": [
+        "poor",
+        "lower_middle",
+        "middle",
+        "affluent"
+      ],
+      "ages": [
+        "youth",
+        "families",
+        "pensioners"
+      ],
+      "score": 66,
+      "sources": [
+        "https://roschart.ru/en/dataset/cpr-gr-tov-rf-2026-struktura-potrebitelskih-rashodov-naselen",
+        "https://70.rosstat.gov.ru/storage/mediabank/%D1%86%D0%B5%D0%BD%D1%8B%D0%A2%D0%9E_%D1%8F%D0%BD%D0%B2%D0%B0%D1%80%D1%8C2026.pdf",
+        "https://www.business.ru/article/7256-minimalnaya-nacenka-pri-prodazhe-statbru"
+      ]
+    },
+    {
+      "id": "grocery_staples",
+      "name": "Бакалея",
+      "products_new": 12,
+      "buildings_new": 2,
+      "reuse_products": [
+        "grain",
+        "flour",
+        "vegetables",
+        "sugar",
+        "eggs",
+        "glass",
+        "steel"
+      ],
+      "complexity": "low",
+      "income_layers": [
+        "poor",
+        "lower_middle",
+        "middle"
+      ],
+      "ages": [
+        "families",
+        "pensioners"
+      ],
+      "score": 55,
+      "sources": [
+        "https://roschart.ru/en/dataset/cpr-gr-tov-rf-2026-struktura-potrebitelskih-rashodov-naselen",
+        "https://70.rosstat.gov.ru/storage/mediabank/%D1%86%D0%B5%D0%BD%D1%8B%D0%A2%D0%9E_%D1%8F%D0%BD%D0%B2%D0%B0%D1%80%D1%8C2026.pdf",
+        "https://02.rosstat.gov.ru/storage/mediabank/ceny-01-2026.pdf",
+        "https://www.business.ru/article/7256-minimalnaya-nacenka-pri-prodazhe-statbru"
+      ]
+    },
+    {
+      "id": "soft_drinks",
+      "name": "Безалкогольные напитки",
+      "products_new": 8,
+      "buildings_new": 2,
+      "reuse_products": [
+        "sugar",
+        "kvass",
+        "plastic",
+        "glass",
+        "gas",
+        "chemicals"
+      ],
+      "complexity": "low",
+      "income_layers": [
+        "poor",
+        "lower_middle",
+        "middle",
+        "affluent"
+      ],
+      "ages": [
+        "youth",
+        "families"
+      ],
+      "score": 52,
+      "sources": [
+        "https://roschart.ru/en/dataset/cpr-gr-tov-rf-2026-struktura-potrebitelskih-rashodov-naselen",
+        "https://70.rosstat.gov.ru/storage/mediabank/%D1%86%D0%B5%D0%BD%D1%8B%D0%A2%D0%9E_%D1%8F%D0%BD%D0%B2%D0%B0%D1%80%D1%8C2026.pdf",
+        "https://www.business.ru/article/7256-minimalnaya-nacenka-pri-prodazhe-statbru",
+        "https://www.garant.ru/products/ipo/prime/doc/409395257/"
+      ]
+    },
+    {
+      "id": "alcohol",
+      "name": "Алкоголь (18+)",
+      "products_new": 8,
+      "buildings_new": 3,
+      "reuse_products": [
+        "grain",
+        "malt",
+        "honey",
+        "mead",
+        "sugar",
+        "glass"
+      ],
+      "complexity": "high",
+      "income_layers": [
+        "lower_middle",
+        "middle",
+        "affluent"
+      ],
+      "ages": [
+        "youth",
+        "families",
+        "pensioners"
+      ],
+      "score": 47,
+      "sources": [
+        "https://roschart.ru/en/dataset/cpr-gr-tov-rf-2026-struktura-potrebitelskih-rashodov-naselen",
+        "https://70.rosstat.gov.ru/storage/mediabank/%D1%86%D0%B5%D0%BD%D1%8B%D0%A2%D0%9E_%D1%8F%D0%BD%D0%B2%D0%B0%D1%80%D1%8C2026.pdf",
+        "https://cdn.nestjs.wipolex.wji.prd.web1.wipo.int/wipolex/en/legislation/details/19278",
+        "https://www.atol.ru/blog/chto-nelzya-prodavat-nesovershennoletnim-v-2025-godu/"
+      ]
+    },
+    {
+      "id": "tobacco",
+      "name": "Табак (18+)",
+      "products_new": 8,
+      "buildings_new": 2,
+      "reuse_products": [
+        "wood",
+        "chemicals",
+        "plastic"
+      ],
+      "complexity": "high",
+      "income_layers": [
+        "poor",
+        "lower_middle",
+        "middle"
+      ],
+      "ages": [
+        "families",
+        "pensioners"
+      ],
+      "score": 28,
+      "sources": [
+        "https://roschart.ru/en/dataset/cpr-gr-tov-rf-2026-struktura-potrebitelskih-rashodov-naselen",
+        "https://70.rosstat.gov.ru/storage/mediabank/%D1%86%D0%B5%D0%BD%D1%8B%D0%A2%D0%9E_%D1%8F%D0%BD%D0%B2%D0%B0%D1%80%D1%8C2026.pdf",
+        "https://www.consultant.ru/document/cons_doc_LAW_142515/382b0b5ae542851db6ce836ce3bac60c5d44ef4b/",
+        "https://www.atol.ru/blog/chto-nelzya-prodavat-nesovershennoletnim-v-2025-godu/"
+      ]
+    },
+    {
+      "id": "transport_vehicles",
+      "name": "Транспорт и машины",
+      "products_new": 12,
+      "buildings_new": 4,
+      "reuse_products": [
+        "car",
+        "steel",
+        "plastic",
+        "glass",
+        "electronics",
+        "fuel",
+        "chemicals",
+        "fabric"
+      ],
+      "complexity": "high",
+      "income_layers": [
+        "lower_middle",
+        "middle",
+        "affluent"
+      ],
+      "ages": [
+        "youth",
+        "families"
+      ],
+      "score": 49,
+      "sources": [
+        "https://roschart.ru/en/dataset/cpr-gr-tov-rf-2026-struktura-potrebitelskih-rashodov-naselen",
+        "https://70.rosstat.gov.ru/storage/mediabank/%D1%86%D0%B5%D0%BD%D1%8B%D0%A2%D0%9E_%D1%8F%D0%BD%D0%B2%D0%B0%D1%80%D1%8C2026.pdf",
+        "https://www.business.ru/article/7256-minimalnaya-nacenka-pri-prodazhe-statbru"
+      ]
+    },
+    {
+      "id": "construction_materials",
+      "name": "Строительные материалы",
+      "products_new": 12,
+      "buildings_new": 4,
+      "reuse_products": [
+        "sand",
+        "stone",
+        "cement",
+        "steel",
+        "glass",
+        "boards",
+        "wood",
+        "plastic",
+        "chemicals"
+      ],
+      "complexity": "medium",
+      "income_layers": [
+        "lower_middle",
+        "middle",
+        "affluent"
+      ],
+      "ages": [
+        "families"
+      ],
+      "score": 46,
+      "sources": [
+        "https://roschart.ru/en/dataset/cpr-gr-tov-rf-2026-struktura-potrebitelskih-rashodov-naselen",
+        "https://70.rosstat.gov.ru/storage/mediabank/%D1%86%D0%B5%D0%BD%D1%8B%D0%A2%D0%9E_%D1%8F%D0%BD%D0%B2%D0%B0%D1%80%D1%8C2026.pdf"
+      ]
+    },
+    {
+      "id": "industrial_equipment",
+      "name": "Оборудование заводов и инструмент",
+      "products_new": 9,
+      "buildings_new": 2,
+      "reuse_products": [
+        "steel",
+        "electronics",
+        "plastic"
+      ],
+      "complexity": "high",
+      "income_layers": [
+        "middle",
+        "affluent"
+      ],
+      "ages": [
+        "families"
+      ],
+      "score": 33,
+      "sources": [
+        "https://roschart.ru/en/dataset/cpr-gr-tov-rf-2026-struktura-potrebitelskih-rashodov-naselen",
+        "https://70.rosstat.gov.ru/storage/mediabank/%D1%86%D0%B5%D0%BD%D1%8B%D0%A2%D0%9E_%D1%8F%D0%BD%D0%B2%D0%B0%D1%80%D1%8C2026.pdf"
+      ]
+    },
+    {
+      "id": "furniture_home",
+      "name": "Мебель и товары для дома",
+      "products_new": 12,
+      "buildings_new": 2,
+      "reuse_products": [
+        "furniture",
+        "boards",
+        "wood",
+        "fabric",
+        "steel",
+        "glass",
+        "plastic"
+      ],
+      "complexity": "low",
+      "income_layers": [
+        "lower_middle",
+        "middle",
+        "affluent"
+      ],
+      "ages": [
+        "families",
+        "pensioners"
+      ],
+      "score": 58,
+      "sources": [
+        "https://roschart.ru/en/dataset/cpr-gr-tov-rf-2026-struktura-potrebitelskih-rashodov-naselen",
+        "https://70.rosstat.gov.ru/storage/mediabank/%D1%86%D0%B5%D0%BD%D1%8B%D0%A2%D0%9E_%D1%8F%D0%BD%D0%B2%D0%B0%D1%80%D1%8C2026.pdf",
+        "https://moycalc.ru/biznes/marzhinalnost"
+      ]
+    },
+    {
+      "id": "toys_sports",
+      "name": "Игрушки и спорт",
+      "products_new": 8,
+      "buildings_new": 2,
+      "reuse_products": [
+        "plastic",
+        "fabric",
+        "steel",
+        "chemicals"
+      ],
+      "complexity": "low",
+      "income_layers": [
+        "lower_middle",
+        "middle",
+        "affluent"
+      ],
+      "ages": [
+        "families"
+      ],
+      "score": 45,
+      "sources": [
+        "https://roschart.ru/en/dataset/cpr-gr-tov-rf-2026-struktura-potrebitelskih-rashodov-naselen",
+        "https://70.rosstat.gov.ru/storage/mediabank/%D1%86%D0%B5%D0%BD%D1%8B%D0%A2%D0%9E_%D1%8F%D0%BD%D0%B2%D0%B0%D1%80%D1%8C2026.pdf"
+      ]
+    },
+    {
+      "id": "books_stationery",
+      "name": "Книги и канцтовары",
+      "products_new": 9,
+      "buildings_new": 2,
+      "reuse_products": [
+        "wood",
+        "plastic",
+        "chemicals",
+        "fabric"
+      ],
+      "complexity": "medium",
+      "income_layers": [
+        "poor",
+        "lower_middle",
+        "middle",
+        "affluent"
+      ],
+      "ages": [
+        "youth",
+        "families"
+      ],
+      "score": 43,
+      "sources": [
+        "https://roschart.ru/en/dataset/cpr-gr-tov-rf-2026-struktura-potrebitelskih-rashodov-naselen",
+        "https://70.rosstat.gov.ru/storage/mediabank/%D1%86%D0%B5%D0%BD%D1%8B%D0%A2%D0%9E_%D1%8F%D0%BD%D0%B2%D0%B0%D1%80%D1%8C2026.pdf"
+      ]
+    },
+    {
+      "id": "paper_packaging",
+      "name": "Бумага и упаковка",
+      "products_new": 10,
+      "buildings_new": 3,
+      "reuse_products": [
+        "wood",
+        "chemicals",
+        "plastic",
+        "gas"
+      ],
+      "complexity": "medium",
+      "income_layers": [
+        "poor",
+        "lower_middle",
+        "middle",
+        "affluent"
+      ],
+      "ages": [
+        "youth",
+        "families",
+        "pensioners"
+      ],
+      "score": 46,
+      "sources": [
+        "https://roschart.ru/en/dataset/cpr-gr-tov-rf-2026-struktura-potrebitelskih-rashodov-naselen",
+        "https://cbonds.ru/indexes/206451/",
+        "https://paperprof.ru/pub/daydzhest-novostey-tsbp-5-18-oktyabrya-2026/",
+        "https://70.rosstat.gov.ru/storage/mediabank/%D1%86%D0%B5%D0%BD%D1%8B%D0%A2%D0%9E_%D1%8F%D0%BD%D0%B2%D0%B0%D1%80%D1%8C2026.pdf"
+      ]
+    },
+    {
+      "id": "energy_utilities",
+      "name": "Энергетика и ЖКУ",
+      "products_new": 8,
+      "buildings_new": 3,
+      "reuse_products": [
+        "gas",
+        "coal",
+        "oil",
+        "fuel",
+        "wood"
+      ],
+      "complexity": "high",
+      "income_layers": [
+        "poor",
+        "lower_middle",
+        "middle",
+        "affluent"
+      ],
+      "ages": [
+        "youth",
+        "families",
+        "pensioners"
+      ],
+      "score": 52,
+      "sources": [
+        "https://roschart.ru/en/dataset/cpr-gr-tov-rf-2026-struktura-potrebitelskih-rashodov-naselen",
+        "https://70.rosstat.gov.ru/storage/mediabank/%D1%86%D0%B5%D0%BD%D1%8B%D0%A2%D0%9E_%D1%8F%D0%BD%D0%B2%D0%B0%D1%80%D1%8C2026.pdf"
+      ]
+    },
+    {
+      "id": "media_advertising",
+      "name": "Медиа, связь и реклама",
+      "products_new": 10,
+      "buildings_new": 4,
+      "reuse_products": [
+        "electronics",
+        "steel",
+        "plastic"
+      ],
+      "complexity": "high",
+      "income_layers": [
+        "lower_middle",
+        "middle",
+        "affluent"
+      ],
+      "ages": [
+        "youth",
+        "families"
+      ],
+      "score": 43,
+      "sources": [
+        "https://roschart.ru/en/dataset/cpr-gr-tov-rf-2026-struktura-potrebitelskih-rashodov-naselen",
+        "https://70.rosstat.gov.ru/storage/mediabank/%D1%86%D0%B5%D0%BD%D1%8B%D0%A2%D0%9E_%D1%8F%D0%BD%D0%B2%D0%B0%D1%80%D1%8C2026.pdf",
+        "https://region-media.com/reklamnye-poverkhnosti/shhity-3x6-v-Ufa/",
+        "https://ufa.mediaohvat.ru/reklama_price/schity_3_6_ufa"
+      ]
+    },
+    {
+      "id": "pets_garden",
+      "name": "Зоотовары, сад и огород",
+      "products_new": 8,
+      "buildings_new": 2,
+      "reuse_products": [
+        "feed",
+        "grain",
+        "meat",
+        "sand",
+        "steel"
+      ],
+      "complexity": "low",
+      "income_layers": [
+        "lower_middle",
+        "middle",
+        "affluent"
+      ],
+      "ages": [
+        "families",
+        "pensioners"
+      ],
+      "score": 53,
+      "sources": [
+        "https://roschart.ru/en/dataset/cpr-gr-tov-rf-2026-struktura-potrebitelskih-rashodov-naselen",
+        "https://70.rosstat.gov.ru/storage/mediabank/%D1%86%D0%B5%D0%BD%D1%8B%D0%A2%D0%9E_%D1%8F%D0%BD%D0%B2%D0%B0%D1%80%D1%8C2026.pdf"
+      ]
+    },
+    {
+      "id": "tourism_hotels",
+      "name": "Гостиницы и туризм",
+      "products_new": 8,
+      "buildings_new": 3,
+      "reuse_products": [
+        "fabric",
+        "bread",
+        "meat",
+        "milk"
+      ],
+      "complexity": "high",
+      "income_layers": [
+        "middle",
+        "affluent"
+      ],
+      "ages": [
+        "youth",
+        "families",
+        "pensioners"
+      ],
+      "score": 42,
+      "sources": [
+        "https://roschart.ru/en/dataset/cpr-gr-tov-rf-2026-struktura-potrebitelskih-rashodov-naselen",
+        "https://70.rosstat.gov.ru/storage/mediabank/%D1%86%D0%B5%D0%BD%D1%8B%D0%A2%D0%9E_%D1%8F%D0%BD%D0%B2%D0%B0%D1%80%D1%8C2026.pdf"
+      ]
+    }
+  ],
+  "recommended_order": [
+    "meat_processing",
+    "dairy_fats",
+    "clothing_footwear",
+    "cosmetics_household",
+    "confectionery",
+    "furniture_home",
+    "grocery_staples",
+    "foodservice",
+    "pets_garden",
+    "energy_utilities",
+    "soft_drinks",
+    "transport_vehicles",
+    "electronics_appliances",
+    "alcohol",
+    "construction_materials",
+    "paper_packaging",
+    "toys_sports",
+    "media_advertising",
+    "pharma_medical",
+    "books_stationery",
+    "tourism_hotels",
+    "consumer_services",
+    "chemicals_fertilizers",
+    "industrial_equipment",
+    "tobacco"
+  ]
+}
