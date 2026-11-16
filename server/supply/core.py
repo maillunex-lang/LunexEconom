@@ -375,6 +375,69 @@ def _arrivals(conn, day):
             (shipment_id,))
 
 
+def split_shares(needed, shares):
+    """ENGINE-FIX1: integer quotas of `needed` for ordered supplier shares.
+
+    `shares` are permille values in link order (priority, slot). The total
+    quota is floor(needed * sum(shares) / 1000), so a full 1000 set gets
+    exactly `needed`; a set below 1000 leaves the rest to the city market as
+    before. Each link first gets floor(needed * share / 1000); the few units
+    lost to rounding (always fewer than the number of links) go one each to
+    the largest fractional remainders, ties by link order. Deterministic and
+    integer only: sum(result) == total, every quota within 1 of exact.
+    """
+    integer(needed)
+    shares = [integer(share, 0, 1000) for share in shares]
+    total = needed * min(1000, sum(shares)) // 1000
+    base = [needed * share // 1000 for share in shares]
+    rest = [needed * share % 1000 for share in shares]
+    order = sorted(range(len(shares)), key=lambda i: (-rest[i], i))
+    for i in order[:total - sum(base)]:
+        base[i] += 1
+    return base
+
+
+def _link_purchases(conn, day, row, product, needed, links, price, flags):
+    """Buy the link quota from direct suppliers, redistributing shortfalls.
+
+    Pass 1 asks each eligible enterprise link for its own quota. Whatever a
+    supplier could not deliver (stock, quality, price cap, policy, wallet,
+    capacity) is
+    offered in pass 2 to the remaining eligible links in priority order, never
+    beyond their stock (_buy caps by on-hand quantity). Pass 2 purchases use
+    distinct sequence numbers (10 + link index) so ledger and shipment
+    request_ids stay unique and idempotent. Market and port links keep their
+    quota for the market phase.
+    """
+    quotas = split_shares(needed, [link[2] for link in links])
+    direct = [index for index, link in enumerate(links)
+              if link[0] == 'enterprise']
+    # A direct link above its max_price cannot deliver; its quota is a
+    # shortfall the other direct links may cover.
+    eligible = [index for index in direct if price <= links[index][3]]
+    target = sum(quotas[index] for index in direct)
+    linked = 0
+
+    def attempt(index, quantity, sequence):
+        _, supplier, _, _, quality = links[index]
+        try:
+            return _buy(conn, day, row, product, quantity, 'enterprise',
+                        supplier, price, quality, flags, sequence)
+        except ValueError as exc:
+            if str(exc) != 'insufficient balance':
+                raise
+            return 0
+
+    for index in eligible:
+        if quotas[index]:
+            linked += attempt(index, quotas[index], index + 1)
+    for index in eligible:
+        if linked >= target:
+            break
+        linked += attempt(index, target - linked, 10 + index + 1)
+    return linked
+
+
 def links_day(conn, day, flags):
     integer(day)
     if conn.execute(
@@ -392,31 +455,15 @@ def links_day(conn, day, flags):
                 (enterprise_id,product_id,day_index,requested,unfilled)
                 VALUES(%s,%s,%s,%s,%s)""",
                 (eid, product, day, needed, needed))
-            remaining, linked = needed, 0
             links = conn.execute(
                 """SELECT source_type,source_enterprise_id,share,max_price,
                 min_quality FROM supply_links WHERE enterprise_id=%s
                 AND product_id=%s ORDER BY priority,slot""",
                 (eid, product)
             ).fetchall()
-            for index, (kind, supplier, share, max_price, quality) in enumerate(links, 1):
-                if not remaining:
-                    break
-                if kind != 'enterprise' or prices[product] > max_price:
-                    continue
-                allotted = min(remaining, needed * share // 1000)
-                if not allotted:
-                    continue
-                try:
-                    received = _buy(conn, day, row, product, allotted, kind,
-                                    supplier, prices[product], quality,
-                                    flags, index)
-                except ValueError as exc:
-                    if str(exc) != 'insufficient balance':
-                        raise
-                    received = 0
-                linked += received
-                remaining -= received
+            linked = _link_purchases(conn, day, row, product, needed, links,
+                                     prices[product], flags)
+            remaining = needed - linked
             conn.execute(
                 """UPDATE supply_daily_needs SET linked=%s,unfilled=%s
                 WHERE enterprise_id=%s AND product_id=%s AND day_index=%s""",

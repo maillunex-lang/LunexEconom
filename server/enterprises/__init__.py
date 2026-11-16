@@ -13,6 +13,9 @@ def register(registry):
     registry.flag('enterprise_wear_month_draft', 1, 0, 100)
     registry.flag('enterprise_admin_stock_draft', False)
     registry.flag('build_materials_required', 0, 0, 1)
+    # ENGINE-FIX1 (draft): off = full catalog upkeep regardless of staffing.
+    registry.flag('upkeep_scales_with_staffing', False)
+    registry.flag('enterprise_upkeep_fixed_bp_draft', 10000, 0, 10000)
     registry.route('POST','/enterprises',api.create)
     registry.route('GET','/enterprises',api.list_own)
     registry.route('GET','/enterprises/plan',api.plan)
@@ -31,6 +34,9 @@ def register(registry):
         from server.platform.settings import read_settings
         flags=read_settings(conn,registry.flags,registry.flag_constraints)
         if flags['enterprise_enabled']:
-            core.close_month(conn,month,flags['enterprise_salary_worker_draft'],flags['enterprise_wear_month_draft'])
+            core.close_month(conn,month,flags['enterprise_salary_worker_draft'],flags['enterprise_wear_month_draft'],
+                             flags['upkeep_scales_with_staffing'] is True,
+                             flags['enterprise_upkeep_fixed_bp_draft'],
+                             flags['enterprise_staffing_bp_draft'])
     registry.tick('daily','enterprise_production',daily,order=40)
     registry.tick('monthly','enterprise_finances',monthly,order=40)
