@@ -1,0 +1,88 @@
+{
+  "balance": "draft",
+  "recommended_variant": "A",
+  "modes": ["manual", "assistant", "automatic"],
+  "roles": ["coo", "cto", "cmo", "cfo"],
+  "rules": [
+    {
+      "id": "buy_min_stock",
+      "roles": ["coo"]
+    },
+    {
+      "id": "shelf_vs_competitor",
+      "roles": ["cmo"]
+    },
+    {
+      "id": "restock_shelf",
+      "roles": ["cmo"]
+    },
+    {
+      "id": "hire_to_staffing",
+      "roles": ["coo"]
+    },
+    {
+      "id": "work_schedule",
+      "roles": ["coo", "cto"]
+    },
+    {
+      "id": "repair_under_cap",
+      "roles": ["cto"]
+    },
+    {
+      "id": "alerts",
+      "roles": ["coo", "cto", "cmo", "cfo"]
+    }
+  ],
+  "flags": {
+    "accel_enabled": 0,
+    "allow_below_cost_default": 0,
+    "stop_on_overdue": 1,
+    "auto_renew_default": 0,
+    "automation_may_take_loans": 0,
+    "automation_may_fire": 0,
+    "automation_may_issue_shares": 0,
+    "automation_may_bid_land": 0,
+    "automation_may_acquire": 0,
+    "automation_may_sell_below_cost_without_consent": 0
+  },
+  "limits": {
+    "free_auto_slots": 2,
+    "safety_enterprise_cap": 100000,
+    "report_history_days_free": 3,
+    "notification_slots_free": 5,
+    "rule_presets_free": 1,
+    "executive_coverage_enterprises": 4,
+    "executive_salary_base_game_rub": 2000,
+    "executive_skill_min": 1,
+    "executive_skill_max": 9,
+    "spend_cap_game_day_default": 50000,
+    "spend_cap_game_day_min": 1000,
+    "spend_cap_game_day_max": 5000000,
+    "min_stock_units_default": 10,
+    "target_stock_units_default": 40,
+    "shelf_delta_bp_max": 2000,
+    "price_basis_bp": 10000,
+    "staffing_permille_default": 1000,
+    "staffing_permille_max": 1000,
+    "permille_basis": 1000,
+    "bp_per_percent": 100,
+    "schedule_hour_count_max": 24,
+    "report_lines_max": 40,
+    "actions_per_enterprise_per_tick": 8,
+    "grace_real_hours": 24,
+    "trial_real_days_once": 7,
+    "early_window_real_days": 90,
+    "early_grant_real_days": 30,
+    "subscription_real_days": 30,
+    "accel_per_real_day": 1,
+    "accel_stage_days_cut": 1,
+    "accel_min_days_left": 1,
+    "accel_price_game_rub": 25000,
+    "day_boundary_hour_ufa": 9,
+    "tz_offset_minutes": 300,
+    "support_min_rub": 50,
+    "support_max_rub": 15000,
+    "support_step_rub": 50,
+    "badge_min_rub": 249
+  }
+}
