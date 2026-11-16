@@ -2,6 +2,7 @@ extends Control
 signal authenticate(mode: String)
 const Strings = preload("res://i18n/strings.gd")
 const Forest = preload("res://theme/forest_glass.gd")
+const UI = preload("res://ui/components.gd")
 var card: PanelContainer
 var scroll: ScrollContainer
 var form: VBoxContainer
@@ -14,22 +15,51 @@ var mode := "login"
 var tab_login: Button
 var tab_register: Button
 var action: Button
+var backdrop: ColorRect
+var brand: VBoxContainer
+var brand_title: Label
+var content_row: HBoxContainer
+var form_column: VBoxContainer
+var visibility_button: Button
 
 func _ready() -> void:
     set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-    var center := CenterContainer.new()
-    center.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-    add_child(center)
+    backdrop = ColorRect.new()
+    backdrop.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+    backdrop.color = Forest.COLORS.background
+    backdrop.mouse_filter = Control.MOUSE_FILTER_IGNORE
+    add_child(backdrop)
+    content_row = HBoxContainer.new()
+    content_row.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+    content_row.add_theme_constant_override("separation",32)
+    add_child(content_row)
+    brand = VBoxContainer.new()
+    brand.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+    brand.alignment = BoxContainer.ALIGNMENT_CENTER
+    content_row.add_child(brand)
+    brand_title = Label.new()
+    brand_title.text = Strings.get_text("main.title")
+    brand_title.add_theme_font_size_override("font_size",28)
+    brand_title.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+    brand_title.add_theme_color_override("font_color",Forest.COLORS.accent)
+    brand.add_child(brand_title)
+    var tagline := UI.wrap("ui.auth.tagline")
+    brand.add_child(tagline)
+    form_column = VBoxContainer.new()
+    form_column.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+    content_row.add_child(form_column)
     scroll = ScrollContainer.new()
     scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
     scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
     scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
-    center.add_child(scroll)
+    form_column.add_child(scroll)
     var align := CenterContainer.new()
     align.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+    align.size_flags_vertical = Control.SIZE_EXPAND_FILL
     scroll.add_child(align)
-    card = PanelContainer.new()
+    card = UI.card()
     align.add_child(card)
+    card.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
     form = VBoxContainer.new()
     card.add_child(form)
     title = Label.new()
@@ -51,6 +81,12 @@ func _ready() -> void:
     email = _field("auth.login.email")
     email.virtual_keyboard_type = LineEdit.KEYBOARD_TYPE_EMAIL_ADDRESS
     password = _field("auth.login.password",true)
+    visibility_button = UI.button("ui.auth.password.show","secondary")
+    form.add_child(visibility_button)
+    visibility_button.pressed.connect(func():
+        password.secret = not password.secret
+        visibility_button.text = Strings.get_text("ui.auth.password.show" if password.secret else "ui.auth.password.hide")
+    )
     action = _button("auth.login.button")
     form.add_child(action)
     action.pressed.connect(func(): authenticate.emit(mode))
@@ -92,18 +128,20 @@ func _field(key: String, hidden: bool = false) -> LineEdit:
     return field
 
 func _button(key: String) -> Button:
-    var button := Button.new()
-    button.text = Strings.get_text(key)
-    button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-    return button
+    return UI.button(key)
 
 func resize_ui(view_size: Vector2, keyboard_height: float = 0.0) -> void:
     # Keyboard height arrives in physical px; caller converts before passing.
+    var wide := view_size.x >= 1600.0
+    brand.visible = wide
+    content_row.add_theme_constant_override("separation",32 if wide else 0)
     scroll.custom_minimum_size = Vector2.ZERO
     var available_height := maxf(175.0,view_size.y - keyboard_height - 32.0)
     scroll.custom_minimum_size.y = minf(available_height,620.0)
-    scroll.custom_minimum_size.x = minf(maxf(280.0,view_size.x * 0.62),830.0)
-    card.custom_minimum_size.x = minf(maxf(280.0,view_size.x * 0.58),800.0)
+    scroll.size_flags_vertical = Control.SIZE_SHRINK_CENTER if keyboard_height > 0.0 else Control.SIZE_EXPAND_FILL
+    scroll.size.y = minf(scroll.size.y,available_height) if keyboard_height > 0.0 else scroll.size.y
+    scroll.custom_minimum_size.x = 0.0
+    card.custom_minimum_size.x = minf(720.0,maxf(280.0,view_size.x * (0.35 if wide else 0.7)))
     title.add_theme_font_size_override("font_size",roundi(24.0 * Forest.scale_for(view_size)))
     var margin := roundi(Forest.METRICS.padding * Forest.scale_for(view_size))
     var panel := Forest.rounded(Forest.COLORS.panel,roundi(Forest.METRICS.radius))
@@ -113,6 +151,8 @@ func resize_ui(view_size: Vector2, keyboard_height: float = 0.0) -> void:
     panel.content_margin_bottom = margin
     card.add_theme_stylebox_override("panel",panel)
     Forest.apply_touch(form,view_size)
+    if visibility_button != null:
+        visibility_button.custom_minimum_size.y = Forest.touch_size(view_size)
     if keyboard_height > 0.0:
         call_deferred("_scroll_focused")
 

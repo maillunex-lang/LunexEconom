@@ -18,12 +18,12 @@ func fetch(kind: String) -> void:
     var raw := await _get_bytes(PublicBase.url(kind + ".json"), 65536)
     if raw.is_empty():
         busy = false
-        failed.emit(kind, "Нет подписанного манифеста")
+        failed.emit(kind, "Не удалось проверить обновление. Проверьте интернет и повторите")
         return
     var signature := await _get_bytes(PublicBase.url(kind + ".json.sig"), 4096)
     busy = false
     if not Verifier.verify(raw, signature.get_string_from_utf8(), public_key_path):
-        failed.emit(kind, "Подпись манифеста не прошла проверку")
+        failed.emit(kind, "Обновление не прошло проверку безопасности и не будет установлено")
         return
     var data = JSON.parse_string(raw.get_string_from_utf8())
     if (kind == "update" and not Verifier.valid_update(data)) or (kind == "content" and not Verifier.valid_content(data)):

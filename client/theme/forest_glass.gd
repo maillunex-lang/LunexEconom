@@ -10,15 +10,20 @@ const COLORS := {
     "border": Color("386c57"),
     "danger": Color("f0a29b"),
     "focus": Color("b7efa5"),
+    "success": Color("7bc67e"),
+    "warning": Color("e9b85c"),
 }
 const METRICS := {
     "touch_dp": 48.0,
     "body_sp": 16.0,
     "headline_sp": 24.0,
-    "title_sp": 21.0,
+    "title_sp": 20.0,
     "gap": 12.0,
-    "padding": 18.0,
+    "padding": 16.0,
     "radius": 18.0,
+    "caption_sp": 12.0,
+    "spacing_sm": 8.0,
+    "spacing_lg": 24.0,
 }
 
 static func scale_for(window_size: Vector2, density: float = 1.0) -> float:
@@ -60,9 +65,12 @@ static func create_theme(window_size: Vector2 = Vector2(1280,720)) -> Theme:
     for name in {"normal":COLORS.panel_secondary, "hover":COLORS.border, "pressed":COLORS.accent, "disabled":COLORS.panel}.keys():
         theme.set_stylebox(name,"Button",rounded({"normal":COLORS.panel_secondary, "hover":COLORS.border, "pressed":COLORS.accent, "disabled":COLORS.panel}[name],roundi(12*scale)))
     theme.set_stylebox("focus","Button",rounded(Color.TRANSPARENT,roundi(12*scale),COLORS.focus,2))
+    theme.set_constant("h_separation", "GridContainer", roundi(12*scale))
     for name in ["normal", "focus", "read_only"]:
         theme.set_stylebox(name,"LineEdit",rounded(COLORS.background,roundi(10*scale),COLORS.focus if name == "focus" else COLORS.border))
     theme.set_stylebox("normal","TextEdit",rounded(COLORS.background))
+    theme.set_color("font_color", "CheckBox", COLORS.text)
+    theme.set_color("font_disabled_color", "LineEdit", COLORS.muted)
     theme.set_stylebox("panel","ItemList",rounded(COLORS.panel_secondary))
     theme.set_stylebox("panel","PopupPanel",rounded(COLORS.panel))
     theme.set_stylebox("panel","AcceptDialog",rounded(COLORS.panel))
@@ -72,6 +80,7 @@ static func create_theme(window_size: Vector2 = Vector2(1280,720)) -> Theme:
 
 static func apply_touch(node: Node, window_size: Vector2) -> void:
     if node is Button or node is LineEdit or node is CheckBox or node is OptionButton:
-        node.custom_minimum_size.y = touch_size(window_size)
+        node.custom_minimum_size.y = maxf(node.custom_minimum_size.y, touch_size(window_size))
+        node.custom_minimum_size.x = maxf(node.custom_minimum_size.x, touch_size(window_size))
     for child in node.get_children():
         apply_touch(child,window_size)

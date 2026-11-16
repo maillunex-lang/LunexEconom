@@ -64,3 +64,7 @@ update.screen.status.idle | Ожидание
 update.screen.status.busy | Обновление идёт
 update.screen.status.done | Готово
 update.screen.help | Если проблема повторяется, напиши в поддержку.
+
+update.screen.version.pair | У вас {current}, доступна {new}
+update.screen.error.manifest_missing | Не удалось проверить обновление. Проверьте интернет и повторите.
+update.screen.error.manifest_security | Обновление не прошло проверку безопасности и не будет установлено.
