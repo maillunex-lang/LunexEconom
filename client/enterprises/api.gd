@@ -51,3 +51,7 @@ func sell(id: int) -> Dictionary:
         pending.erase(key)
         _persist()
     return response
+
+func plan(building_id: String, px: int, py: int, x: int, y: int) -> Dictionary:
+    var path := "/enterprises/plan?building_id=%s&px=%d&py=%d&x=%d&y=%d" % [building_id.uri_encode(), px, py, x, y]
+    return await transport.fetch(path)
