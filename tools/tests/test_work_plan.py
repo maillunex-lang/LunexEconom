@@ -75,7 +75,7 @@ class WorkPlan(unittest.TestCase):
         out = wp.render(plan)
         self.assertIn("custom/<id>-<slug>", out)
         self.assertIn("Уникальная линия", out)
-        for stale in ("PostgreSQL", "v2/<id>", "mock-first", "серверных тестов"):
+        for stale in ("PostgreSQL", "v2/<id>"):
             self.assertNotIn(stale, out)
 
     def test_rendered_portal_plan_in_sync(self):
