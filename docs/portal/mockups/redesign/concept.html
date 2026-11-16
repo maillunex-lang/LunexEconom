@@ -1,0 +1,75 @@
+<!doctype html><meta charset=utf-8><meta name=viewport content="width=device-width,initial-scale=1"><title>CreatePortal — концепт v2</title>
+<style>
+:root{--bg:#0b1512;--s1:#122019;--s2:#182a21;--line:#ffffff14;--tx:#eaf3ee;--mu:#8fa79a;--ac:#5fe0a0;--ac2:#2fb877;--warn:#f2c14e;--bad:#ff7a7a;--blue:#6cb8ff;--r:22px}
+*{box-sizing:border-box;margin:0}body{background:#05090a;font:15px/1.4 Inter,system-ui,sans-serif;color:var(--tx);display:flex;gap:28px;padding:28px;justify-content:center;flex-wrap:wrap}
+.ph{width:390px;height:844px;background:radial-gradient(120% 60% at 0% 0%,#14352a 0,transparent 60%),radial-gradient(90% 50% at 100% 100%,#10324a 0,transparent 55%),var(--bg);border-radius:38px;position:relative;overflow:hidden;border:1px solid #ffffff22}
+.cap{position:absolute;top:-0px}
+.top{padding:22px 20px 8px;display:flex;align-items:center;justify-content:space-between}
+.top b{font-size:13px;color:var(--mu);font-weight:600;letter-spacing:.04em;text-transform:uppercase}
+.av{width:34px;height:34px;border-radius:50%;background:linear-gradient(135deg,var(--ac),var(--ac2));color:#06261a;display:grid;place-items:center;font-weight:700}
+h1{font-size:30px;line-height:1.1;padding:6px 20px 14px;letter-spacing:-.02em}
+.sub{padding:0 20px;color:var(--mu);margin-top:-8px;margin-bottom:14px}
+.card{margin:0 16px 12px;background:linear-gradient(160deg,#ffffff12,#ffffff06);border:1px solid var(--line);border-radius:var(--r);padding:16px;backdrop-filter:blur(14px)}
+.hero{background:linear-gradient(150deg,#1f6b4b,#14402f);border-color:#5fe0a055;box-shadow:0 14px 40px #2fb87722}
+.lbl{font-size:12px;color:#bfe9d3;text-transform:uppercase;letter-spacing:.06em;font-weight:600}
+.hero h2{font-size:21px;margin:6px 0 4px;line-height:1.2}.hero p{color:#cfe9dc;font-size:14px}
+.btn{display:block;width:100%;margin-top:14px;padding:15px;border-radius:16px;background:var(--ac);color:#05261a;font-weight:700;text-align:center;font-size:16px}
+.btn.ghost{background:#ffffff12;color:var(--tx);border:1px solid var(--line);margin-top:8px}
+.row{display:flex;align-items:center;gap:12px}.row+.row{margin-top:12px;padding-top:12px;border-top:1px solid var(--line)}
+.dot{width:10px;height:10px;border-radius:50%;flex:none}.g{background:var(--ac)}.y{background:var(--warn)}.b{background:var(--blue)}.r{background:var(--bad)}
+.row .t{flex:1}.row .t small{display:block;color:var(--mu);font-size:13px}
+.chip{font-size:12px;padding:4px 10px;border-radius:99px;background:#ffffff12;color:var(--mu)}
+.stats{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin:0 16px 12px}.stats div{background:#ffffff0c;border:1px solid var(--line);border-radius:18px;padding:12px}.stats b{font-size:22px;display:block}.stats span{font-size:12px;color:var(--mu)}
+.nav{position:absolute;left:14px;right:14px;bottom:14px;height:66px;border-radius:26px;background:#0d1a14dd;border:1px solid var(--line);backdrop-filter:blur(18px);display:flex;justify-content:space-around;align-items:center}
+.nav i{font-style:normal;text-align:center;font-size:11px;color:var(--mu);width:70px;padding:8px 0;border-radius:18px}.nav i b{display:block;font-size:20px;margin-bottom:2px}.nav i.on{background:#5fe0a01f;color:var(--ac)}
+.act{position:absolute;left:14px;right:14px;bottom:14px;padding:12px;border-radius:26px;background:#0d1a14ee;border:1px solid var(--line);backdrop-filter:blur(18px)}
+.act .btn{margin:0}.act .two{display:flex;gap:8px}.act .two .btn{margin:0}
+.seg{display:flex;margin:0 16px 14px;background:#ffffff0c;border:1px solid var(--line);border-radius:16px;padding:4px}.seg i{flex:1;text-align:center;font-style:normal;padding:9px;border-radius:12px;color:var(--mu);font-size:14px}.seg i.on{background:var(--ac);color:#05261a;font-weight:700}
+.lane{margin:0 16px;position:relative;padding-left:34px}.lane:before{content:"";position:absolute;left:11px;top:6px;bottom:6px;width:2px;background:var(--line)}
+.st{position:relative;padding:10px 0}.st:before{content:"";position:absolute;left:-30px;top:14px;width:14px;height:14px;border-radius:50%;background:var(--s2);border:2px solid #ffffff30}
+.st.done:before{background:var(--ac);border-color:var(--ac)}.st.now:before{border-color:var(--warn);background:var(--warn);box-shadow:0 0 0 6px #f2c14e22}
+.st b{font-size:15px}.st small{display:block;color:var(--mu)}.st.now{background:#ffffff0a;border:1px solid var(--line);border-radius:18px;padding:12px 14px;margin:4px 0}.st.now:before{left:-36px;top:18px}
+.stepper{display:flex;margin:0 16px 14px;gap:6px}.stepper i{flex:1;height:6px;border-radius:9px;background:#ffffff18}.stepper i.on{background:var(--ac)}.stepper i.cur{background:var(--warn)}
+.steplbl{display:flex;justify-content:space-between;margin:-8px 20px 14px;font-size:11px;color:var(--mu)}
+.chk{display:flex;gap:12px;align-items:flex-start;padding:10px 0}.chk+.chk{border-top:1px solid var(--line)}.cb{width:22px;height:22px;border-radius:7px;border:2px solid #ffffff40;flex:none;display:grid;place-items:center;font-size:14px}.cb.on{background:var(--ac);border-color:var(--ac);color:#05261a}
+.n{position:absolute;top:-22px;left:8px;color:#8fa79a;font-size:12px}
+</style>
+<body>
+<div class=ph>
+ <div class=top><b>CreatePortal</b><div class=av>В</div></div>
+ <h1>Сегодня</h1><div class=sub>Один шаг до следующего результата</div>
+ <div class="card hero"><div class=lbl>Сделайте сейчас</div><h2>A3 сдана — проверьте и примите</h2><p>ChatGPT №1 прислал отчёт. CI зелёный, 3 из 5 пунктов проверены.</p><div class=btn>Открыть проверку</div></div>
+ <div class=stats><div><b>2</b><span>у исполнителей</span></div><div><b>1</b><span>ждёт вас</span></div><div><b>9</b><span>принято за неделю</span></div></div>
+ <div class=card><div class=lbl style="color:var(--mu)">Идёт сейчас</div>
+  <div class=row><span class="dot y"></span><div class=t>B3 · Приёмка и метрики<small>ChatGPT №2 · 2 ч</small></div><span class=chip>Линия B</span></div>
+  <div class=row><span class="dot b"></span><div class=t>VPS · Обновление портала<small>Исполнитель VPS</small></div><span class=chip>Ops</span></div>
+  <div class=row><span class="dot g"></span><div class=t>A2 · Вебхук GitHub<small>Принято автоматически</small></div><span class=chip>готово</span></div></div>
+ <div class=nav><i class=on><b>◉</b>Сегодня</i><i><b>≣</b>Доска</i><i><b>▤</b>Проекты</i><i><b>⋯</b>Ещё</i></div></div>
+
+<div class=ph>
+ <div class=top><b>CreatePortal · Портал</b><div class=av>В</div></div>
+ <h1>Доска</h1>
+ <div class=seg><i class=on>Сервер A</i><i>Клиент B</i><i>Все</i></div>
+ <div class=lane>
+  <div class="st done"><b>A1 · Безопасность</b><small>Принято</small></div>
+  <div class="st done"><b>A2 · Вебхук GitHub</b><small>Принято автоматически</small></div>
+  <div class="st now"><b>A3 · Отчёты и приёмка</b><small>Сдана · ждёт вашей проверки</small><div class=btn style="margin-top:10px;padding:11px;font-size:15px">Проверить</div></div>
+  <div class=st><b>A4 · Уведомления</b><small>Следующая</small></div>
+  <div class=st><b>A5 · Копии и экспорт</b><small>Позже</small></div></div>
+ <div class=nav><i><b>◉</b>Сегодня</i><i class=on><b>≣</b>Доска</i><i><b>▤</b>Проекты</i><i><b>⋯</b>Ещё</i></div></div>
+
+<div class=ph>
+ <div class=top><b>← A3 · Отчёты и приёмка</b></div>
+ <h1>Проверка работы</h1>
+ <div class=stepper><i class=on></i><i class=on></i><i class=cur></i><i></i></div>
+ <div class=steplbl><span>Выдана</span><span>Сдана</span><span>Проверка</span><span>Принята</span></div>
+ <div class=card><div class=row><span class="dot g"></span><div class=t>CI зелёный<small>PR #118 · 2 из 2 проверок</small></div></div>
+  <div class=row><span class="dot g"></span><div class=t>Зона файлов соблюдена<small>4 файла</small></div></div></div>
+ <div class=card><div class=lbl style="color:var(--mu)">Чек-лист</div>
+  <div class=chk><span class="cb on">✓</span><div>Тесты проходят</div></div>
+  <div class=chk><span class="cb on">✓</span><div>Зона файлов</div></div>
+  <div class=chk><span class="cb on">✓</span><div>Безопасность: нет слабых мест</div></div>
+  <div class=chk><span class=cb></span><div>Отчёт исполнителя прочитан</div></div>
+  <div class=chk><span class=cb></span><div>Проверено вручную</div></div></div>
+ <div class=act><div class=two><div class="btn ghost" style="flex:1">Вернуть</div><div class=btn style="flex:1.4;opacity:.45">Принять (2 пункта)</div></div></div></div>
+</body>

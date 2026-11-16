@@ -24,7 +24,8 @@ def main():
     app = create_app(path, base=base, secure_cookie=secure, github_token_file=os.environ.get("PORTAL_GITHUB_TOKEN_FILE"),
                      security_v2=os.environ.get("PORTAL_SECURITY_V2", "1") != "0",
                      webhook_enabled=os.environ.get("PORTAL_WEBHOOK_ENABLED") == "1",
-                     webhook_secret_file=os.environ.get("PORTAL_WEBHOOK_SECRET_FILE"))
+                     webhook_secret_file=os.environ.get("PORTAL_WEBHOOK_SECRET_FILE"),
+                     reports_enabled=os.environ.get("PORTAL_REPORTS_ENABLED", "1") != "0")
     with make_server("127.0.0.1", port, app, server_class=Threaded, handler_class=Quiet) as srv:
         srv.serve_forever()
 

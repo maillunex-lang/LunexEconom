@@ -36,10 +36,14 @@ CREATE INDEX IF NOT EXISTS pr_task ON pr_links(project_slug,pkg_id);
 CREATE TABLE IF NOT EXISTS webhook_deliveries(delivery_id TEXT PRIMARY KEY, ts REAL NOT NULL);
 CREATE TABLE IF NOT EXISTS project_settings(project_slug TEXT PRIMARY KEY, auto_accept INTEGER NOT NULL DEFAULT 1, auto_accept_require_checklist INTEGER NOT NULL DEFAULT 0, required_checks TEXT NOT NULL DEFAULT '[]');
 CREATE TABLE IF NOT EXISTS ci_checks(project_slug TEXT NOT NULL, sha TEXT NOT NULL, kind TEXT NOT NULL, run_id TEXT NOT NULL, state TEXT NOT NULL, updated REAL NOT NULL, PRIMARY KEY(project_slug,sha,kind,run_id));"""),
+    (4, """CREATE TABLE IF NOT EXISTS task_reports(project_slug TEXT NOT NULL,pkg_id TEXT NOT NULL,body TEXT NOT NULL DEFAULT '',pr_url TEXT NOT NULL DEFAULT '',updated REAL NOT NULL,PRIMARY KEY(project_slug,pkg_id));
+CREATE TABLE IF NOT EXISTS task_reviews(project_slug TEXT NOT NULL,pkg_id TEXT NOT NULL,items TEXT NOT NULL DEFAULT '[]',ci_state TEXT NOT NULL DEFAULT 'unknown',revision_count INTEGER NOT NULL DEFAULT 0,remarks TEXT NOT NULL DEFAULT '',updated REAL NOT NULL,PRIMARY KEY(project_slug,pkg_id));
+CREATE INDEX IF NOT EXISTS task_reviews_project ON task_reviews(project_slug);"""),
+
 )
 
 
-def migrate(conn, webhook=False):
+def migrate(conn, webhook=False, reports=False):
     conn.execute("BEGIN IMMEDIATE")
     try:
         conn.execute("CREATE TABLE IF NOT EXISTS schema_versions(version INTEGER PRIMARY KEY, applied_at REAL NOT NULL)")
@@ -48,7 +52,9 @@ def migrate(conn, webhook=False):
         if versions - supported or versions != set(range(1, max(versions, default=0) + 1)):
             raise RuntimeError("unsupported or non-sequential schema version")
         for version, script in MIGRATIONS:
-            if version == 3 and not webhook:
+            if version == 3 and not (webhook or reports):
+                continue
+            if version == 4 and not reports:
                 continue
             if version in versions:
                 continue
@@ -82,6 +88,7 @@ AUDIT_FIELDS = {
     "project.create": ("slug",), "plan.import": ("slug", "packages"),
     "task.auto_accept": ("slug", "id", "sha"),
     "plan.sync": ("slug",), "task.status": ("slug", "id", "status"),
+    "task.manual_accept": ("slug", "id", "manual"), "task.revision": ("slug", "id", "count"),
 }
 SAFE_IDENT = re.compile(r"^[a-zA-Z0-9_.:-]{1,80}$")
 
@@ -103,13 +110,13 @@ def recent_audit(conn, limit=200):
     return output
 
 
-def connect(path, webhook=False):
+def connect(path, webhook=False, reports=False):
     conn = sqlite3.connect(path, isolation_level=None, timeout=10, check_same_thread=False)
     try:
         conn.row_factory = sqlite3.Row
         conn.execute("PRAGMA journal_mode=WAL")
         conn.execute("PRAGMA foreign_keys=ON")
-        migrate(conn, webhook=webhook)
+        migrate(conn, webhook=webhook, reports=reports)
         return conn
     except Exception:
         conn.close()
