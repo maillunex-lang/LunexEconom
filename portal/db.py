@@ -56,6 +56,14 @@ CREATE TABLE IF NOT EXISTS project_sync(project_slug TEXT PRIMARY KEY,last_poll 
     (8, """ALTER TABLE projects ADD COLUMN plan_path TEXT NOT NULL DEFAULT 'docs/work_plan.json';
 CREATE TABLE IF NOT EXISTS project_plan_poll(project_slug TEXT PRIMARY KEY,last_checked REAL NOT NULL DEFAULT 0,last_state TEXT NOT NULL DEFAULT '');"""),
 
+    (9, """ALTER TABLE projects ADD COLUMN project_type TEXT NOT NULL DEFAULT 'game';
+CREATE TABLE IF NOT EXISTS project_a7_settings(project_slug TEXT PRIMARY KEY,auto_merge INTEGER NOT NULL DEFAULT 0,auto_merge_delay_minutes INTEGER NOT NULL DEFAULT 10,kill_switch INTEGER NOT NULL DEFAULT 1);
+CREATE TABLE IF NOT EXISTS task_review_runs(id INTEGER PRIMARY KEY,project_slug TEXT NOT NULL,pkg_id TEXT NOT NULL,verdict TEXT NOT NULL,created REAL NOT NULL);
+CREATE INDEX IF NOT EXISTS task_review_runs_task ON task_review_runs(project_slug,pkg_id,id DESC);
+CREATE TABLE IF NOT EXISTS task_returns(id INTEGER PRIMARY KEY,project_slug TEXT NOT NULL,pkg_id TEXT NOT NULL,reasons TEXT NOT NULL,note TEXT NOT NULL DEFAULT '',created REAL NOT NULL);
+CREATE TABLE IF NOT EXISTS project_lessons(project_slug TEXT PRIMARY KEY,content TEXT NOT NULL DEFAULT '[]');
+CREATE TABLE IF NOT EXISTS project_prompt_library(project_slug TEXT PRIMARY KEY,content TEXT NOT NULL DEFAULT '[]');
+CREATE TABLE IF NOT EXISTS task_auto_merge(project_slug TEXT NOT NULL,pkg_id TEXT NOT NULL,pr_number INTEGER NOT NULL,due_at REAL NOT NULL,cancelled INTEGER NOT NULL DEFAULT 0,PRIMARY KEY(project_slug,pkg_id));"""),
 )
 
 
@@ -76,7 +84,7 @@ def migrate(conn, webhook=False, reports=False, notifications=False):
                 continue
             if version == 6 and not webhook:
                 continue
-            if version in (7, 8) and not webhook:
+            if version in (7, 8, 9) and not webhook:
                 continue
             if version in versions:
                 continue
@@ -108,7 +116,7 @@ AUDIT_FIELDS = {
     "login": ("ip",), "login.failure": ("ip",), "login.locked": ("ip",), "login.rate_limited": ("ip",),
     "password.change": (), "sessions.revoke": (),
     "project.delete": ("slug",), "project.create": ("slug",), "plan.import": ("slug", "packages"),
-    "task.auto_accept": ("slug", "id", "sha"),
+    "task.auto_accept": ("slug", "id", "sha"), "task.auto_merge": ("slug", "id"), "task.auto_merge_cancel": ("slug", "id"),
     "plan.sync": ("slug",), "task.status": ("slug", "id", "status"),
     "task.manual_accept": ("slug", "id", "manual"), "task.revision": ("slug", "id", "count"),
 }

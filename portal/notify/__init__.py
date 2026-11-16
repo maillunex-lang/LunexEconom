@@ -11,7 +11,7 @@ import urllib.parse
 import urllib.request
 
 CHANNELS = ("max", "telegram")
-EVENTS = ("task.submitted", "ci.failed", "review.overdue", "plan.sync_failed", "login.new_device", "backup.missing")
+EVENTS = ("task.submitted", "task.accepted", "ci.failed", "review.overdue", "plan.sync_failed", "login.new_device", "backup.missing")
 MAX_URL = "https://platform-api2.max.ru"
 TELEGRAM_URL = "https://api.telegram.org"
 DELAY = 300

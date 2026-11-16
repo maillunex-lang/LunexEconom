@@ -71,6 +71,10 @@ def poll_plans(conn, token_file=None, *, now=None, fetch=None, max_projects=10):
             serialized = json.dumps(plan, ensure_ascii=False)
             if row["plan_json"] is None or json.loads(row["plan_json"]) != plan:
                 conn.execute("UPDATE projects SET plan_json=?,plan_updated=? WHERE slug=?", (serialized, now, row["slug"]))
+            for pkg in plan.get('packages',[]):
+                if isinstance(pkg,dict) and pkg.get('status')=='done' and isinstance(pkg.get('id'),str):
+                    conn.execute('INSERT OR IGNORE INTO task_state(project_slug,pkg_id) VALUES(?,?)',(row['slug'],pkg['id']))
+                    conn.execute("UPDATE task_state SET status='accepted',accepted_at=COALESCE(accepted_at,?),merged=1 WHERE project_slug=? AND pkg_id=? AND status='planned'",(now,row['slug'],pkg['id']))
             state = "ok"
         except (OSError, ValueError, TypeError, KeyError, UnicodeError):
             pass

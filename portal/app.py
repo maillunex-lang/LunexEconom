@@ -19,6 +19,8 @@ from pathlib import Path
 
 from . import auth, bootstrap, db
 from . import launch
+from .launch import a7
+from .review import engine as a7_engine, returns as a7_returns, knowledge as a7_knowledge, project_types as a7_types
 from .hooks import github
 from . import notify
 from .backup import core as backup_core
@@ -35,8 +37,8 @@ def _prompted(plan):
     return [dict(p, prompt=wp.prompt(plan, p["id"])) for p in plan["packages"]]
 
 
-def create_app(db_path, base="", secure_cookie=True, fetch=None, github_token_file=None, security_v2=True, webhook_enabled=False, webhook_secret_file=None, reports_enabled=False, notifications_enabled=False, notify_token_files=None, notify_client=None, notify_clock=None, ops_enabled=False, backup_dir=None, github_api=None, launch_enabled=False, launch_check_repo=None):
-    conn = db.connect(db_path, webhook=webhook_enabled or reports_enabled or ops_enabled or launch_enabled, reports=reports_enabled or ops_enabled or launch_enabled, notifications=notifications_enabled or ops_enabled or launch_enabled)
+def create_app(db_path, base="", secure_cookie=True, fetch=None, github_token_file=None, security_v2=True, webhook_enabled=False, webhook_secret_file=None, reports_enabled=False, notifications_enabled=False, notify_token_files=None, notify_client=None, notify_clock=None, ops_enabled=False, backup_dir=None, github_api=None, launch_enabled=False, launch_check_repo=None, review_a7_enabled=False, github_merge_token_file=None, review_fetch_json=None, review_fetch_diff=None):
+    conn = db.connect(db_path, webhook=webhook_enabled or reports_enabled or ops_enabled or launch_enabled or review_a7_enabled, reports=reports_enabled or ops_enabled or launch_enabled or review_a7_enabled, notifications=notifications_enabled or ops_enabled or launch_enabled or review_a7_enabled)
     notify_token_files = notify_token_files or {}
     notify_client = notify_client or notify.http_json
     clock = notify_clock or time.time
@@ -153,7 +155,8 @@ def create_app(db_path, base="", secure_cookie=True, fetch=None, github_token_fi
         done = sum(1 for v in st.values() if v["status"] == "accepted")
         return {"slug": row["slug"], "name": row["name"], "repo": row["repo"], "description": row["description"],
                 "total": total, "accepted": done, "has_plan": bool(plan),
-                "plan_path": row["plan_path"] if "plan_path" in row.keys() else launch.DEFAULT_PLAN_PATH}
+                "plan_path": row["plan_path"] if "plan_path" in row.keys() else launch.DEFAULT_PLAN_PATH,
+                "project_type": row["project_type"] if "project_type" in row.keys() else "game"}
 
     def fetch_plan(repo, path=None):
         token = ""
@@ -218,11 +221,31 @@ def create_app(db_path, base="", secure_cookie=True, fetch=None, github_token_fi
                                                       token=github_sync.read_token(github_token_file),fetch=github_api)
                 else:
                     result=github.process(conn,kind,payload,delivery,fetch_plan=fetch_plan)
+                if review_a7_enabled and kind in ('pull_request','check_suite','workflow_run'):
+                    repository=payload.get('repository',{}) if isinstance(payload,dict) else {}
+                    if isinstance(repository,dict):
+                        for project in conn.execute('SELECT * FROM projects WHERE repo=?',(repository.get('full_name',''),)):
+                            for task in conn.execute("SELECT pkg_id FROM pr_links WHERE project_slug=? AND state='open'",(project['slug'],)):
+                                try:
+                                    verdict=a7.evaluate(conn,project['slug'],task['pkg_id'],project,github_token_file,review_fetch_json,review_fetch_diff)
+                                    a7.schedule(conn,project['slug'],task['pkg_id'],verdict)
+                                except (ValueError,TypeError,KeyError):pass
                 if ops_enabled:
                     repository=payload.get("repository",{}) if isinstance(payload,dict) else {}
                     if isinstance(repository,dict) and isinstance(repository.get("full_name"),str):
                         for project in conn.execute("SELECT slug FROM projects WHERE repo=?",(repository["full_name"],)):
                             conn.execute("INSERT INTO project_sync(project_slug,last_webhook) VALUES(?,?) ON CONFLICT(project_slug) DO UPDATE SET last_webhook=excluded.last_webhook",(project["slug"],time.time()))
+                if review_a7_enabled and kind=='pull_request' and isinstance(payload,dict) and payload.get('action')=='closed' and (payload.get('pull_request') or {}).get('merged') is True:
+                    repo_name=(payload.get('repository') or {}).get('full_name','')
+                    for proj in conn.execute('SELECT * FROM projects WHERE repo=?',(repo_name,)):
+                        try:
+                            updated=json.loads(fetch_plan(repo_name,proj['plan_path']))
+                            if not isinstance(updated,dict) or wp.validate(updated):raise ValueError('invalid_plan')
+                            conn.execute('UPDATE projects SET plan_json=?,plan_updated=? WHERE slug=?',(json.dumps(updated,ensure_ascii=False),time.time(),proj['slug']))
+                            seed_states(proj['slug'],updated)
+                            record_event(proj['slug'],None,'plan.synced')
+                        except (OSError,ValueError,TypeError,KeyError):
+                            record_event(proj['slug'],None,'plan.sync_failed')
                 notify_events(before)
                 if notifications_enabled and kind in ("check_suite", "workflow_run"):
                     run = payload.get(kind, {})
@@ -446,6 +469,10 @@ def create_app(db_path, base="", secure_cookie=True, fetch=None, github_token_fi
             return respond(start, "200 OK", bootstrap.zip_bytes(files), [("Content-Type", "application/zip"), ("Content-Disposition", 'attachment; filename="project-skeleton.zip"')])
         if path == "/api/protocol" and method == "GET":
             return respond(start, "200 OK", {"markdown": (bootstrap.TPL / "PORTAL_PROTOCOL.md").read_text(encoding="utf-8")})
+        if review_a7_enabled and path == "/api/project-types" and method == "GET":
+            return respond(start,"200 OK",{"types":a7_types.catalog()})
+        if review_a7_enabled and path == "/api/return-templates" and method == "GET":
+            return respond(start,"200 OK",{"templates":a7_returns.catalog()})
         if path == "/api/projects" and method == "GET":
             return respond(start, "200 OK", {"projects": [summary(r) for r in conn.execute("SELECT * FROM projects ORDER BY created")]})
         if path == "/api/projects" and method == "POST":
@@ -455,6 +482,9 @@ def create_app(db_path, base="", secure_cookie=True, fetch=None, github_token_fi
             slug, name = body.get("slug", ""), body.get("name", "")
             repo, desc, wish = body.get("repo", ""), body.get("description", ""), body.get("wish", "")
             plan_path = body.get("plan_path", launch.DEFAULT_PLAN_PATH)
+            project_type = body.get("project_type", "game")
+            if review_a7_enabled and (not isinstance(project_type,str) or project_type not in a7_types.TYPES):
+                return respond(start,"400 Bad Request",{"error":"invalid_project_type"})
             if not all(isinstance(v, str) for v in (slug, name, repo, desc, wish)) or not launch.valid_plan_path(plan_path):
                 return respond(start, "400 Bad Request", {"error": "invalid_project"})
             name, desc = name.strip(), desc.strip()
@@ -481,13 +511,55 @@ def create_app(db_path, base="", secure_cookie=True, fetch=None, github_token_fi
                     repo_visible = None
             if launch_enabled:
                 conn.execute("INSERT INTO projects(slug,name,repo,description,wish,plan_path,created) VALUES(?,?,?,?,?,?,?)", (slug, name, repo, desc, wish, plan_path, time.time()))
+                if review_a7_enabled:
+                    conn.execute("UPDATE projects SET project_type=? WHERE slug=?",(project_type,slug))
             else:
                 conn.execute("INSERT INTO projects(slug,name,repo,description,created) VALUES(?,?,?,?,?)", (slug, name, repo, desc, time.time()))
+            if review_a7_enabled and launch_enabled:
+                starter=a7_types.starter_plan(project_type,name,repo)
+                conn.execute("UPDATE projects SET plan_json=?,plan_updated=? WHERE slug=?",(json.dumps(starter,ensure_ascii=False),time.time(),slug))
             db.audit(conn, "project.create", {"slug": slug})
-            return respond(start, "201 Created", {"ok": True, "slug": slug, "repo": repo, "repo_visible": repo_visible, "plan_path": plan_path,
+            return respond(start, "201 Created", {"ok": True, "slug": slug, "repo": repo, "repo_visible": repo_visible, "plan_path": plan_path, "project_type": project_type,
                                                   "prompt": bootstrap.director_prompt(name, repo, desc),
                                                   "start": bootstrap.start_prompts(name, repo, desc)})
-        if reports_enabled:
+        if review_a7_enabled:
+            return_match=re.fullmatch(r"/api/projects/([a-z][a-z0-9-]{1,38}[a-z0-9])/tasks/([A-Za-z][A-Za-z0-9_-]{0,39})/return",path)
+            if return_match:
+                slug,pid=return_match.groups()
+                project=project_row(slug)
+                if not project or not task_exists(project,pid):return respond(start,"404 Not Found",{"error":"task_not_found"})
+                if method!="POST":return respond(start,"405 Method Not Allowed",{"error":"method_not_allowed"})
+                body=read_body(environ)
+                if body is None or set(body)!={"reasons","note"} or not isinstance(body["reasons"],list) or len(body["reasons"])>9 or any(type(x) is not str or x not in a7_returns.TEMPLATES for x in body["reasons"]) or type(body["note"]) is not str or len(body["note"])>1500 or (not body["reasons"] and not body["note"].strip()) or (type(body["note"]) is str and a7_engine.find_secrets('+'+body['note'])):
+                    return respond(start,"400 Bad Request",{"error":"invalid_return"})
+                state=conn.execute('SELECT status FROM task_state WHERE project_slug=? AND pkg_id=?',(slug,pid)).fetchone()
+                if not state or state['status']!='submitted':return respond(start,"409 Conflict",{"error":"task_not_submitted"})
+                pkg=a7.pkg_of(a7.plan_of(project),pid)
+                old=conn.execute('SELECT revision_count FROM task_reviews WHERE project_slug=? AND pkg_id=?',(slug,pid)).fetchone()
+                count=(old['revision_count'] if old else 0)+1
+                link=conn.execute('SELECT pr_number FROM pr_links WHERE project_slug=? AND pkg_id=? ORDER BY updated DESC LIMIT 1',(slug,pid)).fetchone()
+                pr_url=f'https://github.com/{project["repo"]}/pull/{link["pr_number"]}' if link else ''
+                try:prompt=a7_returns.rework_prompt(pid,pkg['title'],body['reasons'],body['note'],pr_url,count)
+                except ValueError:return respond(start,"400 Bad Request",{"error":"empty_return"})
+                now=time.time()
+                conn.execute('INSERT INTO task_returns(project_slug,pkg_id,reasons,note,created) VALUES(?,?,?,?,?)',(slug,pid,json.dumps(body['reasons']),body['note'],now))
+                conn.execute('INSERT INTO task_reviews(project_slug,pkg_id,revision_count,updated) VALUES(?,?,?,?) ON CONFLICT(project_slug,pkg_id) DO UPDATE SET revision_count=excluded.revision_count,updated=excluded.updated',(slug,pid,count,now))
+                conn.execute("UPDATE task_state SET status='issued',submitted_at=NULL WHERE project_slug=? AND pkg_id=?",(slug,pid))
+                conn.execute('UPDATE task_auto_merge SET cancelled=1 WHERE project_slug=? AND pkg_id=?',(slug,pid))
+                record_event(slug,pid,'task.revision',{'count':count})
+                db.audit(conn,'task.revision',{'slug':slug,'id':pid,'count':count})
+                return respond(start,"200 OK",{"prompt":prompt,"revision_count":count})
+            cancel_match=re.fullmatch(r"/api/projects/([a-z][a-z0-9-]{1,38}[a-z0-9])/tasks/([A-Za-z][A-Za-z0-9_-]{0,39})/cancel-auto-merge",path)
+            if cancel_match:
+                slug,pid=cancel_match.groups()
+                if method!='POST':return respond(start,'405 Method Not Allowed',{'error':'method_not_allowed'})
+                if not project_row(slug) or not task_exists(project_row(slug),pid):return respond(start,'404 Not Found',{'error':'task_not_found'})
+                if read_body(environ)!={}:return respond(start,'400 Bad Request',{'error':'bad_request'})
+                conn.execute('UPDATE task_auto_merge SET cancelled=1 WHERE project_slug=? AND pkg_id=?',(slug,pid))
+                record_event(slug,pid,'task.auto_merge_cancel')
+                db.audit(conn,'task.auto_merge_cancel',{'slug':slug,'id':pid})
+                return respond(start,'200 OK',{'ok':True})
+        if reports_enabled or review_a7_enabled:
             task_match = re.fullmatch(r"/api/projects/([a-z][a-z0-9-]{1,38}[a-z0-9])/tasks/([A-Za-z][A-Za-z0-9_-]{0,39})/(report|review)", path)
             if task_match:
                 slug, pid, kind = task_match.groups()
@@ -498,8 +570,15 @@ def create_app(db_path, base="", secure_cookie=True, fetch=None, github_token_fi
                     if kind == "report":
                         r = conn.execute("SELECT body,pr_url,updated FROM task_reports WHERE project_slug=? AND pkg_id=?", (slug,pid)).fetchone()
                         return respond(start, "200 OK", {"report": dict(r) if r else None})
+                    if review_a7_enabled:
+                        try:
+                            traffic=a7.evaluate(conn,slug,pid,project,github_token_file,review_fetch_json,review_fetch_diff)
+                        except (ValueError,TypeError,KeyError):
+                            return respond(start,'422 Unprocessable Entity',{'error':'review_unavailable'})
+                    else:traffic=None
                     r = conn.execute("SELECT items,ci_state,revision_count,remarks,updated FROM task_reviews WHERE project_slug=? AND pkg_id=?", (slug,pid)).fetchone()
-                    return respond(start, "200 OK", {"review": {**dict(r), "items": json.loads(r["items"])} if r else {"items": [{"text": x, "checked": False} for x in review_template], "ci_state": "unknown", "revision_count": 0, "remarks": ""}})
+                    pending=conn.execute('SELECT due_at,cancelled FROM task_auto_merge WHERE project_slug=? AND pkg_id=?',(slug,pid)).fetchone() if review_a7_enabled else None
+                    return respond(start, "200 OK", {"review": {**dict(r), "items": json.loads(r["items"])} if r else {"items": [{"text": x, "checked": False} for x in review_template], "ci_state": "unknown", "revision_count": 0, "remarks": ""}, **({"traffic_light":traffic,"auto_merge_due_at":pending['due_at'] if pending and not pending['cancelled'] else None} if review_a7_enabled else {})})
                 if method != "POST":
                     return respond(start, "405 Method Not Allowed", {"error": "method_not_allowed"})
                 body = read_body(environ)
@@ -539,6 +618,11 @@ def create_app(db_path, base="", secure_cookie=True, fetch=None, github_token_fi
                     record_event(slug,pid,"task.revision",{"count":count})
                 else:
                     record_event(slug,pid,"task.review")
+                    if review_a7_enabled:
+                        try:
+                            verdict=a7.evaluate(conn,slug,pid,project,github_token_file,review_fetch_json,review_fetch_diff)
+                            a7.schedule(conn,slug,pid,verdict)
+                        except (ValueError,TypeError,KeyError):pass
                 return respond(start, "200 OK", {"ok": True, "revision_count": count})
             metric_match = re.fullmatch(r"/api/projects/([a-z][a-z0-9-]{1,38}[a-z0-9])/metrics", path)
             if metric_match and method == "GET":
@@ -595,9 +679,45 @@ def create_app(db_path, base="", secure_cookie=True, fetch=None, github_token_fi
                     return respond(start,"400 Bad Request",{"error":"invalid_sync_settings"})
                 conn.execute("UPDATE projects SET sync_mode=?,poll_minutes=? WHERE slug=?",(body["sync_mode"],body["poll_minutes"],slug))
                 return respond(start,"200 OK",{"ok":True})
+        if review_a7_enabled and sub == '/conflicts' and method=='GET':
+            return respond(start,'200 OK',{'warnings':a7.conflicts_for(conn,slug,a7.plan_of(row))})
+        if review_a7_enabled and sub == '/lessons':
+            items=a7.lessons(conn,slug)
+            if method=='GET':
+                reasons=[]
+                for r in conn.execute('SELECT reasons FROM task_returns WHERE project_slug=?',(slug,)):
+                    reasons.extend(json.loads(r['reasons']))
+                return respond(start,'200 OK',{'lessons':items,'suggestions':a7_knowledge.suggest_from_returns(reasons)})
+            if method=='POST':
+                body=read_body(environ)
+                if body is None or set(body)!={'text'} or type(body['text']) is not str:
+                    return respond(start,'400 Bad Request',{'error':'invalid_lesson'})
+                try:updated,entry=a7_knowledge.add(items,body['text'])
+                except ValueError as exc:return respond(start,'400 Bad Request',{'error':str(exc)})
+                a7.save_lessons(conn,slug,updated)
+                return respond(start,'200 OK',{'lessons':updated,'added':entry is not None})
+            if method=='DELETE':
+                body=read_body(environ)
+                if body is None or set(body)!={'id'} or type(body['id']) is not str or not re.fullmatch(r'L[1-9][0-9]{0,5}',body['id']):
+                    return respond(start,'400 Bad Request',{'error':'invalid_lesson'})
+                updated=a7_knowledge.remove(items,body['id'])
+                a7.save_lessons(conn,slug,updated)
+                return respond(start,'200 OK',{'lessons':updated})
+        if review_a7_enabled and sub == '/auto-merge-settings':
+            cfg=conn.execute('SELECT * FROM project_a7_settings WHERE project_slug=?',(slug,)).fetchone()
+            values={'auto_merge':bool(cfg['auto_merge']) if cfg else False,'auto_merge_delay_minutes':cfg['auto_merge_delay_minutes'] if cfg else 10,'kill_switch':bool(cfg['kill_switch']) if cfg else True}
+            if method=='GET':return respond(start,'200 OK',{'settings':values})
+            if method=='POST':
+                body=read_body(environ)
+                if body is None or set(body)!={'auto_merge','auto_merge_delay_minutes','kill_switch'} or type(body['auto_merge']) is not bool or type(body['kill_switch']) is not bool or type(body['auto_merge_delay_minutes']) is not int or not 10<=body['auto_merge_delay_minutes']<=1440:
+                    return respond(start,'400 Bad Request',{'error':'invalid_auto_merge_settings'})
+                conn.execute('INSERT INTO project_a7_settings(project_slug,auto_merge,auto_merge_delay_minutes,kill_switch) VALUES(?,?,?,?) ON CONFLICT(project_slug) DO UPDATE SET auto_merge=excluded.auto_merge,auto_merge_delay_minutes=excluded.auto_merge_delay_minutes,kill_switch=excluded.kill_switch',(slug,int(body['auto_merge']),body['auto_merge_delay_minutes'],int(body['kill_switch'])))
+                if body['kill_switch'] or not body['auto_merge']:
+                    conn.execute('UPDATE task_auto_merge SET cancelled=1 WHERE project_slug=?',(slug,))
+                return respond(start,'200 OK',{'settings':body})
         if sub == "" and method == "GET":
             plan = json.loads(row["plan_json"]) if row["plan_json"] else None
-            return respond(start, "200 OK", {"project": summary(row), "lanes": plan["lanes"] if plan else {}, "packages": _prompted(plan) if plan else [],
+            return respond(start, "200 OK", {"project": summary(row), "lanes": plan["lanes"] if plan else {}, "packages": [dict(p,prompt=a7.prompt_for(conn,slug,plan,p)) for p in plan["packages"]] if review_a7_enabled and plan else (_prompted(plan) if plan else []),
                                              "state": states(slug), "plan_updated": row["plan_updated"],
                                              "start": start_list(row), "ideas": ideas_list(slug)})
         if (webhook_enabled or reports_enabled) and sub == "/events" and method == "GET":
@@ -641,7 +761,7 @@ def create_app(db_path, base="", secure_cookie=True, fetch=None, github_token_fi
             first_pending = next((s["number"] for s in steps if not s["done"]), 4)
             for step in steps:
                 step["current"] = step["number"] == first_pending and not step["done"]
-            return respond(start,"200 OK",{"prompt":launch.render_prompt(row["name"],row["repo"],row["wish"],row["plan_path"]),
+            return respond(start,"200 OK",{"prompt":launch.render_prompt(row["name"],row["repo"],row["wish"],row["plan_path"]) + ("\n\n" + a7_knowledge.render(a7.lessons(conn,slug)) if review_a7_enabled and a7.lessons(conn,slug) else ""),
                                              "steps":steps,"repo":row["repo"],"name":row["name"],"plan_path":row["plan_path"],
                                              "has_plan":bool(row["plan_json"]),
                                              "has_tasks":bool(row["plan_json"] and json.loads(row["plan_json"]).get("packages",[]))})
@@ -654,11 +774,11 @@ def create_app(db_path, base="", secure_cookie=True, fetch=None, github_token_fi
                          (slug, f'launch-{data["number"]}',int(data["done"]),time.time()))
             return respond(start,"200 OK",{"ok":True})
         if sub == "/bootstrap" and method == "GET":
-            files = bootstrap.files_for(row["name"], row["repo"], row["description"])
+            files = a7.skeleton_for(row) if review_a7_enabled else bootstrap.files_for(row["name"], row["repo"], row["description"])
             return respond(start, "200 OK", {"prompt": bootstrap.director_prompt(row["name"], row["repo"], row["description"]), "files": sorted(files),
                                              "start": bootstrap.start_prompts(row["name"], row["repo"], row["description"])})
         if sub == "/bootstrap.zip" and method == "GET":
-            files = bootstrap.files_for(row["name"], row["repo"], row["description"])
+            files = a7.skeleton_for(row) if review_a7_enabled else bootstrap.files_for(row["name"], row["repo"], row["description"])
             return respond(start, "200 OK", bootstrap.zip_bytes(files), [("Content-Type", "application/zip"), ("Content-Disposition", f'attachment; filename="{slug}-skeleton.zip"')])
         if sub == "/start" and method == "POST":
             body = read_body(environ)
@@ -724,6 +844,10 @@ def create_app(db_path, base="", secure_cookie=True, fetch=None, github_token_fi
             done = {k for k, v in states(slug).items() if v["status"] == "accepted"}
             if status == "issued" and cur["status"] == "planned" and not all(d in done for d in ids[pid]["depends_on"]):
                 return respond(start, "409 Conflict", {"error": "dependencies_not_accepted"})
+            if review_a7_enabled and status=='accepted' and cur['status']!='accepted':
+                latest=conn.execute('SELECT verdict FROM task_review_runs WHERE project_slug=? AND pkg_id=? ORDER BY id DESC LIMIT 1',(slug,pid)).fetchone()
+                if not latest or json.loads(latest['verdict'])['status']=='red':
+                    return respond(start,'409 Conflict',{'error':'review_blocked','reason':'Нет проверки или светофор красный'})
             if reports_enabled and status == "accepted" and cur["status"] != "accepted":
                 manual = body.get("manual", False)
                 if type(manual) is not bool:
@@ -760,6 +884,13 @@ def create_app(db_path, base="", secure_cookie=True, fetch=None, github_token_fi
             db.audit(conn, "task.status", {"slug": slug, "id": pid, "status": status})
             if reports_enabled:
                 record_event(slug,pid,"task.status",{"status":status})
+            if review_a7_enabled and status=='submitted':
+                try:
+                    verdict=a7.evaluate(conn,slug,pid,row,github_token_file,review_fetch_json,review_fetch_diff)
+                    a7.schedule(conn,slug,pid,verdict)
+                except (ValueError,TypeError,KeyError):pass
+            if review_a7_enabled and status=='accepted' and cur['status']!='accepted':
+                a7.record_success(conn,slug,ids[pid],plan)
             return respond(start, "200 OK", {"ok": True})
         return respond(start, "404 Not Found", {"error": "not_found"})
 

@@ -147,6 +147,12 @@ details{border-top:1px solid var(--hair);padding-top:8px}summary{cursor:pointer;
 .a6-path-label{display:flex;flex-direction:column;gap:5px;font-weight:600}
 .a6-path-label select{width:100%;min-height:48px;border-radius:12px;padding:9px 12px;background:var(--glass-strong);color:var(--ink);border:1px solid var(--edge)}
 @media(max-width:720px){body{padding-bottom:calc(168px + env(safe-area-inset-bottom,0px))!important}main{padding-bottom:calc(112px + env(safe-area-inset-bottom,0px))!important}.a6-quick{grid-template-columns:1fr;margin-bottom:20px}.a6-quick>button{min-height:60px;width:100%}}
+.a7-light{border-radius:18px;padding:14px;border:2px solid var(--edge);display:flex;flex-direction:column;gap:9px}
+.a7-light.green{border-color:var(--ok);background:var(--ok-bg)}
+.a7-light.yellow{border-color:var(--warn);background:var(--warn-bg)}
+.a7-light.red{border-color:var(--err);background:color-mix(in srgb,var(--err) 13%,transparent)}
+.a7-reasons{display:flex;gap:8px;flex-wrap:wrap}.a7-reasons label{display:flex;align-items:center;gap:5px;padding:7px 10px;border:1px solid var(--edge);border-radius:20px}
+.a7-reasons input{accent-color:var(--accent)}.a7-light details{padding:6px;border-bottom:1px solid var(--hair)}
 /* B3: отчёт, приёмка и обзор */
 .b3-review{min-width:0;max-width:100%;box-sizing:border-box;overflow-wrap:anywhere;border:1px solid var(--edge);border-radius:18px;padding:16px;display:flex;flex-direction:column;gap:12px;margin:14px 0;background:var(--glass2)}
 .b3-review textarea{width:100%;min-height:112px;box-sizing:border-box}
@@ -465,6 +471,8 @@ function showNew(){
   var name=field('Название проекта','a6-name','Название проекта');
   var projectSlug=field('Адрес проекта','a6-slug','например, my-project');projectSlug.maxLength=40;
   var wish=field('Что вы хотите получить','a6-wish','Опишите идею, механику, платформы и ваши пожелания…',true);
+  var typeLabel=el('label','a6-path-label','Тип проекта'),projectType=el('select');projectType.id='a7-project-type';typeLabel.appendChild(projectType);c.appendChild(typeLabel);
+  api('/api/project-types').then(function(r){(r.types||[]).forEach(function(t){var opt=el('option','',t.title+' · '+t.hint);opt.value=t.id;projectType.appendChild(opt)})}).catch(function(){var opt=el('option','','Игра');opt.value='game';projectType.appendChild(opt)});
   var planLabel=el('label','a6-path-label','Путь к плану в репозитории'),planPath=a6PlanPath();planPath.id='a6-plan-path';planLabel.appendChild(planPath);c.appendChild(planLabel);
   var err=el('div','err small');err.setAttribute('role','alert');c.appendChild(err);
   repo.addEventListener('input',function(){var parsed=a6Repo(repo.value);repo.classList.toggle('a6-invalid',parsed===null);repo.setAttribute('aria-invalid',String(parsed===null));note.textContent=parsed===null?'Неверная ссылка. Укажите github.com/владелец/репозиторий.':parsed?'Репозиторий: '+parsed:'Введите адрес GitHub.';note.style.color=parsed===null?'var(--warn)':'';if(parsed&&(!name.dataset.edited||!name.value.trim()))name.value=parsed.split('/')[1];if(parsed&&!projectSlug.dataset.edited)projectSlug.value=a6Slug(parsed.split('/')[1]);});
@@ -475,7 +483,7 @@ function showNew(){
   function create(){var parsed=a6Repo(repo.value);if(parsed===null||!parsed){repo.classList.add('a6-invalid');repo.setAttribute('aria-invalid','true');err.textContent='Проверьте формат ссылки на GitHub.';return}if(!name.value.trim()||!wish.value.trim()){err.textContent='Заполните название и пожелания.';return}go.disabled=true;err.textContent='';
     if(!a6ValidateSlug()){err.textContent='Адрес проекта: от 3 до 40 символов, только строчные латинские буквы, цифры и дефисы.';return}
     var slug=projectSlug.value;
-    api('/api/projects','POST',{name:name.value.trim(),slug:slug,repo:repo.value.trim(),description:'',wish:wish.value.trim(),plan_path:planPath.value}).then(function(r){rememberSlug(r.slug);showLaunch(r.slug)}).catch(function(e){go.disabled=false;err.textContent=e.status===409?'Проект с таким адресом уже существует.':e.status===404?'Мастер пока отключён на сервере. Обратитесь к администратору.':e.message==='invalid_repo'?'Неверная ссылка на GitHub.':'Не удалось создать проект. Проверьте поля и связь с сервером.'})}
+    api('/api/projects','POST',{name:name.value.trim(),slug:slug,repo:repo.value.trim(),description:'',wish:wish.value.trim(),plan_path:planPath.value,project_type:projectType.value||'game'}).then(function(r){rememberSlug(r.slug);showLaunch(r.slug)}).catch(function(e){go.disabled=false;err.textContent=e.status===409?'Проект с таким адресом уже существует.':e.status===404?'Мастер пока отключён на сервере. Обратитесь к администратору.':e.message==='invalid_repo'?'Неверная ссылка на GitHub.':'Не удалось создать проект. Проверьте поля и связь с сервером.'})}
 }
 function showLaunch(slug){
   activeB6Tab='Проекты';rememberSlug(slug);drawBar('Запуск проекта');app.textContent='';app.appendChild(el('h1','','Запуск проекта'));
@@ -515,6 +523,7 @@ function drawBoard(){
   var sync;sync=btn('Синхронизировать','',function(){sync.disabled=true;api('/api/projects/'+current.slug+'/sync','POST',{}).then(function(){toast('План обновлён из репозитория');showBoard(current.slug)}).catch(function(e){toast(e.status===422?'План в репозитории содержит ошибки':'Не удалось получить план: проверьте репозиторий и токен');sync.disabled=false})},{icon:'sync',tip:'Загрузить свежий JSON-план по пути из настроек проекта'});
   tb.appendChild(sync);tb.appendChild(btn('Загрузить план','',showImport,{icon:'upload',tip:'Вставить содержимое work_plan.json вручную, если синхронизация не настроена'}));
   tb.appendChild(btn('Граф','',function(){showGraph(current.slug)},{icon:'map',tip:'Открыть граф зависимостей и критический путь'}));tb.appendChild(btn('Поиск','',function(){showSearch(current.slug)},{icon:'book',tip:'Найти задачу или идею'}));tb.appendChild(btn('Настройки проекта','',function(){showProjectSettings(current.slug)},{icon:'work',tip:'Автоприёмка, чек-лист и данные проекта'}));
+  tb.appendChild(btn('Знания проекта','',function(){showA7Lessons(current.slug)},{icon:'book'}));
   tb.appendChild(btn('Протокол для ИИ','',showProtocol,{icon:'book',tip:'Инструкция для ИИ-директора: как добавлять этапы и промпты'}));head.appendChild(tb);head.classList.add('board-heading');app.appendChild(head);
   if(P.length){var before=app.children.length;drawSummary(d,P);Array.from(app.children).slice(before).forEach(function(x){x.classList.add('desktop-board-summary')})}
   if(!P.length){drawA6EmptyPlan(d);drawStart(d);var n=el('div','card empty');n.appendChild(ic('map'));n.appendChild(el('h2','','План ещё не загружен'));n.appendChild(el('div','muted','Вы можете выбрать файл JSON с телефона, вставить текст JSON или синхронизировать план из GitHub. После проверки появятся задачи.'));app.appendChild(n);drawIdeas(d,app);return}
@@ -704,7 +713,10 @@ function drawLog(d,P){
 }
 function actionRow(p,s,r){
   var box=el('div');
-  function act(status){return function(){api('/api/projects/'+current.slug+'/status','POST',{id:p.id,status:status}).then(function(){return refresh()}).catch(function(e){toast(e.message==='dependencies_not_accepted'?'Сначала нужно принять предыдущие шаги':'Не удалось сохранить')})}}
+  function act(status){return function(){
+    if(status==='issued'&&!p._a7Confirmed){api('/api/projects/'+current.slug+'/conflicts').then(function(r){var warnings=(r.warnings||[]).filter(function(w){return w.a===p.id||w.b===p.id});if(warnings.length){p._a7Confirmed=true;toast('Конфликт зон: '+warnings[0].text+' Нажмите «Отдал исполнителю» повторно для подтверждения.');return}send()}).catch(function(){toast('Проверка конфликтов недоступна, выдача не подтверждена')});return}
+    send();function send(){api('/api/projects/'+current.slug+'/status','POST',{id:p.id,status:status}).then(function(){return refresh()}).catch(function(e){toast(e.message==='dependencies_not_accepted'?'Сначала нужно принять предыдущие шаги':'Не удалось сохранить')})}
+  }}
   function line(b,h){var a=el('div','act');a.appendChild(b);a.appendChild(el('div','help',h));box.appendChild(a)}
   if(s==='planned'){if(r)line(btn('Отдал исполнителю','primary',act('issued')),'Нажмите после того, как передали промпт исполнителю. Задача перейдёт в «У исполнителя».');
     else{var w=btn('Пока недоступно','',null,{disabled:true});line(w,'Ждёт приёмки задач: '+p.depends_on.filter(function(x){return st(x)!=='accepted'}).join(', ')+'.')}}
@@ -726,6 +738,8 @@ function drawDrawer(id){
   if(p.depends_on.length)c.appendChild(el('div','small muted','Зависит от: '+p.depends_on.join(', ')));
   var cr=el('div');cr.appendChild(el('b','small','Критерии готовности'));var ul=el('ul');ul.style.cssText='margin:6px 0;padding-left:20px;font-size:14px';(p.done_when||[]).forEach(function(x){ul.appendChild(el('li','',x))});cr.appendChild(ul);c.appendChild(cr);
   var det=el('details');det.open=true;det.appendChild(el('summary','','Промпт для исполнителя'));det.appendChild(el('pre','',p.prompt));det.appendChild(btn('Скопировать промпт','primary',function(){copy(p.prompt)},{icon:'copy',tip:'Скопировать весь текст задания, чтобы передать исполнителю'}));c.appendChild(det);
+  if(s==='submitted')drawA7Review(c,p);
+  if(s==='planned'&&r)drawA7Conflicts(c,p);
   if(s==='submitted'){c.insertBefore(b6ReviewSteps(s),c.firstChild.nextSibling);c.insertBefore(el('h2','','Проверка работы'),c.firstChild.nextSibling)}if(s==='submitted'||s==='issued')drawB3Review(c,p,s);
   c.appendChild(el('b','small','Действия'));c.appendChild(actionRow(p,s,r));
   var shb=shareBtn(p.prompt,p.id+' '+p.title);if(shb)det.appendChild(shb);
@@ -806,7 +820,7 @@ function drawB3Review(host,p,status){
   var count=el('div','muted small','Доработок: нет данных');box.appendChild(count);
   var returnBtn=btn('Вернуть исполнителю','',function(){var txt=notes.value.trim();if(!txt){b3Notice(checkStatus,'Укажите замечания перед возвратом.');return}returnBtn.disabled=true;b3Notice(checkStatus,'Отправка замечаний…');api(b3ReviewPath(p)+'/review','POST',{return:true,remarks:txt,items:checks.map(function(x,i){return {text:B3_CHECKS[i],checked:x.checked}})}).then(function(){return refresh()}).catch(function(e){b3Notice(checkStatus,b2Error(e));returnBtn.disabled=false})},{tip:'Вернуть задачу в работу с обязательными замечаниями'});returnBtn.disabled=true;controls.insertBefore(returnBtn,accept);
   var revisionPrompt=btn('Копировать промпт доработки','',function(){copy(p.prompt+'\n\nДОРАБОТКА:\n'+notes.value.trim())},{tip:'Скопировать исходное задание вместе с замечаниями'});revisionPrompt.disabled=true;box.appendChild(revisionPrompt);notes.addEventListener('input',function(){revisionPrompt.disabled=!notes.value.trim()});
-  function update(){var remaining=checks.filter(function(x){return !x.checked}).length;var all=!remaining;accept.disabled=!all||red||!ready;accept.querySelector('span').textContent=remaining?'Принять ('+remaining+' пунктов)':'Принято, в архив';manual.disabled=!ready||red;b3Notice(checkStatus,red?'CI красный. Приёмка заблокирована.':all?'Все пункты отмечены. Можно принять задачу.':'Отметьте все пункты чек-листа для обычной приёмки. Ручное принятие требует подтверждения.');}
+  function update(){var remaining=checks.filter(function(x){return !x.checked}).length;var all=!remaining;var a7red=A7_TRAFFIC[p.id]==='red';accept.disabled=!all||red||a7red||!ready;accept.querySelector('span').textContent=remaining?'Принять ('+remaining+' пунктов)':'Принято, в архив';manual.disabled=!ready||red||a7red;b3Notice(checkStatus,red?'CI красный. Приёмка заблокирована.':all?'Все пункты отмечены. Можно принять задачу.':'Отметьте все пункты чек-листа для обычной приёмки. Ручное принятие требует подтверждения.');}
   var ready=false;
   function submitReview(override){accept.disabled=manual.disabled=true;b3Notice(checkStatus,'Сохранение приёмки…');api(b3ReviewPath(p)+'/review','POST',{items:checks.map(function(x,i){return {text:B3_CHECKS[i],checked:x.checked}})}).then(function(){return api('/api/projects/'+current.slug+'/status','POST',{id:p.id,status:'accepted',manual:override})}).then(function(){return refresh()}).catch(function(e){b3Notice(checkStatus,b2Error(e));update()})}
   api(b3ReviewPath(p)+'/report').then(function(r){var data=r.report||{};report.value=data.body||data.text||'';save.disabled=false;
@@ -863,7 +877,47 @@ function showProjectSettings(slug){
   var pathLabel=el('label','a6-path-label','Путь к JSON-плану'),pathSelect=a6PlanPath(proj&&proj.plan_path),pathMessage=el('p','muted','Загрузка пути…'),pathSave=btn('Сохранить путь плана','primary',function(){pathSave.disabled=true;api('/api/projects/'+slug+'/plan-settings','POST',{plan_path:pathSelect.value}).then(function(){pathMessage.textContent='Путь сохранён: '+pathSelect.value;if(proj)proj.plan_path=pathSelect.value}).catch(function(){pathMessage.textContent='Не удалось изменить путь, данные не сохранены.'}).finally(function(){pathSave.disabled=false})});
   pathSelect.disabled=true;pathSave.disabled=true;pathLabel.appendChild(pathSelect);repo.appendChild(pathLabel);repo.appendChild(pathSave);repo.appendChild(pathMessage);
   api('/api/projects/'+slug+'/plan-settings').then(function(data){pathSelect.value=data.plan_path;pathSelect.disabled=false;pathSave.disabled=false;pathMessage.textContent='Для GitHub-синхронизации используется этот путь.'}).catch(function(){pathMessage.textContent='Настройки пути недоступны. Попробуйте позже.'});repo.appendChild(el('div','help','Изменение основной ветки и списка обязательных проверок CI: скоро, после появления серверного контракта.'));repo.appendChild(btn('К доске','',function(){showBoard(slug)},{tip:'Вернуться к задачам проекта'}));
-  drawB4ProjectTools(grid,slug);drawB4Sync(grid,slug);
+  drawA7Settings(grid,slug);drawB4ProjectTools(grid,slug);drawB4Sync(grid,slug);
+}
+var A7_TRAFFIC={};
+function drawA7Review(host,p){
+  var card=cardB2('Светофор проверки работы');host.appendChild(card);
+  var light=el('div','a7-light yellow','Получаем файлы и CI из GitHub…');card.appendChild(light);
+  var merge=el('div','small muted');card.appendChild(merge);
+  var cancel=btn('Отменить авто-слияние','',function(){api('/api/projects/'+current.slug+'/tasks/'+p.id+'/cancel-auto-merge','POST',{}).then(function(){merge.textContent='Авто-слияние отменено';cancel.disabled=true}).catch(function(){merge.textContent='Не удалось отменить авто-слияние'})});cancel.hidden=true;card.appendChild(cancel);
+  api('/api/projects/'+current.slug+'/tasks/'+p.id+'/review').then(function(r){var v=r.traffic_light;if(!v){light.textContent='Автоматическая проверка отключена';return}
+    A7_TRAFFIC[p.id]=v.status;light.className='a7-light '+v.status;light.textContent='';light.appendChild(el('h3','',v.status==='green'?'🟢 Зелёный: проверки пройдены':v.status==='red'?'🔴 Красный: есть блокирующие ошибки':'🟡 Жёлтый: требуется проверка'));
+    (v.checks||[]).forEach(function(check){var det=el('details'),head=el('summary','',check.status==='red'?'🔴 '+check.title:check.status==='yellow'?'🟡 '+check.title:'🟢 '+check.title);det.appendChild(head);(check.details||[]).forEach(function(x){det.appendChild(el('div','small',String(x)))});if(check.status==='red')det.open=true;light.appendChild(det)});
+    cancel.hidden=!r.auto_merge_due_at;
+    if(r.auto_merge_due_at){merge.textContent='Авто-слияние через '+Math.max(0,Math.ceil((r.auto_merge_due_at-Date.now()/1000)/60))+' минут. Можно отменить.'}else{merge.textContent='Авто-слияние не запланировано'}
+    if(v.pr_number)merge.textContent+=' · PR #'+v.pr_number+' · '+v.files.length+' файлов';
+    var accept=host.querySelector('.b3-review button');if(accept&&v.status==='red')accept.disabled=true;
+  }).catch(function(){light.textContent='Светофор недоступен, автоматическая приёмка запрещена.'});
+  var ret=cardB2('Вернуть на доработку');host.appendChild(ret);var chips=el('div','a7-reasons');ret.appendChild(chips);
+  var note=el('textarea');note.placeholder='Дополнительные замечания';note.maxLength=1500;ret.appendChild(note);
+  var prompt=el('pre');prompt.hidden=true;ret.appendChild(prompt);
+  ret.appendChild(btn('Сформировать возврат','',function(){var reasons=Array.from(chips.querySelectorAll('input:checked')).map(function(x){return x.value});api('/api/projects/'+current.slug+'/tasks/'+p.id+'/return','POST',{reasons:reasons,note:note.value}).then(function(r){prompt.hidden=false;prompt.textContent=r.prompt;ret.appendChild(btn('Скопировать промпт','primary',function(){copy(r.prompt)}))}).catch(function(){toast('Не удалось оформить возврат, проверьте причины и статус задачи')})}));
+  api('/api/return-templates').then(function(r){(r.templates||[]).forEach(function(t){var label=el('label'),cb=el('input');cb.type='checkbox';cb.value=t.id;label.appendChild(cb);label.appendChild(el('span','',t.title));chips.appendChild(label)})}).catch(function(){chips.textContent='Шаблоны пока недоступны'});
+}
+function drawA7Conflicts(host,p){var c=cardB2('Конфликты зон файлов');host.appendChild(c);api('/api/projects/'+current.slug+'/conflicts').then(function(r){var warnings=(r.warnings||[]).filter(function(w){return w.a===p.id||w.b===p.id});c.appendChild(el('div','',warnings.length?warnings.map(function(w){return (w.level==='red'?'🔴 ':'🟡 ')+w.text}).join('\n'):'Пересечений с выданными задачами не найдено'))}).catch(function(){c.appendChild(el('div','muted','Проверка конфликтов недоступна'))})}
+function showA7Lessons(slug){
+  drawBar('Знания проекта');app.textContent='';app.appendChild(el('h1','','Знания проекта'));
+  var grid=el('div','b2-grid');app.appendChild(grid);drawA7Settings(grid,slug);
+  app.appendChild(btn('Назад к доске','',function(){showBoard(slug)}));
+}
+function drawA7Settings(grid,slug){
+  var c=cardB2('Авто-слияние PR','По умолчанию выключено. При красном или жёлтом светофоре не сливаем.');grid.appendChild(c);
+  var enable=el('input'),kill=el('input');enable.type=kill.type='checkbox';kill.checked=true;
+  var delay=el('input');delay.type='number';delay.min='10';delay.max='1440';delay.value='10';
+  [['Разрешить авто-слияние',enable],['Аварийное отключение (kill switch)',kill]].forEach(function(item){var label=el('label','b2-switch');label.appendChild(item[1]);label.appendChild(el('span','',item[0]));c.appendChild(label)});
+  var dl=el('label','b2-field','Отсрочка в минутах');dl.appendChild(delay);c.appendChild(dl);
+  var msg=el('div','muted');c.appendChild(msg);
+  c.appendChild(btn('Сохранить авто-слияние','primary',function(){api('/api/projects/'+slug+'/auto-merge-settings','POST',{auto_merge:enable.checked,kill_switch:kill.checked,auto_merge_delay_minutes:Number(delay.value)}).then(function(){msg.textContent='Настройки сохранены'}).catch(function(){msg.textContent='Ошибка сохранения'})}));
+  api('/api/projects/'+slug+'/auto-merge-settings').then(function(r){enable.checked=r.settings.auto_merge;kill.checked=r.settings.kill_switch;delay.value=r.settings.auto_merge_delay_minutes}).catch(function(){msg.textContent='Авто-слияние недоступно'});
+  var lessons=cardB2('Знания проекта');grid.appendChild(lessons);var list=el('div');lessons.appendChild(list);
+  var input=el('textarea');input.placeholder='Правило или ловушка (от 8 до 400 символов)';input.maxLength=400;lessons.appendChild(input);
+  lessons.appendChild(btn('Добавить знание','primary',function(){api('/api/projects/'+slug+'/lessons','POST',{text:input.value}).then(function(){input.value='';load()}).catch(function(){toast('Не удалось добавить знание: проверьте текст')})}));
+  function load(){api('/api/projects/'+slug+'/lessons').then(function(r){list.textContent='';(r.lessons||[]).forEach(function(item){var row=el('div','act');row.appendChild(el('span','',item.text));row.appendChild(btn('Удалить','',function(){api('/api/projects/'+slug+'/lessons','DELETE',{id:item.id}).then(load)}));list.appendChild(row)});(r.suggestions||[]).forEach(function(x){var row=el('div','act');row.appendChild(el('span','',x.text));row.appendChild(btn('Добавить предложение','',function(){api('/api/projects/'+slug+'/lessons','POST',{text:x.text}).then(load)}));list.appendChild(row)})}).catch(function(){list.textContent='Хранилище знаний недоступно'})}load();
 }
 function taskMeta(p){var d=current&&current.d;if(!d)return {};var state=d.state&&d.state[p.id]||{};return {pr:p.pr||state.pr,ci:p.ci||state.ci,merged:!!(state.merged||(p.pr&&p.pr.merged)||(state.pr&&state.pr.merged)),sha:state.sha||p.sha}}
 function ciSuccess(ci){if(!ci)return false;var v=typeof ci==='string'?ci:(ci.state||ci.status||ci.conclusion||'');return /^(success|successful|passed|green|ok)$/i.test(v)}
