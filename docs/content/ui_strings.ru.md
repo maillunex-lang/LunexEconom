@@ -8,12 +8,13 @@ main.menu.quit | Выход
 main.title | Башкирия: Мёд и Нефть
 auth.login.title | Вход
 auth.login.email | Электронная почта
+auth.login.name | Логин или почта
 auth.login.password | Пароль
 auth.login.button | Войти
 auth.login.error.invalid | Неверный логин или пароль
 auth.login.error.locked | Слишком много попыток. Попробуйте позже
 auth.register.title | Регистрация
-auth.register.name | Имя компании
+auth.register.name | Имя компании (логин)
 auth.register.email | Электронная почта
 auth.register.password | Пароль
 auth.register.button | Зарегистрироваться
@@ -71,6 +72,9 @@ auth.register.error.name | Имя: 3-24 символа, латиница, циф
 auth.register.error.email | Проверьте адрес почты
 auth.register.error.closed | Регистрация сейчас закрыта
 auth.register.error.limit | Слишком много попыток. Подождите немного
+auth.mode.login | Вход
+auth.mode.register | Регистрация
+auth.register.done | Аккаунт создан. Теперь войдите
 error.generic | Произошла ошибка. Попробуйте ещё раз
 error.network | Нет связи с сервером
 error.auth | Сессия истекла. Войдите снова

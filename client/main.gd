@@ -397,7 +397,12 @@ func _send_auth(mode: String) -> void:
     var username := login_username.text.strip_edges()
     var email := login_email.text.strip_edges()
     var password := login_password.text
-    if username.length() < 3 or username.length() > 24 or password.length() < 6 or (mode == "register" and not email.contains("@")):
+    if mode == "login":
+        # Sign-in needs only the login (name or e-mail) and the password.
+        if username.is_empty() or username.length() > 254 or password.is_empty():
+            status_label.text = Strings.get_text("auth.login.error.invalid")
+            return
+    elif username.length() < 3 or username.length() > 24 or password.length() < 6 or not email.contains("@"):
         status_label.text = Strings.get_text("auth.register.error.weak")
         return
     _auth_busy = true
@@ -411,7 +416,8 @@ func _send_auth(mode: String) -> void:
         status_label.text = _auth_error_text(mode, response)
         return
     if mode == "register":
-        status_label.text = Strings.get_text("auth.login.title")
+        login_screen.set_mode("login")
+        status_label.text = Strings.get_text("auth.register.done")
         return
     token = str((response.data as Dictionary).get("access_token",""))
     refresh_token = str((response.data as Dictionary).get("refresh_token",""))
