@@ -4,6 +4,8 @@ import sys
 import threading
 import time
 from .backup.worker import tick
+from .launch.plan_poll import poll_plans
+from . import db
 from socketserver import ThreadingMixIn
 from wsgiref.simple_server import WSGIRequestHandler, WSGIServer, make_server
 
@@ -43,6 +45,12 @@ def main():
                 tick(path,tokens,os.environ.get("PORTAL_GITHUB_TOKEN_FILE"),
                      notifications=enabled("notifications","PORTAL_NOTIFICATIONS_ENABLED"),
                      webhook=enabled("webhook","PORTAL_WEBHOOK_ENABLED"))
+                if enabled("launch","PORTAL_LAUNCH_ENABLED") and enabled("webhook","PORTAL_WEBHOOK_ENABLED"):
+                    plan_conn = db.connect(path, webhook=True, reports=True, notifications=True)
+                    try:
+                        poll_plans(plan_conn, os.environ.get("PORTAL_GITHUB_TOKEN_FILE"))
+                    finally:
+                        plan_conn.close()
             except Exception:
                 # Do not log exception bodies: HTTP libraries may include token URLs.
                 sys.stderr.write("CreatePortal: background tick failed\n")

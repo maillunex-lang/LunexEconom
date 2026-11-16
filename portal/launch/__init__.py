@@ -5,6 +5,12 @@ from urllib.parse import urlsplit
 
 PART = re.compile(r"[A-Za-z0-9](?:[A-Za-z0-9_.-]{0,98}[A-Za-z0-9])?")
 SOURCE = Path(__file__).with_name("PROJECT_LAUNCH_PROMPT.md")
+DEFAULT_PLAN_PATH = "docs/work_plan.json"
+VALID_PLAN_PATHS = (DEFAULT_PLAN_PATH, "docs/portal/work_plan.json")
+
+
+def valid_plan_path(value):
+    return isinstance(value, str) and value in VALID_PLAN_PATHS
 
 
 def normalize_repo(value):
@@ -43,12 +49,12 @@ def normalize_repo(value):
     return owner + "/" + repo
 
 
-def render_prompt(name, repo, wish):
+def render_prompt(name, repo, wish, plan_path=DEFAULT_PLAN_PATH):
     # Single regex substitution: untrusted replacement text is never interpreted again.
     template = SOURCE.read_text(encoding="utf-8")
-    if not ("{name}" in template and "{repo}" in template and "{wish}" in template):
+    if not ("{name}" in template and "{repo}" in template and "{wish}" in template and "{plan_path}" in template):
         raise ValueError("launch_template_invalid")
-    return re.sub(r"\{(name|repo|wish)\}", lambda match: {"name": name, "repo": repo or "(репозиторий не указан)", "wish": wish or "(уточнить при интервью)"}[match.group(1)], template)
+    return re.sub(r"\{(name|repo|wish|plan_path)\}", lambda match: {"name": name, "repo": repo or "(репозиторий не указан)", "wish": wish or "(уточнить при интервью)", "plan_path": plan_path}[match.group(1)], template)
 
 
 def steps(plan_json):

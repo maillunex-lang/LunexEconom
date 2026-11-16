@@ -38,14 +38,14 @@ class A6Parser(unittest.TestCase):
         self.assertIn('Test {name} {repo}', p)
         self.assertIn('My {wish}', p)
         self.assertIn('own/repo', p)
-        self.assertIn('python tools/work_plan.py check', p)
+        self.assertIn('python tools/work_plan.py --plan docs/work_plan.json check', p)
         self.assertIn('pull request', p)
 
     def test_template_is_from_file(self):
         template = launch.SOURCE.read_text(encoding='utf-8')
-        for key in ('{name}', '{repo}', '{wish}'):
+        for key in ('{name}', '{repo}', '{wish}', '{plan_path}'):
             self.assertIn(key, template)
-        self.assertEqual(launch.render_prompt('N','o/r','W'),template.replace('{name}','N').replace('{repo}','o/r').replace('{wish}','W'))
+        self.assertEqual(launch.render_prompt('N','o/r','W'),template.replace('{name}','N').replace('{repo}','o/r').replace('{wish}','W').replace('{plan_path}',launch.DEFAULT_PLAN_PATH))
 
     def test_steps_empty_plan(self):
         steps=launch.steps(None)
@@ -210,3 +210,119 @@ class A6API(unittest.TestCase):
 
 
 if __name__=='__main__':unittest.main()
+
+class A6Addon(unittest.TestCase):
+    """Additional A6 requirement: safe plan path, sync URL and lifecycle."""
+    def setUp(self):
+        self.tmp=tempfile.TemporaryDirectory()
+        self.dbfile=str(Path(self.tmp.name)/'a6-path.sqlite')
+        conn=db.connect(self.dbfile);auth.set_password(conn,'owner',PW);conn.close()
+        self.calls=[]
+        def fake(url,token):
+            self.calls.append(url)
+            return json.dumps(bootstrap.STARTER_PLAN)
+        self.app=create_app(self.dbfile,base=BASE,launch_enabled=True,fetch=fake)
+        r=call(self.app,'POST',BASE+'/api/login',{'username':'owner','password':PW})
+        self.cookie=r['headers']['Set-Cookie'].split(';')[0]
+        self.csrf=r['json']['csrf']
+    def tearDown(self):
+        self.app.close();self.tmp.cleanup()
+    def request(self,method,path,body=None,csrf=None,cookie=None):
+        return call(self.app,method,BASE+path,body,self.cookie if cookie is None else cookie,self.csrf if csrf is None else csrf)
+    def create(self,**kw):
+        data={'slug':'new-demo','name':'Demo','repo':'owner/demo','wish':'Plan'}
+        data.update(kw)
+        return self.request('POST','/api/projects',data)
+    def test_default_path(self):
+        self.assertEqual(self.create()['status'],201)
+        self.assertEqual(self.request('GET','/api/projects/new-demo/plan-settings')['json']['plan_path'],'docs/work_plan.json')
+        self.assertEqual(self.request('GET','/api/projects/new-demo')['json']['project']['plan_path'],'docs/work_plan.json')
+    def test_alternative_path_create(self):
+        created=self.create(plan_path='docs/portal/work_plan.json')
+        self.assertEqual(created['status'],201)
+        self.assertEqual(created['json']['plan_path'],'docs/portal/work_plan.json')
+        launch_data=self.request('GET','/api/projects/new-demo/launch')['json']
+        self.assertEqual(launch_data['plan_path'],'docs/portal/work_plan.json')
+        self.assertIn('python tools/work_plan.py --plan docs/portal/work_plan.json check',launch_data['prompt'])
+    def test_alternative_path_sync(self):
+        self.create(plan_path='docs/portal/work_plan.json')
+        self.assertEqual(self.request('POST','/api/projects/new-demo/sync',{})['status'],200)
+        self.assertTrue(self.calls[0].endswith('/contents/docs/portal/work_plan.json'))
+    def test_default_path_sync(self):
+        self.create()
+        self.assertEqual(self.request('POST','/api/projects/new-demo/sync',{})['status'],200)
+        self.assertTrue(self.calls[0].endswith('/contents/docs/work_plan.json'))
+    def test_settings_update_changes_sync(self):
+        self.create()
+        data={'plan_path':'docs/portal/work_plan.json'}
+        self.assertEqual(self.request('POST','/api/projects/new-demo/plan-settings',data)['status'],200)
+        self.assertEqual(self.request('POST','/api/projects/new-demo/sync',{})['status'],200)
+        self.assertTrue(self.calls[0].endswith('/contents/docs/portal/work_plan.json'))
+    def test_invalid_paths_at_create(self):
+        for path in ('../work_plan.json','/docs/work_plan.json','docs//work_plan.json','docs/../../etc/passwd',
+                     'https://evil.test/file','docs/work_plan.json?x=1','docs/%2e%2e/work_plan.json', '',None,False,[],{}):
+            with self.subTest(path=path):
+                self.assertEqual(self.create(plan_path=path)['status'],400)
+    def test_invalid_update_preserves_existing_path(self):
+        self.create()
+        for path in ('docs/../work_plan.json','../../etc/shadow','docs/progress.json',3):
+            self.assertEqual(self.request('POST','/api/projects/new-demo/plan-settings',{'plan_path':path})['status'],400)
+        self.assertEqual(self.request('GET','/api/projects/new-demo/plan-settings')['json']['plan_path'],'docs/work_plan.json')
+    def test_csrf_and_auth_on_settings(self):
+        self.create()
+        path='/api/projects/new-demo/plan-settings'
+        self.assertEqual(self.request('POST',path,{'plan_path':'docs/portal/work_plan.json'},csrf='incorrect')['status'],403)
+        self.assertEqual(self.request('GET',path,cookie='invalid')['status'],401)
+    def test_existing_project_migration_default(self):
+        self.create()
+        self.assertEqual(self.request('GET','/api/projects/new-demo')['json']['project']['plan_path'],'docs/work_plan.json')
+
+class A6PlanPolling(unittest.TestCase):
+    def setUp(self):
+        from portal.launch.plan_poll import poll_plans
+        self.poll_plans=poll_plans
+        self.tmp=tempfile.TemporaryDirectory()
+        self.file=str(Path(self.tmp.name)/'poll-path.sqlite')
+        self.conn=db.connect(self.file,webhook=True)
+        self.conn.execute("INSERT INTO projects(slug,name,repo,plan_path,created) VALUES(?,?,?,?,?)",
+                          ('test-plan','Test','owner/repo','docs/portal/work_plan.json',0))
+        self.urls=[]
+    def tearDown(self):
+        self.conn.close();self.tmp.cleanup()
+    def fake(self,url,token):
+        self.urls.append(url)
+        return json.dumps(bootstrap.STARTER_PLAN)
+    def test_poll_reads_configured_path(self):
+        self.assertEqual(self.poll_plans(self.conn,now=1000,fetch=self.fake),1)
+        self.assertTrue(self.urls[0].endswith('/contents/docs/portal/work_plan.json'))
+        self.assertTrue(self.conn.execute("SELECT plan_json FROM projects WHERE slug='test-plan'").fetchone()[0])
+    def test_poll_respects_interval(self):
+        self.poll_plans(self.conn,now=1000,fetch=self.fake)
+        self.assertEqual(self.poll_plans(self.conn,now=1100,fetch=self.fake),0)
+        self.assertEqual(self.poll_plans(self.conn,now=1300,fetch=self.fake),1)
+    def test_poll_failure_preserves_old_plan(self):
+        self.poll_plans(self.conn,now=1000,fetch=self.fake)
+        old=self.conn.execute("SELECT plan_json FROM projects WHERE slug='test-plan'").fetchone()[0]
+        self.assertEqual(self.poll_plans(self.conn,now=1600,fetch=lambda *a: (_ for _ in ()).throw(OSError('offline'))),1)
+        self.assertEqual(self.conn.execute("SELECT plan_json FROM projects WHERE slug='test-plan'").fetchone()[0],old)
+        self.assertEqual(self.conn.execute("SELECT last_state FROM project_plan_poll WHERE project_slug='test-plan'").fetchone()[0],'error')
+    def test_poll_invalid_json_preserves_state(self):
+        self.assertEqual(self.poll_plans(self.conn,now=1000,fetch=lambda *a:'not-json'),1)
+        self.assertIsNone(self.conn.execute("SELECT plan_json FROM projects WHERE slug='test-plan'").fetchone()[0])
+    def test_poll_mode_disabled(self):
+        self.conn.execute("UPDATE projects SET sync_mode='webhook' WHERE slug='test-plan'")
+        self.assertEqual(self.poll_plans(self.conn,now=1000,fetch=self.fake),0)
+        self.assertEqual(self.urls,[])
+    def test_poll_new_path_after_change(self):
+        self.poll_plans(self.conn,now=1000,fetch=self.fake)
+        self.conn.execute("UPDATE projects SET plan_path='docs/work_plan.json' WHERE slug='test-plan'")
+        self.poll_plans(self.conn,now=2000,fetch=self.fake)
+        self.assertTrue(self.urls[-1].endswith('/contents/docs/work_plan.json'))
+    def test_poll_does_not_update_time_for_same_plan(self):
+        self.poll_plans(self.conn,now=1000,fetch=self.fake)
+        original=self.conn.execute("SELECT plan_updated FROM projects WHERE slug='test-plan'").fetchone()[0]
+        self.poll_plans(self.conn,now=2000,fetch=self.fake)
+        self.assertEqual(self.conn.execute("SELECT plan_updated FROM projects WHERE slug='test-plan'").fetchone()[0],original)
+    def test_poll_invalid_plan_rejected(self):
+        self.poll_plans(self.conn,now=1000,fetch=lambda *a:json.dumps({'bad':True}))
+        self.assertIsNone(self.conn.execute("SELECT plan_json FROM projects WHERE slug='test-plan'").fetchone()[0])

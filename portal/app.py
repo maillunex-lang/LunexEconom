@@ -144,15 +144,22 @@ def create_app(db_path, base="", secure_cookie=True, fetch=None, github_token_fi
         total = len(plan["packages"]) if plan else 0
         done = sum(1 for v in st.values() if v["status"] == "accepted")
         return {"slug": row["slug"], "name": row["name"], "repo": row["repo"], "description": row["description"],
-                "total": total, "accepted": done, "has_plan": bool(plan)}
+                "total": total, "accepted": done, "has_plan": bool(plan),
+                "plan_path": row["plan_path"] if "plan_path" in row.keys() else launch.DEFAULT_PLAN_PATH}
 
-    def fetch_plan(repo):
+    def fetch_plan(repo, path=None):
         token = ""
         if github_token_file and Path(github_token_file).is_file():
             token = Path(github_token_file).read_text().strip()
         if not re.fullmatch(r"[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+", repo or ""):
             raise ValueError("repo_invalid")
-        url = f"https://api.github.com/repos/{repo}/contents/docs/work_plan.json"
+        if path is None:
+            # GitHub webhook passes repository only; resolve the correct project by repo.
+            found = conn.execute("SELECT plan_path FROM projects WHERE repo=? ORDER BY created LIMIT 1", (repo,)).fetchone()
+            path = found["plan_path"] if found else launch.DEFAULT_PLAN_PATH
+        if not launch.valid_plan_path(path):
+            raise ValueError("plan_path_invalid")
+        url = f"https://api.github.com/repos/{repo}/contents/{path}"
         if fetch:
             return fetch(url, token)
         req = urllib.request.Request(url, headers={"Accept": "application/vnd.github.raw+json", "User-Agent": "createportal",
@@ -439,7 +446,8 @@ def create_app(db_path, base="", secure_cookie=True, fetch=None, github_token_fi
                 return respond(start, "400 Bad Request", {"error": "bad_request"})
             slug, name = body.get("slug", ""), body.get("name", "")
             repo, desc, wish = body.get("repo", ""), body.get("description", ""), body.get("wish", "")
-            if not all(isinstance(v, str) for v in (slug, name, repo, desc, wish)):
+            plan_path = body.get("plan_path", launch.DEFAULT_PLAN_PATH)
+            if not all(isinstance(v, str) for v in (slug, name, repo, desc, wish)) or not launch.valid_plan_path(plan_path):
                 return respond(start, "400 Bad Request", {"error": "invalid_project"})
             name, desc = name.strip(), desc.strip()
             if (not bootstrap.SLUG.fullmatch(slug) or not 1 <= len(name) <= 80 or len(desc) > 500
@@ -464,11 +472,11 @@ def create_app(db_path, base="", secure_cookie=True, fetch=None, github_token_fi
                 except (ValueError, OSError, TimeoutError, TypeError):
                     repo_visible = None
             if launch_enabled:
-                conn.execute("INSERT INTO projects(slug,name,repo,description,wish,created) VALUES(?,?,?,?,?,?)", (slug, name, repo, desc, wish, time.time()))
+                conn.execute("INSERT INTO projects(slug,name,repo,description,wish,plan_path,created) VALUES(?,?,?,?,?,?,?)", (slug, name, repo, desc, wish, plan_path, time.time()))
             else:
                 conn.execute("INSERT INTO projects(slug,name,repo,description,created) VALUES(?,?,?,?,?)", (slug, name, repo, desc, time.time()))
             db.audit(conn, "project.create", {"slug": slug})
-            return respond(start, "201 Created", {"ok": True, "slug": slug, "repo": repo, "repo_visible": repo_visible,
+            return respond(start, "201 Created", {"ok": True, "slug": slug, "repo": repo, "repo_visible": repo_visible, "plan_path": plan_path,
                                                   "prompt": bootstrap.director_prompt(name, repo, desc),
                                                   "start": bootstrap.start_prompts(name, repo, desc)})
         if reports_enabled:
@@ -608,6 +616,15 @@ def create_app(db_path, base="", secure_cookie=True, fetch=None, github_token_fi
                              (slug, int(cfg['auto_accept']), int(cfg['auto_accept_require_checklist']), json.dumps(checks)))
                 github.event(conn, slug, None, 'settings.changed', source='portal')
                 return respond(start, "200 OK", github.settings(conn, slug))
+        if launch_enabled and sub == "/plan-settings":
+            if method == "GET":
+                return respond(start, "200 OK", {"plan_path": row["plan_path"]})
+            if method == "POST":
+                body = read_body(environ)
+                if body is None or set(body) != {"plan_path"} or not launch.valid_plan_path(body["plan_path"]):
+                    return respond(start, "400 Bad Request", {"error": "invalid_plan_path"})
+                conn.execute("UPDATE projects SET plan_path=? WHERE slug=?", (body["plan_path"], slug))
+                return respond(start, "200 OK", {"ok": True, "plan_path": body["plan_path"]})
         if launch_enabled and sub == "/launch" and method == "GET":
             steps = launch.steps(row["plan_json"])
             confirmed = {r["prompt_id"] for r in conn.execute("SELECT prompt_id FROM start_state WHERE project_slug=? AND done=1",(slug,))}
@@ -616,8 +633,8 @@ def create_app(db_path, base="", secure_cookie=True, fetch=None, github_token_fi
             first_pending = next((s["number"] for s in steps if not s["done"]), 4)
             for step in steps:
                 step["current"] = step["number"] == first_pending and not step["done"]
-            return respond(start,"200 OK",{"prompt":launch.render_prompt(row["name"],row["repo"],row["wish"]),
-                                             "steps":steps,"repo":row["repo"],"name":row["name"],
+            return respond(start,"200 OK",{"prompt":launch.render_prompt(row["name"],row["repo"],row["wish"],row["plan_path"]),
+                                             "steps":steps,"repo":row["repo"],"name":row["name"],"plan_path":row["plan_path"],
                                              "has_plan":bool(row["plan_json"]),
                                              "has_tasks":bool(row["plan_json"] and json.loads(row["plan_json"]).get("packages",[]))})
         if launch_enabled and sub == "/launch-step" and method == "POST":
@@ -675,7 +692,7 @@ def create_app(db_path, base="", secure_cookie=True, fetch=None, github_token_fi
             return respond(start, "200 OK", {"ok": True, "packages": len(plan["packages"])})
         if sub == "/sync" and method == "POST":
             try:
-                plan = json.loads(fetch_plan(row["repo"]))
+                plan = json.loads(fetch_plan(row["repo"], row["plan_path"] if launch_enabled else launch.DEFAULT_PLAN_PATH))
                 errs = wp.validate(plan)
             except Exception as e:
                 return respond(start, "502 Bad Gateway", {"error": "sync_failed", "detail": str(e)[:120]})

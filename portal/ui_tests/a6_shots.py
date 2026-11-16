@@ -48,7 +48,13 @@ def main():
                             repo_name=f'demo-a6-{width}-{theme}'
                             page.locator('#a6-repo').fill('https://github.com/owner/'+repo_name+'.git')
                             assert page.locator('#a6-name').input_value()==repo_name
+                            assert page.locator('#a6-slug').input_value()==repo_name
+                            page.locator('#a6-slug').fill('TEST-ABC')
+                            assert page.locator('#a6-slug').input_value()=='test-abc'
+                            page.locator('#a6-slug').fill(repo_name)
                             page.locator('#a6-wish').fill('Кооперативная игра на 4 игроков для Android')
+                            page.locator('#a6-plan-path').select_option('docs/portal/work_plan.json')
+                            assert page.locator('#a6-plan-path').input_value()=='docs/portal/work_plan.json'
                             page.screenshot(path=str(opts.output/f'a6-create-{width}x{height}-{theme}.png'))
                             page.get_by_role('button',name='Создать проект').click()
                             page.wait_for_timeout(300)
@@ -56,14 +62,38 @@ def main():
                                 print('CREATE ERROR:',page.locator('#app').inner_text()[:1400],flush=True)
                             page.get_by_role('heading',name='Запуск проекта').wait_for()
                             page.get_by_role('heading',name='Скопировать промпт директору').wait_for()
+                            assert 'docs/portal/work_plan.json' in page.locator('#app').inner_text()
                             assert page.locator('.a6-step').count()==4
                             assert page.locator('.a6-step.current').count()==1
                             page.locator('.a6-step').first.get_by_text('Показать текст').click()
                             assert 'Кооперативная игра' in page.locator('.a6-step pre').inner_text()
                             page.screenshot(path=str(opts.output/f'a6-launch-{width}x{height}-{theme}.png'))
+                            page.locator('#tabs').get_by_role('button',name='Доска').click()
+                            page.get_by_role('button',name='Загрузить план файлом').wait_for()
+                            page.get_by_role('button',name='Вставить план текстом').wait_for()
+                            page.get_by_role('button',name='Синхронизировать').first.wait_for()
+                            assert page.locator('[data-screen-title]').inner_text()=='Доска'
+                            buttons=page.locator('.a6-quick button')
+                            assert buttons.count()==3
+                            for button in buttons.all():
+                                assert button.bounding_box()['y'] < 844 if width==390 else True
+                            page.screenshot(path=str(opts.output/f'a6-empty-board-{width}x{height}-{theme}.png'))
+                            page.get_by_role('button',name='Вставить план текстом').click()
+                            page.locator('#a6-plan-text').wait_for(state='visible')
+                            page.locator('#a6-plan-text').fill('{broken json')
+                            page.get_by_role('button',name='Проверить и сохранить план').click()
+                            page.get_by_text('не является корректным JSON',exact=False).wait_for()
+                            page.screenshot(path=str(opts.output/f'a6-paste-plan-{width}x{height}-{theme}.png'))
                             page.locator('#tabs').get_by_role('button',name='Сегодня').click()
                             page.get_by_role('button',name='Продолжить запуск проекта').wait_for()
                             page.screenshot(path=str(opts.output/f'a6-today-{width}x{height}-{theme}.png'))
+                            page.locator('#tabs').get_by_role('button',name='Доска').click()
+                            page.get_by_role('button',name='Настройки проекта').last.click()
+                            page.get_by_role('button',name='Сохранить путь плана').wait_for()
+                            page.locator('.a6-path-label select').first.select_option('docs/work_plan.json')
+                            page.get_by_role('button',name='Сохранить путь плана').click()
+                            page.get_by_text('Путь сохранён',exact=False).wait_for()
+                            page.screenshot(path=str(opts.output/f'a6-plan-settings-{width}x{height}-{theme}.png'))
                             for tab in ('Доска','Проекты','Ещё'):
                                 page.locator('#tabs').get_by_role('button',name=tab).click()
                                 assert page.locator('[data-screen-title]').inner_text().strip(),tab
@@ -87,6 +117,6 @@ def main():
         finally:
             server.shutdown();server.server_close();thread.join(timeout=3);app.close()
     if errors:raise RuntimeError('JS errors: '+'; '.join(errors))
-    print('A6 browser: 16 snapshots, no uncaught JS errors')
+    print('A6 browser: 28 snapshots, no uncaught JS errors')
 
 if __name__=='__main__':main()

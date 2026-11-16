@@ -53,6 +53,8 @@ CREATE TABLE IF NOT EXISTS notify_devices(fingerprint TEXT PRIMARY KEY,created R
 ALTER TABLE projects ADD COLUMN poll_minutes INTEGER NOT NULL DEFAULT 5;
 CREATE TABLE IF NOT EXISTS project_sync(project_slug TEXT PRIMARY KEY,last_poll REAL,last_webhook REAL,etag TEXT,error TEXT NOT NULL DEFAULT '');"""),
     (7, """ALTER TABLE projects ADD COLUMN wish TEXT NOT NULL DEFAULT '';"""),
+    (8, """ALTER TABLE projects ADD COLUMN plan_path TEXT NOT NULL DEFAULT 'docs/work_plan.json';
+CREATE TABLE IF NOT EXISTS project_plan_poll(project_slug TEXT PRIMARY KEY,last_checked REAL NOT NULL DEFAULT 0,last_state TEXT NOT NULL DEFAULT '');"""),
 
 )
 
@@ -74,7 +76,7 @@ def migrate(conn, webhook=False, reports=False, notifications=False):
                 continue
             if version == 6 and not webhook:
                 continue
-            if version == 7 and not webhook:
+            if version in (7, 8) and not webhook:
                 continue
             if version in versions:
                 continue
