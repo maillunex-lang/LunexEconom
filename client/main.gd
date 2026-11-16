@@ -6,6 +6,7 @@ const Forest = preload("res://theme/forest_glass.gd")
 const SafeArea = preload("res://ui/safe_area.gd")
 const Router = preload("res://screens/router.gd")
 const LoginScreen = preload("res://screens/login.tscn")
+const FormatUI2 = preload("res://i18n/format.gd")
 const HeadquartersScreen = preload("res://screens/headquarters.tscn")
 const SettingsScreen = preload("res://screens/settings.tscn")
 const MapScreen = preload("res://screens/map.tscn")
@@ -44,7 +45,7 @@ var tutorial_service: Node
 var account_id := ""
 var login_card: PanelContainer
 var form: VBoxContainer
-var headquarters: VBoxContainer
+var headquarters: Control
 var login_username: LineEdit
 var login_email: LineEdit
 var login_password: LineEdit
@@ -280,7 +281,7 @@ func _on_viewport_resized() -> void:
     finance_screen.resize_ui(size_now)
     if navigation_bar != null:
         navigation_bar.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_WIDE)
-        var nav_height := maxf(60.0, Forest.touch_size(size_now) + 10.0)
+        var nav_height := maxf(72.0, Forest.touch_size(size_now) + 10.0)
         navigation_bar.offset_top = -nav_height - float(shell.get_theme_constant("margin_bottom"))
         navigation_bar.offset_bottom = -float(shell.get_theme_constant("margin_bottom"))
         if router != null and router.host != null:
@@ -502,7 +503,7 @@ func _load_hq() -> void:
         return
     var wallet: Dictionary = await _authorized_api("/ledger/balance")
     if wallet.code == 200:
-        wallet_label.text = Strings.get_text("finance.balance") + ": " + str((wallet.data as Dictionary).get("balance",0)) + " " + Strings.get_text("unit.rub")
+        wallet_label.text = Strings.get_text("finance.balance") + ": " + FormatUI2.money((wallet.data as Dictionary).get("balance",0))
     else:
         wallet_label.text = Strings.get_text("finance.balance") + ": " + Strings.get_text("status.offline")
     var clock: Dictionary = await _api("/clock")

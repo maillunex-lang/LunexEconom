@@ -1,0 +1,36 @@
+extends SceneTree
+const HQ = preload("res://screens/headquarters.tscn")
+const Build = preload("res://screens/build.tscn")
+const Nav = preload("res://ui/navigation_bar.gd")
+func _initialize() -> void:
+    call_deferred("_run")
+func _run() -> void:
+    var hq := HQ.instantiate()
+    root.add_child(hq)
+    await process_frame
+    assert(hq.wallet != null and hq.calendar != null and hq.status != null)
+    hq.resize_ui(Vector2(2400,1080))
+    assert(hq._layout._wide)
+    hq.resize_ui(Vector2(1280,720))
+    assert(not hq._layout._wide)
+    assert(hq._layout.detail_area.visible)
+    var nav := Nav.new()
+    root.add_child(nav)
+    await process_frame
+    nav.change_screen("map")
+    assert(nav.visible)
+    assert(nav.buttons["map"] != null)
+    nav.change_screen("build")
+    assert(not nav.visible)
+    nav.change_screen("supply")
+    assert(not nav.visible)
+    var build := Build.instantiate()
+    root.add_child(build)
+    await process_frame
+    build._columns.refresh_size(Vector2(2400,1080))
+    assert(build._columns._wide)
+    build._columns.refresh_size(Vector2(1280,720))
+    assert(not build._columns._wide)
+    assert(build._build_action.disabled)
+    print("ui2 smoke OK: responsive columns, empty states, navigation")
+    quit(0)

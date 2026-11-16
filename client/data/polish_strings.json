@@ -67,7 +67,7 @@
   "error.build.road_unreachable": "Слишком далеко от дороги, ближайшая дорога дальше 12 клеток или путь перекрыт.",
   "error.build.roads_must_form_one_connected_path": "Дорога должна идти непрерывным маршрутом. Соедините клетки.",
   "error.build.unauthorized": "Для строительства нужно войти в игру.",
-  "error.build.unknown": "Не удалось выполнить операцию.",
+  "error.build.unknown": "Что-то пошло не так. Повторите попытку.",
   "error.build.unknown_building": "Здание недоступно. Обновите каталог.",
   "error.build.warehouse_full": "Склад заполнен. Освободите место.",
   "error.build.water": "На воде строить нельзя. Выберите сухую клетку участка.",
