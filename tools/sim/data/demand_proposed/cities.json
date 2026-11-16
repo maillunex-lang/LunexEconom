@@ -1,0 +1,81 @@
+{
+  "balance": "draft",
+  "cities": [
+    {
+      "age_shares_bp": {
+        "families": 5900,
+        "pensioners": 1900,
+        "youth": 2200
+      },
+      "availability_permille": 850,
+      "id": "industrial",
+      "income_shares_bp": {
+        "affluent": 500,
+        "lower_middle": 4200,
+        "middle": 2500,
+        "poor": 2800
+      },
+      "label": "Рабочий город",
+      "population": 120000,
+      "salary_index_permille": 1100,
+      "supply_growth_permille": 1030
+    },
+    {
+      "age_shares_bp": {
+        "families": 4900,
+        "pensioners": 2500,
+        "youth": 2600
+      },
+      "availability_permille": 920,
+      "id": "resort",
+      "income_shares_bp": {
+        "affluent": 1600,
+        "lower_middle": 2800,
+        "middle": 4000,
+        "poor": 1600
+      },
+      "label": "Курорт",
+      "population": 35000,
+      "salary_index_permille": 1050,
+      "supply_growth_permille": 1020
+    },
+    {
+      "age_shares_bp": {
+        "families": 5700,
+        "pensioners": 1900,
+        "youth": 2400
+      },
+      "availability_permille": 940,
+      "id": "administrative",
+      "income_shares_bp": {
+        "affluent": 1400,
+        "lower_middle": 2900,
+        "middle": 4400,
+        "poor": 1300
+      },
+      "label": "Административный центр",
+      "population": 250000,
+      "salary_index_permille": 1150,
+      "supply_growth_permille": 1020
+    },
+    {
+      "age_shares_bp": {
+        "families": 4400,
+        "pensioners": 4200,
+        "youth": 1400
+      },
+      "availability_permille": 780,
+      "id": "rural",
+      "income_shares_bp": {
+        "affluent": 300,
+        "lower_middle": 3700,
+        "middle": 2000,
+        "poor": 4000
+      },
+      "label": "Село",
+      "population": 12000,
+      "salary_index_permille": 850,
+      "supply_growth_permille": 1040
+    }
+  ]
+}
