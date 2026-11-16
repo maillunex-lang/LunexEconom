@@ -277,8 +277,8 @@ class A1Security(unittest.TestCase):
         self.assertNotIn(NEW, contents)
         conn.close()
 
-    def test_feature_flag_default_off(self):
-        legacy = create_app(self.path, base=BASE)
+    def test_security_can_be_disabled_explicitly(self):
+        legacy = create_app(self.path, base=BASE, security_v2=False)
         try:
             cookie, csrf = self.login(ip='20.0.0.1')
             self.assertEqual(call(legacy, 'GET', BASE + '/api/audit', cookie=cookie)['status'], 404)
@@ -286,6 +286,34 @@ class A1Security(unittest.TestCase):
             self.assertEqual(call(legacy, 'POST', BASE + '/api/sessions/revoke', {'current_password': PW}, cookie, csrf)['status'], 404)
         finally:
             legacy.close()
+
+    def test_security_enabled_by_default(self):
+        default = create_app(self.path, base=BASE)
+        try:
+            cookie, _ = self.login(ip='20.0.0.2')
+            self.assertEqual(call(default, 'GET', BASE + '/api/audit', cookie=cookie)['status'], 200)
+        finally:
+            default.close()
+
+    def test_real_ip_trusted_only_from_loopback_proxy(self):
+        def attempt(remote, real):
+            raw = json.dumps({'username': 'owner', 'password': 'wrong-password-123'}).encode()
+            res = {}
+            def st(status, headers):
+                res['status'] = int(status.split()[0])
+            env = {'REQUEST_METHOD': 'POST', 'PATH_INFO': BASE + '/api/login', 'CONTENT_LENGTH': str(len(raw)), 'wsgi.input': io.BytesIO(raw),
+                   'REMOTE_ADDR': remote, 'HTTP_X_REAL_IP': real}
+            b''.join(self.app(env, st))
+            return res['status']
+        # за прокси разные клиенты считаются раздельно
+        for _ in range(auth.ATTEMPT_LIMIT):
+            self.assertEqual(attempt('127.0.0.1', '5.5.5.5'), 401)
+        self.assertEqual(attempt('127.0.0.1', '5.5.5.5'), 429)
+        self.assertEqual(attempt('127.0.0.1', '6.6.6.6'), 401)
+        # прямой клиент не может подменить адрес заголовком
+        for _ in range(auth.ATTEMPT_LIMIT):
+            attempt('8.8.8.8', '9.9.9.1')
+        self.assertEqual(attempt('8.8.8.8', '9.9.9.2'), 429)
 
     def test_rate_limit_audit(self):
         conn = db.connect(self.path)

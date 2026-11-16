@@ -23,7 +23,7 @@ def _prompted(plan):
     return [dict(p, prompt=wp.prompt(plan, p["id"])) for p in plan["packages"]]
 
 
-def create_app(db_path, base="", secure_cookie=True, fetch=None, github_token_file=None, security_v2=False):
+def create_app(db_path, base="", secure_cookie=True, fetch=None, github_token_file=None, security_v2=True):
     conn = db.connect(db_path)
     base = base.rstrip("/")
 
@@ -94,7 +94,9 @@ def create_app(db_path, base="", secure_cookie=True, fetch=None, github_token_fi
         path = environ.get("PATH_INFO", "/")
         if base and path.startswith(base):
             path = path[len(base):] or "/"
-        ip = (environ.get("REMOTE_ADDR") or "-")[:64]  # never trust client-supplied forwarding headers
+        remote = (environ.get("REMOTE_ADDR") or "-")[:64]
+        # X-Real-IP доверяем только от локального прокси (nginx сам перезаписывает его адресом клиента); иначе всё за прокси считалось бы одним IP
+        ip = (environ.get("HTTP_X_REAL_IP") or remote)[:64] if remote in ("127.0.0.1", "::1") else remote
         try:
             cookies = SimpleCookie(environ.get("HTTP_COOKIE", "")[:4096])
         except Exception:
