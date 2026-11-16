@@ -1,0 +1,41 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1440" height="900" viewBox="0 0 1440 900">
+<rect width="1440" height="900" fill="#EDF1EA"/>
+<rect x="0" y="0" width="1440" height="64" rx="0" fill="#FFFFFF" stroke="#D2DBD3" stroke-width="1.5"/>
+<text x="40" y="40" font-family="Inter,sans-serif" font-size="18" fill="#13201A" text-anchor="start" font-weight="700">CreatePortal</text>
+<text x="190" y="40" font-family="Inter,sans-serif" font-size="15" fill="#566860" text-anchor="start">/ Проект / Настройки</text>
+<text x="1400" y="40" font-family="Inter,sans-serif" font-size="14" fill="#566860" text-anchor="end">Справка   Тема   Выйти</text>
+<text x="40" y="110" font-family="Inter,sans-serif" font-size="28" fill="#13201A" text-anchor="start" font-weight="700">Настройки проекта · Башкирия</text>
+<rect x="40" y="140" width="680" height="360" rx="16" fill="#FFFFFF" stroke="#D2DBD3" stroke-width="1.5"/>
+<text x="60" y="170" font-family="Inter,sans-serif" font-size="17" fill="#13201A" text-anchor="start" font-weight="600">Автоприёмка</text>
+<rect x="60" y="170" width="44" height="24" rx="12" fill="#2B7A52"/>
+<text x="120" y="188" font-family="Inter,sans-serif" font-size="15" fill="#13201A" text-anchor="start">Закрывать задачу автоматически при слиянии PR в main</text>
+<text x="60" y="225" font-family="Inter,sans-serif" font-size="14" fill="#566860" text-anchor="start">Условия: PR слит в основную ветку, на слитом коммите все проверки CI зелёные.</text>
+<text x="60" y="250" font-family="Inter,sans-serif" font-size="14" fill="#566860" text-anchor="start">Если CI красный или ещё идёт, задача остаётся в «Ждёт приёмки».</text>
+<rect x="60" y="285" width="44" height="24" rx="12" fill="#D2DBD3"/>
+<text x="120" y="303" font-family="Inter,sans-serif" font-size="15" fill="#13201A" text-anchor="start">Требовать отмеченный чек-лист приёмки</text>
+<text x="60" y="340" font-family="Inter,sans-serif" font-size="14" fill="#566860" text-anchor="start">Обычно не нужно: слияние директором уже есть проверка.</text>
+<text x="60" y="385" font-family="Inter,sans-serif" font-size="15" fill="#13201A" text-anchor="start">Основная ветка: main</text>
+<rect x="60" y="405" width="200" height="40" rx="10" fill="#FFFFFF" stroke="#D2DBD3" stroke-width="1.5"/>
+<text x="160" y="430" font-family="Inter,sans-serif" font-size="14" fill="#13201A" text-anchor="middle" font-weight="600">Изменить ветку</text>
+<text x="60" y="470" font-family="Inter,sans-serif" font-size="13" fill="#566860" text-anchor="start">Ошибочное закрытие отменяется кнопкой «Вернуть из архива».</text>
+<rect x="740" y="140" width="660" height="360" rx="16" fill="#FFFFFF" stroke="#D2DBD3" stroke-width="1.5"/>
+<text x="760" y="170" font-family="Inter,sans-serif" font-size="17" fill="#13201A" text-anchor="start" font-weight="600">Репозиторий и план</text>
+<text x="760" y="195" font-family="Inter,sans-serif" font-size="15" fill="#13201A" text-anchor="start">Репозиторий: maillunex-lang/LunexEconom</text>
+<text x="760" y="225" font-family="Inter,sans-serif" font-size="14" fill="#566860" text-anchor="start">План: docs/work_plan.json · 22 пакета · обновлён сегодня 11:42</text>
+<rect x="760" y="245" width="190" height="24" rx="12" fill="#DAF0E3"/>
+<text x="855" y="262" font-family="Inter,sans-serif" font-size="12" fill="#13201A" text-anchor="middle" font-weight="600">вебхук GitHub работает</text>
+<rect x="760" y="290" width="220" height="40" rx="10" fill="#2B7A52"/>
+<text x="870" y="315" font-family="Inter,sans-serif" font-size="14" fill="#FFFFFF" text-anchor="middle" font-weight="600">Синхронизировать сейчас</text>
+<rect x="995" y="290" width="180" height="40" rx="10" fill="#FFFFFF" stroke="#D2DBD3" stroke-width="1.5"/>
+<text x="1085" y="315" font-family="Inter,sans-serif" font-size="14" fill="#13201A" text-anchor="middle" font-weight="600">Загрузить план</text>
+<text x="760" y="380" font-family="Inter,sans-serif" font-size="14" fill="#566860" text-anchor="start">Обязательные проверки CI (необязательно):</text>
+<rect x="760" y="395" width="600" height="44" rx="10" fill="#F4F7F2" stroke="#D2DBD3" stroke-width="1.5"/>
+<text x="776" y="423" font-family="Inter,sans-serif" font-size="14" fill="#13201A" text-anchor="start">server test, client smoke</text>
+<rect x="40" y="520" width="1360" height="340" rx="16" fill="#FFFFFF" stroke="#D2DBD3" stroke-width="1.5"/>
+<text x="60" y="550" font-family="Inter,sans-serif" font-size="17" fill="#13201A" text-anchor="start" font-weight="600">Опасная зона</text>
+<text x="60" y="575" font-family="Inter,sans-serif" font-size="14" fill="#566860" text-anchor="start">Удаление проекта удаляет план, состояния задач, идеи и журнал. Это нельзя отменить.</text>
+<text x="60" y="620" font-family="Inter,sans-serif" font-size="14" fill="#13201A" text-anchor="start">Введите адрес проекта для подтверждения: bashkiria</text>
+<rect x="60" y="635" width="420" height="46" rx="10" fill="#F4F7F2" stroke="#D2DBD3" stroke-width="1.5"/>
+<rect x="500" y="638" width="220" height="40" rx="10" fill="#FFFFFF" stroke="#D2DBD3" stroke-width="1.5"/>
+<text x="610" y="663" font-family="Inter,sans-serif" font-size="14" fill="#13201A" text-anchor="middle" font-weight="600">Удалить проект</text>
+</svg>

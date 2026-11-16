@@ -1,0 +1,58 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1440" height="900" viewBox="0 0 1440 900">
+<rect width="1440" height="900" fill="#EDF1EA"/>
+<rect x="0" y="0" width="1440" height="64" rx="0" fill="#FFFFFF" stroke="#D2DBD3" stroke-width="1.5"/>
+<text x="40" y="40" font-family="Inter,sans-serif" font-size="18" fill="#13201A" text-anchor="start" font-weight="700">CreatePortal</text>
+<text x="190" y="40" font-family="Inter,sans-serif" font-size="15" fill="#566860" text-anchor="start">/ Настройки / Уведомления</text>
+<text x="1400" y="40" font-family="Inter,sans-serif" font-size="14" fill="#566860" text-anchor="end">Справка   Тема   Выйти</text>
+<text x="40" y="110" font-family="Inter,sans-serif" font-size="28" fill="#13201A" text-anchor="start" font-weight="700">Уведомления</text>
+<rect x="40" y="140" width="680" height="300" rx="16" fill="#FFFFFF" stroke="#D2DBD3" stroke-width="1.5"/>
+<text x="60" y="170" font-family="Inter,sans-serif" font-size="17" fill="#13201A" text-anchor="start" font-weight="600">MAX</text>
+<rect x="120" y="158" width="110" height="24" rx="12" fill="#DAF0E3"/>
+<text x="175" y="175" font-family="Inter,sans-serif" font-size="12" fill="#13201A" text-anchor="middle" font-weight="600">подключено</text>
+<text x="60" y="195" font-family="Inter,sans-serif" font-size="15" fill="#13201A" text-anchor="start">Бот портала привязан к вашему чату</text>
+<text x="60" y="222" font-family="Inter,sans-serif" font-size="13" fill="#566860" text-anchor="start">Идентификатор чата сохранён (токен бота хранится на сервере)</text>
+<rect x="60" y="250" width="180" height="40" rx="10" fill="#2B7A52"/>
+<text x="150" y="275" font-family="Inter,sans-serif" font-size="14" fill="#FFFFFF" text-anchor="middle" font-weight="600">Отправить тест</text>
+<rect x="255" y="250" width="160" height="40" rx="10" fill="#FFFFFF" stroke="#D2DBD3" stroke-width="1.5"/>
+<text x="335" y="275" font-family="Inter,sans-serif" font-size="14" fill="#13201A" text-anchor="middle" font-weight="600">Отключить</text>
+<text x="60" y="330" font-family="Inter,sans-serif" font-size="14" fill="#566860" text-anchor="start">Если ещё не подключено: откройте бота в MAX и отправьте ему код</text>
+<rect x="60" y="345" width="300" height="70" rx="12" fill="#F4F7F2" stroke="#D2DBD3" stroke-width="1.5"/>
+<text x="210" y="388" font-family="Inter,sans-serif" font-size="26" fill="#13201A" text-anchor="middle" font-weight="700">K7-4F2-9QX</text>
+<text x="380" y="392" font-family="Inter,sans-serif" font-size="14" fill="#566860" text-anchor="start">действует 9:42</text>
+<rect x="740" y="140" width="660" height="300" rx="16" fill="#FFFFFF" stroke="#D2DBD3" stroke-width="1.5"/>
+<text x="760" y="170" font-family="Inter,sans-serif" font-size="17" fill="#13201A" text-anchor="start" font-weight="600">Telegram</text>
+<rect x="840" y="148" width="130" height="24" rx="12" fill="#FBEED2"/>
+<text x="905" y="165" font-family="Inter,sans-serif" font-size="12" fill="#13201A" text-anchor="middle" font-weight="600">не подключено</text>
+<text x="760" y="195" font-family="Inter,sans-serif" font-size="14" fill="#566860" text-anchor="start">Нажмите «Получить код», откройте бота и отправьте код</text>
+<rect x="760" y="220" width="180" height="40" rx="10" fill="#2B7A52"/>
+<text x="850" y="245" font-family="Inter,sans-serif" font-size="14" fill="#FFFFFF" text-anchor="middle" font-weight="600">Получить код</text>
+<rect x="955" y="220" width="220" height="40" rx="10" fill="#FFFFFF" stroke="#D2DBD3" stroke-width="1.5"/>
+<text x="1065" y="245" font-family="Inter,sans-serif" font-size="14" fill="#13201A" text-anchor="middle" font-weight="600">Показать инструкцию</text>
+<text x="760" y="290" font-family="Inter,sans-serif" font-size="13" fill="#566860" text-anchor="start">Токен бота кладёт на сервер владелец, в чат его не присылать</text>
+<rect x="40" y="460" width="1360" height="400" rx="16" fill="#FFFFFF" stroke="#D2DBD3" stroke-width="1.5"/>
+<text x="60" y="490" font-family="Inter,sans-serif" font-size="17" fill="#13201A" text-anchor="start" font-weight="600">События: что присылать</text>
+<text x="900" y="520" font-family="Inter,sans-serif" font-size="14" fill="#566860" text-anchor="start" font-weight="600">MAX</text>
+<text x="1010" y="520" font-family="Inter,sans-serif" font-size="14" fill="#566860" text-anchor="start" font-weight="600">Telegram</text>
+<text x="60" y="560" font-family="Inter,sans-serif" font-size="15" fill="#13201A" text-anchor="start">Исполнитель сдал (PR открыт)</text>
+<rect x="890" y="542" width="44" height="24" rx="12" fill="#2B7A52"/>
+<rect x="1000" y="542" width="44" height="24" rx="12" fill="#2B7A52"/>
+<text x="60" y="600" font-family="Inter,sans-serif" font-size="15" fill="#13201A" text-anchor="start">Задача принята автоматически</text>
+<rect x="890" y="582" width="44" height="24" rx="12" fill="#2B7A52"/>
+<rect x="1000" y="582" width="44" height="24" rx="12" fill="#2B7A52"/>
+<text x="60" y="640" font-family="Inter,sans-serif" font-size="15" fill="#13201A" text-anchor="start">CI упал на PR выданной задачи</text>
+<rect x="890" y="622" width="44" height="24" rx="12" fill="#2B7A52"/>
+<rect x="1000" y="622" width="44" height="24" rx="12" fill="#2B7A52"/>
+<text x="60" y="680" font-family="Inter,sans-serif" font-size="15" fill="#13201A" text-anchor="start">Задача ждёт приёмки больше суток</text>
+<rect x="890" y="662" width="44" height="24" rx="12" fill="#2B7A52"/>
+<rect x="1000" y="662" width="44" height="24" rx="12" fill="#D2DBD3"/>
+<text x="60" y="720" font-family="Inter,sans-serif" font-size="15" fill="#13201A" text-anchor="start">Ошибка в плане при синхронизации</text>
+<rect x="890" y="702" width="44" height="24" rx="12" fill="#2B7A52"/>
+<rect x="1000" y="702" width="44" height="24" rx="12" fill="#2B7A52"/>
+<text x="60" y="760" font-family="Inter,sans-serif" font-size="15" fill="#13201A" text-anchor="start">Вход с нового устройства</text>
+<rect x="890" y="742" width="44" height="24" rx="12" fill="#2B7A52"/>
+<rect x="1000" y="742" width="44" height="24" rx="12" fill="#D2DBD3"/>
+<text x="60" y="800" font-family="Inter,sans-serif" font-size="15" fill="#13201A" text-anchor="start">Не создана резервная копия</text>
+<rect x="890" y="782" width="44" height="24" rx="12" fill="#D2DBD3"/>
+<rect x="1000" y="782" width="44" height="24" rx="12" fill="#D2DBD3"/>
+<text x="60" y="850" font-family="Inter,sans-serif" font-size="13" fill="#566860" text-anchor="start">Не чаще одного уведомления на событие в час. В сообщения не попадают промпты и тексты отчётов.</text>
+</svg>
