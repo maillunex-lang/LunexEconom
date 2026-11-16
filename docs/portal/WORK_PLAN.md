@@ -1,4 +1,5 @@
-# План работ: этапы и две независимые линии исполнителей
+docs/portal/WORK_PLAN.md обновлён
+� независимые линии исполнителей
 
 Источник правды: [`work_plan.json`](work_plan.json). Файл собирается командой `python tools/work_plan.py render`, вручную не правится. Проверка `python tools/work_plan.py check`.
 
