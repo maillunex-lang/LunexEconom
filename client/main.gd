@@ -13,6 +13,12 @@ const EnterprisesScreen = preload("res://screens/enterprises.tscn")
 const BuildScreen = preload("res://screens/build.tscn")
 const SupplyScreen = preload("res://screens/supply.tscn")
 const StoreScreen = preload("res://screens/store.tscn")
+const MoreScreen = preload("res://screens/more.tscn")
+const FinanceScreen = preload("res://screens/finance.tscn")
+const NavBar = preload("res://ui/navigation_bar.gd")
+const TutorialState = preload("res://tutorial/state.gd")
+const TutorialGuide = preload("res://tutorial/guide.gd")
+const TutorialService = preload("res://tutorial/service.gd")
 const PublicBase = preload("res://config/public_base.gd")
 const VERSION := "2.1.0"
 const PUBLIC_KEY_PATH := "res://security/config_public.pem"
@@ -29,6 +35,13 @@ var enterprises_screen: Control
 var build_screen: Control
 var supply_screen: Control
 var store_screen: Control
+var more_screen: Control
+var finance_screen: Control
+var navigation_bar: Control
+var tutorial_state: RefCounted
+var tutorial_guide: Control
+var tutorial_service: Node
+var account_id := ""
 var login_card: PanelContainer
 var form: VBoxContainer
 var headquarters: VBoxContainer
@@ -64,6 +77,8 @@ func _ready() -> void:
     build_screen = BuildScreen.instantiate()
     supply_screen = SupplyScreen.instantiate()
     store_screen = StoreScreen.instantiate()
+    more_screen = MoreScreen.instantiate()
+    finance_screen = FinanceScreen.instantiate()
     router.register_screen("login",login_screen)
     router.register_screen("headquarters",headquarters_screen)
     router.register_screen("settings",settings_screen)
@@ -72,6 +87,8 @@ func _ready() -> void:
     router.register_screen("build",build_screen)
     router.register_screen("supply",supply_screen)
     router.register_screen("store",store_screen)
+    router.register_screen("more",more_screen)
+    router.register_screen("finance",finance_screen)
     # Existing V2-01b implementation stays untouched.
     update_screen = UpdatesPanel.instantiate()
     router.register_screen("updates", update_screen)
@@ -83,6 +100,7 @@ func _ready() -> void:
     settings_screen.back_requested.connect(func(): router.back())
     map_screen.back_requested.connect(func(): router.back())
     map_screen.wallet_changed.connect(_load_hq)
+    map_screen.stream.land_purchased.connect(func(_data: Dictionary): _refresh_tutorial())
     map_screen.build_requested.connect(_on_build_requested)
     map_screen.enterprise_requested.connect(_on_enterprise_requested)
     enterprises_screen.back_requested.connect(func(): router.back())
@@ -92,8 +110,28 @@ func _ready() -> void:
     build_screen.back_requested.connect(func(): router.back())
     supply_screen.back_requested.connect(func(): router.back())
     store_screen.back_requested.connect(func(): router.back())
+    more_screen.navigate.connect(_navigate)
+    more_screen.logout_requested.connect(_logout)
+    navigation_bar = NavBar.new()
+    navigation_bar.name = "BottomNavigation"
+    navigation_bar.target_requested.connect(_navigate)
+    navigation_bar.visible = false
+    add_child(navigation_bar)
+    router.changed.connect(_on_screen_changed)
+    tutorial_state = TutorialState.new()
+    tutorial_service = TutorialService.new()
+    add_child(tutorial_service)
+    tutorial_service.verified.connect(_on_tutorial_verified)
+    tutorial_service.clock_observed.connect(_on_tutorial_clock)
+    tutorial_guide = TutorialGuide.new()
+    tutorial_guide.name = "TutorialGuide"
+    tutorial_guide.refresh_requested.connect(_refresh_tutorial)
+    add_child(tutorial_guide)
+    tutorial_guide.set_progress(tutorial_state)
+    settings_screen.reset_tutorial_requested.connect(_reset_tutorial)
     build_screen.built.connect(_on_enterprise_built)
     build_screen.preview_changed.connect(func(footprint: Dictionary): map_screen.canvas.preview = footprint; map_screen.canvas.queue_redraw())
+    build_screen.road_preview_changed.connect(_show_planned_road)
     form = login_screen.form
     login_card = login_screen.card
     login_username = login_screen.username
@@ -125,6 +163,26 @@ func _navigate(screen: String) -> void:
         map_screen.open(base_url,token)
     elif screen == "enterprises":
         enterprises_screen.open(_enterprise_transport())
+        _refresh_tutorial()
+
+func _show_planned_road(cells: Array) -> void:
+    map_screen.canvas.road_preview.clear()
+    for cell in cells:
+        if cell is Array and cell.size() >= 2:
+            map_screen.canvas.road_preview.append(Vector2i(int(cell[0]),int(cell[1])))
+    map_screen.canvas.queue_redraw()
+
+
+func _on_screen_changed(screen: String) -> void:
+    if navigation_bar != null:
+        navigation_bar.change_screen(screen)
+    if tutorial_guide != null:
+        tutorial_guide.change_screen(screen)
+    if router != null and router.host != null:
+        router.host.offset_bottom = -maxf(60.0, Forest.touch_size(get_viewport_rect().size) + 10.0) if navigation_bar.visible else 0.0
+    if screen in ["map", "enterprises", "headquarters", "supply", "store"] and not account_id.is_empty():
+        _refresh_tutorial()
+
 
 func _enterprise_transport() -> Node:
     map_screen.api.base_url = base_url
@@ -150,9 +208,13 @@ func _on_store_requested(id: int) -> void:
 
 func _on_enterprise_built() -> void:
     map_screen.canvas.preview = {}
+    map_screen.canvas.road_preview.clear()
     map_screen.canvas.queue_redraw()
+    for key in map_screen.stream.cache.keys():
+        map_screen.stream.revalidate(key)
     _load_hq()
     map_screen.stream.poll_events()
+    _refresh_tutorial()
     router.go("enterprises")
     enterprises_screen.open(_enterprise_transport())
 
@@ -162,16 +224,22 @@ func _refresh_map_access() -> String:
     return ""
 
 func _on_update_state(_message: String, _can_install: bool, mandatory: bool) -> void:
-    if mandatory:
+    if mandatory and not token.is_empty():
         _navigate("updates")
 
 func _show_headquarters() -> void:
     headquarters.show()
     router.reset("headquarters")
+    if not account_id.is_empty() and not token.is_empty():
+        _begin_tutorial()
 
 func _show_login() -> void:
     headquarters.hide()
     router.reset("login")
+    account_id = ""
+    tutorial_service.active_account = ""
+    tutorial_state.use_account("")
+    tutorial_guide.redraw()
 
 func _unhandled_key_input(event: InputEvent) -> void:
     if event is InputEventKey and event.pressed and not event.echo and (event.keycode == KEY_ESCAPE or event.keycode == KEY_BACK):
@@ -201,6 +269,25 @@ func _on_viewport_resized() -> void:
     supply_screen.resize_ui(size_now)
     store_screen.resize_ui(size_now)
     Forest.apply_touch(update_screen,size_now)
+    if tutorial_guide != null:
+        tutorial_guide.set_anchors_and_offsets_preset(Control.PRESET_TOP_RIGHT)
+        tutorial_guide.offset_left = -minf(450.0, size_now.x * 0.39)
+        tutorial_guide.offset_right = -float(shell.get_theme_constant("margin_right"))
+        tutorial_guide.offset_top = float(shell.get_theme_constant("margin_top")) + 5.0
+        tutorial_guide.offset_bottom = tutorial_guide.offset_top + (56.0 if tutorial_state.collapsed else 172.0)
+        tutorial_guide.refresh_size(size_now)
+    more_screen.resize_ui(size_now)
+    finance_screen.resize_ui(size_now)
+    if navigation_bar != null:
+        navigation_bar.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_WIDE)
+        var nav_height := maxf(60.0, Forest.touch_size(size_now) + 10.0)
+        navigation_bar.offset_top = -nav_height - float(shell.get_theme_constant("margin_bottom"))
+        navigation_bar.offset_bottom = -float(shell.get_theme_constant("margin_bottom"))
+        if router != null and router.host != null:
+            router.host.offset_bottom = -nav_height if navigation_bar.visible else 0.0
+        navigation_bar.offset_left = float(shell.get_theme_constant("margin_left"))
+        navigation_bar.offset_right = -float(shell.get_theme_constant("margin_right"))
+        navigation_bar.refresh_size(size_now)
 
 func _process(_delta: float) -> void:
     if router.current == "updates" and not update_screen.visible and not update_screen.mandatory:
@@ -275,6 +362,7 @@ func _restore_session() -> void:
         if router.current in ["", "login", "headquarters"]:
             _show_headquarters()
         _load_hq()
+        _identify_tutorial()
 
 func _send_auth(mode: String) -> void:
     if _auth_busy:
@@ -304,6 +392,7 @@ func _send_auth(mode: String) -> void:
         status_label.text = Strings.get_text("error.auth")
         return
     _save_refresh(refresh_token)
+    account_id = str((response.data as Dictionary).get("account_id", ""))
     _show_headquarters()
     _load_hq()
 
@@ -312,6 +401,55 @@ func _authorized_api(path: String) -> Dictionary:
     if result.code == 401 and await _renew_tokens():
         result = await _api(path,HTTPClient.METHOD_GET,{},true)
     return result
+
+func _begin_tutorial() -> void:
+    if token.is_empty():
+        return
+    if account_id.is_empty():
+        _identify_tutorial()
+        return
+    tutorial_state.use_account(account_id)
+    tutorial_guide.set_progress(tutorial_state)
+    navigation_bar.focus_tutorial(tutorial_state.step)
+    tutorial_service.configure(_enterprise_transport(), account_id, tutorial_state.started_day)
+    _refresh_tutorial()
+
+
+func _identify_tutorial() -> void:
+    var me: Dictionary = await _authorized_api("/auth/me")
+    if int(me.get("code", 0)) == 200:
+        account_id = str(me.get("data", {}).get("id", ""))
+        _begin_tutorial()
+
+
+func _refresh_tutorial() -> void:
+    if account_id.is_empty() or tutorial_state.completed:
+        return
+    tutorial_service.configure(_enterprise_transport(), account_id, tutorial_state.started_day)
+    var chunks: Array = map_screen.stream.parcels.keys()
+    map_screen.api.set_meta("tutorial_chunks", chunks)
+    tutorial_service.refresh()
+
+
+func _on_tutorial_clock(day: int) -> void:
+    if tutorial_state != null and not tutorial_state.account_id.is_empty():
+        tutorial_state.note_start_day(day)
+
+
+func _on_tutorial_verified(verified_step: int) -> void:
+    tutorial_state.accept_verified(verified_step)
+    navigation_bar.focus_tutorial(-1 if tutorial_state.completed else tutorial_state.step)
+    tutorial_guide.redraw()
+
+
+func _reset_tutorial() -> void:
+    if account_id.is_empty():
+        return
+    tutorial_state.reset_progress()
+    navigation_bar.focus_tutorial(tutorial_state.step)
+    tutorial_guide.redraw()
+    _refresh_tutorial()
+
 
 func _presence_heartbeat() -> void:
     if token.is_empty():

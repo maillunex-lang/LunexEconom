@@ -1,6 +1,6 @@
 extends Control
 signal changed(screen_name: String)
-const SCREENS := ["login", "headquarters", "settings", "updates", "map", "enterprises", "supply", "store", "build"]
+const SCREENS := ["login", "headquarters", "settings", "updates", "map", "enterprises", "supply", "store", "build", "more", "finance"]
 var current := ""
 var history: Array[String] = []
 var host: Control

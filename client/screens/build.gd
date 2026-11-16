@@ -2,6 +2,7 @@ extends Control
 signal back_requested
 signal built
 signal preview_changed(footprint: Dictionary)
+signal road_preview_changed(cells: Array)
 const Catalog = preload("res://enterprises/catalog.gd")
 const EnterpriseApi = preload("res://enterprises/api.gd")
 const Words = preload("res://enterprises/strings.gd")
@@ -29,6 +30,11 @@ var category: OptionButton
 var available_filter: CheckButton
 var confirmation: ConfirmationDialog
 var _busy := false
+var _plan_serial := 0
+var plan_data: Dictionary = {}
+var plan_details: Label
+var plan_shortfall: Label
+var preview_canvas: Control
 
 func _ready() -> void:
     set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
@@ -63,12 +69,34 @@ func _ready() -> void:
     context.add_child(zone_label)
     road_label = Label.new()
     context.add_child(road_label)
+    var preview := PanelContainer.new()
+    preview.name = "RoadPreviewPanel"
+    preview.custom_minimum_size = Vector2(0, 140)
+    outer.add_child(preview)
+    var preview_box := VBoxContainer.new()
+    preview.add_child(preview_box)
+    var preview_title := Label.new()
+    preview_title.text = Words.get_text("build.plan.preview")
+    preview_box.add_child(preview_title)
+    preview_canvas = preload("res://world/map_canvas.gd").new()
+    preview_canvas.name = "RoadPreviewCanvas"
+    preview_canvas.custom_minimum_size = Vector2(0, 112)
+    preview_canvas.mouse_filter = Control.MOUSE_FILTER_IGNORE
+    preview_box.add_child(preview_canvas)
     var scroll := ScrollContainer.new()
     scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
     outer.add_child(scroll)
     rows = VBoxContainer.new()
     rows.size_flags_horizontal = Control.SIZE_EXPAND_FILL
     scroll.add_child(rows)
+    plan_details = Label.new()
+    plan_details.name = "RoadPlan"
+    plan_details.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+    outer.add_child(plan_details)
+    plan_shortfall = Label.new()
+    plan_shortfall.name = "PlanShortfall"
+    plan_shortfall.add_theme_color_override("font_color", Color("f2a8a8"))
+    outer.add_child(plan_shortfall)
     message = Label.new()
     message.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
     outer.add_child(message)
@@ -95,6 +123,14 @@ func open(adapter: Node, parcel: Dictionary, cell: Vector2i) -> void:
     available_width = maxi(0,px*6+6-x)
     available_height = maxi(0,py*6+6-y)
     road_near = bool(parcel.get("road_near",false))
+    _plan_serial += 1
+    plan_data.clear()
+    chosen.clear()
+    if plan_details != null:
+        plan_details.text = ""
+        plan_shortfall.text = ""
+    road_preview_changed.emit([])
+    _update_local_preview([])
     site_cells.clear()
     for entry in parcel.get("site_cells",[]):
         if entry is Dictionary and entry.has("x") and entry.has("y"):
@@ -148,6 +184,7 @@ func _evaluate(item: Dictionary) -> Dictionary:
     var any_zone := false
     var any_clear := false
     var any_road := false
+    var candidate := {}
     var saw_water := false
     var saw_obstacle := false
     for top_y in range(py*6,py*6+7-height):
@@ -191,16 +228,23 @@ func _evaluate(item: Dictionary) -> Dictionary:
                             unknown_boundary = true
                         elif bool(adjacent.get("road",false)):
                             has_road = true
+            # Local site validity only; server plan owns final access/cost.
+            var installment := int(item.get("build_cost",0))*300/1000
+            if wallet_balance>=0 and wallet_balance<installment:
+                return {"allowed":false,"reason":"money","amount":installment,"x":top_x,"y":top_y}
             if has_road or unknown_boundary or not complete:
-                var installment := int(item.get("build_cost",0))*300/1000
-                if wallet_balance>=0 and wallet_balance<int(installment):
-                    return {"allowed":false,"reason":"money","amount":installment}
                 return {"allowed":true,"x":top_x,"y":top_y,"reason":""}
+            if candidate.is_empty():
+                candidate = {"allowed":true,"x":top_x,"y":top_y,"reason":""}
             any_road = any_road or has_road
     if not any_zone:
         return {"allowed":false,"reason":"zone"}
     if not any_clear:
         return {"allowed":false,"reason":"water" if saw_water and not saw_obstacle else "occupied"}
+    if not candidate.is_empty():
+        # Permit server-planned access roads even if the old local road test fails.
+        # Preserve the historical diagnostic result for unselected previews.
+        return {"allowed":false,"reason":"road","candidate":candidate}
     if not any_road:
         return {"allowed":false,"reason":"road"}
     return {"allowed":false,"reason":"occupied"}
@@ -225,7 +269,7 @@ func _render() -> void:
         if not kind.is_empty() and str(item.get("category","")) != kind:
             continue
         var status := _evaluate(item)
-        var allowed := bool(status.get("allowed",false))
+        var allowed := bool(status.get("allowed",false)) or status.has("candidate") or str(status.get("reason","")) == "money"
         if available_filter.button_pressed and not allowed:
             continue
         var footprint: Dictionary = item.get("size",{})
@@ -245,30 +289,80 @@ func _render() -> void:
             Format.days(item.get("build_days",0)),
             Words.get_text("build.zone.allowed",{"zones":_allowed_names(item)})]
         content.add_child(specs)
-        var installment := Label.new()
-        installment.text = Words.get_text("build.initial",{"cost":Format.money(int(item.get("build_cost",0))*300/1000)})
-        content.add_child(installment)
         var button := Button.new()
-        button.text = Words.get_text("build.available") if allowed else Words.get_text("build.unavailable",{"reason":_reason(item,status)})
+        button.text = Words.get_text("build.plan.choose") if str(status.get("reason","")) in ["road","money"] else (Words.get_text("build.available") if allowed else Words.get_text("build.unavailable",{"reason":_reason(item,status)}))
         button.disabled = not allowed
         if allowed:
-            button.pressed.connect(_choose.bind(item,status))
+            button.pressed.connect(_choose.bind(item, status.get("candidate", status)))
         content.add_child(button)
 
 func _choose(item: Dictionary, placement: Dictionary) -> void:
     if _busy:
         return
     chosen = item
-    x = int(placement.get("x",x))
-    y = int(placement.get("y",y))
-    var footprint: Dictionary = item.get("size",{})
-    preview_changed.emit({"x":x,"y":y,"width":int(footprint.get("width",1)),"height":int(footprint.get("height",1))})
-    confirmation.dialog_text = Words.get_text("confirm.build",{
-        "name":item.get("name",""),"cost":Format.number(item.get("build_cost",0))})
+    x = int(placement.get("x", x))
+    y = int(placement.get("y", y))
+    var footprint: Dictionary = item.get("size", {})
+    var footprint_data := {"x": x, "y": y, "width": int(footprint.get("width", 1)),
+        "height": int(footprint.get("height", 1))}
+    preview_changed.emit(footprint_data)
+    preview_canvas.preview = footprint_data
+    preview_canvas.focus(Vector2i(x + int(footprint.get("width", 1)) / 2, y + int(footprint.get("height", 1)) / 2))
+    preview_canvas.queue_redraw()
+    _schedule_plan()
+
+
+func _schedule_plan() -> void:
+    _plan_serial += 1
+    var serial := _plan_serial
+    plan_data.clear()
+    plan_details.text = Words.get_text("build.plan.loading")
+    plan_shortfall.text = ""
+    road_preview_changed.emit([])
+    _update_local_preview([])
+    await get_tree().create_timer(0.3).timeout
+    if serial != _plan_serial or chosen.is_empty():
+        return
+    var response: Dictionary = await service.plan(str(chosen.get("id", "")), px, py, x, y)
+    if serial != _plan_serial or chosen.is_empty():
+        return
+    if int(response.get("code", 0)) != 200:
+        plan_details.text = Words.error(response)
+        return
+    var data: Dictionary = response.get("data", {})
+    plan_data = data
+    if not bool(data.get("ok", false)):
+        var reason := str(data.get("reason", "unknown"))
+        plan_details.text = Words.get_text("error.build." + reason) if Words.has_text("error.build." + reason) else Words.get_text("build.plan.unavailable")
+        return
+    var road: Array = data.get("road_cells", [])
+    road_preview_changed.emit(road)
+    _update_local_preview(road)
+    plan_details.text = "\n".join([
+        Words.get_text("build.plan.road", {"count": road.size(), "cost": Format.money(data.get("road_cost", 0))}),
+        Words.get_text("build.plan.initial", {"amount": Format.money(data.get("initial_payment", 0))}),
+        Words.get_text("build.plan.total", {"amount": Format.money(data.get("total_initial", 0))})])
+    if not bool(data.get("can_afford", false)):
+        plan_shortfall.text = Words.get_text("build.plan.shortfall", {"amount": Format.money(data.get("shortfall", 0))})
+        return
+    plan_shortfall.text = Words.get_text("build.plan.afford")
+    confirmation.dialog_text = Words.get_text("build.plan.confirm", {
+        "name": chosen.get("name", ""), "total": Format.money(data.get("total_initial", 0))})
     confirmation.popup_centered()
 
+
+func _update_local_preview(cells: Array) -> void:
+    if preview_canvas == null:
+        return
+    preview_canvas.road_preview.clear()
+    for item in cells:
+        if item is Array and item.size() >= 2:
+            preview_canvas.road_preview.append(Vector2i(int(item[0]), int(item[1])))
+    preview_canvas.queue_redraw()
+
+
 func _purchase() -> void:
-    if _busy or chosen.is_empty():
+    if _busy or chosen.is_empty() or not bool(plan_data.get("ok", false)) or not bool(plan_data.get("can_afford", false)):
         return
     _busy = true
     message.text = Words.get_text("loading")
@@ -285,6 +379,11 @@ func _purchase() -> void:
             message.text = Words.get_text("error.build.unknown")
             error_code_label.text = Words.get_text("error.build.code",{"code":raw_code})
             error_code_label.visible = true
+        if raw_code == "insufficient_funds":
+            message.text = Words.get_text("build.plan.error.money", {
+                "required": Format.money(response.get("data", {}).get("required", 0)),
+                "road_cost": Format.money(response.get("data", {}).get("road_cost", 0)),
+                "shortfall": Format.money(response.get("data", {}).get("shortfall", 0))})
         if raw_code=="invalid_zone":
             message.text += "\n" + Words.get_text("build.zone.allowed",{"zones":_allowed_names(chosen)})
 

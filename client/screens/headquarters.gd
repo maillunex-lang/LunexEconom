@@ -51,18 +51,6 @@ func _ready() -> void:
     settings.pressed.connect(func(): navigate.emit("settings"))
     var logout := _button("auth.logout",actions)
     logout.pressed.connect(func(): logout_requested.emit())
-    tabs = HBoxContainer.new()
-    tabs.name = "NavigationTabs"
-    stack.add_child(tabs)
-    for key in ["map.title","player.enterprises","market.title","finance.title"]:
-        var tab := _button(key,tabs)
-        if key == "map.title":
-            tab.pressed.connect(func(): navigate.emit("map"))
-        elif key == "player.enterprises":
-            tab.pressed.connect(func(): navigate.emit("enterprises"))
-        else:
-            tab.disabled = true
-            tab.focus_mode = Control.FOCUS_NONE
 
 func _button(key: String, parent: HBoxContainer) -> Button:
     var control := Button.new()
