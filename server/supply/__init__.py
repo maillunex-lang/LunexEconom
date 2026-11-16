@@ -1,11 +1,13 @@
 """Supply registration: links first, city market second, production later."""
 from pathlib import Path
 from . import core, api
+from server import sales
 
 def migrations():
-    return [Path(__file__).resolve().parents[1] / 'migrations' / filename for filename in ('202611152200_supply_core.sql', '202611152210_supply_seller_policy.sql', '202611160830_supply_fuel_failures.sql')]
+    return [Path(__file__).resolve().parents[1] / 'migrations' / filename for filename in ('202611152200_supply_core.sql', '202611152210_supply_seller_policy.sql', '202611160830_supply_fuel_failures.sql')] + sales.migrations()
 
 def register(registry):
+    sales.register(registry)
     registry.flag('supply_enabled', True)
     registry.flag('logistics_fuel_required', False)
     registry.flag('logistics_fuel_autobuy', True)
@@ -22,5 +24,7 @@ def register(registry):
         from server.platform.settings import read_settings
         flags=read_settings(conn,registry.flags,registry.flag_constraints)
         if flags['supply_enabled']:
+            if flags.get('supply_sales_modes_enabled', False):
+                registry.sales_daily_prelink(conn,day)
             core.links_day(conn,day,flags)
     registry.tick('daily','supply_links',links,order=20)
