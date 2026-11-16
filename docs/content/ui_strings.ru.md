@@ -208,3 +208,11 @@ supply.fuel.same_city | Внутри города рейс топливо не �
 city.gas | Газ для города
 city.gas.need | Городу сегодня нужно {m3} м³ газа
 retail.hardware.note | Эти полки для стройки, не для еды
+
+ui.back | Назад
+ui.empty.title | Пока здесь пусто
+ui.empty.help | Добавьте первый объект, чтобы увидеть его в списке.
+ui.empty.action | Добавить
+ui.auth.tagline | Создайте компанию. Развивайте экономику Башкортостана.
+ui.auth.password.show | Показать пароль
+ui.auth.password.hide | Скрыть пароль
