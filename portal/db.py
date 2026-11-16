@@ -121,6 +121,8 @@ AUDIT_FIELDS = {
     "project.delete": ("slug",), "project.create": ("slug",), "plan.import": ("slug", "packages"),
     "task.auto_accept": ("slug", "id", "sha"), "task.auto_merge": ("slug", "id"), "task.auto_merge_cancel": ("slug", "id"),
     "plan.sync": ("slug",), "task.status": ("slug", "id", "status"),
+    "memory.link.create": ("slug",), "memory.link.revoke": ("slug",),
+    "memory.link.view": ("slug",), "memory.decision.add": ("slug",),
     "task.manual_accept": ("slug", "id", "manual"), "task.revision": ("slug", "id", "count"),
 }
 SAFE_IDENT = re.compile(r"^[a-zA-Z0-9_.:-]{1,80}$")

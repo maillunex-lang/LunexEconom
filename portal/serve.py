@@ -1,5 +1,6 @@
 """Запуск портала: python -m portal.serve. Слушает только 127.0.0.1 (наружу через nginx)."""
 import os
+import re
 import sys
 import threading
 import time
@@ -19,7 +20,7 @@ class Threaded(ThreadingMixIn, WSGIServer):
 
 class Quiet(WSGIRequestHandler):
     def log_message(self, fmt, *args):
-        sys.stderr.write("%s %s\n" % (self.address_string(), fmt % args))
+        sys.stderr.write("%s %s\n" % (self.address_string(), re.sub(r"(/ctx/)[A-Za-z0-9_-]{22,64}",lambda match: match.group(1)+"[скрыто]",fmt % args)))
 
 
 def main():
@@ -53,7 +54,9 @@ def main():
                 if enabled("launch","PORTAL_LAUNCH_ENABLED") and enabled("webhook","PORTAL_WEBHOOK_ENABLED"):
                     plan_conn = db.connect(path, webhook=True, reports=True, notifications=True)
                     try:
-                        poll_plans(plan_conn, os.environ.get("PORTAL_GITHUB_TOKEN_FILE"))
+                        poll_plans(plan_conn, os.environ.get("PORTAL_GITHUB_TOKEN_FILE"),
+                                   memory_enabled=os.environ.get("PORTAL_MEMORY","1")=="1",
+                                   memory_root=os.environ.get("PORTAL_REPO_ROOT"))
                         if enabled("review_a7","PORTAL_REVIEW_A7_ENABLED"):
                             before=plan_conn.execute("SELECT COALESCE(MAX(id),0) FROM events").fetchone()[0]
                             merge_due(plan_conn,os.environ.get("PORTAL_GITHUB_MERGE_TOKEN_FILE"),os.environ.get("PORTAL_GITHUB_TOKEN_FILE"))
