@@ -96,3 +96,15 @@ svg { width: 100%; height: auto; min-height: 120px; }
   .topbar { flex-wrap:wrap; }
   .shell { overflow-x:clip; }
 }
+
+/* Admin help: explanatory text stays readable on small screens. */
+.help-panel { margin-bottom: 16px; border-left: 3px solid var(--mint); }
+.help-panel p { line-height: 1.55; }
+.help-details { margin-top: 10px; padding: 10px 12px; background: var(--panel-soft); border-radius: 10px; }
+.help-details summary { cursor: pointer; font-weight: 700; }
+.help-details p { margin-bottom: 2px; line-height: 1.6; }
+.help-setting { max-width: 650px; overflow-wrap: anywhere; }
+.help-setting strong { color: var(--text); }
+.help-setting p { margin: 7px 0; }
+.setting-form { align-items: flex-start; }
+@media(max-width:600px) { .setting-form .actions { width:100%; } .setting-form .actions input { flex:1 1 100%; } }
