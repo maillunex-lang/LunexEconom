@@ -1,9 +1,10 @@
 """City market HTTP and second-phase daily clearing."""
 from pathlib import Path
-from . import core, api
+from . import core, api, city_gas
 
 def migrations():
-    return []
+    return [Path(__file__).resolve().parents[1] / 'migrations' /
+            '202611161320_city_gas_daily.sql']
 
 def register(registry):
     registry.flag('market_enabled', True)
@@ -20,3 +21,11 @@ def register(registry):
         if flags['market_enabled'] and flags['supply_enabled']:
             core.clear_day(conn,day,flags)
     registry.tick('daily','supply_market',clear,order=30)
+
+    registry.flag('city_gas_utility', 0, 0, 1)
+    def gas_daily(conn, day):
+        from server.platform.settings import read_settings
+        flags = read_settings(conn, registry.flags, registry.flag_constraints)
+        if flags['city_gas_utility'] == 1:
+            city_gas.day(conn, day)
+    registry.tick('daily', 'city_gas', gas_daily, order=35)
