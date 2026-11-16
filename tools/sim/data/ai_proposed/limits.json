@@ -1,0 +1,20 @@
+{
+  "version": "draft-1",
+  "balance": "draft",
+  "limits": {
+    "max_actions_per_ai_per_day": 5,
+    "max_total_actions_per_tick": 500,
+    "max_lm_calls_per_day": 20,
+    "max_lm_cost_game_rub_per_day": 50,
+    "memory_max_bytes": 4096,
+    "dump_below_cost_max_days": 7,
+    "market_buy_share_max_permille": 400,
+    "max_ai_count": 100,
+    "mood_decay_per_day_permille": 50,
+    "memory_decay_factor_permille": 950,
+    "memory_decay_interval_days": 7
+  },
+  "ai_mark_text": "Управляется ИИ",
+  "forbidden_words": ["я человек", "реальные деньги", "переведи", "email", "пароль", "токен", "выход из игры"],
+  "allowed_placeholders": ["{company}", "{city}", "{goods}", "{price_rub}", "{days}"]
+}

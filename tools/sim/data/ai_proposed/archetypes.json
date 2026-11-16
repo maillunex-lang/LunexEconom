@@ -1,0 +1,102 @@
+{
+  "version": "draft-1",
+  "balance": "draft",
+  "archetypes": [
+    {
+      "id": "cautious_saver",
+      "name_ru": "Осторожный накопитель",
+      "risk_permille": 200,
+      "patience_days": 90,
+      "reinvest_permille": 300,
+      "price_aggression_permille": 100,
+      "debt_threshold_permille": 200,
+      "competitor_reaction_permille": 300,
+      "preferred_chains": ["grain_flour_bread", "dairy"],
+      "preferred_cities": ["ufa", "oktyabrsky"]
+    },
+    {
+      "id": "aggressive_expander",
+      "name_ru": "Агрессивный расширитель",
+      "risk_permille": 800,
+      "patience_days": 15,
+      "reinvest_permille": 800,
+      "price_aggression_permille": 600,
+      "debt_threshold_permille": 700,
+      "competitor_reaction_permille": 800,
+      "preferred_chains": ["fuel", "construction"],
+      "preferred_cities": ["salavat", "uchaly"]
+    },
+    {
+      "id": "chain_monopolist",
+      "name_ru": "Монополист цепочки",
+      "risk_permille": 500,
+      "patience_days": 60,
+      "reinvest_permille": 600,
+      "price_aggression_permille": 400,
+      "debt_threshold_permille": 400,
+      "competitor_reaction_permille": 700,
+      "preferred_chains": ["steel", "grain_flour_bread"],
+      "preferred_cities": ["beloretsk", "davlekanovo"]
+    },
+    {
+      "id": "price_dumper",
+      "name_ru": "Ценовой демпингующий",
+      "risk_permille": 700,
+      "patience_days": 20,
+      "reinvest_permille": 400,
+      "price_aggression_permille": 900,
+      "debt_threshold_permille": 600,
+      "competitor_reaction_permille": 900,
+      "preferred_chains": ["bread", "dairy"],
+      "preferred_cities": ["meleuz", "sterlitamak"]
+    },
+    {
+      "id": "niche_specialist",
+      "name_ru": "Нишевый специалист",
+      "risk_permille": 300,
+      "patience_days": 120,
+      "reinvest_permille": 500,
+      "price_aggression_permille": 200,
+      "debt_threshold_permille": 300,
+      "competitor_reaction_permille": 400,
+      "preferred_chains": ["dairy", "honey"],
+      "preferred_cities": ["sterlitamak", "sibay"]
+    },
+    {
+      "id": "speculator",
+      "name_ru": "Спекулянт-перепродавец",
+      "risk_permille": 900,
+      "patience_days": 5,
+      "reinvest_permille": 200,
+      "price_aggression_permille": 700,
+      "debt_threshold_permille": 800,
+      "competitor_reaction_permille": 500,
+      "preferred_chains": ["fuel", "electronics"],
+      "preferred_cities": ["neftekamsk", "tuymazy"]
+    },
+    {
+      "id": "loyal_partner",
+      "name_ru": "Лояльный партнёр",
+      "risk_permille": 250,
+      "patience_days": 180,
+      "reinvest_permille": 400,
+      "price_aggression_permille": 150,
+      "debt_threshold_permille": 250,
+      "competitor_reaction_permille": 200,
+      "preferred_chains": ["retail", "dairy"],
+      "preferred_cities": ["birsk", "ishimbay"]
+    },
+    {
+      "id": "novice_experimenter",
+      "name_ru": "Новичок-экспериментатор",
+      "risk_permille": 600,
+      "patience_days": 30,
+      "reinvest_permille": 700,
+      "price_aggression_permille": 500,
+      "debt_threshold_permille": 500,
+      "competitor_reaction_permille": 600,
+      "preferred_chains": ["electronics", "honey"],
+      "preferred_cities": ["kumertau"]
+    }
+  ]
+}

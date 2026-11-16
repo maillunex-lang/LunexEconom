@@ -1,0 +1,20 @@
+{
+  "balance": "draft",
+  "alternatives": [
+    {
+      "id": "hire_executive_coverage",
+      "pay_with": "game_rub",
+      "coverage_enterprises": 4,
+      "salary_base_game_rub": 2000,
+      "skill_note_level": 5,
+      "title": "Нанять управляющего за игровую зарплату"
+    },
+    {
+      "id": "buy_accel_game_rub",
+      "pay_with": "game_rub",
+      "price_game_rub": 25000,
+      "per_real_day": 1,
+      "title": "Ускорить текущую стадию стройки за игровые рубли"
+    }
+  ]
+}
