@@ -118,6 +118,14 @@ def create_app(db_path, base="", secure_cookie=True, fetch=None, github_token_fi
     def project_row(slug):
         return conn.execute("SELECT * FROM projects WHERE slug=?", (slug,)).fetchone()
 
+    def seed_states(slug, plan):
+        """Пакеты, помеченные в плане как done, считаются принятыми (для проектов, у которых уже есть история). Уже начатые задачи не трогаем."""
+        now = time.time()
+        for pkg in plan.get("packages", []):
+            if isinstance(pkg, dict) and pkg.get("status") == "done" and isinstance(pkg.get("id"), str):
+                conn.execute("INSERT OR IGNORE INTO task_state(project_slug,pkg_id) VALUES(?,?)", (slug, pkg["id"]))
+                conn.execute("UPDATE task_state SET status='accepted',accepted_at=COALESCE(accepted_at,?),merged=1 WHERE project_slug=? AND pkg_id=? AND status='planned'", (now, slug, pkg["id"]))
+
     def states(slug):
         result = {r["pkg_id"]: {k: r[k] for k in ("status", "issued_at", "submitted_at", "accepted_at", "merged", "sha", "note")}
                   for r in conn.execute("SELECT * FROM task_state WHERE project_slug=?", (slug,))}
@@ -624,6 +632,7 @@ def create_app(db_path, base="", secure_cookie=True, fetch=None, github_token_fi
             if errs:
                 return respond(start, "422 Unprocessable Entity", {"error": "plan_errors", "details": errs[:20]})
             conn.execute("UPDATE projects SET plan_json=?, plan_updated=? WHERE slug=?", (json.dumps(plan, ensure_ascii=False), time.time(), slug))
+            seed_states(slug, plan)
             db.audit(conn, "plan.import", {"slug": slug, "packages": len(plan["packages"])})
             return respond(start, "200 OK", {"ok": True, "packages": len(plan["packages"])})
         if sub == "/sync" and method == "POST":
@@ -635,6 +644,7 @@ def create_app(db_path, base="", secure_cookie=True, fetch=None, github_token_fi
             if errs:
                 return respond(start, "422 Unprocessable Entity", {"error": "plan_errors", "details": errs[:20]})
             conn.execute("UPDATE projects SET plan_json=?, plan_updated=? WHERE slug=?", (json.dumps(plan, ensure_ascii=False), time.time(), slug))
+            seed_states(slug, plan)
             db.audit(conn, "plan.sync", {"slug": slug})
             return respond(start, "200 OK", {"ok": True, "packages": len(plan["packages"])})
         if sub == "/status" and method == "POST":
