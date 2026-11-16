@@ -1,0 +1,33 @@
+{
+  "months": 24,
+  "business": {
+    "workers": 25,
+    "units_per_worker_month_base": 320,
+    "price": 38,
+    "input_cost_per_unit": 14,
+    "upkeep_month": 4000,
+    "demand_units_month": 8000
+  },
+  "variants": [
+    {
+      "id": "market_wage_no_training",
+      "wage_factor_bp": 10000,
+      "training_budget_month": 0
+    },
+    {
+      "id": "low_wage",
+      "wage_factor_bp": 7000,
+      "training_budget_month": 0
+    },
+    {
+      "id": "market_wage_training",
+      "wage_factor_bp": 10000,
+      "training_budget_month": 20000
+    },
+    {
+      "id": "high_wage_training",
+      "wage_factor_bp": 13000,
+      "training_budget_month": 20000
+    }
+  ]
+}

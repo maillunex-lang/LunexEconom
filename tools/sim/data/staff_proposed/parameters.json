@@ -1,0 +1,18 @@
+{
+  "version": "draft-1",
+  "levels": 9,
+  "productivity_base_bp": 8000,
+  "productivity_per_level_bp": 500,
+  "wage_per_level_bp": 1200,
+  "base_wage_month": 2100,
+  "market_wage_month": 2100,
+  "train_cost_points_per_level_sq": 600,
+  "points_per_1000_rub": 250,
+  "turnover_base_bp": 150,
+  "turnover_per_underpay_1000_bp": 120,
+  "turnover_floor_bp": 50,
+  "hire_cost_wage_months": 1,
+  "new_hire_level": 1,
+  "morale_penalty_bp_per_underpay_1000_bp": 6000,
+  "morale_floor_bp": 6000
+}
