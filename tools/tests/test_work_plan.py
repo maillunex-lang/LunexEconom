@@ -53,6 +53,30 @@ class WorkPlan(unittest.TestCase):
         self.assertIn("ВЫКЛЮЧЕНЫ", text)
         self.assertIn("Godot", wp.prompt(self.plan, "B1"))
 
+    def test_portal_plan_valid_and_prompt_paths(self):
+        import json
+        plan = json.loads((wp.ROOT / "docs/portal/work_plan.json").read_text(encoding="utf-8"))
+        self.assertEqual(wp.validate(plan), [])
+        text = wp.prompt(plan, "B1")
+        self.assertIn("portal/qa/ui/B1.md", text)
+        self.assertIn("portal/static/**", text)
+        self.assertNotIn("Godot", text)
+        self.assertNotIn("LunexEconom V2", text)
+        a = wp.prompt(plan, "A2")
+        self.assertIn("portal/qa/server/A2.md", a)
+        self.assertIn("portal/hooks/**", a)
+
+    def test_rendered_portal_plan_in_sync(self):
+        import json
+        plan_path = wp.ROOT / "docs/portal/work_plan.json"
+        plan = json.loads(plan_path.read_text(encoding="utf-8"))
+        old = (wp.PLAN, wp.OUT)
+        try:
+            wp.PLAN, wp.OUT = plan_path, plan_path.with_name("WORK_PLAN.md")
+            self.assertEqual(wp.OUT.read_text(encoding="utf-8"), wp.render(plan))
+        finally:
+            wp.PLAN, wp.OUT = old
+
 
 if __name__ == "__main__":
     unittest.main()

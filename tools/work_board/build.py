@@ -32,7 +32,9 @@ ACCEPT = ["Пробное слияние с актуальным main без к�
           "Слияние squash в main выполняет директор; затем пакет принимается кнопкой «Принято, в архив»"]
 
 
-def build(out):
+def build(out, plan_file=None):
+    if plan_file:
+        work_plan.PLAN = Path(plan_file).resolve()
     plan = work_plan.load()
     data = {"lanes": plan["lanes"], "selfcheck": SELFCHECK, "acceptance": ACCEPT, "packages": []}
     for p in plan["packages"]:
@@ -43,5 +45,5 @@ def build(out):
 
 
 if __name__ == "__main__":
-    build(sys.argv[1] if len(sys.argv) > 1 else "work_board.html")
+    build(sys.argv[1] if len(sys.argv) > 1 else "work_board.html", sys.argv[2] if len(sys.argv) > 2 else None)
     print("готово")
