@@ -25,7 +25,9 @@ def main():
                      security_v2=os.environ.get("PORTAL_SECURITY_V2", "1") != "0",
                      webhook_enabled=os.environ.get("PORTAL_WEBHOOK_ENABLED") == "1",
                      webhook_secret_file=os.environ.get("PORTAL_WEBHOOK_SECRET_FILE"),
-                     reports_enabled=os.environ.get("PORTAL_REPORTS_ENABLED", "1") != "0")
+                     reports_enabled=os.environ.get("PORTAL_REPORTS_ENABLED", "1") != "0",
+                     notifications_enabled=os.environ.get("PORTAL_NOTIFICATIONS_ENABLED") == "1",
+                     notify_token_files={"max":os.environ.get("PORTAL_MAX_TOKEN_FILE"),"telegram":os.environ.get("PORTAL_TELEGRAM_TOKEN_FILE")})
     with make_server("127.0.0.1", port, app, server_class=Threaded, handler_class=Quiet) as srv:
         srv.serve_forever()
 
