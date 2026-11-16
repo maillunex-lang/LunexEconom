@@ -4,6 +4,7 @@ from __future__ import annotations
 import json
 import sqlite3
 import time
+import re
 
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS users(id INTEGER PRIMARY KEY, username TEXT UNIQUE NOT NULL, pw_hash TEXT NOT NULL, created REAL NOT NULL);
@@ -22,14 +23,90 @@ CREATE TABLE IF NOT EXISTS audit(id INTEGER PRIMARY KEY, ts REAL NOT NULL, actio
 """
 
 
+# Append-only versioned upgrades; legacy tables predate the version ledger.
+MIGRATIONS = (
+    (1, SCHEMA),
+    (2, """CREATE INDEX IF NOT EXISTS audit_recent ON audit(id DESC);
+CREATE INDEX IF NOT EXISTS attempts_recent ON attempts(ts);"""),
+)
+
+
+def migrate(conn):
+    conn.execute("BEGIN IMMEDIATE")
+    try:
+        conn.execute("CREATE TABLE IF NOT EXISTS schema_versions(version INTEGER PRIMARY KEY, applied_at REAL NOT NULL)")
+        versions = {r[0] for r in conn.execute("SELECT version FROM schema_versions")}
+        supported = {v for v, _ in MIGRATIONS}
+        if versions - supported or versions != set(range(1, max(versions, default=0) + 1)):
+            raise RuntimeError("unsupported or non-sequential schema version")
+        for version, script in MIGRATIONS:
+            if version in versions:
+                continue
+            if version != len(versions) + 1:
+                raise RuntimeError("non-sequential schema migration")
+            # sqlite executescript() commits transactions: execute statements individually.
+            for statement in script.split(";"):
+                if statement.strip():
+                    conn.execute(statement)
+            conn.execute("INSERT INTO schema_versions(version,applied_at) VALUES(?,?)", (version, time.time()))
+            versions.add(version)
+        conn.execute("COMMIT")
+    except Exception:
+        conn.execute("ROLLBACK")
+        raise
+
+
+def check_health(conn):
+    try:
+        return conn.execute("SELECT 1").fetchone()[0] == 1
+    except Exception:
+        return False
+
+
+# Explicit allowlist: never persist arbitrary payloads, passwords, tokens or notes.
+AUDIT_FIELDS = {
+    "login": ("ip",), "login.failure": ("ip",), "login.locked": ("ip",), "login.rate_limited": ("ip",),
+    "password.change": (), "sessions.revoke": (),
+    "project.create": ("slug",), "plan.import": ("slug", "packages"),
+    "plan.sync": ("slug",), "task.status": ("slug", "id", "status"),
+}
+SAFE_IDENT = re.compile(r"^[a-zA-Z0-9_.:-]{1,80}$")
+
+
+def recent_audit(conn, limit=200):
+    output = []
+    for row in conn.execute("SELECT id,ts,action,payload FROM audit ORDER BY id DESC LIMIT ?", (min(max(int(limit), 0), 200),)):
+        try:
+            payload = json.loads(row["payload"])
+        except (TypeError, ValueError):
+            payload = {}
+        if not isinstance(payload, dict):
+            payload = {}
+        allowed = AUDIT_FIELDS.get(row["action"], ())
+        sanitized = {k: v for k, v in payload.items() if k in allowed and
+                     ((isinstance(v, str) and SAFE_IDENT.fullmatch(v)) or
+                      (type(v) is int and 0 <= v <= 1_000_000))}
+        output.append({"id": row["id"], "ts": row["ts"], "action": row["action"], "payload": sanitized})
+    return output
+
+
 def connect(path):
     conn = sqlite3.connect(path, isolation_level=None, timeout=10)
-    conn.row_factory = sqlite3.Row
-    conn.execute("PRAGMA journal_mode=WAL")
-    conn.execute("PRAGMA foreign_keys=ON")
-    conn.executescript(SCHEMA)
-    return conn
+    try:
+        conn.row_factory = sqlite3.Row
+        conn.execute("PRAGMA journal_mode=WAL")
+        conn.execute("PRAGMA foreign_keys=ON")
+        migrate(conn)
+        return conn
+    except Exception:
+        conn.close()
+        raise
 
 
 def audit(conn, action, payload=None):
-    conn.execute("INSERT INTO audit(ts,action,payload) VALUES(?,?,?)", (time.time(), action, json.dumps(payload or {}, ensure_ascii=False)))
+    allowed = AUDIT_FIELDS.get(action, ())
+    value = payload if isinstance(payload, dict) else {}
+    safe = {k: v for k, v in value.items() if k in allowed and
+            ((isinstance(v, str) and SAFE_IDENT.fullmatch(v)) or
+             (type(v) is int and 0 <= v <= 1_000_000))}
+    conn.execute("INSERT INTO audit(ts,action,payload) VALUES(?,?,?)", (time.time(), action, json.dumps(safe, ensure_ascii=False)))
