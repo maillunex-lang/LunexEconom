@@ -113,6 +113,15 @@ class Portal(unittest.TestCase):
         self.assertNotIn("Godot", text)
         self.assertNotIn("PostgreSQL", text)
 
+    def test_generated_plan_uses_project_repo_not_lunex(self):
+        files = bootstrap.files_for("Мой проект", "me/my-proj", "d")
+        plan = json.loads(files["docs/work_plan.json"])
+        self.assertEqual(wp.validate(plan), [])
+        text = wp.prompt(plan, "A1")
+        self.assertIn("me/my-proj", text)
+        self.assertNotIn("LunexEconom", text)
+        self.assertNotIn("Godot", text)
+
     def test_plan_import_and_status_flow(self):
         cookie, csrf = self.login()
         self.create_project(cookie, csrf)
@@ -180,6 +189,44 @@ class Portal(unittest.TestCase):
         cookie, csrf = self.login()
         call(self.app, "POST", "/createportal/api/logout", {}, cookie=cookie, csrf=csrf)
         self.assertEqual(call(self.app, "GET", "/createportal/api/me", cookie=cookie)["status"], 401)
+
+    def test_start_prompts_and_gdd_prompt(self):
+        cookie, csrf = self.login()
+        r = self.create_project(cookie, csrf)
+        ids = [x["id"] for x in r["json"]["start"]]
+        self.assertEqual(ids, ["repo", "gdd"])
+        gdd = r["json"]["start"][1]["prompt"]
+        for need in ("GDD", "work_plan.json", "docs/gdd/00_OVERVIEW.md", "Критерии приёмки", "симулятор", "Решения для владельца", "owner/demo"):
+            self.assertIn(need, gdd)
+        base = "/createportal/api/projects/demo-project"
+        self.assertEqual(call(self.app, "POST", base + "/start", {"id": "gdd", "done": True}, cookie=cookie, csrf=csrf)["status"], 200)
+        self.assertEqual(call(self.app, "POST", base + "/start", {"id": "zzz", "done": True}, cookie=cookie, csrf=csrf)["status"], 400)
+        self.assertEqual(call(self.app, "POST", base + "/start", {"id": "gdd", "done": "yes"}, cookie=cookie, csrf=csrf)["status"], 400)
+        d = call(self.app, "GET", base, cookie=cookie)["json"]
+        self.assertEqual([x["done"] for x in d["start"]], [False, True])
+
+    def test_ideas_inbox(self):
+        cookie, csrf = self.login()
+        self.create_project(cookie, csrf)
+        base = "/createportal/api/projects/demo-project/ideas"
+        a = call(self.app, "POST", base, {"text": "Добавить экран отчётов"}, cookie=cookie, csrf=csrf)
+        self.assertEqual(a["status"], 201)
+        self.assertEqual(call(self.app, "POST", base, {"text": "   "}, cookie=cookie, csrf=csrf)["status"], 400)
+        self.assertEqual(call(self.app, "POST", base, {"text": "x" * 501}, cookie=cookie, csrf=csrf)["status"], 400)
+        d = call(self.app, "GET", "/createportal/api/projects/demo-project", cookie=cookie)["json"]
+        self.assertEqual([i["text"] for i in d["ideas"]], ["Добавить экран отчётов"])
+        self.assertEqual(call(self.app, "POST", base, {"id": a["json"]["id"], "done": True}, cookie=cookie, csrf=csrf)["status"], 200)
+        d = call(self.app, "GET", "/createportal/api/projects/demo-project", cookie=cookie)["json"]
+        self.assertEqual(d["ideas"], [])
+        self.assertEqual(call(self.app, "POST", base, {"text": "ок"}, cookie=cookie)["status"], 403)
+
+    def test_ideas_not_leaked_between_projects(self):
+        cookie, csrf = self.login()
+        self.create_project(cookie, csrf, "proj-one")
+        self.create_project(cookie, csrf, "proj-two")
+        call(self.app, "POST", "/createportal/api/projects/proj-one/ideas", {"text": "секрет"}, cookie=cookie, csrf=csrf)
+        d = call(self.app, "GET", "/createportal/api/projects/proj-two", cookie=cookie)["json"]
+        self.assertEqual(d["ideas"], [])
 
 
 if __name__ == "__main__":

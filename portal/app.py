@@ -58,6 +58,13 @@ def create_app(db_path, base="", secure_cookie=True, fetch=None, github_token_fi
         return {r["pkg_id"]: {k: r[k] for k in ("status", "issued_at", "submitted_at", "accepted_at", "merged", "sha", "note")}
                 for r in conn.execute("SELECT * FROM task_state WHERE project_slug=?", (slug,))}
 
+    def start_list(row):
+        done = {r["prompt_id"]: r["done"] for r in conn.execute("SELECT prompt_id,done FROM start_state WHERE project_slug=?", (row["slug"],))}
+        return [dict(x, done=bool(done.get(x["id"], 0))) for x in bootstrap.start_prompts(row["name"], row["repo"], row["description"])]
+
+    def ideas_list(slug):
+        return [{"id": r["id"], "text": r["text"], "created": r["created"]} for r in conn.execute("SELECT * FROM ideas WHERE project_slug=? AND done=0 ORDER BY id DESC LIMIT 200", (slug,))]
+
     def summary(row):
         plan = json.loads(row["plan_json"]) if row["plan_json"] else None
         st = states(row["slug"])
@@ -135,7 +142,8 @@ def create_app(db_path, base="", secure_cookie=True, fetch=None, github_token_fi
                 return respond(start, "409 Conflict", {"error": "exists"})
             conn.execute("INSERT INTO projects(slug,name,repo,description,created) VALUES(?,?,?,?,?)", (slug, name, repo, desc, time.time()))
             db.audit(conn, "project.create", {"slug": slug})
-            return respond(start, "201 Created", {"ok": True, "slug": slug, "prompt": bootstrap.director_prompt(name, repo, desc)})
+            return respond(start, "201 Created", {"ok": True, "slug": slug, "prompt": bootstrap.director_prompt(name, repo, desc),
+                                                  "start": bootstrap.start_prompts(name, repo, desc)})
         m = re.fullmatch(r"/api/projects/([a-z][a-z0-9-]{1,38}[a-z0-9])(/[a-z.]+)?", path)
         if not m:
             return respond(start, "404 Not Found", {"error": "not_found"})
@@ -146,13 +154,39 @@ def create_app(db_path, base="", secure_cookie=True, fetch=None, github_token_fi
         if sub == "" and method == "GET":
             plan = json.loads(row["plan_json"]) if row["plan_json"] else None
             return respond(start, "200 OK", {"project": summary(row), "lanes": plan["lanes"] if plan else {}, "packages": _prompted(plan) if plan else [],
-                                             "state": states(slug), "plan_updated": row["plan_updated"]})
+                                             "state": states(slug), "plan_updated": row["plan_updated"],
+                                             "start": start_list(row), "ideas": ideas_list(slug)})
         if sub == "/bootstrap" and method == "GET":
             files = bootstrap.files_for(row["name"], row["repo"], row["description"])
-            return respond(start, "200 OK", {"prompt": bootstrap.director_prompt(row["name"], row["repo"], row["description"]), "files": sorted(files)})
+            return respond(start, "200 OK", {"prompt": bootstrap.director_prompt(row["name"], row["repo"], row["description"]), "files": sorted(files),
+                                             "start": bootstrap.start_prompts(row["name"], row["repo"], row["description"])})
         if sub == "/bootstrap.zip" and method == "GET":
             files = bootstrap.files_for(row["name"], row["repo"], row["description"])
             return respond(start, "200 OK", bootstrap.zip_bytes(files), [("Content-Type", "application/zip"), ("Content-Disposition", f'attachment; filename="{slug}-skeleton.zip"')])
+        if sub == "/start" and method == "POST":
+            body = read_body(environ)
+            ids = {x["id"] for x in bootstrap.start_prompts(row["name"], row["repo"], row["description"])}
+            if body is None or str(body.get("id", "")) not in ids or type(body.get("done")) is not bool:
+                return respond(start, "400 Bad Request", {"error": "invalid_start"})
+            conn.execute("INSERT INTO start_state(project_slug,prompt_id,done,ts) VALUES(?,?,?,?) ON CONFLICT(project_slug,prompt_id) DO UPDATE SET done=excluded.done, ts=excluded.ts",
+                         (slug, body["id"], 1 if body["done"] else 0, time.time()))
+            return respond(start, "200 OK", {"ok": True})
+        if sub == "/ideas" and method == "POST":
+            body = read_body(environ)
+            if body is None:
+                return respond(start, "400 Bad Request", {"error": "bad_request"})
+            if isinstance(body.get("text"), str):
+                text = body["text"].strip()
+                if not 1 <= len(text) <= 500:
+                    return respond(start, "400 Bad Request", {"error": "invalid_idea"})
+                if conn.execute("SELECT count(*) FROM ideas WHERE project_slug=? AND done=0", (slug,)).fetchone()[0] >= 200:
+                    return respond(start, "409 Conflict", {"error": "too_many_ideas"})
+                cur = conn.execute("INSERT INTO ideas(project_slug,text,created) VALUES(?,?,?)", (slug, text, time.time()))
+                return respond(start, "201 Created", {"ok": True, "id": cur.lastrowid})
+            if type(body.get("id")) is int and body.get("done") is True:
+                conn.execute("UPDATE ideas SET done=1 WHERE project_slug=? AND id=?", (slug, body["id"]))
+                return respond(start, "200 OK", {"ok": True})
+            return respond(start, "400 Bad Request", {"error": "bad_request"})
         if sub == "/plan" and method == "POST":
             body = read_body(environ)
             plan = body.get("plan") if body else None
