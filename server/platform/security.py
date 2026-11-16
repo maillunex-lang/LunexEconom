@@ -7,8 +7,8 @@ import secrets
 
 
 def hash_password(password):
-    if not isinstance(password, str) or not 10 <= len(password) <= 256:
-        raise ValueError('password must be 10..256 characters')
+    if not isinstance(password, str) or not 6 <= len(password) <= 256:
+        raise ValueError('password must be 6..256 characters')
     salt = os.urandom(16)
     digest = hashlib.scrypt(password.encode(), salt=salt, n=16384, r=8, p=1)
     return 'scrypt$' + base64.b64encode(salt).decode() + '$' + base64.b64encode(digest).decode()

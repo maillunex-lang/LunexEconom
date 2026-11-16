@@ -17,8 +17,8 @@ auth.register.name | Имя компании
 auth.register.email | Электронная почта
 auth.register.password | Пароль
 auth.register.button | Зарегистрироваться
-auth.register.error.exists | Такое имя или почта уже заняты
-auth.register.error.weak | Пароль слишком простой
+auth.register.error.exists | Такое имя или почта уже есть. Нажмите «Войти»
+auth.register.error.weak | Пароль слишком короткий: нужно не меньше 6 символов
 auth.logout | Выйти
 map.title | Карта Башкирии
 map.city.ufa | Уфа
@@ -67,6 +67,10 @@ finance.income | Доходы
 finance.expense | Расходы
 finance.profit | Прибыль
 finance.report | Месячный отчёт
+auth.register.error.name | Имя: 3-24 символа, латиница, цифры и «_»
+auth.register.error.email | Проверьте адрес почты
+auth.register.error.closed | Регистрация сейчас закрыта
+auth.register.error.limit | Слишком много попыток. Подождите немного
 error.generic | Произошла ошибка. Попробуйте ещё раз
 error.network | Нет связи с сервером
 error.auth | Сессия истекла. Войдите снова
