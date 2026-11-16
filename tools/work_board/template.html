@@ -1,0 +1,199 @@
+<title>Доска задач Lunex</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Space+Grotesk:wght@500;600;700&display=swap">
+<style>
+/* Макет: вертикальные шаги, в каждом две карточки (линия A сервер, линия B клиент); архив внизу. */
+:root{--bg:#EEF1EC;--surface:#FFFFFF;--surface2:#F5F8F4;--ink:#14201A;--muted:#58695F;--line:#D3DCD4;--accent:#2C7A52;--accent-ink:#FFFFFF;--warn:#A86A00;--warn-bg:#FBEFD5;--info:#235FA6;--info-bg:#DEEAF8;--ok:#1F6B45;--ok-bg:#DDF1E5;--lock:#7A867F;--font-head:"Space Grotesk",system-ui,sans-serif;--font-body:"Inter",system-ui,sans-serif}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0D1814;--surface:#14231D;--surface2:#101D18;--ink:#E8F0EA;--muted:#9AB0A2;--line:#24372E;--accent:#7BD88F;--accent-ink:#0D1814;--warn:#F2C14E;--warn-bg:#3A3015;--info:#8DB8F0;--info-bg:#16283D;--ok:#7BD88F;--ok-bg:#16301F;--lock:#7F938A;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#0D1814;--surface:#14231D;--surface2:#101D18;--ink:#E8F0EA;--muted:#9AB0A2;--line:#24372E;--accent:#7BD88F;--accent-ink:#0D1814;--warn:#F2C14E;--warn-bg:#3A3015;--info:#8DB8F0;--info-bg:#16283D;--ok:#7BD88F;--ok-bg:#16301F;--lock:#7F938A;color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--font-body);font-size:15px;line-height:1.5;padding-block:20px 48px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.wrap{max-width:1180px;margin:0 auto;display:flex;flex-direction:column;gap:20px}
+h1,h2,h3{font-family:var(--font-head);margin:0;text-wrap:balance;letter-spacing:-.01em}
+h1{font-size:26px}h2{font-size:18px}h3{font-size:16px;line-height:1.3}
+.sub{color:var(--muted);margin:4px 0 0}
+.top{display:flex;flex-wrap:wrap;gap:16px 24px;align-items:flex-end;justify-content:space-between}
+.progress{flex:1 1 320px;min-width:0}
+.bar{height:10px;border-radius:6px;background:var(--line);overflow:hidden}
+.bar>i{display:block;height:100%;background:var(--accent);width:0}
+.legend{display:flex;flex-wrap:wrap;gap:6px 16px;margin-top:8px;color:var(--muted);font-size:13px;font-variant-numeric:tabular-nums}
+.next{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px}
+.next div{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:12px 14px;min-width:0}
+.next b{font-family:var(--font-head);display:block;font-size:13px;color:var(--muted);margin-bottom:2px;text-transform:uppercase;letter-spacing:.06em}
+.notice{background:var(--warn-bg);color:var(--ink);border:1px solid var(--warn);border-radius:10px;padding:10px 14px;font-size:14px}
+.step{display:flex;flex-direction:column;gap:10px}
+.step>h2{display:flex;gap:10px;align-items:baseline}
+.step>h2 small{font-family:var(--font-body);font-weight:400;color:var(--muted);font-size:13px}
+.pair{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+@media(max-width:780px){.pair{grid-template-columns:minmax(0,1fr)}}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:14px;display:flex;flex-direction:column;gap:10px;min-width:0}
+.card.locked{background:var(--surface2)}
+.card header{display:flex;gap:10px;justify-content:space-between;align-items:flex-start}
+.lane{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
+.pid{font-family:var(--font-head);font-weight:700;color:var(--accent);margin-right:6px}
+.pill{flex:none;font-size:12px;font-weight:600;padding:3px 9px;border-radius:999px;white-space:nowrap}
+.pill.planned{background:var(--surface2);color:var(--lock);border:1px solid var(--line)}
+.pill.ready{background:var(--ok-bg);color:var(--ok)}
+.pill.issued{background:var(--warn-bg);color:var(--warn)}
+.pill.submitted{background:var(--info-bg);color:var(--info)}
+.pill.accepted{background:var(--ok-bg);color:var(--ok)}
+.goal{margin:0;color:var(--muted);font-size:14px}
+details{border-top:1px solid var(--line);padding-top:8px}
+summary{cursor:pointer;font-weight:600;font-size:14px;padding:4px 0}
+summary:focus-visible,button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+pre{white-space:pre-wrap;word-break:break-word;background:var(--surface2);border:1px solid var(--line);border-radius:10px;padding:12px;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12.5px;line-height:1.5;max-height:340px;overflow:auto;margin:8px 0}
+ul.checks{margin:6px 0;padding-left:20px;font-size:14px}
+ul.checks li{margin:2px 0}
+.row{display:flex;flex-wrap:wrap;gap:8px}
+button{font:inherit;font-weight:600;font-size:14px;min-height:44px;padding:8px 14px;border-radius:10px;border:1px solid var(--line);background:var(--surface);color:var(--ink);cursor:pointer}
+button.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+button.ghost{background:transparent;color:var(--muted)}
+button.confirm{background:var(--warn);color:var(--surface);border-color:var(--warn)}
+button:disabled{opacity:.5;cursor:not-allowed}
+.meta{font-size:12.5px;color:var(--muted)}
+.merged{color:var(--ok);font-weight:600}
+.arch{display:flex;flex-direction:column;gap:8px}
+.arch .item{display:flex;flex-wrap:wrap;gap:8px 14px;align-items:center;justify-content:space-between;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:10px 14px}
+.arch .item div{min-width:0}
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(16px + env(safe-area-inset-bottom,0px));background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:10px;font-size:14px;max-width:calc(100% - 32px)}
+.empty{color:var(--muted);font-size:14px;padding:8px 2px}
+@media (prefers-reduced-motion:no-preference){.bar>i{transition:width .3s}}
+</style>
+<div class="wrap">
+  <div class="top">
+    <div><h1>Доска задач</h1><p class="sub">Башкирия: Мёд и Нефть · этапы по порядку, две независимые линии исполнителей</p></div>
+    <div class="progress"><div class="bar" aria-hidden="true"><i id="barfill"></i></div><div class="legend" id="legend"></div></div>
+  </div>
+  <div id="notice" class="notice" hidden></div>
+  <section aria-labelledby="nexth"><h2 id="nexth" style="margin-bottom:10px">Что выдавать сейчас</h2><div class="next" id="next"></div></section>
+  <div id="steps" class="wrap" style="gap:22px"></div>
+  <section aria-labelledby="archh" class="arch"><h2 id="archh">Архив принятых</h2><div id="archive"></div></section>
+</div>
+<div id="toast" class="toast" hidden></div>
+<script type="application/json" id="plan">/*PLAN_JSON*/</script>
+<script>
+(function(){
+var PLAN=JSON.parse(document.getElementById('plan').textContent);
+var PK=PLAN.packages, BYID={}; PK.forEach(function(p){BYID[p.id]=p});
+var STATE={}, db=null, coll=null, LS='lunexBoard.v1', confirmTimer=null, confirmId=null;
+var LABEL={planned:'В очереди',ready:'Можно выдавать',issued:'У исполнителя',submitted:'Сдано, жду приёмки',accepted:'Принято'};
+function el(t,c,x){var n=document.createElement(t);if(c)n.className=c;if(x!=null)n.textContent=x;return n}
+function st(id){return (STATE[id]&&STATE[id].status)||'planned'}
+function ready(p){return st(p.id)==='planned'&&p.depends_on.every(function(d){return st(d)==='accepted'})}
+function show(msg){var t=document.getElementById('toast');t.textContent=msg;t.hidden=false;clearTimeout(show.t);show.t=setTimeout(function(){t.hidden=true},2600)}
+function loadLocal(){try{return JSON.parse(localStorage.getItem(LS)||'{}')}catch(e){return {}}}
+function saveLocal(){try{localStorage.setItem(LS,JSON.stringify(STATE))}catch(e){}}
+function now(){return new Date().toISOString()}
+function fmt(s){if(!s)return '';try{return new Date(s).toLocaleDateString('ru-RU',{day:'numeric',month:'long'})+' '+new Date(s).toLocaleTimeString('ru-RU',{hour:'2-digit',minute:'2-digit'})}catch(e){return s}}
+function setStatus(id,status){
+  var cur=STATE[id]||{}, d=Object.assign({},cur,{status:status});
+  d[status+'At']=now(); if(status==='planned'){delete d.issuedAt;delete d.submittedAt;delete d.acceptedAt}
+  STATE[id]=d; render();
+  if(coll){coll.doc(id).set(d).catch(function(e){show('Не удалось сохранить: '+(e&&e.code||'ошибка'))})}else{saveLocal()}
+}
+function copy(text,btn){
+  function fb(){var ta=document.createElement('textarea');ta.value=text;document.body.appendChild(ta);ta.select();try{document.execCommand('copy');show('Скопировано')}catch(e){show('Выделите текст и скопируйте вручную')}ta.remove()}
+  if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(text).then(function(){show('Скопировано')},fb)}else fb()
+}
+function actions(p){
+  var row=el('div','row'), s=st(p.id);
+  function b(label,cls,fn,dis){var x=el('button',cls||'',label);x.type='button';if(dis)x.disabled=true;x.onclick=fn;row.appendChild(x);return x}
+  if(s==='planned'){
+    if(ready(p)) b('Отдал исполнителю','primary',function(){setStatus(p.id,'issued')});
+    else b('Ждёт: '+p.depends_on.filter(function(d){return st(d)!=='accepted'}).join(', '),'',null,true);
+  }else if(s==='issued'){
+    b('Исполнитель сдал','primary',function(){setStatus(p.id,'submitted')});
+    b('Вернуть в очередь','ghost',function(){setStatus(p.id,'planned')});
+  }else if(s==='submitted'){
+    var acc=b(confirmId===p.id?'Точно принято? Нажмите ещё раз':'Принято, в архив',confirmId===p.id?'confirm':'primary',function(){
+      if(confirmId===p.id){confirmId=null;clearTimeout(confirmTimer);setStatus(p.id,'accepted');show(p.id+' перенесён в архив')}
+      else{confirmId=p.id;render();clearTimeout(confirmTimer);confirmTimer=setTimeout(function(){confirmId=null;render()},4000)}
+    });
+    b('Вернуть исполнителю','ghost',function(){setStatus(p.id,'issued')});
+  }
+  return row;
+}
+function card(p){
+  var s=st(p.id), r=ready(p), cls=(s==='planned'&&!r)?'card locked':'card';
+  var c=el('article',cls);
+  var h=el('header'); var left=el('div');
+  var lane=el('div','lane','Линия '+p.lane+' · '+PLAN.lanes[p.lane].name+' · '+PLAN.lanes[p.lane].who);
+  var t=el('h3'); t.appendChild(el('span','pid',p.id)); t.appendChild(document.createTextNode(p.title));
+  left.appendChild(lane);left.appendChild(t);
+  var pill=el('span','pill '+((s==='planned'&&r)?'ready':s),(s==='planned'&&r)?LABEL.ready:LABEL[s]);
+  h.appendChild(left);h.appendChild(pill);c.appendChild(h);
+  c.appendChild(el('p','goal',p.goal));
+  var d=el('details'); d.appendChild(el('summary','','Промпт для исполнителя'));
+  d.appendChild(el('pre','',p.prompt));
+  var cr=el('div','row'); var cb=el('button','',"Скопировать промпт"); cb.type='button'; cb.onclick=function(){copy(p.prompt)}; cr.appendChild(cb); d.appendChild(cr);
+  c.appendChild(d);
+  var d2=el('details'); d2.appendChild(el('summary','','Самопроверка исполнителя и приёмка'));
+  d2.appendChild(el('div','meta','Исполнитель проверяет сам перед сдачей:'));
+  var u1=el('ul','checks'); PLAN.selfcheck[p.lane].forEach(function(x){u1.appendChild(el('li','',x))}); d2.appendChild(u1);
+  d2.appendChild(el('div','meta','Директор проверяет и сливает в main:'));
+  var u2=el('ul','checks'); PLAN.acceptance.forEach(function(x){u2.appendChild(el('li','',x))}); d2.appendChild(u2);
+  c.appendChild(d2);
+  c.appendChild(actions(p));
+  var info=STATE[p.id]||{}; var meta=[];
+  if(info.issuedAt)meta.push('выдано '+fmt(info.issuedAt)); if(info.submittedAt)meta.push('сдано '+fmt(info.submittedAt));
+  if(meta.length)c.appendChild(el('div','meta',meta.join(' · ')));
+  if(info.merged){var m=el('div','meta merged','Влито в main'+(info.sha?' ('+info.sha+')':'')+(info.note?' · '+info.note:''));c.appendChild(m)}
+  else if(info.note){c.appendChild(el('div','meta',info.note))}
+  return c;
+}
+function render(){
+  var steps=document.getElementById('steps'); steps.textContent='';
+  var nums=Array.from(new Set(PK.map(function(p){return p.step}))).sort(function(a,b){return a-b});
+  var open=nums.filter(function(n){return PK.some(function(p){return p.step===n&&st(p.id)!=='accepted'})});
+  open.forEach(function(n){
+    var sec=el('section','step'), h=el('h2'); h.appendChild(document.createTextNode('Шаг '+n));
+    var small=el('small','',(n<=2?'Волна 1–3':n<=5?'Волна 2–3':n<=8?'Волны 3–4':'Волны 4–5')); h.appendChild(small); sec.appendChild(h);
+    var pair=el('div','pair');
+    ['A','B'].forEach(function(l){PK.filter(function(p){return p.step===n&&p.lane===l&&st(p.id)!=='accepted'}).forEach(function(p){pair.appendChild(card(p))})});
+    sec.appendChild(pair); steps.appendChild(sec);
+  });
+  if(!open.length) steps.appendChild(el('div','empty','Все шаги приняты.'));
+  var total=PK.length, cnt={accepted:0,submitted:0,issued:0,ready:0,planned:0};
+  PK.forEach(function(p){var s=st(p.id); if(s==='planned'&&ready(p))cnt.ready++; else cnt[s]++});
+  document.getElementById('barfill').style.width=(100*cnt.accepted/total)+'%';
+  document.getElementById('legend').textContent='Принято '+cnt.accepted+' из '+total+' · сдано '+cnt.submitted+' · у исполнителей '+cnt.issued+' · можно выдавать '+cnt.ready;
+  var nx=document.getElementById('next'); nx.textContent='';
+  ['A','B'].forEach(function(l){
+    var box=el('div'); box.appendChild(el('b','','Линия '+l+' · '+PLAN.lanes[l].name));
+    var busy=PK.filter(function(p){return p.lane===l&&(st(p.id)==='issued'||st(p.id)==='submitted')});
+    var rd=PK.filter(function(p){return p.lane===l&&ready(p)});
+    if(busy.length)box.appendChild(el('div','',(st(busy[0].id)==='issued'?'Сейчас у исполнителя: ':'Ждёт приёмки: ')+busy[0].id+' '+busy[0].title));
+    else if(rd.length)box.appendChild(el('div','','Выдавать: '+rd[0].id+' '+rd[0].title));
+    else box.appendChild(el('div','meta','Нет доступных пакетов: ждём предыдущие.'));
+    nx.appendChild(box);
+  });
+  var ar=document.getElementById('archive'); ar.textContent='';
+  var done=PK.filter(function(p){return st(p.id)==='accepted'}).sort(function(a,b){return ((STATE[b.id]||{}).acceptedAt||'').localeCompare((STATE[a.id]||{}).acceptedAt||'')});
+  if(!done.length)ar.appendChild(el('div','empty','Пока пусто. Принятые задачи окажутся здесь.'));
+  done.forEach(function(p){
+    var i=STATE[p.id]||{}, it=el('div','item'), l=el('div');
+    var t=el('div'); t.appendChild(el('span','pid',p.id)); t.appendChild(document.createTextNode(p.title)); l.appendChild(t);
+    l.appendChild(el('div','meta','принято '+fmt(i.acceptedAt)+(i.merged?' · влито в main'+(i.sha?' ('+i.sha+')':''):'')));
+    var b=el('button','ghost','Вернуть из архива'); b.type='button'; b.onclick=function(){setStatus(p.id,'planned')};
+    it.appendChild(l); it.appendChild(b); ar.appendChild(it);
+  });
+}
+function start(){
+  STATE=loadLocal(); render();
+  var timer=setTimeout(function(){var n=document.getElementById('notice');n.textContent='Общее состояние не отвечает. Показано сохранённое на этом устройстве.';n.hidden=false},10000);
+  var done=false;
+  function ok(){if(!done){done=true;clearTimeout(timer);document.getElementById('notice').hidden=true}}
+  if(!window.claude||!window.claude.use){noShared();return}
+  window.claude.use('db').then(function(d){
+    if(!d){noShared();return}
+    db=d; coll=db.collection('tasks'); STATE={};
+    coll.onSnapshot(function(snap){
+      var next={}; snap.docs.forEach(function(x){next[x.id]=x.data()});
+      STATE=next; ok(); render();
+    },function(e){clearTimeout(timer);var n=document.getElementById('notice');n.textContent='Не удалось подключить общее состояние ('+(e&&e.code||'ошибка')+'). Отметки сохраняются только на этом устройстве.';n.hidden=false;coll=null;STATE=loadLocal();render()});
+  },function(){noShared()});
+  function noShared(){clearTimeout(timer);var n=document.getElementById('notice');n.textContent='Отметки сохраняются только на этом устройстве: общее хранилище недоступно.';n.hidden=false}
+}
+start();
+})();
+</script>
