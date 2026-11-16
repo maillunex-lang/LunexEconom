@@ -397,12 +397,36 @@ def advance_day(conn,day,default_staffing_bp=10000,materials_required=False):
                 _advance_build(conn,eid,day,info[:-1],materials_required)
 
 
-def close_month(conn,month,salary_per_worker=100,monthly_wear=1):
+def monthly_upkeep(upkeep,staffing_bp,scales_with_staffing=False,fixed_bp=BP):
+    """ENGINE-FIX1 (draft): monthly building upkeep, integer only.
+
+    Flag off (default) or fixed_bp=10000: the full catalog upkeep, unchanged.
+    Flag on: fixed=upkeep*fixed_bp//10000 is always due, the variable rest
+    (upkeep-fixed) is charged pro rata to staffing: variable*staffing_bp//10000.
+    Floor rounding favours the payer; the result never exceeds upkeep and is
+    exactly upkeep at 100% staffing.
+    """
+    integer(upkeep)
+    integer(staffing_bp,0,BP)
+    integer(fixed_bp,0,BP)
+    if not scales_with_staffing:
+        return upkeep
+    fixed=upkeep*fixed_bp//BP
+    return fixed+(upkeep-fixed)*staffing_bp//BP
+
+
+def close_month(conn,month,salary_per_worker=100,monthly_wear=1,
+                upkeep_scales_with_staffing=False,upkeep_fixed_bp=BP,
+                default_staffing_bp=BP):
     """Draft: settle cumulative arrears atomically per enterprise, never block other owners."""
     from psycopg.types.json import Jsonb
     integer(month)
     integer(salary_per_worker,0,1000000)
     integer(monthly_wear,0,100)
+    integer(upkeep_fixed_bp,0,BP)
+    integer(default_staffing_bp,0,BP)
+    if type(upkeep_scales_with_staffing) is not bool:
+        raise ValueError('invalid_flag')
     rows=conn.execute('SELECT id FROM enterprises WHERE sold_at IS NULL ORDER BY id').fetchall()
     for (eid,) in rows:
         # The caller's monthly transaction remains intact. This savepoint isolates
@@ -417,7 +441,10 @@ def close_month(conn,month,salary_per_worker=100,monthly_wear=1):
             if stage==4 and month>0:
                 loads=conn.execute('SELECT load_bp FROM enterprise_daily_load WHERE enterprise_id=%s AND day_index BETWEEN %s AND %s',(eid,(month-1)*30+1,month*30)).fetchall()
                 avg=sum(r[0] for r in loads)//len(loads) if loads else 0
-                expenses=upkeep+jobs*salary_per_worker*staff//BP
+                # Effective staffing is capped by the global draft, as in production.
+                upkeep_due=monthly_upkeep(upkeep,min(staff,default_staffing_bp),
+                                          upkeep_scales_with_staffing,upkeep_fixed_bp)
+                expenses=upkeep_due+jobs*salary_per_worker*staff//BP
                 prior=conn.execute('SELECT COALESCE(sum(amount),0),COALESCE(max(consecutive_months),0) FROM enterprise_arrears WHERE enterprise_id=%s AND paid_at IS NULL',(eid,)).fetchone()
                 debt,streak=prior
                 # PostgreSQL SUM(bigint) returns NUMERIC (Decimal), not int.
