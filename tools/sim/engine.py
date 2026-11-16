@@ -5,6 +5,8 @@ import json
 from pathlib import Path
 
 from tools.sim.catalog import Catalog, read_flag, salary_worker_draft
+from tools.sim.demand import market_demand
+from tools.sim.districts import load_city_districts
 from tools.sim.formulas import (
     BRAND_M1,
     LOAD_FULL_BP,
@@ -56,7 +58,16 @@ class Engine:
         self.cells: list[dict] = []
         self.orders: list[dict] = list(scenario.get("orders") or [])
         self.infusions: list[dict] = list(scenario.get("infusions") or [])
-        self.district = scenario["district"]
+        self.m2 = "districts_file" in scenario
+        self.demand_report: list[dict] = []
+        self.district_book: dict | None = None
+        if self.m2:
+            if "district" in scenario:
+                raise RuntimeError("сценарий M2 не задаёт одиночный district")
+            self.district_book = load_city_districts(self._districts_path())
+            self.district = None
+        else:
+            self.district = scenario["district"]
         self._prepare()
 
     def _prepare(self) -> None:
@@ -118,6 +129,69 @@ class Engine:
                     "min_stock": None if row.get("min_stock") is None else _int(row["min_stock"], "min_stock"),
                 }
             )
+        for row in self.scenario.get("fixtures") or []:
+            self._open_fixture(row)
+
+    def _districts_path(self) -> Path:
+        relative = Path(str(self.scenario["districts_file"]))
+        if relative.is_absolute():
+            return relative
+        return self.catalog.root.joinpath(relative)
+
+    def _open_fixture(self, row: dict) -> None:
+        building = self.catalog.building(str(row["building"]))
+        if not building.get("retail_cells"):
+            raise RuntimeError("fixture M2 поддерживает только магазин")
+        blank = {
+            "player": str(row["player"]),
+            "enterprise": str(row["enterprise"]),
+        }
+        if "staffing_bp" in row:
+            blank["staffing_bp"] = row["staffing_bp"]
+        ent = self._blank_enterprise(blank, building, None, self._build_cost_of(building))
+        ent["stage"] = STAGE_OPERATIONAL
+        district_id = str(row["district"])
+        known = {str(item["id"]) for item in self.district_book["districts"]}
+        if district_id not in known:
+            raise RuntimeError(f"неизвестный район {district_id}")
+        ent["district"] = district_id
+        for product, spec in (row.get("stock") or {}).items():
+            if isinstance(spec, bool) or isinstance(spec, int):
+                qty = _int(spec, "запас")
+                quality = 50
+            else:
+                qty = _int(spec["quantity"], "запас")
+                quality = _int(spec.get("quality", 50), "качество")
+            if quality < 1 or quality > 100:
+                raise RuntimeError("качество запаса вне 1..100")
+            self.add_goods(ent, str(product), qty, quality)
+        self.enterprises[ent["id"]] = ent
+
+    def _district_views(self, day: int) -> list[dict]:
+        layer_ids = [str(layer["id"]) for layer in self.district_book["layers"]]
+        views = []
+        for src in self.district_book["districts"]:
+            row = dict(src)
+            row["layers_permille"] = dict(src["layers_permille"])
+            for shift in self.scenario.get("layer_shifts") or []:
+                if _int(shift["day"], "день сдвига слоёв") != day:
+                    continue
+                target = shift.get("district")
+                if target is not None and str(target) != row["id"]:
+                    continue
+                shares = shift.get("layers_permille")
+                if not isinstance(shares, dict) or set(shares) != set(layer_ids):
+                    raise RuntimeError("сдвиг слоёв не покрывает четыре слоя")
+                cleaned = {}
+                for layer_id in layer_ids:
+                    cleaned[layer_id] = _int(shares[layer_id], layer_id)
+                    if cleaned[layer_id] < 0:
+                        raise RuntimeError("доля слоя отрицательная")
+                if sum(cleaned.values()) != 1000:
+                    raise RuntimeError("доли слоёв после сдвига не 1000")
+                row["layers_permille"] = cleaned
+            views.append(row)
+        return views
 
     def _money_limit(self, raw, product: str) -> int | None:
         if raw is None:
@@ -540,6 +614,9 @@ class Engine:
         return rating(product["rating_weights"], BRAND_M1, quality, score)
 
     def _retail(self, day: int) -> None:
+        if self.m2:
+            self._retail_m2(day)
+            return
         by_product: dict[str, list[dict]] = {}
         for cell in self.cells:
             ent = self.enterprises.get(cell["enterprise"])
@@ -628,6 +705,102 @@ class Engine:
                 ent["retail_vat"] += tax
                 reference = int(self.catalog.product(cell["product"])["reference_price"])
                 ent["va"] += sold * (self._shelf_price(cell) - reference) - tax
+
+    def _retail_m2(self, day: int) -> None:
+        by_product: dict[str, list[dict]] = {}
+        for cell in self.cells:
+            ent = self.enterprises.get(cell["enterprise"])
+            if ent is None or not self.operational(ent):
+                continue
+            info = self.catalog.product(cell["product"])
+            if not info.get("consumer"):
+                continue
+            by_product.setdefault(cell["product"], []).append(cell)
+        views = self._district_views(day)
+        known = {str(row["id"]): row for row in views}
+        book = self.district_book
+        sharp = _int(self.scenario.get("competition_s", book["competition_s"]), "competition_s")
+        months = _int(self.scenario.get("growth_months", 0), "growth_months")
+        reports = []
+        for product in sorted(by_product):
+            info = self.catalog.product(product)
+            stores = []
+            for cell in by_product[product]:
+                ent = self.enterprises[cell["enterprise"]]
+                district_id = ent.get("district")
+                if not isinstance(district_id, str) or district_id not in known:
+                    raise RuntimeError("магазин M2 без района")
+                district = known[district_id]
+                allowed = self.catalog.building(ent["building_id"]).get("allowed_goods") or []
+                if cell["product"] not in allowed:
+                    raise RuntimeError(f"товар {cell['product']} не в специализации {ent['building_id']}")
+                stores.append(
+                    {
+                        "enterprise": ent["id"],
+                        "player": ent["player"],
+                        "slot": cell["slot"],
+                        "district": district_id,
+                        "price": self._shelf_price(cell),
+                        "rating": self._cell_rating(cell, ent),
+                        "traffic": int(district["traffic"]),
+                        "appeal_permille": int(district["appeal_permille"]),
+                    }
+                )
+            report = market_demand(
+                int(self.city["population_estimate"]),
+                info,
+                views,
+                book["layers"],
+                stores,
+                sharp,
+                int(book["ad_factor_permille"]),
+                int(book["growth_bp"]),
+                months,
+            )
+            self._sell_m2(day, report)
+            reports.append(report)
+        self.demand_report = reports
+
+    def _sell_m2(self, day: int, report: dict) -> None:
+        product = str(report["product"])
+        reference = int(report["reference_price"])
+        for district in report["districts"]:
+            sold_total = 0
+            revenue_total = 0
+            for store in district["stores"]:
+                ent = self.enterprises[store["enterprise"]]
+                have = self.qty(ent, product)
+                share = int(store["share"])
+                qty = share if share < have else have
+                gross = 0
+                tax = 0
+                if qty > 0:
+                    self.take_goods(ent, product, qty)
+                    gross = qty * int(store["price"])
+                    if gross > 0:
+                        posted = self.ledger.post(
+                            f"sale:{ent['id']}:{store['slot']}:{day}",
+                            [(self.account(ent["player"]), gross), ("system:market", -gross)],
+                        )
+                        if posted is None:
+                            raise RuntimeError("выручка розницы не проведена")
+                        player = self.players[ent["player"]]
+                        player["sales"] += qty
+                        player["revenue"] += gross
+                        tax = vat_on_gross(gross)
+                        player["tax"] += tax
+                        player["vat_month"] += tax
+                        ent["retail_gross"] += gross
+                        ent["retail_vat"] += tax
+                        ent["va"] += qty * (int(store["price"]) - reference) - tax
+                store["sold"] = qty
+                store["revenue"] = gross
+                store["vat"] = tax
+                sold_total += qty
+                revenue_total += gross
+            district["sold"] = sold_total
+            district["revenue"] = revenue_total
+            district["unmet"] = int(district["demand"]) - sold_total
 
     def _projects(self, day: int) -> None:
         # Сервер: POST списывает только фундамент и отказывает, если денег нет.
@@ -841,7 +1014,9 @@ class Engine:
                 "arrears": ent["arrears_due"],
                 "stock": stock,
             }
-        return {
+            if "district" in ent:
+                enterprises[eid]["district"] = ent["district"]
+        payload = {
             "day": day,
             "month_closed": day // 30 if day % 30 == 0 else 0,
             "ledger_sum": sum(self.ledger.balances.values()),
@@ -849,6 +1024,9 @@ class Engine:
             "enterprises": enterprises,
             "market": list(getattr(self, "market_rows", [])),
         }
+        if self.m2:
+            payload["demand"] = self.demand_report
+        return payload
 
 
 def _chain_cost(catalog: Catalog, buildings: list[str]) -> int:

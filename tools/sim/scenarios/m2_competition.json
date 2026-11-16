@@ -1,0 +1,30 @@
+{
+  "id": "m2_competition",
+  "days": 1,
+  "city": "ufa",
+  "districts_file": "tools/sim/data/districts_ufa.json",
+  "players": [
+    {"id": "mira", "capital": 1000000},
+    {"id": "oleg", "capital": 1000000}
+  ],
+  "fixtures": [
+    {
+      "player": "mira",
+      "enterprise": "store_ref",
+      "building": "grocery_store",
+      "district": "medovy_kvartal",
+      "stock": {"bread": {"quantity": 5000000, "quality": 50}}
+    },
+    {
+      "player": "oleg",
+      "enterprise": "store_dear",
+      "building": "grocery_store",
+      "district": "medovy_kvartal",
+      "stock": {"bread": {"quantity": 5000000, "quality": 50}}
+    }
+  ],
+  "cells": [
+    {"enterprise": "store_ref", "slot": 1, "product": "bread", "price": 90},
+    {"enterprise": "store_dear", "slot": 1, "product": "bread", "price": 120}
+  ]
+}

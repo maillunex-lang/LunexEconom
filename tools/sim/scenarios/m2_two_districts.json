@@ -1,0 +1,30 @@
+{
+  "id": "m2_two_districts",
+  "days": 1,
+  "city": "ufa",
+  "districts_file": "tools/sim/data/districts_ufa.json",
+  "players": [
+    {"id": "mira", "capital": 1000000},
+    {"id": "oleg", "capital": 1000000}
+  ],
+  "fixtures": [
+    {
+      "player": "mira",
+      "enterprise": "store_center",
+      "building": "grocery_store",
+      "district": "belaya_naberezhnaya",
+      "stock": {"bread": {"quantity": 5000000, "quality": 50}}
+    },
+    {
+      "player": "oleg",
+      "enterprise": "store_edge",
+      "building": "grocery_store",
+      "district": "yuzhnaya_okraina",
+      "stock": {"bread": {"quantity": 5000000, "quality": 50}}
+    }
+  ],
+  "cells": [
+    {"enterprise": "store_center", "slot": 1, "product": "bread", "price": 90},
+    {"enterprise": "store_edge", "slot": 1, "product": "bread", "price": 90}
+  ]
+}
