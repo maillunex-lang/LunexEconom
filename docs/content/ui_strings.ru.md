@@ -208,3 +208,22 @@ supply.fuel.same_city | Внутри города рейс топливо не �
 city.gas | Газ для города
 city.gas.need | Городу сегодня нужно {m3} м³ газа
 retail.hardware.note | Эти полки для стройки, не для еды
+
+ui.back | Назад
+ui.empty.title | Здесь пока пусто
+ui.empty.description | Добавьте первый элемент, чтобы увидеть его здесь.
+ui.empty.action | Добавить
+ui.loading | Загружаем данные...
+ui.load.failed | Не получилось загрузить данные. Проверьте соединение и повторите.
+ui.retry | Повторить
+ui.confirm.yes | Подтвердить
+ui.confirm.no | Отмена
+ui.auth.slogan | Постройте своё дело в Башкортостане
+ui.auth.password.show | Показать пароль
+ui.auth.password.hide | Скрыть пароль
+ui.auth.loading | Подождите, выполняем вход...
+ui.update.check | Проверить
+ui.update.versions | У вас {current}, доступна {new}
+ui.update.progress | Скачано {downloaded} из {total} ({percent}%)
+ui.update.security_error | Обновление не прошло проверку безопасности и не будет установлено.
+ui.update.connection_error | Не удалось проверить обновление. Проверьте интернет и повторите.

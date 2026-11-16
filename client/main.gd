@@ -268,7 +268,7 @@ func _on_viewport_resized() -> void:
     build_screen.resize_ui(size_now)
     supply_screen.resize_ui(size_now)
     store_screen.resize_ui(size_now)
-    Forest.apply_touch(update_screen,size_now)
+    update_screen.resize_ui(size_now)
     if tutorial_guide != null:
         tutorial_guide.set_anchors_and_offsets_preset(Control.PRESET_TOP_RIGHT)
         tutorial_guide.offset_left = -minf(450.0, size_now.x * 0.39)
@@ -406,12 +406,14 @@ func _send_auth(mode: String) -> void:
         status_label.text = Strings.get_text("auth.register.error.weak")
         return
     _auth_busy = true
-    status_label.text = Strings.get_text("loading")
+    login_screen.set_loading(true)
+    status_label.text = Strings.get_text("ui.auth.loading")
     var data := {"username":username,"password":password}
     if mode == "register":
         data["email"] = email
     var response: Dictionary = await _api("/auth/" + mode,HTTPClient.METHOD_POST,data)
     _auth_busy = false
+    login_screen.set_loading(false)
     if response.code != 200 and response.code != 201:
         status_label.text = _auth_error_text(mode, response)
         return

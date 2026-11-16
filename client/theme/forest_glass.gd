@@ -8,9 +8,14 @@ const COLORS := {
     "text": Color("eef5e8"),
     "muted": Color("a1b9ad"),
     "border": Color("386c57"),
+    "success": Color("7bc67e"),
+    "warning": Color("e9b85c"),
+    "error": Color("f0a29b"),
+    "surface": Color("173a30"),
     "danger": Color("f0a29b"),
     "focus": Color("b7efa5"),
 }
+const TOKENS = preload("res://theme/ui_tokens.gd")
 const METRICS := {
     "touch_dp": 48.0,
     "body_sp": 16.0,
@@ -19,6 +24,7 @@ const METRICS := {
     "gap": 12.0,
     "padding": 18.0,
     "radius": 18.0,
+    "button_radius": 12.0,
 }
 
 static func scale_for(window_size: Vector2, density: float = 1.0) -> float:
@@ -26,10 +32,10 @@ static func scale_for(window_size: Vector2, density: float = 1.0) -> float:
     # OS dpi / 160 is useful for physical pixels, but canvas_items already scales
     # to the Android drawable viewport; don't double-apply the phone DPI.
     var candidate: float = minf(window_size.x / 1280.0, window_size.y / 720.0)
-    return clampf(maxf(candidate, 1.0), 1.0, 1.5)
+    return clampf(candidate, float(TOKENS.data().font.scale_min), float(TOKENS.data().font.scale_max))
 
 static func touch_size(window_size: Vector2, density: float = 1.0) -> float:
-    return ceilf(METRICS.touch_dp * scale_for(window_size, density))
+    return ceilf(float(TOKENS.data().touch.min_height_dp) * scale_for(window_size, density))
 
 static func rounded(fill: Color, radius: int = 18, border: Color = COLORS.border, width: int = 1) -> StyleBoxFlat:
     var style := StyleBoxFlat.new()
@@ -42,30 +48,38 @@ static func rounded(fill: Color, radius: int = 18, border: Color = COLORS.border
 
 static func create_theme(window_size: Vector2 = Vector2(1280,720)) -> Theme:
     var scale := scale_for(window_size)
+    var tokens: Dictionary = TOKENS.data()
+    var colors: Dictionary = tokens.colors.dark
     var theme := Theme.new()
     var font := SystemFont.new()
     font.font_names = PackedStringArray(["Noto Sans", "DejaVu Sans", "sans-serif"])
     theme.default_font = font
-    theme.default_font_size = roundi(METRICS.body_sp * scale)
+    theme.default_font_size = maxi(roundi(float(tokens.font.body) * scale), int(tokens.font.body_min))
     for node_type in ["Label", "Button", "LineEdit", "CheckBox", "OptionButton", "ItemList", "TextEdit", "PopupMenu"]:
         theme.set_color("font_color",node_type,COLORS.text)
         theme.set_font_size("font_size",node_type,roundi(METRICS.body_sp * scale))
     theme.set_color("font_placeholder_color", "LineEdit", COLORS.muted)
+    theme.set_color("font_color", "CheckBox", COLORS.text)
+    theme.set_color("font_color", "ProgressBar", COLORS.text)
+    theme.set_color("font_color", "Button", Color("#" + str(colors.text_primary)))
     theme.set_color("font_focus_color", "Button", COLORS.accent)
     theme.set_color("font_hover_color", "Button", COLORS.accent)
     theme.set_color("font_pressed_color", "Button", COLORS.background)
     theme.set_color("font_disabled_color", "Button", COLORS.muted)
+    theme.set_color("font_pressed_color", "Button", COLORS.background)
     for node_type in ["Panel", "PanelContainer"]:
         theme.set_stylebox("panel",node_type,rounded(COLORS.panel,roundi(METRICS.radius*scale)))
     for name in {"normal":COLORS.panel_secondary, "hover":COLORS.border, "pressed":COLORS.accent, "disabled":COLORS.panel}.keys():
         theme.set_stylebox(name,"Button",rounded({"normal":COLORS.panel_secondary, "hover":COLORS.border, "pressed":COLORS.accent, "disabled":COLORS.panel}[name],roundi(12*scale)))
-    theme.set_stylebox("focus","Button",rounded(Color.TRANSPARENT,roundi(12*scale),COLORS.focus,2))
+    theme.set_stylebox("focus","Button",rounded(Color.TRANSPARENT,roundi(12*scale),COLORS.focus,int(tokens.border.focus)))
     for name in ["normal", "focus", "read_only"]:
         theme.set_stylebox(name,"LineEdit",rounded(COLORS.background,roundi(10*scale),COLORS.focus if name == "focus" else COLORS.border))
     theme.set_stylebox("normal","TextEdit",rounded(COLORS.background))
     theme.set_stylebox("panel","ItemList",rounded(COLORS.panel_secondary))
     theme.set_stylebox("panel","PopupPanel",rounded(COLORS.panel))
     theme.set_stylebox("panel","AcceptDialog",rounded(COLORS.panel))
+    theme.set_stylebox("background","ProgressBar",rounded(COLORS.panel_secondary,8))
+    theme.set_stylebox("fill","ProgressBar",rounded(COLORS.accent,8))
     theme.set_constant("separation","VBoxContainer",roundi(METRICS.gap * scale))
     theme.set_constant("separation","HBoxContainer",roundi(METRICS.gap * scale))
     return theme

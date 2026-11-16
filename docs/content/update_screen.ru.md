@@ -20,7 +20,7 @@ update.screen.success_desc | Можно продолжать игру.
 update.screen.error.network | Нет сети. Проверь подключение и попробуй снова.
 update.screen.error.space | Не хватает места. Освободи память и повтори.
 update.screen.error.corrupt | Файл повреждён. Скачай обновление заново.
-update.screen.error.signature | Подпись не прошла. Обновление отменено.
+update.screen.error.signature | Обновление не прошло проверку безопасности и не будет установлено.
 update.screen.error.mandatory | Обязательное обновление. Без него игра не запустится.
 update.screen.error.generic | Не удалось обновить. Попробуй позже.
 update.screen.retry | Повторить
@@ -64,3 +64,7 @@ update.screen.status.idle | Ожидание
 update.screen.status.busy | Обновление идёт
 update.screen.status.done | Готово
 update.screen.help | Если проблема повторяется, напиши в поддержку.
+update.screen.check | Проверить
+update.screen.versions | У вас {current}, доступна {new}
+update.screen.progress.full | Скачано {downloaded} из {total} ({percent}%)
+update.screen.error.manifest | Не удалось проверить обновление. Проверьте интернет и повторите.
