@@ -10,7 +10,7 @@
 
 ## Шаги
 1. Пользователь без входа: `useradd --system --home /opt/createportal --shell /usr/sbin/nologin createportal`.
-2. Код: клонировать репозиторий maillunex-lang/LunexEconom (ветка main) во временную папку, скопировать в `/opt/createportal` каталог `portal/` и файл `tools/work_plan.py` с пакетами `tools/__init__.py`: структура `/opt/createportal/portal/...` и `/opt/createportal/tools/work_plan.py`. Права: владелец root, чтение для createportal.
+2. Код: клонировать репозиторий maillunex-lang/LunexEconom (ветка main) во временную папку, скопировать в `/opt/createportal` каталог `portal/` и файл `tools/work_plan.py` (пустой файл __init__.py в папке tools создаёт install.sh): структура `/opt/createportal/portal/...` и `/opt/createportal/tools/work_plan.py`. Права: владелец root, чтение для createportal.
 3. Данные: `install -d -m 0700 -o createportal -g createportal /var/lib/createportal`.
 4. systemd: скопировать `portal/deploy/createportal.service` в `/etc/systemd/system/`, `systemctl daemon-reload`, `systemctl enable --now createportal`.
 5. Пароль владельца: владелец сам запускает `sudo -u createportal PORTAL_DB=/var/lib/createportal/portal.sqlite python3 -m portal.manage set-password owner` и вводит пароль (не короче 14 символов) на сервере.
