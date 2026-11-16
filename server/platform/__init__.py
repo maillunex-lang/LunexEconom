@@ -1,14 +1,15 @@
 """Platform accounts, sessions, roles, health and runtime flags."""
 from pathlib import Path
-from . import api, admin, admin_economy, admin_world, admin_server
+from . import api, admin, admin_economy, admin_world, admin_server, admin_catalog, admin_content, admin_releases, admin_audit
 
 
 def migrations():
     base=Path(__file__).resolve().parents[1] / 'migrations'
-    return [base / '202611150900_platform_accounts.sql',base / '202611151000_platform_v201.sql',base / '202611160010_admin_a1.sql',base / '202611160200_admin_a2.sql',base / '202611160201_admin_a2_production.sql',base / '202611160300_platform_refresh_family.sql']
+    return [base / '202611150900_platform_accounts.sql',base / '202611151000_platform_v201.sql',base / '202611160010_admin_a1.sql',base / '202611160200_admin_a2.sql',base / '202611160201_admin_a2_production.sql',base / '202611160300_platform_refresh_family.sql',base / '202611161100_admin_a3.sql']
 
 
 def register(registry):
+    admin_audit.install_serializer()
     registry.route('GET', '/health', api.health)
     registry.route('POST', '/auth/register', api.register)
     registry.route('POST', '/auth/login', api.login)
@@ -54,6 +55,18 @@ def register(registry):
     registry.route('GET','/admin/ticks',admin_server.ticks)
     registry.route('GET','/admin/errors',admin_server.errors)
     registry.route('GET','/admin/alerts',admin_server.alerts)
+    # A3 catalog, announcements, release metadata and audit downloads.
+    registry.route('GET','/admin/catalog',admin_catalog.catalog)
+    registry.route('POST','/admin/catalog/preview',admin_catalog.preview)
+    registry.route('POST','/admin/catalog/apply',admin_catalog.apply)
+    registry.route('POST','/admin/catalog/rollback',admin_catalog.rollback)
+    registry.route('GET','/admin/catalog/revisions',admin_catalog.revisions)
+    registry.route('GET','/admin/announcements',admin_content.list_admin)
+    registry.route('POST','/admin/announcements',admin_content.create)
+    registry.route('POST','/admin/announcements/{id}/deactivate',admin_content.deactivate)
+    registry.route('GET','/announcements',admin_content.public)
+    registry.route('GET','/admin/releases',admin_releases.releases)
+    registry.route('GET','/admin/audit/export',admin_audit.export)
     registry.tick('daily','admin_production',admin_economy.capture_production,order=41)
     registry.tick('daily','admin_daily_stats',admin_economy.snapshot,order=1000)
     registry.tick('daily','admin_error_sync',admin_server.record_tick_errors,order=1001)
