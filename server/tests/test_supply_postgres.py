@@ -169,7 +169,7 @@ class SupplyPostgresTests(unittest.TestCase):
         with patch('server.supply.api.authenticate', return_value=None):
             self.assertEqual(supply_api.get({}, ctx)[0], 401)
         registry = build_registry()
-        self.assertEqual([name for _,name,_ in sorted(registry.tick_handlers['daily'])][0:2],
+        self.assertEqual([name for _,name,_ in sorted(registry.tick_handlers['daily']) if name.startswith('supply_')][0:2],
                          ['supply_links', 'supply_market'])
         self.assertIn(('PUT', '/enterprises/{id}/supply'), registry.routes)
 

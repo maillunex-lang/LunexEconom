@@ -19,7 +19,7 @@ class RefreshReplayTests(unittest.TestCase):
 
     def test_replay_revokes_successor(self):
         name = 'sec' + uuid4().hex[:12]
-        data = {'username': name, 'email': name+'@example.test', 'password':'StrongSecurePass123!'}
+        data = {'consent_personal_data':True,'username': name, 'email': name+'@example.test', 'password':'StrongSecurePass123!'}
         self.assertEqual(request(self.app, 'POST', '/auth/register', data, ip='10.131.2.3')[0], 201)
         code, login = request(self.app, 'POST', '/auth/login', {'username':name, 'password':data['password']}, ip='10.131.2.4')
         self.assertEqual(code, 200)

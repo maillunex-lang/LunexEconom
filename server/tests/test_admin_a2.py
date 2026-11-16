@@ -49,7 +49,7 @@ class AdminA2Database(unittest.TestCase):
         username = 'a'+unique
         passwd = 'Test_Valid_Admin_Pass_123!'
         registration = request(self.app,'POST','/auth/register',
-                               {'username':username, 'email':username+'@example.test','password':passwd},
+                               {'consent_personal_data':True,'username':username, 'email':username+'@example.test','password':passwd},
                                ip='10.30.'+str(int(unique[:2],16)%230+1)+'.10')
         self.assertEqual(registration['status'],201,registration)
         with db.connect(DSN) as conn:

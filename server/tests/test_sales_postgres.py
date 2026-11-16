@@ -53,7 +53,7 @@ class SalesPostgresTests(unittest.TestCase):
         self.assertIs(registry.flags['supply_sales_modes_enabled'],False)
         self.assertIn(('GET','/supply/offers'),registry.routes)
         self.assertIn(('PUT','/enterprises/{id}/sales-policy/{product}'),registry.routes)
-        self.assertEqual([n for _,n,_ in sorted(registry.tick_handlers['daily'])][:2],
+        self.assertEqual([n for _,n,_ in sorted(registry.tick_handlers['daily']) if n.startswith('supply_')][:2],
                          ['supply_links','supply_market'])
         self.assertEqual(api.offers({}, {'conn':self.conn,'settings':{},'query':{}})[0],401)
 

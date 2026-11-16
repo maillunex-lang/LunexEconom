@@ -70,7 +70,7 @@ class AdminA3Database(unittest.TestCase):
         suffix=uuid4().hex[:12]
         user="a"+suffix
         password="AdminA3StrictPassword!123"
-        reg=request(self.app,"POST","/auth/register",{
+        reg=request(self.app,"POST","/auth/register",{"consent_personal_data":True,
             "username":user,"email":user+"@example.test","password":password},
             ip="10.41."+str(int(suffix[:2],16)%240+1)+".1")
         self.assertEqual(reg["status"],201,reg)
@@ -88,7 +88,7 @@ class AdminA3Database(unittest.TestCase):
         username="p"+suffix
         password="PlayerA3ValidPassword!123"
         reg=request(self.app,"POST","/auth/register",
-            {"username":username,"email":username+"@example.test","password":password},
+            {"consent_personal_data":True,"username":username,"email":username+"@example.test","password":password},
             ip="10.44."+str(int(suffix[2:4],16)%240+1)+".1")
         self.assertEqual(reg["status"],201,reg)
         login=request(self.app,"POST","/auth/login",
@@ -255,7 +255,7 @@ class AdminA3Database(unittest.TestCase):
         with db.connect(DSN) as conn:
             conn.execute("""INSERT INTO audit(actor,actor_role,action,payload)
                 VALUES(%s,'admin','formula.a3',%s::jsonb)""",
-                ("=HYPERLINK(1,2)",json.dumps({"password":"DO_NOT_EXPORT_123","email":"secret@example.test"})))
+                ("=HYPERLINK(1,2)",json.dumps({"consent_personal_data":True,"password":"DO_NOT_EXPORT_123","email":"secret@example.test"})))
             conn.execute("""INSERT INTO audit(actor,actor_role,action,payload)
                 SELECT 'a3_test','admin','bulk.a3','{}'::jsonb
                 FROM generate_series(1,10004)""")

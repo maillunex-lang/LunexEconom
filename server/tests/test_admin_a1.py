@@ -72,7 +72,7 @@ class AdminDatabaseTests(unittest.TestCase):
         suffix = uuid4().hex[:12]
         username = 'a' + suffix
         email = username + '@example.com'
-        reg = request(self.application, 'POST', '/auth/register', {
+        reg = request(self.application, 'POST', '/auth/register', {'consent_personal_data':True,
             'username': username, 'email': email, 'password': password,
         }, ip='10.77.' + str(int(suffix[:2], 16) % 240 + 1) + '.3')
         self.assertEqual(reg['status'], 201, reg)

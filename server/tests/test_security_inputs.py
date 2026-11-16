@@ -36,7 +36,7 @@ class SecurityInputTests(unittest.TestCase):
     def player(self):
         name='n'+uuid4().hex[:12]
         password='ReallyStrongPassword123!'
-        details={'username':name,'email':name+'@example.test','password':password}
+        details={'consent_personal_data':True,'username':name,'email':name+'@example.test','password':password}
         self.assertEqual(request(self.app,'POST','/auth/register',details,ip='10.160.'+str(int(name[1:3],16)%240+1)+'.'+str(int(name[3:5],16)%240+1))[0],201)
         result=request(self.app,'POST','/auth/login',{'username':name,'password':password},ip='10.161.'+str(int(name[5:7],16)%240+1)+'.'+str(int(name[7:9],16)%240+1))
         self.assertEqual(result[0],200)
@@ -115,5 +115,5 @@ class SecurityInputTests(unittest.TestCase):
             self.assertIn(r['code'],(400,409,422),r)
             self.assertNotIn('Traceback',str(r['body']))
         for value in samples:
-            result=probe(self.app,'POST','/auth/register',json.dumps({'username':value,'email':'test@example.org','password':'PasswordSecure123'}).encode())
+            result=probe(self.app,'POST','/auth/register',json.dumps({'consent_personal_data':True,'username':value,'email':'test@example.org','password':'PasswordSecure123'}).encode())
             self.assertIn(result['code'],(400,409,422,429),result)

@@ -44,7 +44,7 @@ class WorldDatabaseTests(unittest.TestCase):
     def user(self):
         username='w'+uuid4().hex[:12]
         ip='10.91.'+str(int(uuid4().hex[:2],16)%240+1)+'.'+str(int(uuid4().hex[:2],16)%240+1)
-        data={'username':username,'email':username+'@example.com','password':'StrongWorldPass123!'}
+        data={'consent_personal_data':True,'username':username,'email':username+'@example.com','password':'StrongWorldPass123!'}
         registered=request(type(self).app,'POST','/auth/register',data,ip=ip)
         self.assertEqual(registered['status'],201,registered)
         login=request(type(self).app,'POST','/auth/login',

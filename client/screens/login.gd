@@ -21,6 +21,8 @@ var brand_title: Label
 var content_row: HBoxContainer
 var form_column: VBoxContainer
 var visibility_button: Button
+var consent_checkbox: CheckBox
+var consent_links: HBoxContainer
 
 func _ready() -> void:
     set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
@@ -87,6 +89,18 @@ func _ready() -> void:
         password.secret = not password.secret
         visibility_button.text = Strings.get_text("ui.auth.password.show" if password.secret else "ui.auth.password.hide")
     )
+    consent_checkbox = CheckBox.new()
+    consent_checkbox.text = Strings.get_text("auth.consent.checkbox")
+    consent_checkbox.button_pressed = false
+    consent_checkbox.toggled.connect(_update_registration_allowed)
+    form.add_child(consent_checkbox)
+    consent_links = HBoxContainer.new()
+    form.add_child(consent_links)
+    for entry in [["auth.consent.policy","policy"],["auth.consent.terms","terms"]]:
+        var link := LinkButton.new()
+        link.text = Strings.get_text(entry[0])
+        link.pressed.connect(_open_legal.bind(entry[1]))
+        consent_links.add_child(link)
     action = _button("auth.login.button")
     form.add_child(action)
     action.pressed.connect(func(): authenticate.emit(mode))
@@ -104,6 +118,9 @@ func set_mode(new_mode: String) -> void:
     mode = new_mode if new_mode in ["login","register"] else "login"
     var registering := mode == "register"
     email.visible = registering
+    consent_checkbox.visible = registering
+    consent_links.visible = registering
+    _update_registration_allowed(false)
     username.placeholder_text = Strings.get_text("auth.register.name" if registering else "auth.login.name")
     action.text = Strings.get_text("auth.register.button" if registering else "auth.login.button")
     tab_login.button_pressed = not registering
@@ -164,3 +181,12 @@ func _scroll_focused() -> void:
 
 func _ensure_field_visible(_field_node: Control) -> void:
     call_deferred("_scroll_focused")
+
+func _update_registration_allowed(_checked: bool) -> void:
+    if action != null:
+        action.disabled = mode == "register" and not consent_checkbox.button_pressed
+
+func _open_legal(kind: String) -> void:
+    var url := preload("res://config/consent_urls.gd").url(kind)
+    if not url.is_empty():
+        OS.shell_open(url)

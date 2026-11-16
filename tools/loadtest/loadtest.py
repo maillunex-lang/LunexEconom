@@ -60,7 +60,7 @@ def scenario(base,i,seed,simulate_ips=False):
         code,ms,payload,error=request(base,method,path,body,token,simulated_ip=simulated_ip)
         results.append({'stage':stage,'status':code,'latency_ms':round(ms,2),'error':error})
         return code,payload
-    code,_=call('register','POST','/auth/register',{'username':name,'email':email,'password':password})
+    code,_=call('register','POST','/auth/register',{'consent_personal_data':True,'username':name,'email':email,'password':password})
     if code!=201:return results
     code,auth=call('login','POST','/auth/login',{'username':name,'password':password})
     if code!=200:return results
