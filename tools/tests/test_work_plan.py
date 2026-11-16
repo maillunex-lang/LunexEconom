@@ -66,6 +66,18 @@ class WorkPlan(unittest.TestCase):
         self.assertIn("portal/qa/server/A2.md", a)
         self.assertIn("portal/hooks/**", a)
 
+    def test_render_is_generic_for_other_projects(self):
+        """Скелет нового проекта не должен получать тексты чужой игры: ветки, линии и правила берутся из его плана."""
+        plan = copy.deepcopy(self.plan)
+        plan["rules"]["branch_pattern"] = "custom/<id>-<slug>"
+        first = next(iter(plan["lanes"]))
+        plan["lanes"][first]["name"] = "Уникальная линия"
+        out = wp.render(plan)
+        self.assertIn("custom/<id>-<slug>", out)
+        self.assertIn("Уникальная линия", out)
+        for stale in ("PostgreSQL", "v2/<id>", "mock-first", "серверных тестов"):
+            self.assertNotIn(stale, out)
+
     def test_rendered_portal_plan_in_sync(self):
         import json
         plan_path = wp.ROOT / "docs/portal/work_plan.json"
