@@ -1,0 +1,184 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>CreatePortal</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Space+Grotesk:wght@500;600;700&display=swap">
+<style>
+:root{--bg:#EEF1EC;--surface:#fff;--surface2:#F5F8F4;--ink:#14201A;--muted:#58695F;--line:#D3DCD4;--accent:#2C7A52;--accent-ink:#fff;--warn:#A86A00;--warn-bg:#FBEFD5;--info:#235FA6;--info-bg:#DEEAF8;--ok:#1F6B45;--ok-bg:#DDF1E5;--lock:#7A867F;--err:#B3261E}
+@media (prefers-color-scheme:dark){:root{--bg:#0D1814;--surface:#14231D;--surface2:#101D18;--ink:#E8F0EA;--muted:#9AB0A2;--line:#24372E;--accent:#7BD88F;--accent-ink:#0D1814;--warn:#F2C14E;--warn-bg:#3A3015;--info:#8DB8F0;--info-bg:#16283D;--ok:#7BD88F;--ok-bg:#16301F;--lock:#7F938A;--err:#F2B8B5;color-scheme:dark}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 Inter,system-ui,sans-serif;padding:20px max(16px,env(safe-area-inset-right,0px)) 48px max(16px,env(safe-area-inset-left,0px))}
+h1,h2,h3{font-family:"Space Grotesk",system-ui,sans-serif;margin:0;text-wrap:balance}
+h1{font-size:26px}h2{font-size:18px}h3{font-size:16px;line-height:1.3}
+.wrap{max-width:1180px;margin:0 auto;display:flex;flex-direction:column;gap:18px}
+.top{display:flex;flex-wrap:wrap;gap:10px 18px;align-items:center;justify-content:space-between}
+.muted{color:var(--muted)}.small{font-size:13px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:14px;display:flex;flex-direction:column;gap:10px;min-width:0}
+.card.locked{background:var(--surface2)}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px}
+.pair{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+@media(max-width:780px){.pair{grid-template-columns:minmax(0,1fr)}}
+button,input,textarea{font:inherit}
+button{font-weight:600;font-size:14px;min-height:44px;padding:8px 14px;border-radius:10px;border:1px solid var(--line);background:var(--surface);color:var(--ink);cursor:pointer}
+button.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+button.ghost{background:transparent;color:var(--muted)}
+button.confirm{background:var(--warn);color:var(--surface);border-color:var(--warn)}
+button:disabled{opacity:.5;cursor:not-allowed}
+button:focus-visible,input:focus-visible,textarea:focus-visible,summary:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+input,textarea{width:100%;padding:10px 12px;border-radius:10px;border:1px solid var(--line);background:var(--surface);color:var(--ink)}
+label{display:flex;flex-direction:column;gap:4px;font-size:13px;color:var(--muted)}
+.row{display:flex;flex-wrap:wrap;gap:8px}
+.pill{align-self:flex-start;font-size:12px;font-weight:600;padding:3px 9px;border-radius:999px;white-space:nowrap}
+.pill.planned{background:var(--surface2);color:var(--lock);border:1px solid var(--line)}
+.pill.ready,.pill.accepted{background:var(--ok-bg);color:var(--ok)}
+.pill.issued{background:var(--warn-bg);color:var(--warn)}
+.pill.submitted{background:var(--info-bg);color:var(--info)}
+.pid{font-family:"Space Grotesk",system-ui,sans-serif;font-weight:700;color:var(--accent);margin-right:6px}
+pre{white-space:pre-wrap;word-break:break-word;background:var(--surface2);border:1px solid var(--line);border-radius:10px;padding:12px;font:12.5px/1.5 ui-monospace,Menlo,Consolas,monospace;max-height:340px;overflow:auto;margin:8px 0}
+details{border-top:1px solid var(--line);padding-top:8px}summary{cursor:pointer;font-weight:600;font-size:14px;padding:4px 0}
+.bar{height:10px;border-radius:6px;background:var(--line);overflow:hidden}.bar>i{display:block;height:100%;background:var(--accent)}
+.err{color:var(--err)}.notice{background:var(--warn-bg);border:1px solid var(--warn);border-radius:10px;padding:10px 14px;font-size:14px}
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(16px + env(safe-area-inset-bottom,0px));background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:10px;font-size:14px;max-width:calc(100% - 32px)}
+[hidden]{display:none!important}
+</style>
+</head>
+<body>
+<div class="wrap" id="app"></div>
+<div class="toast" id="toast" hidden></div>
+<script nonce="__NONCE__">
+(function(){
+var BASE="__BASE__", CSRF="", ME="", app=document.getElementById('app');
+var LABEL={planned:'В очереди',ready:'Можно выдавать',issued:'У исполнителя',submitted:'Сдано, жду приёмки',accepted:'Принято'};
+var confirmId=null, confirmTimer=null, current=null;
+function el(t,c,x){var n=document.createElement(t);if(c)n.className=c;if(x!=null)n.textContent=x;return n}
+function toast(m){var t=document.getElementById('toast');t.textContent=m;t.hidden=false;clearTimeout(toast.t);toast.t=setTimeout(function(){t.hidden=true},2600)}
+function api(path,method,body){
+  var o={method:method||'GET',headers:{},credentials:'same-origin'};
+  if(body!==undefined){o.headers['Content-Type']='application/json';o.body=JSON.stringify(body)}
+  if(o.method!=='GET')o.headers['X-CSRF-Token']=CSRF;
+  return fetch(BASE+path,o).then(function(r){return r.json().catch(function(){return {}}).then(function(j){if(!r.ok){var e=new Error(j.error||('http_'+r.status));e.data=j;e.status=r.status;throw e}return j})});
+}
+function copy(text){
+  function fb(){var ta=el('textarea');ta.value=text;document.body.appendChild(ta);ta.select();try{document.execCommand('copy');toast('Скопировано')}catch(e){toast('Выделите и скопируйте вручную')}ta.remove()}
+  if(navigator.clipboard&&navigator.clipboard.writeText)navigator.clipboard.writeText(text).then(function(){toast('Скопировано')},fb);else fb();
+}
+function fmt(t){if(!t)return '';var d=new Date(t*1000);return d.toLocaleDateString('ru-RU',{day:'numeric',month:'long'})+' '+d.toLocaleTimeString('ru-RU',{hour:'2-digit',minute:'2-digit'})}
+function head(title,sub,extra){
+  var t=el('div','top'),l=el('div');l.appendChild(el('h1','',title));if(sub)l.appendChild(el('div','muted',sub));t.appendChild(l);
+  var r=el('div','row');(extra||[]).forEach(function(x){r.appendChild(x)});
+  var lo=el('button','ghost','Выйти ('+ME+')');lo.onclick=function(){api('/api/logout','POST',{}).finally(function(){CSRF='';showLogin()})};r.appendChild(lo);t.appendChild(r);return t;
+}
+function btn(label,cls,fn){var b=el('button',cls||'',label);b.type='button';b.onclick=fn;return b}
+/* ---------- вход ---------- */
+function showLogin(msg){
+  app.textContent='';
+  var c=el('div','card');c.style.maxWidth='380px';c.style.margin='12vh auto 0';
+  c.appendChild(el('h1','','CreatePortal'));c.appendChild(el('div','muted','Портал проектов. Вход только для владельца.'));
+  var u=el('input');u.id='u';u.autocomplete='username';u.placeholder='Логин';
+  var p=el('input');p.id='p';p.type='password';p.autocomplete='current-password';p.placeholder='Пароль';
+  var e=el('div','err small',msg||'');
+  var go=btn('Войти','primary',function(){
+    go.disabled=true;
+    api('/api/login','POST',{username:u.value,password:p.value}).then(function(r){CSRF=r.csrf;return api('/api/me')}).then(function(m){ME=m.user;CSRF=m.csrf;showProjects()})
+    .catch(function(x){e.textContent=x.status===429?'Слишком много попыток. Подождите 15 минут.':'Неверный логин или пароль.';go.disabled=false});
+  });
+  p.onkeydown=function(ev){if(ev.key==='Enter')go.click()};
+  [u,p,go,e].forEach(function(x){c.appendChild(x)});app.appendChild(c);
+}
+/* ---------- проекты ---------- */
+function showProjects(){
+  app.textContent='';
+  app.appendChild(head('Проекты','Мои проекты и их задачи',[btn('Новый проект','primary',showNew)]));
+  var g=el('div','grid');app.appendChild(g);
+  api('/api/projects').then(function(r){
+    if(!r.projects.length)g.appendChild(el('div','muted','Проектов пока нет. Нажмите «Новый проект».'));
+    r.projects.forEach(function(p){
+      var c=el('div','card');c.appendChild(el('h3','',p.name));c.appendChild(el('div','muted small',p.repo||'репозиторий не указан'));
+      if(p.description)c.appendChild(el('div','small',p.description));
+      var b=el('div','bar');var i=el('i');i.style.width=(p.total?100*p.accepted/p.total:0)+'%';b.appendChild(i);c.appendChild(b);
+      c.appendChild(el('div','muted small',p.has_plan?('Принято '+p.accepted+' из '+p.total):'План ещё не загружен'));
+      c.appendChild(btn('Открыть','primary',function(){showBoard(p.slug)}));g.appendChild(c);
+    });
+  }).catch(function(){showLogin()});
+}
+/* ---------- новый проект ---------- */
+function showNew(){
+  app.textContent='';app.appendChild(head('Новый проект','Мастер: создаёт запись и выдаёт промпт для ИИ-директора и скелет репозитория',[btn('К проектам','',showProjects)]));
+  var c=el('div','card');
+  function field(id,label,ph,area){var l=el('label','',label);var i=el(area?'textarea':'input');i.id=id;i.placeholder=ph||'';if(area)i.rows=3;l.appendChild(i);c.appendChild(l);return i}
+  var name=field('n','Название проекта','Например: Мой новый проект'),slug=field('s','Короткий адрес (латиница, цифры, дефис)','my-project'),repo=field('r','Репозиторий GitHub (необязательно)','владелец/репозиторий'),desc=field('d','Описание','Что это за проект',true);
+  var out=el('div'),err=el('div','err small');
+  var go=btn('Создать проект','primary',function(){
+    err.textContent='';go.disabled=true;
+    api('/api/projects','POST',{name:name.value,slug:slug.value,repo:repo.value,description:desc.value}).then(function(r){
+      out.textContent='';out.appendChild(el('h2','','Проект создан. Что дальше'));
+      out.appendChild(el('p','muted','1) Скачайте скелет репозитория и положите в корень нового репозитория. 2) Отдайте ИИ-директору промпт ниже. 3) Когда в репозитории появится docs/work_plan.json, нажмите «Синхронизировать» на доске проекта.'));
+      var row=el('div','row');var a=el('a');a.href=BASE+'/api/projects/'+r.slug+'/bootstrap.zip';a.textContent='Скачать скелет репозитория';a.style.cssText='display:inline-flex;align-items:center;min-height:44px;padding:8px 14px;border-radius:10px;background:var(--accent);color:var(--accent-ink);font-weight:600;text-decoration:none';row.appendChild(a);
+      row.appendChild(btn('Скопировать промпт директору','',function(){copy(r.prompt)}));row.appendChild(btn('Открыть доску','',function(){showBoard(r.slug)}));out.appendChild(row);
+      out.appendChild(el('pre','',r.prompt));go.hidden=true;
+    }).catch(function(x){err.textContent=x.message==='exists'?'Такой адрес уже занят.':'Проверьте поля: адрес из латиницы и цифр, репозиторий в виде владелец/имя.';go.disabled=false});
+  });
+  c.appendChild(go);c.appendChild(err);app.appendChild(c);app.appendChild(out);
+}
+/* ---------- доска ---------- */
+function showBoard(slug){
+  app.textContent='';
+  api('/api/projects/'+slug).then(function(d){current={slug:slug,d:d};drawBoard()}).catch(function(){showLogin()});
+}
+function st(id){var s=current.d.state[id];return s?s.status:'planned'}
+function ready(p){return st(p.id)==='planned'&&p.depends_on.every(function(x){return st(x)==='accepted'})}
+function setStatus(id,status){api('/api/projects/'+current.slug+'/status','POST',{id:id,status:status}).then(function(){return api('/api/projects/'+current.slug)}).then(function(d){current.d=d;confirmId=null;drawBoard()}).catch(function(e){toast(e.message==='dependencies_not_accepted'?'Сначала нужно принять предыдущие шаги':'Не удалось сохранить')})}
+function drawBoard(){
+  var d=current.d,P=d.packages;app.textContent='';
+  var sync=btn('Синхронизировать с GitHub','',function(){sync.disabled=true;api('/api/projects/'+current.slug+'/sync','POST',{}).then(function(){toast('План обновлён');showBoard(current.slug)}).catch(function(e){toast(e.status===422?'План в репозитории содержит ошибки':'Не удалось получить план');sync.disabled=false})});
+  var imp=btn('Загрузить план (JSON)','',function(){showImport()});
+  app.appendChild(head(d.project.name,d.project.repo||'',[sync,imp,btn('Протокол для ИИ','',showProtocol),btn('Все проекты','',showProjects)]));
+  if(!P.length){var n=el('div','notice','План ещё не загружен. Положите docs/work_plan.json в репозиторий и нажмите «Синхронизировать» или загрузите файл вручную.');app.appendChild(n);return}
+  var cnt={accepted:0,submitted:0,issued:0,ready:0};P.forEach(function(p){var s=st(p.id);if(s==='planned'&&ready(p))cnt.ready++;else if(cnt[s]!==undefined)cnt[s]++});
+  var top=el('div','card'),b=el('div','bar'),i=el('i');i.style.width=(100*cnt.accepted/P.length)+'%';b.appendChild(i);top.appendChild(b);
+  top.appendChild(el('div','muted small','Принято '+cnt.accepted+' из '+P.length+' · сдано '+cnt.submitted+' · у исполнителей '+cnt.issued+' · можно выдавать '+cnt.ready));app.appendChild(top);
+  var steps=Array.from(new Set(P.map(function(p){return p.step}))).sort(function(a,b){return a-b});
+  steps.filter(function(n){return P.some(function(p){return p.step===n&&st(p.id)!=='accepted'})}).forEach(function(n){
+    var sec=el('section');sec.style.cssText='display:flex;flex-direction:column;gap:10px';sec.appendChild(el('h2','','Шаг '+n));
+    var pair=el('div','pair');Object.keys(d.lanes).sort().forEach(function(l){P.filter(function(p){return p.step===n&&p.lane===l&&st(p.id)!=='accepted'}).forEach(function(p){pair.appendChild(card(p))})});
+    sec.appendChild(pair);app.appendChild(sec)});
+  var done=P.filter(function(p){return st(p.id)==='accepted'});
+  var ah=el('h2','','Архив принятых');app.appendChild(ah);
+  if(!done.length)app.appendChild(el('div','muted small','Пока пусто.'));
+  done.forEach(function(p){var s=d.state[p.id]||{};var it=el('div','card');var t=el('div');t.appendChild(el('span','pid',p.id));t.appendChild(document.createTextNode(p.title));it.appendChild(t);
+    it.appendChild(el('div','muted small','принято '+fmt(s.accepted_at)+(s.merged?' · влито в main'+(s.sha?' ('+s.sha+')':''):'')));
+    it.appendChild(btn('Вернуть из архива','ghost',function(){setStatus(p.id,'planned')}));app.appendChild(it)});
+}
+function card(p){
+  var d=current.d,s=st(p.id),r=ready(p),c=el('article','card'+((s==='planned'&&!r)?' locked':''));
+  var h=el('div','row');h.style.justifyContent='space-between';var l=el('div');l.appendChild(el('div','muted small','Линия '+p.lane+' · '+(d.lanes[p.lane]?d.lanes[p.lane].name+' · '+d.lanes[p.lane].who:'')));
+  var t=el('h3');t.appendChild(el('span','pid',p.id));t.appendChild(document.createTextNode(p.title));l.appendChild(t);h.appendChild(l);
+  h.appendChild(el('span','pill '+((s==='planned'&&r)?'ready':s),(s==='planned'&&r)?LABEL.ready:LABEL[s]));c.appendChild(h);
+  c.appendChild(el('p','muted small',p.goal));
+  var det=el('details');det.appendChild(el('summary','','Промпт для исполнителя'));det.appendChild(el('pre','',p.prompt));det.appendChild(btn('Скопировать промпт','',function(){copy(p.prompt)}));c.appendChild(det);
+  var ck=el('details');ck.appendChild(el('summary','','Критерии готовности'));var ul=el('ul');ul.style.cssText='margin:6px 0;padding-left:20px;font-size:14px';(p.done_when||[]).forEach(function(x){ul.appendChild(el('li','',x))});ck.appendChild(ul);c.appendChild(ck);
+  var row=el('div','row');
+  if(s==='planned'){if(r)row.appendChild(btn('Отдал исполнителю','primary',function(){setStatus(p.id,'issued')}));else{var w=btn('Ждёт: '+p.depends_on.filter(function(x){return st(x)!=='accepted'}).join(', '),'',null);w.disabled=true;row.appendChild(w)}}
+  else if(s==='issued'){row.appendChild(btn('Исполнитель сдал','primary',function(){setStatus(p.id,'submitted')}));row.appendChild(btn('Вернуть в очередь','ghost',function(){setStatus(p.id,'planned')}))}
+  else if(s==='submitted'){var ok=btn(confirmId===p.id?'Точно принято? Нажмите ещё раз':'Принято, в архив',confirmId===p.id?'confirm':'primary',function(){if(confirmId===p.id){setStatus(p.id,'accepted')}else{confirmId=p.id;drawBoard();clearTimeout(confirmTimer);confirmTimer=setTimeout(function(){confirmId=null;drawBoard()},4000)}});row.appendChild(ok);row.appendChild(btn('Вернуть исполнителю','ghost',function(){setStatus(p.id,'issued')}))}
+  c.appendChild(row);
+  var si=d.state[p.id];if(si){var m=[];if(si.issued_at)m.push('выдано '+fmt(si.issued_at));if(si.submitted_at)m.push('сдано '+fmt(si.submitted_at));if(m.length)c.appendChild(el('div','muted small',m.join(' · ')));if(si.merged)c.appendChild(el('div','muted small','Влито в main'+(si.sha?' ('+si.sha+')':'')+(si.note?' · '+si.note:'')))}
+  return c;
+}
+function showImport(){
+  app.textContent='';app.appendChild(head('Загрузка плана','Вставьте содержимое docs/work_plan.json',[btn('Назад','',function(){showBoard(current.slug)})]));
+  var c=el('div','card');var ta=el('textarea');ta.rows=14;ta.placeholder='{"rules": ..., "lanes": ..., "packages": [...]}';var e=el('div','err small');
+  c.appendChild(ta);c.appendChild(btn('Загрузить','primary',function(){var plan;try{plan=JSON.parse(ta.value)}catch(x){e.textContent='Это не JSON.';return}
+    api('/api/projects/'+current.slug+'/plan','POST',{plan:plan}).then(function(){toast('План загружен');showBoard(current.slug)}).catch(function(x){e.textContent=x.data&&x.data.details?x.data.details.join('; '):'План не принят.'})}));c.appendChild(e);app.appendChild(c);
+}
+function showProtocol(){
+  app.textContent='';app.appendChild(head('Протокол для ИИ','Как добавлять этапы и промпты в портал',[btn('Назад','',function(){current?showBoard(current.slug):showProjects()})]));
+  api('/api/protocol').then(function(r){var c=el('div','card');c.appendChild(btn('Скопировать протокол','',function(){copy(r.markdown)}));c.appendChild(el('pre','',r.markdown));app.appendChild(c)});
+}
+api('/api/me').then(function(m){ME=m.user;CSRF=m.csrf;showProjects()}).catch(function(){showLogin()});
+})();
+</script>
+</body>
+</html>

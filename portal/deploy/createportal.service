@@ -1,0 +1,25 @@
+[Unit]
+Description=CreatePortal (портал проектов)
+After=network.target
+
+[Service]
+User=createportal
+Group=createportal
+WorkingDirectory=/opt/createportal
+Environment=PORTAL_DB=/var/lib/createportal/portal.sqlite
+Environment=PORTAL_BASE=/createportal
+Environment=PORTAL_PORT=18790
+# Необязательно: токен GitHub только на чтение (создаёт владелец, кладёт на сервер сам)
+#Environment=PORTAL_GITHUB_TOKEN_FILE=/etc/createportal/github_token
+ExecStart=/usr/bin/python3 -m portal.serve
+Restart=on-failure
+RestartSec=3
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/lib/createportal
+UMask=0077
+
+[Install]
+WantedBy=multi-user.target
