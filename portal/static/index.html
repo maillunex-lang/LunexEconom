@@ -4,6 +4,14 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>CreatePortal</title>
+<meta name="theme-color" content="#DDE8DF" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#08130F" media="(prefers-color-scheme: dark)">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Портал">
+<link rel="manifest" href="__BASE__/manifest.webmanifest">
+<link rel="icon" href="__BASE__/icons/icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="__BASE__/icons/icon-192.png">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Space+Grotesk:wght@500;600;700&display=swap">
 <style>
 /* Liquid glass: полупрозрачные поверхности, размытие фона, блики по краю */
@@ -99,7 +107,7 @@ label{display:flex;flex-direction:column;gap:4px;font-size:13px;color:var(--mute
 pre{white-space:pre-wrap;word-break:break-word;background:var(--glass2);border:1px solid var(--edge);border-radius:16px;padding:12px;font:12.5px/1.5 ui-monospace,Menlo,Consolas,monospace;max-height:340px;overflow:auto;margin:8px 0}
 details{border-top:1px solid var(--hair);padding-top:8px}summary{cursor:pointer;font-weight:600;font-size:14px;padding:4px 0}
 .ov{position:fixed;inset:0;background:rgba(6,16,11,.38);backdrop-filter:blur(6px);display:flex;justify-content:flex-end;align-items:stretch;z-index:40}
-.drawer{width:min(600px,100%);height:100%;overflow:auto;padding:20px max(16px,env(safe-area-inset-right,0px)) calc(28px + env(safe-area-inset-bottom,0px)) 20px;display:flex;flex-direction:column;gap:14px;border-radius:28px 0 0 28px;background:var(--glass-strong)}
+.drawer{max-width:100vw;min-width:0;width:min(600px,100%);height:100%;overflow:auto;padding:20px max(16px,env(safe-area-inset-right,0px)) calc(28px + env(safe-area-inset-bottom,0px)) 20px;display:flex;flex-direction:column;gap:14px;border-radius:28px 0 0 28px;background:var(--glass-strong)}
 @media(max-width:700px){.ov{align-items:flex-end}.drawer{height:90%;border-radius:28px 28px 0 0;width:100%}}
 .act{display:flex;gap:12px;align-items:flex-start;padding:10px 0;border-top:1px solid var(--hair)}.act:first-child{border-top:0}.act .help{flex:1;min-width:0}
 .log{display:flex;flex-direction:column;gap:6px}.log div{display:flex;gap:10px;font-size:13.5px}.log time{color:var(--muted);flex:none;font-variant-numeric:tabular-nums;min-width:118px}
@@ -111,7 +119,28 @@ details{border-top:1px solid var(--hair);padding-top:8px}summary{cursor:pointer;
 .stp{display:flex;flex-direction:column;gap:10px}
 .mini{border-radius:20px;padding:12px 14px;cursor:pointer;display:flex;flex-direction:column;gap:4px;min-width:0;background:var(--glass);backdrop-filter:var(--blur);border:1px solid var(--edge);box-shadow:var(--shadow)}
 .mini .mt{font-weight:600;font-size:14px;line-height:1.3}.mini.locked{opacity:.8}
-@media(max-width:560px){.brand span{display:none}.crumb b{max-width:34vw}.bar-in{gap:4px}}
+@media(max-width:560px){.bar button span{display:none}.brand span{display:none}.crumb b{max-width:34vw}.bar-in{gap:4px}}
+
+/* мобильное управление */
+.tabs{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(10px + env(safe-area-inset-bottom,0px));z-index:30;display:none;gap:2px;padding:6px;border-radius:26px;background:var(--glass-strong);backdrop-filter:var(--blur);-webkit-backdrop-filter:var(--blur);border:1px solid var(--edge);box-shadow:var(--shadow);width:min(440px,calc(100% - 24px))}
+.tabs button{flex:1;flex-direction:column;gap:2px;min-height:54px;border-radius:20px;border:0;background:transparent;box-shadow:none;font-size:11.5px;padding:6px 4px;color:var(--muted);backdrop-filter:none}
+.tabs button svg{width:22px;height:22px}
+.tabs button.on{background:color-mix(in srgb,var(--accent) 20%,transparent);color:var(--accent2)}
+.sticky-actions{display:none;position:sticky;bottom:0;margin:0 -4px;padding:10px;border-radius:22px;background:var(--glass-strong);backdrop-filter:var(--blur);-webkit-backdrop-filter:var(--blur);border:1px solid var(--edge);box-shadow:var(--shadow);display:flex;gap:8px;flex-wrap:wrap}
+.sticky-actions button{flex:1 1 auto;justify-content:center}
+.toolbar{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+@media(max-width:720px){
+ .tabs.show{display:flex}
+ .sticky-actions{display:flex}
+ body{padding-bottom:calc(96px + env(safe-area-inset-bottom,0px))}
+ .toast{bottom:calc(92px + env(safe-area-inset-bottom,0px))}
+ .toolbar{flex-wrap:nowrap;overflow-x:auto;width:100%;padding-bottom:4px;scrollbar-width:none}
+ .toolbar::-webkit-scrollbar{display:none}.toolbar>*{flex:none}
+ h1{font-size:26px}
+ .nows{grid-template-columns:1fr}
+}
+@media(pointer:coarse){button,.lnk,input,textarea{min-height:48px}[data-tip]:hover::after,[data-tip]:focus-visible::after{display:none}}
+.drawer>*{min-width:0;max-width:100%}.drawer p,.drawer li,.drawer h2,.drawer .small{overflow-wrap:anywhere}
 [hidden]{display:none!important}
 h2>span>svg,h3>span>svg{width:20px;height:20px}.row>span>svg{width:22px;height:22px}
 @media (prefers-reduced-motion:no-preference){.drawer{animation:slide .2s ease-out}@keyframes slide{from{transform:translateX(28px);opacity:.5}}.ring circle.v{transition:stroke-dashoffset .5s}}
@@ -122,6 +151,7 @@ h2>span>svg,h3>span>svg{width:20px;height:20px}.row>span>svg{width:22px;height:2
 <div class="bg" aria-hidden="true"><i></i><i></i><i></i></div>
 <div class="bar"><div class="bar-in" id="bar"></div></div>
 <main id="app"></main>
+<nav class="tabs" id="tabs" aria-label="Разделы" hidden></nav>
 <div class="toast" id="toast" hidden></div>
 <script nonce="__NONCE__">
 (function(){
@@ -156,17 +186,37 @@ function copy(text){function fb(){var ta=el('textarea');ta.value=text;document.b
 function fmt(t){if(!t)return '';var d=new Date(t*1000);return d.toLocaleDateString('ru-RU',{day:'numeric',month:'short'})+', '+d.toLocaleTimeString('ru-RU',{hour:'2-digit',minute:'2-digit'})}
 function btn(label,cls,fn,o){o=o||{};var b=el('button',cls||'');b.type='button';if(o.icon)b.appendChild(ic(o.icon));if(label){var s=el('span','',label);b.appendChild(s)}if(o.tip){b.setAttribute('data-tip',o.tip);b.setAttribute('aria-label',label?label+'. '+o.tip:o.tip)}if(fn)b.onclick=fn;if(o.disabled)b.disabled=true;return b}
 function pill(cls,t){return el('span','pill '+cls,t)}
+
+function acceptHandler(p,act){return function(){if(confirmId===p.id){openId=null;act('accepted')()}else{confirmId=p.id;drawBoard();clearTimeout(confirmTimer);confirmTimer=setTimeout(function(){confirmId=null;drawBoard()},4000)}}}
+function shareBtn(text,title,cls){if(!navigator.share)return null;return btn('Поделиться',cls||'',function(){navigator.share({title:title,text:text}).catch(function(){})},{icon:'upload',tip:'Отправить текст в другое приложение: ChatGPT, мессенджер, заметки'})}
+var deferredInstall=null;window.addEventListener('beforeinstallprompt',function(e){e.preventDefault();deferredInstall=e;if(ME)drawBar(lastCrumb)});
+window.addEventListener('appinstalled',function(){deferredInstall=null;toast('Приложение установлено')});
+var lastCrumb='',isStandalone=window.matchMedia&&window.matchMedia('(display-mode: standalone)').matches;
+function rememberSlug(s){try{localStorage.setItem('portalSlug',s)}catch(e){}}
+function lastSlug(){try{return localStorage.getItem('portalSlug')||''}catch(e){return ''}}
+function focusIdeas(){var t=document.getElementById('idea');if(t){t.scrollIntoView({behavior:'smooth',block:'center'});t.focus();return}var sl=current?current.slug:lastSlug();if(sl){showBoard(sl)}else showProjects()}
+function drawTabs(){
+  var nav=document.getElementById('tabs');nav.textContent='';
+  if(!ME){nav.hidden=true;nav.classList.remove('show');return}
+  nav.hidden=false;nav.classList.add('show');
+  var onBoard=!!current&&lastCrumb!=='Проекты';
+  [['Проекты','book',showProjects,!onBoard],['Доска','next',function(){var sl=current?current.slug:lastSlug();if(sl)showBoard(sl);else showProjects()},onBoard],['Идеи','inbox',focusIdeas,false],['Справка','help',showHelp,false]].forEach(function(x){
+    var b=el('button',x[3]?'on':'');b.type='button';b.appendChild(ic(x[1]));b.appendChild(el('span','',x[0]));b.onclick=x[2];nav.appendChild(b)});
+}
+function showOffline(){drawBar('');app.textContent='';var c=el('div','card empty');c.appendChild(ic('help'));c.appendChild(el('h2','','Нет связи с порталом'));c.appendChild(el('div','muted','Проверьте интернет. Данные не сохраняются на устройстве, чтобы они не попали в чужие руки.'));c.appendChild(btn('Повторить','primary',function(){location.reload()},{icon:'sync'}));app.appendChild(c)}
 /* ---------- верхняя панель ---------- */
 function drawBar(crumb){
-  barEl.textContent='';
+  lastCrumb=crumb;barEl.textContent='';
   var l=el('div','row');l.style.flexWrap='nowrap';var b=el('button','brand');b.type='button';b.appendChild(ic('logo'));b.appendChild(el('span','','CreatePortal'));b.onclick=function(){ME?showProjects():null};l.appendChild(b);
   if(crumb){var c=el('div','crumb');c.appendChild(document.createTextNode('/'));c.appendChild(el('b','',crumb));l.appendChild(c)}
   barEl.appendChild(l);
   var r=el('div','row');r.style.flexWrap='nowrap';
+  if(ME&&deferredInstall&&!isStandalone)r.appendChild(btn('Установить','',function(){deferredInstall.prompt();deferredInstall=null;drawBar(lastCrumb)},{icon:'upload',tip:'Установить портал на экран телефона как приложение'}));
   if(ME){r.appendChild(btn('','icon ghost',showHelp,{icon:'help',tip:'Справка: что означают статусы и кнопки'}));
     r.appendChild(btn('','icon ghost',toggleTheme,{icon:'moon',tip:'Переключить светлую и тёмную тему'}));
     r.appendChild(btn('Выйти','ghost',function(){api('/api/logout','POST',{}).finally(function(){CSRF='';ME='';showLogin()})},{icon:'out',tip:'Завершить сеанс на этом устройстве'}))}
   barEl.appendChild(r);
+  drawTabs();
 }
 function toggleTheme(){var r=document.documentElement,cur=r.getAttribute('data-theme');var dark=cur?cur==='dark':window.matchMedia('(prefers-color-scheme: dark)').matches;var nx=dark?'light':'dark';r.setAttribute('data-theme',nx);try{localStorage.setItem('portalTheme',nx)}catch(e){}}
 try{var th=localStorage.getItem('portalTheme');if(th)document.documentElement.setAttribute('data-theme',th)}catch(e){}
@@ -230,7 +280,7 @@ function showNew(){
   c.appendChild(go);c.appendChild(err);app.appendChild(c);app.appendChild(out);
 }
 /* ---------- доска ---------- */
-function showBoard(slug){drawBar('…');app.textContent='';api('/api/projects/'+slug).then(function(d){current={slug:slug,d:d};drawBoard()}).catch(function(){showLogin()})}
+function showBoard(slug){rememberSlug(slug);drawBar('…');app.textContent='';api('/api/projects/'+slug).then(function(d){current={slug:slug,d:d};drawBoard()}).catch(function(){showLogin()})}
 function st(id){var s=current.d.state[id];return s?s.status:'planned'}
 function ready(p){return st(p.id)==='planned'&&p.depends_on.every(function(x){return st(x)==='accepted'})}
 function refresh(then){return api('/api/projects/'+current.slug).then(function(d){current.d=d;confirmId=null;drawBoard();if(then)then()})}
@@ -241,7 +291,7 @@ function byId(id){return current.d.packages.filter(function(x){return x.id===id}
 function drawBoard(){
   var d=current.d,P=d.packages;drawBar(d.project.name);app.textContent='';
   var head=el('div','row spread');var l=el('div');l.appendChild(el('h1','',d.project.name));l.appendChild(el('div','muted',d.project.repo?d.project.repo:'Репозиторий не указан'));head.appendChild(l);
-  var tb=el('div','row');
+  var tb=el('div','toolbar');
   var seg=el('div','seg');var b1=btn('Дорожки','',function(){setView('lanes')},{tip:'Две линии рядом по шагам: видно, что идёт параллельно'});var b2=btn('По шагам','',function(){setView('steps')},{tip:'Задачи по порядку шагов, линии рядом'});b1.className=view==='lanes'?'on':'';b2.className=view==='steps'?'on':'';seg.appendChild(b1);seg.appendChild(b2);tb.appendChild(seg);
   var sync;sync=btn('Синхронизировать','',function(){sync.disabled=true;api('/api/projects/'+current.slug+'/sync','POST',{}).then(function(){toast('План обновлён из репозитория');showBoard(current.slug)}).catch(function(e){toast(e.status===422?'План в репозитории содержит ошибки':'Не удалось получить план: проверьте репозиторий и токен');sync.disabled=false})},{icon:'sync',tip:'Загрузить свежий docs/work_plan.json из репозитория GitHub'});
   tb.appendChild(sync);tb.appendChild(btn('Загрузить план','',showImport,{icon:'upload',tip:'Вставить содержимое work_plan.json вручную, если синхронизация не настроена'}));
@@ -291,7 +341,7 @@ function drawStart(d){
   d.start.forEach(function(x){var b=el('div','act');var m=el('div');m.style.flex='1';m.appendChild(el('h3','',(x.done?'✓ ':'')+x.title));
     var pd=el('details');pd.appendChild(el('summary','','Показать текст'));pd.appendChild(el('pre','',x.prompt));m.appendChild(pd);b.appendChild(m);
     var r=el('div','row');r.style.flexDirection='column';r.style.alignItems='stretch';
-    r.appendChild(btn('Копировать','primary',function(){copy(x.prompt)},{icon:'copy',tip:'Скопировать текст промпта'}));
+    r.appendChild(btn('Копировать','primary',function(){copy(x.prompt)},{icon:'copy',tip:'Скопировать текст промпта'}));var shs=shareBtn(x.prompt,x.title);if(shs)r.appendChild(shs);
     r.appendChild(btn(x.done?'Вернуть':'Выполнено','ghost',function(){api('/api/projects/'+current.slug+'/start','POST',{id:x.id,done:!x.done}).then(function(){refresh()})},{tip:x.done?'Снять отметку выполнения':'Отметить, что директор выполнил этот промпт'}));b.appendChild(r);det.appendChild(b)});
   app.appendChild(det);
 }
@@ -349,7 +399,7 @@ function actionRow(p,s,r){
   if(s==='planned'){if(r)line(btn('Отдал исполнителю','primary',act('issued')),'Нажмите после того, как передали промпт исполнителю. Задача перейдёт в «У исполнителя».');
     else{var w=btn('Пока недоступно','',null,{disabled:true});line(w,'Ждёт приёмки задач: '+p.depends_on.filter(function(x){return st(x)!=='accepted'}).join(', ')+'.')}}
   else if(s==='issued'){line(btn('Исполнитель сдал','primary',act('submitted')),'Нажмите, когда исполнитель прислал отчёт. Задача перейдёт в «Ждёт приёмки», директор её проверит.');line(btn('Вернуть в очередь','ghost',act('planned')),'Отозвать задачу у исполнителя: она вернётся в очередь.')}
-  else if(s==='submitted'){var ok=btn(confirmId===p.id?'Точно принято? Нажмите ещё раз':'Принято, в архив',confirmId===p.id?'confirm':'primary',function(){if(confirmId===p.id){openId=null;act('accepted')()}else{confirmId=p.id;drawBoard();clearTimeout(confirmTimer);confirmTimer=setTimeout(function(){confirmId=null;drawBoard()},4000)}});
+  else if(s==='submitted'){var ok=btn(confirmId===p.id?'Точно принято? Нажмите ещё раз':'Принято, в архив',confirmId===p.id?'confirm':'primary',acceptHandler(p,act));
     line(ok,'Нажмите, когда директор подтвердит, что работа проверена и влита в main. Задача уйдёт в архив. Нужно нажать дважды.');line(btn('Вернуть исполнителю','ghost',act('issued')),'Если нужны доработки: задача вернётся в «У исполнителя».')}
   else if(s==='accepted'){line(btn('Вернуть из архива','ghost',act('planned')),'Снять приёмку, если принято по ошибке.')}
   return box;
@@ -367,8 +417,21 @@ function drawDrawer(id){
   var cr=el('div');cr.appendChild(el('b','small','Критерии готовности'));var ul=el('ul');ul.style.cssText='margin:6px 0;padding-left:20px;font-size:14px';(p.done_when||[]).forEach(function(x){ul.appendChild(el('li','',x))});cr.appendChild(ul);c.appendChild(cr);
   var det=el('details');det.open=true;det.appendChild(el('summary','','Промпт для исполнителя'));det.appendChild(el('pre','',p.prompt));det.appendChild(btn('Скопировать промпт','primary',function(){copy(p.prompt)},{icon:'copy',tip:'Скопировать весь текст задания, чтобы передать исполнителю'}));c.appendChild(det);
   c.appendChild(el('b','small','Действия'));c.appendChild(actionRow(p,s,r));
+  var shb=shareBtn(p.prompt,p.id+' '+p.title);if(shb)det.appendChild(shb);
+  c.appendChild(stickyBar(p,s,r));
   var si=d.state[p.id];if(si){var m=[];if(si.issued_at)m.push('выдано '+fmt(si.issued_at));if(si.submitted_at)m.push('сдано '+fmt(si.submitted_at));if(si.accepted_at)m.push('принято '+fmt(si.accepted_at));if(m.length)c.appendChild(el('div','muted small',m.join(' · ')));if(si.merged)c.appendChild(el('div','muted small','Влито в main'+(si.sha?' ('+si.sha+')':'')+(si.note?' · '+si.note:'')))}
   ov.appendChild(c);app.appendChild(ov);
+}
+
+function stickyBar(p,s,r){
+  var bar=el('div','sticky-actions');
+  function act(status){return function(){api('/api/projects/'+current.slug+'/status','POST',{id:p.id,status:status}).then(function(){return refresh()}).catch(function(e){toast(e.message==='dependencies_not_accepted'?'Сначала нужно принять предыдущие шаги':'Не удалось сохранить')})}}
+  if(s==='planned'&&r)bar.appendChild(btn('Отдал исполнителю','primary',act('issued'),{icon:'next'}));
+  else if(s==='issued')bar.appendChild(btn('Исполнитель сдал','primary',act('submitted'),{icon:'review'}));
+  else if(s==='submitted')bar.appendChild(btn(confirmId===p.id?'Точно? Нажмите ещё раз':'Принято, в архив',confirmId===p.id?'confirm':'primary',acceptHandler(p,act),{icon:'done'}));
+  bar.appendChild(btn('Копировать','',function(){copy(p.prompt)},{icon:'copy'}));
+  var sh=shareBtn(p.prompt,p.id+' '+p.title);if(sh)bar.appendChild(sh);
+  return bar;
 }
 function showImport(){
   drawBar('Загрузка плана');app.textContent='';var hd=el('div');hd.appendChild(el('h1','','Загрузка плана'));hd.appendChild(el('div','muted','Вставьте содержимое файла docs/work_plan.json из репозитория проекта. Портал проверит его и покажет ошибки, если они есть.'));app.appendChild(hd);
@@ -385,13 +448,17 @@ function showHelp(){
   var h=el('div','row spread');h.appendChild(el('h2','','Справка'));h.appendChild(btn('Закрыть','ghost',function(){ov.remove()}));c.appendChild(h);
   c.appendChild(el('b','','Как это работает'));
   var ol=el('ol');ol.style.cssText='margin:6px 0;padding-left:20px';['Создайте проект и отдайте ИИ-директору два стартовых промпта: он организует репозиторий и разработает GDD.','Директор составит план работ. Нажмите «Синхронизировать», и задачи появятся на доске.','Откройте задачу, скопируйте промпт, передайте исполнителю и нажмите «Отдал исполнителю».','Когда исполнитель сдал, нажмите «Исполнитель сдал». Директор проверит и сольёт работу.','Когда директор подтвердит, нажмите «Принято, в архив». Откроется следующая задача.'].forEach(function(x){ol.appendChild(el('li','',x))});c.appendChild(ol);
+  c.appendChild(el('b','','Установка на телефон'));
+  c.appendChild(el('div','help','Откройте портал в браузере телефона и выберите «Добавить на главный экран» (в Chrome на Android появится кнопка «Установить» вверху). Портал откроется как приложение без адресной строки. Данные нигде не хранятся на устройстве, нужен интернет.'));
   c.appendChild(el('b','','Статусы задач'));
   [['planned','В очереди','Ждёт, пока будут приняты предыдущие шаги. Выдать нельзя.'],['ready','Можно выдавать','Все предыдущие шаги приняты. Можно брать промпт и отдавать исполнителю.'],['issued','У исполнителя','Вы отдали задачу, исполнитель работает.'],['submitted','Ждёт приёмки','Исполнитель сдал. Директор проверяет и сливает в main.'],['accepted','Принято','Проверено и влито в main. Лежит в архиве.']].forEach(function(x){var r=el('div','act');r.appendChild(pill(x[0],x[1]));r.appendChild(el('div','help',x[2]));c.appendChild(r)});
   c.appendChild(el('b','','Кнопки'));
   [['Схема / По шагам','Переключает вид доски: колонки или порядок шагов.'],['Синхронизировать','Берёт свежий план из репозитория GitHub (нужен токен только на чтение).'],['Загрузить план','Ручная вставка work_plan.json, если синхронизация не настроена.'],['Протокол для ИИ','Инструкция директору, как вести план.'],['Скопировать промпт','Копирует текст задания для передачи исполнителю.'],['Отдал исполнителю','Фиксирует, что задание передано.'],['Исполнитель сдал','Фиксирует, что пришёл отчёт.'],['Принято, в архив','Нажмите дважды после подтверждения директора.'],['Учтено','Убирает идею из входящих.']].forEach(function(x){var r=el('div','act');r.appendChild(el('b','small',x[0]));r.appendChild(el('div','help',x[1]));c.appendChild(r)});
   ov.appendChild(c);document.body.appendChild(ov);
 }
-api('/api/me').then(function(m){ME=m.user;CSRF=m.csrf;showProjects()}).catch(function(){showLogin()});
+if('serviceWorker' in navigator){navigator.serviceWorker.register(BASE+'/sw.js',{scope:BASE+'/'}).catch(function(){})}
+window.addEventListener('online',function(){toast('Связь восстановлена')});window.addEventListener('offline',function(){toast('Нет сети')});
+api('/api/me').then(function(m){ME=m.user;CSRF=m.csrf;showProjects()}).catch(function(x){if(x&&x.status)showLogin();else showOffline()});
 })();
 </script>
 </body>
