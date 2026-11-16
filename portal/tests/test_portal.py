@@ -228,6 +228,35 @@ class Portal(unittest.TestCase):
         d = call(self.app, "GET", "/createportal/api/projects/proj-two", cookie=cookie)["json"]
         self.assertEqual(d["ideas"], [])
 
+    def test_pwa_manifest_sw_icons_public(self):
+        m = call(self.app, "GET", "/createportal/manifest.webmanifest")
+        self.assertEqual(m["status"], 200)
+        man = m["json"]
+        self.assertEqual(man["display"], "standalone")
+        self.assertEqual(man["start_url"], "/createportal/")
+        self.assertEqual(man["scope"], "/createportal/")
+        self.assertTrue(any(i.get("purpose") == "maskable" for i in man["icons"]))
+        self.assertTrue(all(i["src"].startswith("/createportal/icons/") for i in man["icons"]))
+        sw = call(self.app, "GET", "/createportal/sw.js")
+        self.assertEqual(sw["status"], 200)
+        self.assertIn("javascript", sw["headers"]["Content-Type"])
+        self.assertEqual(sw["headers"]["Service-Worker-Allowed"], "/createportal/")
+        self.assertIn(b"const BASE = '/createportal'", sw["body"])
+        self.assertIn(b"BASE + '/api/'", sw["body"])
+        self.assertNotIn(b"__BASE__", sw["body"])
+        for name in ("icon-192.png", "icon-512.png", "icon-maskable-512.png", "icon.svg"):
+            r = call(self.app, "GET", "/createportal/icons/" + name)
+            self.assertEqual(r["status"], 200, name)
+            self.assertGreater(len(r["body"]), 200)
+        self.assertEqual(call(self.app, "GET", "/createportal/icons/../app.py")["status"], 404)
+        self.assertEqual(call(self.app, "GET", "/createportal/icons/other.png")["status"], 404)
+
+    def test_csp_allows_manifest_and_worker_only_self(self):
+        csp = call(self.app, "GET", "/createportal/")["headers"]["Content-Security-Policy"]
+        self.assertIn("manifest-src 'self'", csp)
+        self.assertIn("worker-src 'self'", csp)
+        self.assertEqual(call(self.app, "GET", "/createportal/health")["headers"]["Cache-Control"], "no-store")
+
 
 if __name__ == "__main__":
     unittest.main()

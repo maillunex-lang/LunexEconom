@@ -30,8 +30,10 @@ def create_app(db_path, base="", secure_cookie=True, fetch=None, github_token_fi
     def respond(start, status, body, headers=None, nonce=None):
         data = body if isinstance(body, bytes) else json.dumps(body, ensure_ascii=False).encode()
         h = [("Content-Length", str(len(data))), ("X-Content-Type-Options", "nosniff"), ("Referrer-Policy", "no-referrer"),
-             ("X-Frame-Options", "DENY"), ("Cache-Control", "no-store"),
-             ("Content-Security-Policy", "default-src 'none'; connect-src 'self'; img-src 'self' data:; style-src 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; script-src 'nonce-%s'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'" % (nonce or "x"))]
+             ("X-Frame-Options", "DENY"),
+             ("Content-Security-Policy", "default-src 'none'; connect-src 'self'; img-src 'self' data:; style-src 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; script-src 'nonce-%s'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'; manifest-src 'self'; worker-src 'self'" % (nonce or "x"))]
+        if not any(k == "Cache-Control" for k, _ in (headers or [])):
+            h.append(("Cache-Control", "no-store"))
         if not any(k == "Content-Type" for k, _ in (headers or [])):
             h.append(("Content-Type", "application/json; charset=utf-8"))
         start(status, h + (headers or []))
@@ -101,6 +103,22 @@ def create_app(db_path, base="", secure_cookie=True, fetch=None, github_token_fi
             nonce = secrets.token_urlsafe(12)
             html = (STATIC / "index.html").read_text(encoding="utf-8").replace("__NONCE__", nonce).replace("__BASE__", base)
             return respond(start, "200 OK", html.encode(), [("Content-Type", "text/html; charset=utf-8")], nonce)
+        if method == "GET" and path == "/manifest.webmanifest":
+            man = {"name": "CreatePortal", "short_name": "Портал", "description": "Проекты, задачи и приёмка работы исполнителей",
+                   "lang": "ru", "start_url": (base or "") + "/", "scope": (base or "") + "/", "display": "standalone", "orientation": "portrait",
+                   "background_color": "#DDE8DF", "theme_color": "#1F7A4D",
+                   "icons": [{"src": (base or "") + "/icons/icon-192.png", "sizes": "192x192", "type": "image/png"},
+                             {"src": (base or "") + "/icons/icon-512.png", "sizes": "512x512", "type": "image/png"},
+                             {"src": (base or "") + "/icons/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable"}]}
+            return respond(start, "200 OK", json.dumps(man, ensure_ascii=False).encode(), [("Content-Type", "application/manifest+json; charset=utf-8")])
+        if method == "GET" and path == "/sw.js":
+            js = (STATIC / "sw.js").read_text(encoding="utf-8").replace("__BASE__", base)
+            return respond(start, "200 OK", js.encode(), [("Content-Type", "text/javascript; charset=utf-8"), ("Service-Worker-Allowed", (base or "") + "/")])
+        m_icon = re.fullmatch(r"/icons/(icon-192\.png|icon-512\.png|icon-maskable-512\.png|icon\.svg)", path)
+        if method == "GET" and m_icon:
+            f = STATIC / "icons" / m_icon.group(1)
+            ctype = "image/svg+xml" if f.suffix == ".svg" else "image/png"
+            return respond(start, "200 OK", f.read_bytes(), [("Content-Type", ctype), ("Cache-Control", "public, max-age=86400")])
         if not path.startswith("/api/"):
             return respond(start, "404 Not Found", {"error": "not_found"})
         sess = auth.session(conn, token)

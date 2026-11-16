@@ -17,6 +17,7 @@
 | [08_DATA_API.md](08_DATA_API.md) | данные и маршруты API |
 | [09_OPS_DEPLOY.md](09_OPS_DEPLOY.md) | развёртывание на VPS, резервные копии, мониторинг, обновления |
 | [10_ROADMAP_ACCEPTANCE.md](10_ROADMAP_ACCEPTANCE.md) | версии, критерии приёмки, риски |
+| [11_MOBILE_PWA.md](11_MOBILE_PWA.md) | управление со смартфона: PWA, APK, мобильный интерфейс |
 | [DECISIONS.md](DECISIONS.md) | решения и вопросы владельцу |
 | [mockups/](mockups/) | макеты экранов v2 (SVG) |
 
