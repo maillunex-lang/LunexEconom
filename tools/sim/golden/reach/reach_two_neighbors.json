@@ -1,0 +1,281 @@
+{
+  "balance": "draft",
+  "days": [
+    {
+      "allocated": 1321519,
+      "city": 753036,
+      "day": 1,
+      "demand": 2074555,
+      "districts": [
+        {
+          "allocated_to_stores": 347868,
+          "city": 49968,
+          "demand": 397836,
+          "id": "belaya_naberezhnaya",
+          "layers": [
+            {
+              "allocated_to_stores": 55343,
+              "city": 7949,
+              "demand": 63292,
+              "id": "low"
+            },
+            {
+              "allocated_to_stores": 131769,
+              "city": 18927,
+              "demand": 150696,
+              "id": "mid"
+            },
+            {
+              "allocated_to_stores": 114638,
+              "city": 16467,
+              "demand": 131105,
+              "id": "high"
+            },
+            {
+              "allocated_to_stores": 46118,
+              "city": 6625,
+              "demand": 52743,
+              "id": "premium"
+            }
+          ],
+          "name": "Белая набережная"
+        },
+        {
+          "allocated_to_stores": 936758,
+          "city": 1323,
+          "demand": 938081,
+          "id": "medovy_kvartal",
+          "layers": [
+            {
+              "allocated_to_stores": 276512,
+              "city": 391,
+              "demand": 276903,
+              "id": "low"
+            },
+            {
+              "allocated_to_stores": 376209,
+              "city": 531,
+              "demand": 376740,
+              "id": "mid"
+            },
+            {
+              "allocated_to_stores": 218201,
+              "city": 308,
+              "demand": 218509,
+              "id": "high"
+            },
+            {
+              "allocated_to_stores": 65836,
+              "city": 93,
+              "demand": 65929,
+              "id": "premium"
+            }
+          ],
+          "name": "Медовый квартал"
+        },
+        {
+          "allocated_to_stores": 0,
+          "city": 397166,
+          "demand": 397166,
+          "id": "neftyanoy_holm",
+          "layers": [
+            {
+              "allocated_to_stores": 0,
+              "city": 175812,
+              "demand": 175812,
+              "id": "low"
+            },
+            {
+              "allocated_to_stores": 0,
+              "city": 146510,
+              "demand": 146510,
+              "id": "mid"
+            },
+            {
+              "allocated_to_stores": 0,
+              "city": 63124,
+              "demand": 63124,
+              "id": "high"
+            },
+            {
+              "allocated_to_stores": 0,
+              "city": 11720,
+              "demand": 11720,
+              "id": "premium"
+            }
+          ],
+          "name": "Нефтяной холм"
+        },
+        {
+          "allocated_to_stores": 0,
+          "city": 235486,
+          "demand": 235486,
+          "id": "yuzhnaya_okraina",
+          "layers": [
+            {
+              "allocated_to_stores": 0,
+              "city": 116035,
+              "demand": 116035,
+              "id": "low"
+            },
+            {
+              "allocated_to_stores": 0,
+              "city": 80371,
+              "demand": 80371,
+              "id": "mid"
+            },
+            {
+              "allocated_to_stores": 0,
+              "city": 32048,
+              "demand": 32048,
+              "id": "high"
+            },
+            {
+              "allocated_to_stores": 0,
+              "city": 7032,
+              "demand": 7032,
+              "id": "premium"
+            }
+          ],
+          "name": "Южная окраина"
+        },
+        {
+          "allocated_to_stores": 0,
+          "city": 63793,
+          "demand": 63793,
+          "id": "centralny_rynok",
+          "layers": [
+            {
+              "allocated_to_stores": 0,
+              "city": 15823,
+              "demand": 15823,
+              "id": "low"
+            },
+            {
+              "allocated_to_stores": 0,
+              "city": 26371,
+              "demand": 26371,
+              "id": "mid"
+            },
+            {
+              "allocated_to_stores": 0,
+              "city": 14567,
+              "demand": 14567,
+              "id": "high"
+            },
+            {
+              "allocated_to_stores": 0,
+              "city": 7032,
+              "demand": 7032,
+              "id": "premium"
+            }
+          ],
+          "name": "Центральный рынок"
+        },
+        {
+          "allocated_to_stores": 36893,
+          "city": 5300,
+          "demand": 42193,
+          "id": "vokzalny_krug",
+          "layers": [
+            {
+              "allocated_to_stores": 9838,
+              "city": 1413,
+              "demand": 11251,
+              "id": "low"
+            },
+            {
+              "allocated_to_stores": 14641,
+              "city": 2103,
+              "demand": 16744,
+              "id": "mid"
+            },
+            {
+              "allocated_to_stores": 9340,
+              "city": 1342,
+              "demand": 10682,
+              "id": "high"
+            },
+            {
+              "allocated_to_stores": 3074,
+              "city": 442,
+              "demand": 3516,
+              "id": "premium"
+            }
+          ],
+          "name": "Вокзальный круг"
+        }
+      ],
+      "sold": 360,
+      "stores": [
+        {
+          "allocated": 660762,
+          "capacity_visitors": 240,
+          "district": "medovy_kvartal",
+          "district_allocated": {
+            "belaya_naberezhnaya": 173935,
+            "centralny_rynok": 0,
+            "medovy_kvartal": 468380,
+            "neftyanoy_holm": 0,
+            "vokzalny_krug": 18447,
+            "yuzhnaya_okraina": 0
+          },
+          "experience_score_permille": 865,
+          "fame_after_permille": 198,
+          "fame_delta_permille": -2,
+          "fame_permille": 200,
+          "format": "corner",
+          "id": "alice",
+          "queue_penalty_permille": 250,
+          "radius_cells": 5,
+          "reputation_after_permille": 508,
+          "reputation_permille": 500,
+          "sold": 180,
+          "stock_remaining": 999820,
+          "unserved": 660582,
+          "visitors": 240
+        },
+        {
+          "allocated": 660757,
+          "capacity_visitors": 240,
+          "district": "medovy_kvartal",
+          "district_allocated": {
+            "belaya_naberezhnaya": 173933,
+            "centralny_rynok": 0,
+            "medovy_kvartal": 468378,
+            "neftyanoy_holm": 0,
+            "vokzalny_krug": 18446,
+            "yuzhnaya_okraina": 0
+          },
+          "experience_score_permille": 865,
+          "fame_after_permille": 198,
+          "fame_delta_permille": -2,
+          "fame_permille": 200,
+          "format": "corner",
+          "id": "boris",
+          "queue_penalty_permille": 250,
+          "radius_cells": 5,
+          "reputation_after_permille": 508,
+          "reputation_permille": 500,
+          "sold": 180,
+          "stock_remaining": 999820,
+          "unserved": 660577,
+          "visitors": 240
+        }
+      ],
+      "unserved": 1321159
+    }
+  ],
+  "days_run": 1,
+  "model_version": "retail-reach-v1",
+  "product": "bread",
+  "scenario": "reach_two_neighbors",
+  "spatial_mode": "district_centroid_proxy",
+  "totals": {
+    "allocated": 1321519,
+    "city": 753036,
+    "demand": 2074555,
+    "sold": 360,
+    "unserved": 1321159
+  }
+}

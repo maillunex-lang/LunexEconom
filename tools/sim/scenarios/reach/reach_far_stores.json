@@ -1,0 +1,29 @@
+{
+  "id": "reach_far_stores",
+  "reach_enabled": true,
+  "days": 1,
+  "city": "ufa",
+  "product": "bread",
+  "stores": [
+    {
+      "id": "north",
+      "format": "corner",
+      "x": -9,
+      "y": 0,
+      "district": "vokzalny_krug",
+      "area_m2": 40,
+      "cashiers": 2,
+      "fame_permille": 100
+    },
+    {
+      "id": "south",
+      "format": "corner",
+      "x": 0,
+      "y": 10,
+      "district": "yuzhnaya_okraina",
+      "area_m2": 40,
+      "cashiers": 2,
+      "fame_permille": 100
+    }
+  ]
+}
