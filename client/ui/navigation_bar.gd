@@ -2,6 +2,7 @@ extends PanelContainer
 signal target_requested(target: String)
 const Words = preload("res://enterprises/strings.gd")
 const Forest = preload("res://theme/forest_glass.gd")
+const Components = preload("res://ui/components.gd")
 const MAIN := ["headquarters", "map", "enterprises", "finance", "more"]
 const DISPLAY := ["headquarters", "map", "enterprises", "settings", "finance", "more"]
 const LABELS := ["nav.headquarters", "nav.map", "nav.enterprises", "nav.finance", "nav.more"]
@@ -9,6 +10,7 @@ var buttons: Dictionary = {}
 var bar: HBoxContainer
 var _current := ""
 var _tutorial_step := -1
+const ICONS := ["⌂", "▦", "▤", "◈", "☰"]
 
 func _ready() -> void:
     mouse_filter = Control.MOUSE_FILTER_STOP
@@ -17,11 +19,12 @@ func _ready() -> void:
     add_child(bar)
     for i in range(MAIN.size()):
         var target: String = MAIN[i]
-        var button := Button.new()
+        var button := Components.button(LABELS[i], "secondary")
         button.name = target.capitalize()
-        button.text = Words.get_text(LABELS[i])
+        button.text = ICONS[i] + "\n" + Words.get_text(LABELS[i])
+        button.add_theme_font_size_override("font_size", 15)
         button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-        button.custom_minimum_size = Vector2(88, 48)
+        button.custom_minimum_size = Vector2(88, 60)
         button.pressed.connect(func(): target_requested.emit(target))
         bar.add_child(button)
         buttons[target] = button
@@ -53,4 +56,4 @@ func _highlight() -> void:
 func refresh_size(view_size: Vector2) -> void:
     Forest.apply_touch(self, view_size)
     for button in buttons.values():
-        button.custom_minimum_size.y = maxf(48.0, Forest.touch_size(view_size))
+        button.custom_minimum_size.y = maxf(60.0, Forest.touch_size(view_size))

@@ -8,6 +8,8 @@ const EnterpriseApi = preload("res://enterprises/api.gd")
 const Words = preload("res://enterprises/strings.gd")
 const Format = preload("res://i18n/format.gd")
 const Forest = preload("res://theme/forest_glass.gd")
+const Components = preload("res://ui/components.gd")
+const Columns = preload("res://ui/two_columns.gd")
 var catalog: Node
 var service: Node
 var zone := "free"
@@ -35,6 +37,11 @@ var plan_data: Dictionary = {}
 var plan_details: Label
 var plan_shortfall: Label
 var preview_canvas: Control
+var _columns: Control
+var _list_scroll: ScrollContainer
+var _detail_head: Label
+var _build_action: Button
+var _selected_summary: Label
 
 func _ready() -> void:
     set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
@@ -48,6 +55,7 @@ func _ready() -> void:
     var bar := HBoxContainer.new()
     outer.add_child(bar)
     var back := Button.new()
+    back.custom_minimum_size.y = 48
     back.text = Words.get_text("back")
     back.pressed.connect(func(): back_requested.emit())
     bar.add_child(back)
@@ -56,9 +64,11 @@ func _ready() -> void:
     title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
     bar.add_child(title)
     category = OptionButton.new()
+    category.custom_minimum_size.y = 48
     category.item_selected.connect(func(_idx: int): _render())
     bar.add_child(category)
     available_filter = CheckButton.new()
+    available_filter.custom_minimum_size.y = 48
     available_filter.text = Words.get_text("build.filter.available")
     available_filter.toggled.connect(func(_checked: bool): _render())
     bar.add_child(available_filter)
@@ -87,6 +97,7 @@ func _ready() -> void:
     scroll.follow_focus = true
     scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
     scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+    _list_scroll = scroll
     outer.add_child(scroll)
     rows = VBoxContainer.new()
     rows.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -113,6 +124,42 @@ func _ready() -> void:
     confirmation.cancel_button_text = Words.get_text("cancel")
     confirmation.confirmed.connect(_purchase)
     add_child(confirmation)
+    _install_columns(outer,preview)
+    resize_ui(get_viewport_rect().size)
+
+func _install_columns(outer: VBoxContainer, preview: PanelContainer) -> void:
+    _columns = Columns.new()
+    _columns.name = "BuildColumns"
+    outer.remove_child(_list_scroll)
+    outer.remove_child(preview)
+    outer.remove_child(plan_details)
+    outer.remove_child(plan_shortfall)
+    outer.remove_child(message)
+    outer.remove_child(error_code_label)
+    outer.add_child(_columns)
+    _columns.size_flags_vertical = Control.SIZE_EXPAND_FILL
+    _columns.list_area.add_child(_list_scroll)
+    _list_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+    _detail_head = Label.new()
+    _detail_head.text = Words.get_text("choose")
+    _detail_head.add_theme_font_size_override("font_size",22)
+    _columns.detail_area.add_child(_detail_head)
+    _selected_summary = Label.new()
+    _selected_summary.text = Words.get_text("build.plan.choose")
+    _selected_summary.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+    _columns.detail_area.add_child(_selected_summary)
+    _columns.detail_area.add_child(preview)
+    _columns.detail_area.add_child(plan_details)
+    _columns.detail_area.add_child(plan_shortfall)
+    _columns.detail_area.add_child(message)
+    _columns.detail_area.add_child(error_code_label)
+    _build_action = Components.button("ui2.build.construct")
+    _build_action.name = "BuildAction"
+    _build_action.disabled = true
+    _build_action.pressed.connect(_purchase)
+    _columns.detail_area.add_child(_build_action)
+    _columns.back_button.text = Words.get_text("back")
+    _columns.refresh_size(get_viewport_rect().size)
 
 func open(adapter: Node, parcel: Dictionary, cell: Vector2i) -> void:
     catalog.configure(adapter)
@@ -128,6 +175,12 @@ func open(adapter: Node, parcel: Dictionary, cell: Vector2i) -> void:
     _plan_serial += 1
     plan_data.clear()
     chosen.clear()
+    if _build_action != null:
+        _build_action.disabled = true
+    if _columns != null:
+        _columns.show_list()
+    if _selected_summary != null:
+        _selected_summary.text = Words.get_text("ui2.build.select")
     if plan_details != null:
         plan_details.text = ""
         plan_shortfall.text = ""
@@ -264,6 +317,7 @@ func _reason(item: Dictionary, result: Dictionary) -> String:
 
 func _render() -> void:
     for node in rows.get_children():
+        rows.remove_child(node)
         node.queue_free()
     var kind := "" if category.selected<=0 else str(category.get_item_metadata(category.selected))
     for entry in catalog.buildings():
@@ -297,6 +351,7 @@ func _render() -> void:
         var button := Button.new()
         button.text = Words.get_text("build.plan.choose") if str(status.get("reason","")) in ["road","money"] else (Words.get_text("build.available") if allowed else Words.get_text("build.unavailable",{"reason":_reason(item,status)}))
         button.disabled = not allowed
+        button.custom_minimum_size = Vector2(48,48)
         if allowed:
             button.pressed.connect(_choose.bind(item, status.get("candidate", status)))
         content.add_child(button)
@@ -318,6 +373,14 @@ func _choose(item: Dictionary, placement: Dictionary) -> void:
     if _busy:
         return
     chosen = item
+    if _selected_summary != null:
+        var footprint: Dictionary = item.get("size",{})
+        _selected_summary.text = "%s\n%s\n%s  ·  %s  ·  %s" % [
+            str(item.get("name","")),str(item.get("description","")),
+            Words.get_text("size",{"width":int(footprint.get("width",0)),"height":int(footprint.get("height",0))}),
+            Format.money(item.get("build_cost",0)),Format.days(item.get("build_days",0))]
+    if _columns != null:
+        _columns.show_detail()
     x = int(placement.get("x", x))
     y = int(placement.get("y", y))
     var footprint: Dictionary = item.get("size", {})
@@ -334,6 +397,7 @@ func _schedule_plan() -> void:
     _plan_serial += 1
     var serial := _plan_serial
     plan_data.clear()
+    if _build_action != null: _build_action.disabled = true
     plan_details.text = Words.get_text("build.plan.loading")
     plan_shortfall.text = ""
     road_preview_changed.emit([])
@@ -369,13 +433,14 @@ func _schedule_plan() -> void:
         Words.get_text("build.plan.total", {"amount": Format.money(data.get("total_initial", 0))})])
     if not material_lines.is_empty():
         plan_details.text += "\n" + Words.get_text("build.materials.summary", {"items":", ".join(material_lines)})
+    if _build_action != null: _build_action.disabled = not bool(data.get("can_afford", false))
     if not bool(data.get("can_afford", false)):
         plan_shortfall.text = Words.get_text("build.plan.shortfall", {"amount": Format.money(data.get("shortfall", 0))})
         return
     plan_shortfall.text = Words.get_text("build.plan.afford")
     confirmation.dialog_text = Words.get_text("build.plan.confirm", {
         "name": chosen.get("name", ""), "total": Format.money(data.get("total_initial", 0))})
-    confirmation.popup_centered()
+    # Selection previews costs; building requires an explicit main-button tap.
 
 
 func _update_local_preview(cells: Array) -> void:
@@ -416,3 +481,11 @@ func _purchase() -> void:
 
 func resize_ui(view_size: Vector2) -> void:
     Forest.apply_touch(self,view_size)
+    if _columns != null:
+        _columns.refresh_size(view_size)
+        if _columns._wide:
+            _columns.show_list()
+        elif chosen.is_empty():
+            _columns.show_list()
+        else:
+            _columns.show_detail()

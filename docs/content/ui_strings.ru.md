@@ -217,6 +217,28 @@ ui.auth.tagline | Создайте компанию. Развивайте эко
 ui.auth.password.show | Показать пароль
 ui.auth.password.hide | Скрыть пароль
 
+ui2.hq.intro | Добро пожаловать в управление компанией
+ui2.hq.next | Что делать дальше
+ui2.hq.hint | Откройте карту, выберите свободный участок и начните производство.
+ui2.hq.back | К показателям
+ui2.hq.map | На карту
+ui2.hq.metrics.empty | Показатели предприятий появятся после получения отчёта с сервера.
+ui2.map.zoom.in | +
+ui2.map.zoom.out | −
+ui2.build.select | Выберите здание слева, чтобы увидеть параметры и план дороги.
+ui2.build.construct | Построить
+ui2.build.details | Параметры здания
+ui2.build.back.list | К списку зданий
+ui2.error.generic | Что-то пошло не так. Повторите попытку.
+ui2.hq.enterprises | Предприятия
+ui2.hq.parcels | Участки
+ui2.hq.revenue | Выручка за сутки
+ui2.hq.no.data | Нет данных
+ui2.hq.until.month | До нового месяца: {duration}
+ui2.hq.hint.land | Выберите участок на карте и приобретите землю для первого предприятия.
+ui2.hq.hint.production | Создайте производственную цепочку: поле, мельница и пекарня.
+ui2.hq.hint.retail | Организуйте поставки и продажи в магазине.
+ui2.hq.hint.done | Развивайте компанию: изучайте рынок и расширяйте производство.
 model.viewer.title | Просмотр 3D-моделей
 model.viewer.back | Назад
 model.viewer.filter | Категория объектов

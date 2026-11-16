@@ -39,7 +39,7 @@
   "error.build.parcel_unavailable": "Участок уже куплен. Выберите другой.",
   "error.build.rate_limited": "Слишком много запросов. Попробуйте чуть позже.",
   "error.build.network": "Не удалось связаться с сервером. Проверьте интернет.",
-  "error.build.unknown": "Не удалось выполнить операцию.",
+  "error.build.unknown": "Что-то пошло не так. Повторите попытку.",
   "error.build.code": "Код ответа: {code}",
   "build.zone.allowed": "Разрешено: {zones}",
   "build.zone.current": "Зона участка: {zone}",

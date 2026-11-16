@@ -6,6 +6,7 @@ const Forest = preload("res://theme/forest_glass.gd")
 const SafeArea = preload("res://ui/safe_area.gd")
 const Router = preload("res://screens/router.gd")
 const LoginScreen = preload("res://screens/login.tscn")
+const FormatUI2 = preload("res://i18n/format.gd")
 const HeadquartersScreen = preload("res://screens/headquarters.tscn")
 const SettingsScreen = preload("res://screens/settings.tscn")
 const MapScreen = preload("res://screens/map.tscn")
@@ -46,7 +47,7 @@ var tutorial_service: Node
 var account_id := ""
 var login_card: PanelContainer
 var form: VBoxContainer
-var headquarters: VBoxContainer
+var headquarters: Control
 var login_username: LineEdit
 var login_email: LineEdit
 var login_password: LineEdit
@@ -185,7 +186,7 @@ func _on_screen_changed(screen: String) -> void:
     if tutorial_guide != null:
         tutorial_guide.change_screen(screen)
     if router != null and router.host != null:
-        router.host.offset_bottom = -maxf(60.0, Forest.touch_size(get_viewport_rect().size) + 10.0) if navigation_bar.visible else 0.0
+        router.host.offset_bottom = -maxf(72.0, Forest.touch_size(get_viewport_rect().size) + 10.0) if navigation_bar.visible else 0.0
     if screen in ["map", "enterprises", "headquarters", "supply", "store"] and not account_id.is_empty():
         _refresh_tutorial()
 
@@ -286,7 +287,7 @@ func _on_viewport_resized() -> void:
     finance_screen.resize_ui(size_now)
     if navigation_bar != null:
         navigation_bar.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_WIDE)
-        var nav_height := maxf(60.0, Forest.touch_size(size_now) + 10.0)
+        var nav_height := maxf(72.0, Forest.touch_size(size_now) + 10.0)
         navigation_bar.offset_top = -nav_height - float(shell.get_theme_constant("margin_bottom"))
         navigation_bar.offset_bottom = -float(shell.get_theme_constant("margin_bottom"))
         if router != null and router.host != null:
@@ -461,7 +462,10 @@ func _begin_tutorial() -> void:
 func _identify_tutorial() -> void:
     var me: Dictionary = await _authorized_api("/auth/me")
     if int(me.get("code", 0)) == 200:
-        account_id = str(me.get("data", {}).get("id", ""))
+        var me_data: Dictionary = me.get("data", {})
+        if me_data.has("username"):
+            headquarters_screen.set_company(str(me_data["username"]))
+        account_id = str(me_data.get("id", ""))
         _begin_tutorial()
 
 
@@ -482,6 +486,7 @@ func _on_tutorial_clock(day: int) -> void:
 func _on_tutorial_verified(verified_step: int) -> void:
     tutorial_state.accept_verified(verified_step)
     navigation_bar.focus_tutorial(-1 if tutorial_state.completed else tutorial_state.step)
+    _update_hq_tutorial_hint()
     tutorial_guide.redraw()
 
 
@@ -490,6 +495,7 @@ func _reset_tutorial() -> void:
         return
     tutorial_state.reset_progress()
     navigation_bar.focus_tutorial(tutorial_state.step)
+    _update_hq_tutorial_hint()
     tutorial_guide.redraw()
     _refresh_tutorial()
 
@@ -502,23 +508,45 @@ func _presence_heartbeat() -> void:
         _show_login()
         status_label.text = Strings.get_text("error.auth")
 
+func _update_hq_tutorial_hint() -> void:
+    if tutorial_state == null or headquarters_screen == null:
+        return
+    var step: int = tutorial_state.step
+    var key := "ui2.hq.hint"
+    if tutorial_state.completed:
+        key = "ui2.hq.hint.done"
+    elif step >= 2 and step <= 3:
+        key = "ui2.hq.hint.land"
+    elif step >= 4 and step <= 7:
+        key = "ui2.hq.hint.production"
+    elif step >= 8 and step <= 15:
+        key = "ui2.hq.hint.retail"
+    headquarters_screen.set_tutorial_hint(key)
+
 func _load_hq() -> void:
     if token.is_empty():
         _show_login()
         return
+    _update_hq_tutorial_hint()
     var wallet: Dictionary = await _authorized_api("/ledger/balance")
     if wallet.code == 200:
-        wallet_label.text = Strings.get_text("finance.balance") + ": " + str((wallet.data as Dictionary).get("balance",0)) + " " + Strings.get_text("unit.rub")
+        wallet_label.text = Strings.get_text("finance.balance") + ": " + FormatUI2.money((wallet.data as Dictionary).get("balance",0))
     else:
         wallet_label.text = Strings.get_text("finance.balance") + ": " + Strings.get_text("status.offline")
     var clock: Dictionary = await _api("/clock")
     if clock.code == 200:
         var data: Dictionary = clock.data
-        calendar_label.text = "%s %s · %s %s · %s %s" % [Strings.get_text("time.year"), data.get("year",2027), Strings.get_text("time.month"), data.get("month",1), Strings.get_text("time.day"), data.get("day",1)]
+        calendar_label.text = "%s %s · %s %s · %s %s" % [Strings.get_text("time.year"), data.get("year","?"), Strings.get_text("time.month"), data.get("month","?"), Strings.get_text("time.day"), data.get("day","?")]
+        if data.has("seconds_until_month"):
+            calendar_label.text += "\n" + Strings.get_text("ui2.hq.until.month",{"duration":_format_remaining(int(data["seconds_until_month"]))})
         hq_status.text = Strings.get_text("status.online")
     else:
         calendar_label.text = Strings.get_text("time.month") + ": " + Strings.get_text("status.offline")
         hq_status.text = Strings.get_text("error.network")
+
+func _format_remaining(seconds: int) -> String:
+    var duration := maxi(0, seconds)
+    return "%02d:%02d:%02d" % [duration / 3600, (duration % 3600) / 60, duration % 60]
 
 func _verify_signed_config(config: Dictionary, public_pem: String = "") -> bool:
     if int(config.get("schema",0)) != 1:

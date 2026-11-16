@@ -10,6 +10,7 @@ const Words = preload("res://world/strings.gd")
 const Forest = preload("res://theme/forest_glass.gd")
 const Gen = preload("res://world/generator.gd")
 const Format = preload("res://i18n/format.gd")
+const Components = preload("res://ui/components.gd")
 var api: Node
 var stream: Node
 var canvas: Control
@@ -37,6 +38,9 @@ var _started := false
 var _panel_visible := false
 var _city_data: Dictionary = {}
 var _enterprise_refresh_busy := false
+var _map_area: Control
+var _map_hint: Label
+var _zoom_tools: VBoxContainer
 
 func _ready() -> void:
     set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
@@ -88,6 +92,7 @@ func _ready() -> void:
     header.add_child(home)
     var area := Control.new()
     area.name = "MapArea"
+    _map_area = area
     area.size_flags_vertical = Control.SIZE_EXPAND_FILL
     root_layout.add_child(area)
     canvas = Canvas.new()
@@ -109,25 +114,35 @@ func _ready() -> void:
     panel.offset_bottom = 380.0
     panel.visible = false
     area.add_child(panel)
+    panel.add_theme_stylebox_override("panel", Forest.rounded(Forest.COLORS.panel,18))
     var details := VBoxContainer.new()
+    details.add_theme_constant_override("separation", 8)
     panel.add_child(details)
     parcel_title = Label.new()
+    parcel_title.add_theme_font_size_override("font_size", 20)
+    parcel_title.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
     details.add_child(parcel_title)
     parcel_zone = Label.new()
+    parcel_zone.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
     details.add_child(parcel_zone)
     parcel_owner = Label.new()
+    parcel_owner.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
     details.add_child(parcel_owner)
     parcel_price = Label.new()
+    parcel_price.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
     details.add_child(parcel_price)
     parcel_road = Label.new()
+    parcel_road.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
     details.add_child(parcel_road)
     var actions := HBoxContainer.new()
     details.add_child(actions)
     buy_button = Button.new()
+    buy_button.custom_minimum_size.y = 48
     buy_button.text = Words.get_text("world.parcel.buy")
     buy_button.pressed.connect(_confirm_purchase)
     actions.add_child(buy_button)
     build_button = Button.new()
+    build_button.custom_minimum_size.y = 48
     build_button.text = Words.get_text("world.parcel.build")
     build_button.disabled = true
     build_button.pressed.connect(_build_selected)
@@ -135,17 +150,20 @@ func _ready() -> void:
     var road_actions := HBoxContainer.new()
     details.add_child(road_actions)
     road_button = Button.new()
+    road_button.custom_minimum_size.y = 48
     road_button.name = "RoadStart"
     road_button.text = Words.get_text("world.road.start")
     road_button.pressed.connect(_begin_road)
     road_actions.add_child(road_button)
     road_finish = Button.new()
+    road_finish.custom_minimum_size.y = 48
     road_finish.name = "RoadFinish"
     road_finish.text = Words.get_text("world.road.finish")
     road_finish.pressed.connect(_finish_road)
     road_finish.visible = false
     road_actions.add_child(road_finish)
     road_cancel = Button.new()
+    road_cancel.custom_minimum_size.y = 48
     road_cancel.name = "RoadCancel"
     road_cancel.text = Words.get_text("world.road.cancel")
     road_cancel.pressed.connect(_cancel_road)
@@ -157,8 +175,25 @@ func _ready() -> void:
     details.add_child(road_hint)
     var close := Button.new()
     close.text = Words.get_text("button.close")
+    close.custom_minimum_size.y = 48
     close.pressed.connect(func(): panel.hide(); _panel_visible = false)
     actions.add_child(close)
+    _zoom_tools = VBoxContainer.new()
+    _zoom_tools.name = "ZoomTools"
+    _zoom_tools.mouse_filter = Control.MOUSE_FILTER_PASS
+    area.add_child(_zoom_tools)
+    for item in [["ui2.map.zoom.in",1.2],["ui2.map.zoom.out",0.8333333]]:
+        var zoom_button := Components.button(str(item[0]),"secondary")
+        zoom_button.custom_minimum_size = Vector2(62,54)
+        zoom_button.pressed.connect(_zoom_button.bind(float(item[1])))
+        _zoom_tools.add_child(zoom_button)
+    _map_hint = Label.new()
+    _map_hint.name = "MapEmptyHint"
+    _map_hint.text = Words.get_text("world.map.hint")
+    _map_hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+    _map_hint.mouse_filter = Control.MOUSE_FILTER_IGNORE
+    _map_hint.add_theme_stylebox_override("normal", Forest.rounded(Forest.COLORS.panel,12))
+    area.add_child(_map_hint)
     var legend := HBoxContainer.new()
     legend.name = "ZoneLegend"
     root_layout.add_child(legend)
@@ -194,9 +229,24 @@ func _ready() -> void:
 
 func resize_ui(view_size: Vector2) -> void:
     Forest.apply_touch(self,view_size)
-    if panel != null:
-        panel.offset_left = -minf(398.0, view_size.x * 0.46)
-        panel.offset_bottom = minf(390.0,view_size.y*0.72)
+    if panel != null and _map_area != null:
+        var area_width: float = _map_area.size.x if _map_area.size.x > 0 else view_size.x
+        var area_height: float = _map_area.size.y if _map_area.size.y > 0 else view_size.y - 190.0
+        var width: float = minf(390.0,maxf(280.0,area_width * 0.42))
+        panel.offset_left = -width - 12.0
+        panel.offset_right = -12.0
+        panel.offset_top = 12.0
+        panel.offset_bottom = minf(390.0,maxf(220.0,area_height - 18.0))
+        if _zoom_tools != null:
+            _zoom_tools.position = Vector2(12.0,16.0)
+        if _map_hint != null:
+            _map_hint.position = Vector2(88.0,20.0)
+            _map_hint.custom_minimum_size.x = 0
+            _map_hint.size = Vector2(maxf(100.0,area_width - width - 130.0),60.0)
+
+func _zoom_button(multiplier: float) -> void:
+    if canvas != null:
+        canvas._zoom_at(canvas.zoom * multiplier,canvas.size * 0.5)
 
 func open(url: String, access_token: String, preferred_city: String = "ufa") -> void:
     api.base_url = url
@@ -256,6 +306,7 @@ func _focus_on_city(id: String) -> void:
             break
     panel.hide()
     _panel_visible = false
+    if _map_hint != null: _map_hint.show()
     _cancel_road()
     canvas.preview = {}
     canvas.queue_redraw()
@@ -281,6 +332,7 @@ func _on_parcel_tapped(px: int, py: int) -> void:
     selected = Vector2i(px, py)
     _panel_visible = true
     panel.show()
+    if _map_hint != null: _map_hint.hide()
     _show_selected()
 
 func _show_selected() -> void:
