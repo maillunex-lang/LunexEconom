@@ -5,6 +5,7 @@ import threading
 import time
 from .backup.worker import tick
 from .launch.plan_poll import poll_plans
+from .launch.a7 import merge_due
 from . import db
 from socketserver import ThreadingMixIn
 from wsgiref.simple_server import WSGIRequestHandler, WSGIServer, make_server
@@ -37,7 +38,9 @@ def main():
                      reports_enabled=enabled("reports","PORTAL_REPORTS_ENABLED"),
                      notifications_enabled=enabled("notifications","PORTAL_NOTIFICATIONS_ENABLED"),
                      notify_token_files=tokens,ops_enabled=enabled("ops","PORTAL_OPS_ENABLED"),backup_dir=os.environ.get("PORTAL_BACKUP_DIR"),
-                     launch_enabled=enabled("launch","PORTAL_LAUNCH_ENABLED"))
+                     launch_enabled=enabled("launch","PORTAL_LAUNCH_ENABLED"),
+                     review_a7_enabled=enabled("review_a7","PORTAL_REVIEW_A7_ENABLED"),
+                     github_merge_token_file=os.environ.get("PORTAL_GITHUB_MERGE_TOKEN_FILE"))
     stop=threading.Event()
     def worker():
         while not stop.is_set():
@@ -49,6 +52,14 @@ def main():
                     plan_conn = db.connect(path, webhook=True, reports=True, notifications=True)
                     try:
                         poll_plans(plan_conn, os.environ.get("PORTAL_GITHUB_TOKEN_FILE"))
+                        if enabled("review_a7","PORTAL_REVIEW_A7_ENABLED"):
+                            before=plan_conn.execute("SELECT COALESCE(MAX(id),0) FROM events").fetchone()[0]
+                            merge_due(plan_conn,os.environ.get("PORTAL_GITHUB_MERGE_TOKEN_FILE"),os.environ.get("PORTAL_GITHUB_TOKEN_FILE"))
+                            if enabled("notifications","PORTAL_NOTIFICATIONS_ENABLED"):
+                                from . import notify
+                                for ev in plan_conn.execute("SELECT project_slug,pkg_id,kind FROM events WHERE id>? AND kind IN ('task.auto_merge','task.ready')",(before,)):
+                                    label='слита автоматически' if ev['kind']=='task.auto_merge' else 'готова к выдаче'
+                                    notify.enqueue(plan_conn,'task.accepted',f"{ev['project_slug']}:{ev['pkg_id']}:{ev['kind']}",f"{ev['project_slug']}: задача {ev['pkg_id']} {label}. https://rikagro.ru/createportal/")
                     finally:
                         plan_conn.close()
             except Exception:
