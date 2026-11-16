@@ -55,6 +55,7 @@ func _ready() -> void:
     var bar := HBoxContainer.new()
     outer.add_child(bar)
     var back := Button.new()
+    back.custom_minimum_size.y = 48
     back.text = Words.get_text("back")
     back.pressed.connect(func(): back_requested.emit())
     bar.add_child(back)
@@ -63,9 +64,11 @@ func _ready() -> void:
     title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
     bar.add_child(title)
     category = OptionButton.new()
+    category.custom_minimum_size.y = 48
     category.item_selected.connect(func(_idx: int): _render())
     bar.add_child(category)
     available_filter = CheckButton.new()
+    available_filter.custom_minimum_size.y = 48
     available_filter.text = Words.get_text("build.filter.available")
     available_filter.toggled.connect(func(_checked: bool): _render())
     bar.add_child(available_filter)
@@ -172,6 +175,12 @@ func open(adapter: Node, parcel: Dictionary, cell: Vector2i) -> void:
     _plan_serial += 1
     plan_data.clear()
     chosen.clear()
+    if _build_action != null:
+        _build_action.disabled = true
+    if _columns != null:
+        _columns.show_list()
+    if _selected_summary != null:
+        _selected_summary.text = Words.get_text("ui2.build.select")
     if plan_details != null:
         plan_details.text = ""
         plan_shortfall.text = ""

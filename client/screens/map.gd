@@ -116,24 +116,33 @@ func _ready() -> void:
     area.add_child(panel)
     panel.add_theme_stylebox_override("panel", Forest.rounded(Forest.COLORS.panel,18))
     var details := VBoxContainer.new()
+    details.add_theme_constant_override("separation", 8)
     panel.add_child(details)
     parcel_title = Label.new()
+    parcel_title.add_theme_font_size_override("font_size", 20)
+    parcel_title.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
     details.add_child(parcel_title)
     parcel_zone = Label.new()
+    parcel_zone.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
     details.add_child(parcel_zone)
     parcel_owner = Label.new()
+    parcel_owner.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
     details.add_child(parcel_owner)
     parcel_price = Label.new()
+    parcel_price.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
     details.add_child(parcel_price)
     parcel_road = Label.new()
+    parcel_road.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
     details.add_child(parcel_road)
     var actions := HBoxContainer.new()
     details.add_child(actions)
     buy_button = Button.new()
+    buy_button.custom_minimum_size.y = 48
     buy_button.text = Words.get_text("world.parcel.buy")
     buy_button.pressed.connect(_confirm_purchase)
     actions.add_child(buy_button)
     build_button = Button.new()
+    build_button.custom_minimum_size.y = 48
     build_button.text = Words.get_text("world.parcel.build")
     build_button.disabled = true
     build_button.pressed.connect(_build_selected)
@@ -141,17 +150,20 @@ func _ready() -> void:
     var road_actions := HBoxContainer.new()
     details.add_child(road_actions)
     road_button = Button.new()
+    road_button.custom_minimum_size.y = 48
     road_button.name = "RoadStart"
     road_button.text = Words.get_text("world.road.start")
     road_button.pressed.connect(_begin_road)
     road_actions.add_child(road_button)
     road_finish = Button.new()
+    road_finish.custom_minimum_size.y = 48
     road_finish.name = "RoadFinish"
     road_finish.text = Words.get_text("world.road.finish")
     road_finish.pressed.connect(_finish_road)
     road_finish.visible = false
     road_actions.add_child(road_finish)
     road_cancel = Button.new()
+    road_cancel.custom_minimum_size.y = 48
     road_cancel.name = "RoadCancel"
     road_cancel.text = Words.get_text("world.road.cancel")
     road_cancel.pressed.connect(_cancel_road)
@@ -163,6 +175,7 @@ func _ready() -> void:
     details.add_child(road_hint)
     var close := Button.new()
     close.text = Words.get_text("button.close")
+    close.custom_minimum_size.y = 48
     close.pressed.connect(func(): panel.hide(); _panel_visible = false)
     actions.add_child(close)
     _zoom_tools = VBoxContainer.new()
@@ -293,6 +306,7 @@ func _focus_on_city(id: String) -> void:
             break
     panel.hide()
     _panel_visible = false
+    if _map_hint != null: _map_hint.show()
     _cancel_road()
     canvas.preview = {}
     canvas.queue_redraw()

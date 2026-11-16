@@ -230,3 +230,12 @@ ui2.build.construct | Построить
 ui2.build.details | Параметры здания
 ui2.build.back.list | К списку зданий
 ui2.error.generic | Что-то пошло не так. Повторите попытку.
+ui2.hq.enterprises | Предприятия
+ui2.hq.parcels | Участки
+ui2.hq.revenue | Выручка за сутки
+ui2.hq.no.data | Нет данных
+ui2.hq.until.month | До нового месяца: {duration}
+ui2.hq.hint.land | Выберите участок на карте и приобретите землю для первого предприятия.
+ui2.hq.hint.production | Создайте производственную цепочку: поле, мельница и пекарня.
+ui2.hq.hint.retail | Организуйте поставки и продажи в магазине.
+ui2.hq.hint.done | Развивайте компанию: изучайте рынок и расширяйте производство.

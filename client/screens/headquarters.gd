@@ -13,6 +13,9 @@ var tabs: HBoxContainer
 var _layout: Control
 var _hint: Label
 var _metric: Label
+var _company: Label
+var _metrics: GridContainer
+var _metrics_by_key: Dictionary = {}
 
 func _ready() -> void:
     set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
@@ -22,6 +25,7 @@ func _ready() -> void:
     _layout.list_area.add_child(_headline())
     _layout.list_area.add_child(_balance_card())
     _layout.list_area.add_child(_actions())
+    _layout.list_area.size_flags_horizontal = Control.SIZE_EXPAND_FILL
     var help := Components.card()
     _layout.detail_area.add_child(help)
     var stack := VBoxContainer.new()
@@ -46,10 +50,11 @@ func _headline() -> Control:
     card.name = "CompanyHeading"
     var box := VBoxContainer.new()
     card.add_child(box)
-    var title := Label.new()
-    title.text = Strings.get_text("player.company")
-    title.add_theme_font_size_override("font_size",26)
-    box.add_child(title)
+    _company = Label.new()
+    _company.text = Strings.get_text("player.company")
+    _company.add_theme_font_size_override("font_size",26)
+    _company.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+    box.add_child(_company)
     var subtitle := Label.new()
     subtitle.text = Strings.get_text("ui2.hq.intro")
     subtitle.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
@@ -74,7 +79,33 @@ func _balance_card() -> Control:
     _metric.text = Strings.get_text("ui2.hq.metrics.empty")
     _metric.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
     box.add_child(_metric)
+    _metrics = GridContainer.new()
+    _metrics.columns = 2
+    box.add_child(_metrics)
+    for item in [["enterprises","ui2.hq.enterprises"],["parcels","ui2.hq.parcels"],["revenue","ui2.hq.revenue"]]:
+        var card_metric := Components.card()
+        _metrics.add_child(card_metric)
+        var metric_label := Label.new()
+        metric_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+        metric_label.text = Strings.get_text(str(item[1])) + ": " + Strings.get_text("ui2.hq.no.data")
+        card_metric.add_child(metric_label)
+        _metrics_by_key[str(item[0])] = metric_label
     return card
+
+func set_company(value: String) -> void:
+    if _company != null and not value.strip_edges().is_empty():
+        _company.text = value.strip_edges()
+
+func set_tutorial_hint(key: String) -> void:
+    if _hint != null:
+        _hint.text = Strings.get_text(key)
+
+func set_counts(values: Dictionary) -> void:
+    for key in _metrics_by_key:
+        var metric_label: Label = _metrics_by_key[key]
+        var prefix := "ui2.hq." + str(key)
+        metric_label.text = Strings.get_text(prefix) + ": " + (str(values[key]) if values.has(key) else Strings.get_text("ui2.hq.no.data"))
+    _metric.visible = values.is_empty()
 
 func _actions() -> Control:
     var card := Components.card()
