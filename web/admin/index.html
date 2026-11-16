@@ -14,7 +14,7 @@
         <p class="eyebrow">LUNEXECONOM · УПРАВЛЕНИЕ</p>
         <h1>Панель администратора</h1>
       </div>
-      <button id="logout" class="button ghost hidden" type="button">Выйти</button>
+      <div class="actions"><button id="open-password-change" class="button ghost hidden" type="button">Сменить пароль</button><button id="logout" class="button ghost hidden" type="button">Выйти</button></div>
     </header>
 
     <section id="login" class="card login-card" aria-labelledby="login-title">
@@ -33,7 +33,17 @@
     </section>
 
     <section id="app" class="hidden" aria-live="polite">
-      <nav class="tabs" aria-label="Разделы панели">
+      <section id="password-change" class="card login-card hidden" aria-labelledby="password-change-title">
+        <h2 id="password-change-title">Сменить пароль</h2>
+        <p id="password-change-hint" class="muted"></p>
+        <form id="password-change-form" class="form">
+          <label>Новый пароль (не менее 14 символов)<input name="password" type="password" autocomplete="new-password" minlength="14" maxlength="256" required></label>
+          <label>Повторите пароль<input name="confirmation" type="password" autocomplete="new-password" minlength="14" maxlength="256" required></label>
+          <div class="actions"><button class="button primary" type="submit">Сохранить пароль</button><button id="password-change-cancel" class="button ghost" type="button">Отмена</button></div>
+          <p id="password-change-error" class="error" role="alert"></p>
+        </form>
+      </section>
+      <nav id="admin-tabs" class="tabs" aria-label="Разделы панели">
         <button class="tab active" data-tab="overview" type="button">Обзор</button>
         <button class="tab" data-tab="players" type="button">Игроки</button>
         <button class="tab" data-tab="economy" type="button">Экономика</button>
