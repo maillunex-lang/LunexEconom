@@ -4,6 +4,7 @@
   const apiBase = String(config.apiBase || '/lunexeconom/v2/admin-api/').replace(/\/$/, '');
   let token = sessionStorage.getItem('lunex_admin_token') || '';
   let currentRole = sessionStorage.getItem('lunex_admin_role') || '';
+  let passwordChangeRequired = sessionStorage.getItem('lunex_admin_password_change_required') === 'true';
 
   const numberRu = (value) => Number(value || 0).toLocaleString('ru-RU');
   const dateRu = (value) => value ? new Date(value).toLocaleString('ru-RU') : '—';
@@ -16,7 +17,14 @@
     const headers = { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) };
     const response = await fetch(`${apiBase}${path}`, { ...options, headers });
     const data = await response.json().catch(() => ({}));
-    if (!response.ok) throw new Error(data.message || data.error || 'Ошибка запроса');
+    if (!response.ok) {
+      if (data.error === 'password_change_required') {
+        passwordChangeRequired = true;
+        sessionStorage.setItem('lunex_admin_password_change_required', 'true');
+        showPasswordChange();
+      }
+      throw new Error(data.message || data.error || 'Ошибка запроса');
+    }
     return data;
   }
 
@@ -55,8 +63,52 @@
     $('#login').classList.add('hidden');
     $('#app').classList.remove('hidden');
     $('#logout').classList.remove('hidden');
-    loadTab('overview');
+    $('#open-password-change').classList.remove('hidden');
+    if (passwordChangeRequired) showPasswordChange();
+    else loadTab('overview');
   }
+
+  function showPasswordChange() {
+    $('#password-change').classList.remove('hidden');
+    $('#content').classList.add('hidden');
+    $('#admin-tabs').classList.toggle('hidden', passwordChangeRequired);
+    $('#password-change-title').textContent = passwordChangeRequired ? 'Необходимо сменить пароль' : 'Сменить пароль';
+    $('#password-change-hint').textContent = passwordChangeRequired
+      ? 'Для доступа к панели установите пароль длиной не менее 14 символов. Он также станет паролем для игры.'
+      : 'Новый пароль будет использоваться и для входа в игру.';
+    $('#password-change-error').textContent = '';
+    $('#password-change-cancel').classList.toggle('hidden', passwordChangeRequired);
+  }
+
+  function closePasswordChange() {
+    $('#password-change').classList.add('hidden');
+    $('#content').classList.remove('hidden');
+    $('#admin-tabs').classList.remove('hidden');
+    $('#password-change-form').reset();
+  }
+
+  $('#open-password-change').onclick = () => showPasswordChange();
+  $('#password-change-cancel').onclick = () => { if (!passwordChangeRequired) closePasswordChange(); };
+  $('#password-change-form').onsubmit = async (event) => {
+    event.preventDefault();
+    const form = event.currentTarget;
+    const password = form.elements.namedItem('password').value;
+    const confirmation = form.elements.namedItem('confirmation').value;
+    const message = $('#password-change-error');
+    message.textContent = '';
+    if (password.length < 14 || password.length > 256) { message.textContent = 'Пароль должен содержать от 14 до 256 символов.'; return; }
+    if (password !== confirmation) { message.textContent = 'Пароли не совпадают.'; return; }
+    const button = form.querySelector('[type=submit]');
+    button.disabled = true;
+    try {
+      await api('/password', { method: 'POST', body: JSON.stringify({ password }) });
+      passwordChangeRequired = false;
+      sessionStorage.removeItem('lunex_admin_password_change_required');
+      closePasswordChange();
+      await loadTab('overview');
+    } catch (error) { message.textContent = error.message; }
+    finally { button.disabled = false; }
+  };
 
   function metric(label, value) {
     return `<article class="metric"><span class="muted">${escapeHtml(label)}</span><strong>${escapeHtml(value)}</strong></article>`;
@@ -270,6 +322,7 @@
   }
 
   async function loadTab(name) {
+    if (passwordChangeRequired) { showPasswordChange(); return; }
     document.querySelectorAll('.tab').forEach((tab) => tab.classList.toggle('active', tab.dataset.tab === name));
     try {
       if (['catalog','announcements','releases'].includes(name)) await loadA3(name);
@@ -314,6 +367,9 @@
       const data = await api('/login', { method: 'POST', body: JSON.stringify({ username: form.get('username'), password: form.get('password') }) });
       token = data.token;
       currentRole = data.role;
+      passwordChangeRequired = data.password_change_required === true;
+      if (passwordChangeRequired) sessionStorage.setItem('lunex_admin_password_change_required', 'true');
+      else sessionStorage.removeItem('lunex_admin_password_change_required');
       if (data.password_change_required) { showPasswordChange(); return; }
       sessionStorage.setItem('lunex_admin_token', token);
       sessionStorage.setItem('lunex_admin_role', currentRole);
@@ -321,6 +377,6 @@
     } catch (error) { $('#login-error').textContent = error.message; }
   };
   document.querySelectorAll('.tab').forEach((tab) => tab.onclick = () => loadTab(tab.dataset.tab));
-  $('#logout').onclick = async () => { try { await api('/logout', { method: 'POST' }); } finally { sessionStorage.removeItem('lunex_admin_token'); sessionStorage.removeItem('lunex_admin_role'); location.reload(); } };
+  $('#logout').onclick = async () => { try { await api('/logout', { method: 'POST' }); } finally { sessionStorage.removeItem('lunex_admin_token'); sessionStorage.removeItem('lunex_admin_role'); sessionStorage.removeItem('lunex_admin_password_change_required'); location.reload(); } };
   if (token) showLoggedIn();
 })();
