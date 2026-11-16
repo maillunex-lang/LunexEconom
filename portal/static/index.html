@@ -218,6 +218,17 @@ details{border-top:1px solid var(--hair);padding-top:8px}summary{cursor:pointer;
 h2>span>svg,h3>span>svg{width:20px;height:20px}.row>span>svg{width:22px;height:22px}
 @media (prefers-reduced-motion:no-preference){.drawer{animation:slide .2s ease-out}@keyframes slide{from{transform:translateX(28px);opacity:.5}}.ring circle.v{transition:stroke-dashoffset .5s}}
 @media (prefers-reduced-motion:reduce){.node,button{transition:none}}
+@media(min-width:1100px){.b6-today-hero{max-width:780px}.b6-today-metrics{max-width:780px}.b6-more{max-width:1050px}.b6-review-steps{max-width:680px}}
+/* B6: четыре раздела, одна контекстная панель, спокойная поверхность */
+body{background:var(--bg)}.bg{opacity:.25}.bar-in{justify-content:space-between}.bar .brand{font-size:17px}.b6-avatar{width:46px;min-width:46px;height:46px;border-radius:50%;background:var(--accent);color:var(--accent-ink);font-weight:800;justify-content:center}
+.tabs{display:flex;position:fixed;left:50%;transform:translateX(-50%);bottom:calc(10px + env(safe-area-inset-bottom,0px));z-index:35;gap:3px;padding:7px;border-radius:24px;width:min(440px,calc(100% - 24px));background:var(--glass-strong);border:1px solid var(--edge);box-shadow:var(--shadow)}
+.tabs.show{display:flex}.tabs button{min-height:58px}.b6-more{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.b6-more button{min-height:66px;justify-content:flex-start;text-align:left}
+.b6-today-hero{padding:24px;background:linear-gradient(145deg,color-mix(in srgb,var(--accent) 32%,var(--glass-strong)),var(--glass-strong));border-color:var(--accent)}.b6-today-hero h2{font-size:clamp(22px,3vw,34px);margin:12px 0}.b6-eyebrow{text-transform:uppercase;letter-spacing:.07em;font-size:12px;font-weight:700;color:var(--accent2)}
+.b6-today-metrics{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin:14px 0}.b6-today-metrics>div{padding:14px;border:1px solid var(--edge);border-radius:18px;background:var(--glass2)}.b6-today-metrics b{display:block;font-size:25px}.b6-today-metrics span{font-size:12px;color:var(--muted)}.b6-running{display:flex;align-items:center;justify-content:space-between;gap:10px;border-top:1px solid var(--edge);padding:10px 0;flex-wrap:wrap}
+.b6-review-steps{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:5px;margin:12px 0}.b6-review-steps>div{border-top:6px solid var(--edge);padding-top:9px;font-size:11px;text-align:center;color:var(--muted)}.b6-review-steps>.done{border-color:var(--ok)}.b6-review-steps>.current{border-color:var(--warn)}
+.b6-context{position:sticky;bottom:0;z-index:36;background:var(--glass-strong);padding:10px;border:1px solid var(--edge);border-radius:18px;box-shadow:var(--shadow)}.b6-context button{flex:1;min-height:48px}.b6-ladder .phone-step{border-left:2px solid var(--edge);margin-left:16px;padding-left:14px}.b6-ladder .phone-step.active{border-left-color:var(--warn)}.b6-ladder .phone-step.done{border-left-color:var(--ok)}
+@media(min-width:721px){body{padding-left:210px}.tabs{left:0;top:76px;bottom:auto;transform:none;width:194px;display:flex;flex-direction:column;align-items:stretch;border-radius:0 22px 22px 0}.tabs button{flex-direction:row;justify-content:flex-start;font-size:15px;min-height:54px;padding:12px}.b6-more{grid-template-columns:repeat(3,minmax(0,1fr))}.b6-today-hero{max-width:none}.b6-today-metrics{max-width:650px}.ov{padding-left:210px}.drawer{width:min(640px,calc(100vw - 220px))}}
+@media(max-width:720px){body{padding-bottom:calc(102px + env(safe-area-inset-bottom,0px))}.phone-board.b6-ladder{display:block}.desktop-board{display:none}.b6-today-hero{padding:18px}.b6-today-metrics>div{padding:10px}.b6-today-metrics b{font-size:22px}.b6-context{bottom:0}.phone-bottom-actions{display:none!important}.drawer .sticky-actions{display:none}}
 </style>
 </head>
 <body>
@@ -272,23 +283,21 @@ function drawTabs(){
   var nav=document.getElementById('tabs');nav.textContent='';
   if(!ME){nav.hidden=true;nav.classList.remove('show');return}
   nav.hidden=false;nav.classList.add('show');
-  var onBoard=!!current&&lastCrumb!=='Проекты';
-  [['Проекты','book',showProjects,!onBoard],['Доска','next',function(){var sl=current?current.slug:lastSlug();if(sl)showBoard(sl);else showProjects()},onBoard],['Идеи','inbox',focusIdeas,false],['Настройки','work',showSettings,false]].forEach(function(x){
-    var b=el('button',x[3]?'on':'');b.type='button';b.appendChild(ic(x[1]));b.appendChild(el('span','',x[0]));b.onclick=x[2];b.title=x[0];b.setAttribute('aria-label',x[0]);nav.appendChild(b)});
+  var tab=activeB6Tab||'Сегодня';
+  [['Сегодня','flag',showToday],['Доска','next',openB6Board],['Проекты','book',showProjects],['Ещё','work',showMore]].forEach(function(x){
+    var b=btn(x[0],tab===x[0]?'on':'',x[2],{icon:x[1],tip:'Открыть раздел «'+x[0]+'»'});b.setAttribute('aria-current',tab===x[0]?'page':'false');nav.appendChild(b)});
+}
+function openB6Board(){var sl=current?current.slug:lastSlug();if(sl)return showBoard(sl);return api('/api/projects').then(function(r){if(r.projects&&r.projects.length)return showBoard(r.projects[0].slug);showProjects()}).catch(function(){showProjects()})}
+function showMore(){activeB6Tab='Ещё';drawBar('Ещё');app.textContent='';app.appendChild(el('h1','','Ещё'));
+  var grid=el('div','b6-more');app.appendChild(grid);
+  [['Идеи','inbox',function(){var sl=current?current.slug:lastSlug();if(sl)showBoard(sl).then(function(){focusIdeas()});else showProjects()}],['Настройки','work',showSettings],['Справка','help',showHelp],['Мастер-промпт','book',function(){showProjects();var m=document.querySelector('.master');if(m){m.scrollIntoView();m.querySelector('details').open=true}}],['Протокол для ИИ','book',showProtocol],['Планы и проекты','map',showProjects],['Сменить тему','moon',toggleTheme],['Установить PWA','upload',function(){if(deferredInstall){deferredInstall.prompt();deferredInstall=null}else toast('Установка доступна через меню браузера')}],['Выйти','out',function(){api('/api/logout','POST',{}).finally(function(){CSRF='';ME='';showLogin()})}]].forEach(function(x){grid.appendChild(btn(x[0],'card',x[2],{icon:x[1],tip:'Перейти: '+x[0]}))});
 }
 function showOffline(){drawBar('');app.textContent='';var c=el('div','card empty');c.appendChild(ic('help'));c.appendChild(el('h2','','Нет связи с порталом'));c.appendChild(el('div','muted','Проверьте интернет. Данные не сохраняются на устройстве, чтобы они не попали в чужие руки.'));c.appendChild(btn('Повторить','primary',function(){location.reload()},{icon:'sync'}));app.appendChild(c)}
 /* ---------- верхняя панель ---------- */
 function drawBar(crumb){
-  lastCrumb=crumb;barEl.textContent='';
-  var l=el('div','row');l.style.flexWrap='nowrap';var b=el('button','brand');b.type='button';b.appendChild(ic('logo'));b.appendChild(el('span','','CreatePortal'));b.onclick=function(){ME?showProjects():null};l.appendChild(b);
-  if(crumb){var c=el('div','crumb');c.appendChild(document.createTextNode('/'));c.appendChild(el('b','',crumb));l.appendChild(c)}
-  barEl.appendChild(l);
-  var r=el('div','row');r.style.flexWrap='nowrap';
-  if(ME&&deferredInstall&&!isStandalone)r.appendChild(btn('Установить','',function(){deferredInstall.prompt();deferredInstall=null;drawBar(lastCrumb)},{icon:'upload',tip:'Установить портал на экран телефона как приложение'}));
-  if(ME){r.appendChild(btn('','icon ghost',showSettings,{icon:'work',tip:'Настройки и безопасность портала'}));r.appendChild(btn('','icon ghost',showHelp,{icon:'help',tip:'Справка: что означают статусы и кнопки'}));
-    r.appendChild(btn('','icon ghost',toggleTheme,{icon:'moon',tip:'Переключить светлую и тёмную тему'}));
-    r.appendChild(btn('Выйти','ghost',function(){api('/api/logout','POST',{}).finally(function(){CSRF='';ME='';showLogin()})},{icon:'out',tip:'Завершить сеанс на этом устройстве'}))}
-  barEl.appendChild(r);
+  lastCrumb=crumb;barEl.textContent='';var l=el('div','row');
+  var brand=btn(crumb&&crumb!=='Сегодня'&&crumb!=='Проекты'&&crumb!=='Ещё'&&crumb!=='Доска'?'← '+crumb:crumb||'CreatePortal','brand',function(){showToday()},{tip:'Вернуться на экран «Сегодня»'});l.appendChild(brand);barEl.appendChild(l);
+  if(ME){var avatar=btn(String(ME).slice(0,1).toUpperCase(),'b6-avatar',showMore,{tip:'Открыть меню пользователя и настройки'});barEl.appendChild(avatar)}
   drawTabs();
 }
 function toggleTheme(){var r=document.documentElement,cur=r.getAttribute('data-theme');var dark=cur?cur==='dark':window.matchMedia('(prefers-color-scheme: dark)').matches;var nx=dark?'light':'dark';r.setAttribute('data-theme',nx);try{localStorage.setItem('portalTheme',nx)}catch(e){}}
@@ -303,7 +312,7 @@ function showLogin(msg){
   var p=el('input');p.id='p';p.type='password';p.autocomplete='current-password';p.placeholder='Пароль';p.setAttribute('aria-label','Пароль');
   var e=el('div','err small',msg||'');
   var go=btn('Войти','primary',function(){go.disabled=true;
-    api('/api/login','POST',{username:u.value,password:p.value}).then(function(r){CSRF=r.csrf;return api('/api/me')}).then(function(m){ME=m.user;CSRF=m.csrf;showProjects()})
+    api('/api/login','POST',{username:u.value,password:p.value}).then(function(r){CSRF=r.csrf;return api('/api/me')}).then(function(m){ME=m.user;CSRF=m.csrf;showToday()})
     .catch(function(x){e.textContent=x.status===429?'Слишком много попыток. Подождите 15 минут.':'Неверный логин или пароль.';go.disabled=false})},{tip:'Войти в портал'});
   p.onkeydown=function(ev){if(ev.key==='Enter')go.click()};
   [u,p,go,e].forEach(function(x){c.appendChild(x)});app.appendChild(c);
@@ -318,7 +327,7 @@ function ring(pct,size){
 }
 /* ---------- проекты ---------- */
 function showProjects(){
-  current=null;drawBar('Проекты');app.textContent='';
+  activeB6Tab='Проекты';current=null;drawBar('Проекты');app.textContent='';
   var top=el('div','row spread');var l=el('div');l.appendChild(el('h1','','Мои проекты'));l.appendChild(el('div','muted','Здесь все ваши проекты. Откройте проект, чтобы увидеть задачи и промпты для исполнителей.'));top.appendChild(l);
   top.appendChild(btn('Новый проект','primary',showNew,{icon:'plus',tip:'Мастер создаст проект и выдаст стартовые промпты для ИИ-директора'}));app.appendChild(top);
   drawOverview();
@@ -368,7 +377,7 @@ function showNew(){
   c.appendChild(go);c.appendChild(err);app.appendChild(c);app.appendChild(out);
 }
 /* ---------- доска ---------- */
-function showBoard(slug){rememberSlug(slug);drawBar('…');app.textContent='';api('/api/projects/'+slug).then(function(d){current={slug:slug,d:d};drawBoard()}).catch(function(){showLogin()})}
+function showBoard(slug){rememberSlug(slug);drawBar('…');app.textContent='';return api('/api/projects/'+slug).then(function(d){current={slug:slug,d:d};drawBoard()}).catch(function(){showLogin()})}
 function st(id){var s=current.d.state[id];return s?s.status:'planned'}
 function ready(p){return st(p.id)==='planned'&&p.depends_on.every(function(x){return st(x)==='accepted'})}
 function refresh(then){return api('/api/projects/'+current.slug).then(function(d){current.d=d;confirmId=null;drawBoard();if(then)then()})}
@@ -378,7 +387,7 @@ function ttl(p){return p.short||(p.title.length>46?p.title.slice(0,44)+'…':p.t
 function setView(v){view=v;try{localStorage.setItem('portalView',v)}catch(e){}drawBoard()}
 function byId(id){return current.d.packages.filter(function(x){return x.id===id})[0]}
 function drawBoard(){
-  var d=current.d,P=d.packages;drawBar(d.project.name);app.textContent='';
+  activeB6Tab='Доска';var d=current.d,P=d.packages;drawBar(d.project.name);app.textContent='';
   var head=el('div','row spread');var l=el('div');l.appendChild(el('h1','',d.project.name));l.appendChild(el('div','muted',d.project.repo?d.project.repo:'Репозиторий не указан'));head.appendChild(l);
   var tb=el('div','toolbar');
   var seg=el('div','seg');var b1=btn('Дорожки','',function(){setView('lanes')},{tip:'Две линии рядом по шагам: видно, что идёт параллельно'});var b2=btn('По шагам','',function(){setView('steps')},{tip:'Задачи по порядку шагов, линии рядом'});b1.className=view==='lanes'?'on':'';b2.className=view==='steps'?'on':'';seg.appendChild(b1);seg.appendChild(b2);tb.appendChild(seg);
@@ -401,7 +410,7 @@ function drawBoard(){
 
 /* Мобильная доска B1. Состояния и API всегда берутся из уже загруженного проекта. */
 function drawPhoneBoard(d,P){
-  var root=el('section','phone-board');root.setAttribute('aria-label','Мобильная доска');root.appendChild(btn('Настройки проекта','',function(){showProjectSettings(current.slug)},{tip:'Переключатели автоприёмки и чек-листа проекта'}));
+  var root=el('section','phone-board b6-ladder');root.setAttribute('aria-label','Доска-лесенка');root.appendChild(btn('Настройки проекта','',function(){showProjectSettings(current.slug)},{tip:'Переключатели автоприёмки и чек-листа проекта'}));
   var switcher=el('div','phone-switch seg');switcher.setAttribute('role','group');switcher.setAttribute('aria-label','Выбор линии');
   [['A','Сервер · A'],['B','Клиент · B'],['both','Обе']].forEach(function(x){
     var b=btn(x[1],phoneLane===x[0]?'on':'',function(){phoneLane=x[0];drawBoard()},{tip:'Показать '+(x[0]==='both'?'обе линии': 'линию '+x[0])});
@@ -430,7 +439,7 @@ function drawPhoneBoard(d,P){
   }
   var active=laneCurrent(d,P,phoneLane==='both'?'A':phoneLane);
   if(!active&&phoneLane==='both')active=laneCurrent(d,P,'B');
-  if(active){
+  if(active&&false){
     var sticky=el('div','phone-bottom-actions');sticky.setAttribute('aria-label','Быстрые действия');
     var status=st(active.id),allowed=ready(active);
     function change(next){api('/api/projects/'+current.slug+'/status','POST',{id:active.id,status:next}).then(function(){refresh()}).catch(function(){toast('Не удалось сохранить статус')})}
@@ -578,10 +587,10 @@ function drawDrawer(id){
   if(p.depends_on.length)c.appendChild(el('div','small muted','Зависит от: '+p.depends_on.join(', ')));
   var cr=el('div');cr.appendChild(el('b','small','Критерии готовности'));var ul=el('ul');ul.style.cssText='margin:6px 0;padding-left:20px;font-size:14px';(p.done_when||[]).forEach(function(x){ul.appendChild(el('li','',x))});cr.appendChild(ul);c.appendChild(cr);
   var det=el('details');det.open=true;det.appendChild(el('summary','','Промпт для исполнителя'));det.appendChild(el('pre','',p.prompt));det.appendChild(btn('Скопировать промпт','primary',function(){copy(p.prompt)},{icon:'copy',tip:'Скопировать весь текст задания, чтобы передать исполнителю'}));c.appendChild(det);
-  if(s==='submitted'||s==='issued')drawB3Review(c,p,s);
+  if(s==='submitted'){c.insertBefore(b6ReviewSteps(s),c.firstChild.nextSibling);c.insertBefore(el('h2','','Проверка работы'),c.firstChild.nextSibling)}if(s==='submitted'||s==='issued')drawB3Review(c,p,s);
   c.appendChild(el('b','small','Действия'));c.appendChild(actionRow(p,s,r));
   var shb=shareBtn(p.prompt,p.id+' '+p.title);if(shb)det.appendChild(shb);
-  c.appendChild(stickyBar(p,s,r));
+  if(s!=='submitted')c.appendChild(stickyBar(p,s,r));
   var si=d.state[p.id];if(si){var m=[];if(si.issued_at)m.push('выдано '+fmt(si.issued_at));if(si.submitted_at)m.push('сдано '+fmt(si.submitted_at));if(si.accepted_at)m.push('принято '+fmt(si.accepted_at));if(m.length)c.appendChild(el('div','muted small',m.join(' · ')));if(si.merged)c.appendChild(el('div','muted small','Влито в main'+(si.sha?' ('+si.sha+')':'')+(si.note?' · '+si.note:'')))}
   ov.appendChild(c);app.appendChild(ov);
 }
@@ -619,6 +628,22 @@ function showHelp(){
   [['Схема / По шагам','Переключает вид доски: колонки или порядок шагов.'],['Синхронизировать','Берёт свежий план из репозитория GitHub (нужен токен только на чтение).'],['Загрузить план','Ручная вставка work_plan.json, если синхронизация не настроена.'],['Протокол для ИИ','Инструкция директору, как вести план.'],['Скопировать промпт','Копирует текст задания для передачи исполнителю.'],['Отдал исполнителю','Фиксирует, что задание передано.'],['Исполнитель сдал','Фиксирует, что пришёл отчёт.'],['Принято, в архив','Нажмите дважды после подтверждения директора.'],['Учтено','Убирает идею из входящих.']].forEach(function(x){var r=el('div','act');r.appendChild(el('b','small',x[0]));r.appendChild(el('div','help',x[1]));c.appendChild(r)});
   ov.appendChild(c);document.body.appendChild(ov);
 }
+var activeB6Tab='Сегодня';
+function b6ReviewSteps(status){var section=el('div','b6-review-steps');var labels=['Выдана','Сдана','Проверка','Принята'];labels.forEach(function(t,i){var step=el('div',i<2||status==='accepted'?'done':i===2?'current':'',t);section.appendChild(step)});return section}
+function showToday(){activeB6Tab='Сегодня';drawBar('Сегодня');app.textContent='';app.appendChild(el('h1','','Сегодня'));app.appendChild(el('div','muted','Один шаг до следующего результата'));
+  var hero=el('section','card b6-today-hero');hero.appendChild(el('div','b6-eyebrow','Сделайте сейчас'));var title=el('h2','','Загрузка задач…');hero.appendChild(title);var desc=el('p','', 'Выбираем ближайшее действие');hero.appendChild(desc);var action=el('div');hero.appendChild(action);app.appendChild(hero);
+  var metrics=el('div','b6-today-metrics');app.appendChild(metrics);var running=el('section','card');running.appendChild(el('h2','','Идёт сейчас'));var list=el('div');running.appendChild(list);app.appendChild(running);
+  api('/api/projects').then(function(res){var projects=res.projects||[];if(!projects.length){title.textContent='Создайте первый проект';desc.textContent='Начните с плана и мастер-промпта';action.appendChild(btn('Новый проект','primary',showNew,{tip:'Открыть мастер создания проекта'}));return}
+    return Promise.all(projects.slice(0,12).map(function(pr){return api('/api/projects/'+encodeURIComponent(pr.slug)).then(function(d){return {project:pr,data:d}}).catch(function(){return null})})).then(function(loaded){var tasks=[];loaded.filter(Boolean).forEach(function(entry){(entry.data.packages||[]).forEach(function(p){var state=entry.data.state[p.id]||{},status=state.status||'planned',ready=status==='planned'&&(p.depends_on||[]).every(function(id){return (entry.data.state[id]||{}).status==='accepted'});tasks.push({entry:entry,p:p,status:status,ready:ready})})});
+      var priority=tasks.filter(function(t){return t.status==='submitted'})[0]||tasks.filter(function(t){return t.ready})[0];
+      if(priority){title.textContent=priority.p.id+' · '+priority.p.title;desc.textContent=priority.status==='submitted'?'Работа сдана и ожидает проверки':'Задание готово к выдаче исполнителю';action.appendChild(btn(priority.status==='submitted'?'Открыть проверку':'Открыть задание','primary',function(){openId=priority.p.id;showBoard(priority.entry.project.slug)},{tip:'Перейти к главному действию дня'}))}
+      else{title.textContent='Всё идёт по плану';desc.textContent='Новых действий сейчас нет. Проверьте ход работ на доске.';action.appendChild(btn('Открыть доску','primary',openB6Board,{tip:'Посмотреть задачи'}))}
+      [['У исполнителей',tasks.filter(function(t){return t.status==='issued'}).length],['Ждёт вас',tasks.filter(function(t){return t.status==='submitted'}).length],['Принято',tasks.filter(function(t){return t.status==='accepted'}).length]].forEach(function(m){var cell=el('div');cell.appendChild(el('b','',String(m[1])));cell.appendChild(el('span','',m[0]));metrics.appendChild(cell)});
+      var ongoing=tasks.filter(function(t){return t.status==='issued'||t.status==='submitted'}).slice(0,6);if(!ongoing.length)list.appendChild(el('p','muted','Активных задач пока нет.'));
+      ongoing.forEach(function(t){var row=el('div','b6-running');row.appendChild(el('div','',t.p.id+' · '+t.p.title));row.appendChild(pill(t.status,t.status==='submitted'?'Ждёт проверки':'В работе'));row.appendChild(btn('Открыть','',function(){openId=t.p.id;showBoard(t.entry.project.slug)},{tip:'Открыть задачу '+t.p.id}));list.appendChild(row)})
+    })
+  }).catch(function(){title.textContent='Не удалось загрузить задачи';desc.textContent='Проверьте соединение';action.appendChild(btn('Повторить','primary',showToday,{tip:'Повторить загрузку'}))});
+}
 /* B3: серверная приёмка, локальные флаги не дают право обходить проверку. */
 var B3_CHECKS=['Пробное слияние с актуальным main без конфликтов','Изменены только файлы разрешённой зоны','Полные тесты директора прошли','CI на PR зелёный','Слито в main'];
 function b3Notice(host,text){host.textContent=text;host.setAttribute('role','status')}
@@ -633,21 +658,23 @@ function drawB3Review(host,p,status){
   var checks=[];B3_CHECKS.forEach(function(t,i){var row=el('label','b3-check'),cb=el('input');cb.type='checkbox';cb.disabled=true;row.appendChild(cb);row.appendChild(el('span','',String(i+1)+'. '+t));box.appendChild(row);checks.push(cb)});
   var checkStatus=el('div','b2-state','Ожидаем данные с сервера.');box.appendChild(checkStatus);
   var ci=taskMeta(p).ci;var ciStatus=ci&&(typeof ci==='string'?ci:(ci.conclusion||ci.status||ci.state));var red=/^(failure|failed|error|red|cancelled)$/i.test(ciStatus||'');
-  var controls=el('div','row');box.appendChild(controls);
+  var controls=el('div','row b6-context');box.appendChild(controls);
   var accept=btn('Принято, в архив','primary',function(){submitReview(false)},{tip:'Принять только после выполнения всех пяти проверок'});
   var manual=btn('Принять вручную','ghost',function(){if(!manual.dataset.confirm){manual.dataset.confirm='yes';b3Notice(checkStatus,'Подтвердите ручную приёмку без чек-листа повторным нажатием. Причина будет отмечена в журнале.');return}submitReview(true)},{tip:'Ручная приёмка без чек-листа, с записью причины в журнале'});
   accept.disabled=manual.disabled=true;controls.appendChild(accept);controls.appendChild(manual);
   var noteLabel=el('label','b2-field','Замечания исполнителю');var notes=el('textarea');notes.maxLength=5000;notes.placeholder='Опишите, что исправить и как проверить результат';noteLabel.appendChild(notes);box.appendChild(noteLabel);
   var count=el('div','muted small','Доработок: нет данных');box.appendChild(count);
-  var returnBtn=btn('Вернуть исполнителю','',function(){var txt=notes.value.trim();if(!txt){b3Notice(checkStatus,'Укажите замечания перед возвратом.');return}returnBtn.disabled=true;b3Notice(checkStatus,'Отправка замечаний…');api(b3ReviewPath(p)+'/review','POST',{action:'return',notes:txt}).then(function(){return refresh()}).catch(function(e){b3Notice(checkStatus,b2Error(e));returnBtn.disabled=false})},{tip:'Вернуть задачу в работу с обязательными замечаниями'});returnBtn.disabled=true;box.appendChild(returnBtn);
+  var returnBtn=btn('Вернуть исполнителю','',function(){var txt=notes.value.trim();if(!txt){b3Notice(checkStatus,'Укажите замечания перед возвратом.');return}returnBtn.disabled=true;b3Notice(checkStatus,'Отправка замечаний…');api(b3ReviewPath(p)+'/review','POST',{return:true,remarks:txt,items:checks.map(function(x,i){return {text:B3_CHECKS[i],checked:x.checked}})}).then(function(){return refresh()}).catch(function(e){b3Notice(checkStatus,b2Error(e));returnBtn.disabled=false})},{tip:'Вернуть задачу в работу с обязательными замечаниями'});returnBtn.disabled=true;controls.insertBefore(returnBtn,accept);
   var revisionPrompt=btn('Копировать промпт доработки','',function(){copy(p.prompt+'\n\nДОРАБОТКА:\n'+notes.value.trim())},{tip:'Скопировать исходное задание вместе с замечаниями'});revisionPrompt.disabled=true;box.appendChild(revisionPrompt);notes.addEventListener('input',function(){revisionPrompt.disabled=!notes.value.trim()});
-  function update(){var all=checks.every(function(x){return x.checked});accept.disabled=!all||red||!ready;manual.disabled=!ready||red;b3Notice(checkStatus,red?'CI красный. Приёмка заблокирована.':all?'Все пункты отмечены. Можно принять задачу.':'Отметьте все пункты чек-листа для обычной приёмки. Ручное принятие требует подтверждения.');}
+  function update(){var remaining=checks.filter(function(x){return !x.checked}).length;var all=!remaining;accept.disabled=!all||red||!ready;accept.querySelector('span').textContent=remaining?'Принять ('+remaining+' пунктов)':'Принято, в архив';manual.disabled=!ready||red;b3Notice(checkStatus,red?'CI красный. Приёмка заблокирована.':all?'Все пункты отмечены. Можно принять задачу.':'Отметьте все пункты чек-листа для обычной приёмки. Ручное принятие требует подтверждения.');}
   var ready=false;
-  function submitReview(override){accept.disabled=manual.disabled=true;b3Notice(checkStatus,'Сохранение приёмки…');api(b3ReviewPath(p)+'/review','POST',{action:'accept',checks:checks.map(function(x,i){return {item:i+1,done:x.checked}}),manual:override,reason:override?'Ручная приёмка без чек-листа':''}).then(function(){return refresh()}).catch(function(e){b3Notice(checkStatus,b2Error(e));update()})}
-  api(b3ReviewPath(p)+'/report').then(function(r){var data=r.report||r;report.value=typeof data==='string'?data:(data.text||'');save.disabled=false;returnBtn.disabled=status!=='submitted';ready=status==='submitted';
-    var saved=r.review_checks||r.checks||[];checks.forEach(function(cb,i){cb.disabled=status!=='submitted';cb.checked=Array.isArray(saved)?saved.some(function(x){return (x.item===i+1||x.item===B3_CHECKS[i])&&x.done}):!!saved[String(i+1)];cb.addEventListener('change',update)});
-    count.textContent='Доработок: '+String(r.revisions==null?0:r.revisions);if(r.pr&&r.pr.number)pr.textContent='PR #'+r.pr.number+(r.pr.branch?' · '+r.pr.branch:'')+(r.pr.sha?' · '+r.pr.sha:'');
-    b3Notice(message,'Отчёт загружен.');update();
+  function submitReview(override){accept.disabled=manual.disabled=true;b3Notice(checkStatus,'Сохранение приёмки…');api(b3ReviewPath(p)+'/review','POST',{items:checks.map(function(x,i){return {text:B3_CHECKS[i],checked:x.checked}})}).then(function(){return api('/api/projects/'+current.slug+'/status','POST',{id:p.id,status:'accepted',manual:override})}).then(function(){return refresh()}).catch(function(e){b3Notice(checkStatus,b2Error(e));update()})}
+  api(b3ReviewPath(p)+'/report').then(function(r){var data=r.report||{};report.value=data.body||data.text||'';save.disabled=false;
+    return api(b3ReviewPath(p)+'/review').then(function(reviewResponse){var saved=reviewResponse.review||{};returnBtn.disabled=status!=='submitted';ready=status==='submitted';
+      checks.forEach(function(cb,i){cb.disabled=status!=='submitted';cb.checked=(saved.items||[]).some(function(x){return x.text===B3_CHECKS[i]&&x.checked});cb.addEventListener('change',update)});
+      count.textContent='Доработок: '+String(saved.revision_count||0);if(data.pr_url)pr.textContent='PR: '+data.pr_url;
+      b3Notice(message,'Отчёт загружен.');update();
+    });
   }).catch(function(e){b3Notice(message,b2Error(e)+' Приёмка и отправка отчёта недоступны до подключения API.');b3Notice(checkStatus,'Нет данных: приёмка отключена.')});
 }
 function drawOverview(){
@@ -714,7 +741,7 @@ function drawTaskPR(host,p,s,d){var m=taskMeta(p);if(!m.pr&&!m.ci)return;var car
 }
 if('serviceWorker' in navigator){navigator.serviceWorker.register(BASE+'/sw.js',{scope:BASE+'/'}).catch(function(){})}
 window.addEventListener('online',function(){toast('Связь восстановлена')});window.addEventListener('offline',function(){toast('Нет сети')});
-api('/api/me').then(function(m){ME=m.user;CSRF=m.csrf;showProjects()}).catch(function(x){if(x&&x.status)showLogin();else showOffline()});
+api('/api/me').then(function(m){ME=m.user;CSRF=m.csrf;showToday()}).catch(function(x){if(x&&x.status)showLogin();else showOffline()});
 })();
 </script>
 </body>
