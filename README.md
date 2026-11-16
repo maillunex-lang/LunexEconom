@@ -47,7 +47,7 @@
 |---|---|
 | [`docs/gdd/`](docs/gdd/README.md) | игровая спецификация (GDD 00–44) и [утверждённые решения](docs/gdd/DECISIONS_APPROVED.md) |
 | [`docs/WORK_PLAN.md`](docs/WORK_PLAN.md) | план работ: этапы, две линии исполнителей, что можно выдавать |
-| [`docs/PORTAL.md`](docs/PORTAL.md) | портал проектов CreatePortal (доска задач, мастер новых проектов, протокол для ИИ) |
+| [`docs/PORTAL.md`](docs/PORTAL.md), [`docs/portal/`](docs/portal/README.md) | портал проектов CreatePortal: описание и полный GDD портала (доска GTD, мастер проектов, протокол для ИИ) |
 | [`docs/PLAN_V2_CAPLAB.md`](docs/PLAN_V2_CAPLAB.md) | пять волн до уровня Capitalism Lab |
 | [`docs/legal/`](docs/legal/) | юридические черновики (политика, соглашение, РКН, платежи) |
 | [`docs/mockups/`](docs/mockups/) | макеты экранов 1920×1080 |

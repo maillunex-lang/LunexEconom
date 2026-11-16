@@ -1,0 +1,53 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1440" height="900" viewBox="0 0 1440 900">
+<rect width="1440" height="900" fill="#EDF1EA"/>
+<defs><marker id="ar" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0 0 L8 4 L0 8 z" fill="#566860"/></marker></defs>
+<rect x="0" y="0" width="1440" height="64" rx="0" fill="#FFFFFF" stroke="#D2DBD3" stroke-width="1.5"/>
+<text x="40" y="40" font-family="Inter,sans-serif" font-size="18" fill="#13201A" text-anchor="start" font-weight="700">CreatePortal</text>
+<text x="190" y="40" font-family="Inter,sans-serif" font-size="15" fill="#566860" text-anchor="start">/ Проект / Граф</text>
+<text x="1400" y="40" font-family="Inter,sans-serif" font-size="14" fill="#566860" text-anchor="end">Справка   Тема   Выйти</text>
+<text x="40" y="110" font-family="Inter,sans-serif" font-size="28" fill="#13201A" text-anchor="start" font-weight="700">Граф зависимостей · Моя игра</text>
+<text x="70" y="150" font-family="Inter,sans-serif" font-size="15" fill="#566860" text-anchor="start" font-weight="600">Шаг 1</text>
+<rect x="70" y="180" width="260" height="120" rx="14" fill="#DAF0E3" stroke="#D2DBD3" stroke-width="1.5"/>
+<text x="86" y="214" font-family="Inter,sans-serif" font-size="17" fill="#2B7A52" text-anchor="start" font-weight="700">A1</text>
+<text x="86" y="242" font-family="Inter,sans-serif" font-size="14" fill="#13201A" text-anchor="start">Название задачи</text>
+<text x="86" y="270" font-family="Inter,sans-serif" font-size="13" fill="#566860" text-anchor="start">Линия A</text>
+<rect x="70" y="370" width="260" height="120" rx="14" fill="#DAF0E3" stroke="#D2DBD3" stroke-width="1.5"/>
+<text x="86" y="404" font-family="Inter,sans-serif" font-size="17" fill="#2B7A52" text-anchor="start" font-weight="700">B1</text>
+<text x="86" y="432" font-family="Inter,sans-serif" font-size="14" fill="#13201A" text-anchor="start">Название задачи</text>
+<text x="86" y="460" font-family="Inter,sans-serif" font-size="13" fill="#566860" text-anchor="start">Линия B</text>
+<text x="410" y="150" font-family="Inter,sans-serif" font-size="15" fill="#566860" text-anchor="start" font-weight="600">Шаг 2</text>
+<rect x="410" y="180" width="260" height="120" rx="14" fill="#DFEBF9" stroke="#D2DBD3" stroke-width="1.5"/>
+<text x="426" y="214" font-family="Inter,sans-serif" font-size="17" fill="#2B7A52" text-anchor="start" font-weight="700">A2</text>
+<text x="426" y="242" font-family="Inter,sans-serif" font-size="14" fill="#13201A" text-anchor="start">Название задачи</text>
+<text x="426" y="270" font-family="Inter,sans-serif" font-size="13" fill="#566860" text-anchor="start">Линия A</text>
+<rect x="410" y="370" width="260" height="120" rx="14" fill="#DFEBF9" stroke="#D2DBD3" stroke-width="1.5"/>
+<text x="426" y="404" font-family="Inter,sans-serif" font-size="17" fill="#2B7A52" text-anchor="start" font-weight="700">B2</text>
+<text x="426" y="432" font-family="Inter,sans-serif" font-size="14" fill="#13201A" text-anchor="start">Название задачи</text>
+<text x="426" y="460" font-family="Inter,sans-serif" font-size="13" fill="#566860" text-anchor="start">Линия B</text>
+<text x="750" y="150" font-family="Inter,sans-serif" font-size="15" fill="#566860" text-anchor="start" font-weight="600">Шаг 3</text>
+<rect x="750" y="180" width="260" height="120" rx="14" fill="#FBEED2" stroke="#D2DBD3" stroke-width="1.5"/>
+<text x="766" y="214" font-family="Inter,sans-serif" font-size="17" fill="#2B7A52" text-anchor="start" font-weight="700">A3</text>
+<text x="766" y="242" font-family="Inter,sans-serif" font-size="14" fill="#13201A" text-anchor="start">Название задачи</text>
+<text x="766" y="270" font-family="Inter,sans-serif" font-size="13" fill="#566860" text-anchor="start">Линия A</text>
+<rect x="750" y="370" width="260" height="120" rx="14" fill="#FBEED2" stroke="#D2DBD3" stroke-width="1.5"/>
+<text x="766" y="404" font-family="Inter,sans-serif" font-size="17" fill="#2B7A52" text-anchor="start" font-weight="700">B3</text>
+<text x="766" y="432" font-family="Inter,sans-serif" font-size="14" fill="#13201A" text-anchor="start">Название задачи</text>
+<text x="766" y="460" font-family="Inter,sans-serif" font-size="13" fill="#566860" text-anchor="start">Линия B</text>
+<text x="1090" y="150" font-family="Inter,sans-serif" font-size="15" fill="#566860" text-anchor="start" font-weight="600">Шаг 4</text>
+<rect x="1090" y="180" width="260" height="120" rx="14" fill="#F4F7F2" stroke="#D2DBD3" stroke-width="1.5"/>
+<text x="1106" y="214" font-family="Inter,sans-serif" font-size="17" fill="#2B7A52" text-anchor="start" font-weight="700">A4</text>
+<text x="1106" y="242" font-family="Inter,sans-serif" font-size="14" fill="#13201A" text-anchor="start">Название задачи</text>
+<text x="1106" y="270" font-family="Inter,sans-serif" font-size="13" fill="#566860" text-anchor="start">Линия A</text>
+<rect x="1090" y="370" width="260" height="120" rx="14" fill="#F4F7F2" stroke="#D2DBD3" stroke-width="1.5"/>
+<text x="1106" y="404" font-family="Inter,sans-serif" font-size="17" fill="#2B7A52" text-anchor="start" font-weight="700">B4</text>
+<text x="1106" y="432" font-family="Inter,sans-serif" font-size="14" fill="#13201A" text-anchor="start">Название задачи</text>
+<text x="1106" y="460" font-family="Inter,sans-serif" font-size="13" fill="#566860" text-anchor="start">Линия B</text>
+<path d="M330 240 L410 240" stroke="#566860" stroke-width="2" fill="none" marker-end="url(#ar)"/>
+<path d="M670 240 L750 240" stroke="#566860" stroke-width="2" fill="none" marker-end="url(#ar)"/>
+<path d="M1010 240 L1090 240" stroke="#566860" stroke-width="2" fill="none" marker-end="url(#ar)"/>
+<path d="M330 430 L410 430" stroke="#566860" stroke-width="2" fill="none" marker-end="url(#ar)"/>
+<path d="M670 430 L750 430" stroke="#566860" stroke-width="2" fill="none" marker-end="url(#ar)"/>
+<path d="M1010 430 L1090 430" stroke="#566860" stroke-width="2" fill="none" marker-end="url(#ar)"/>
+<text x="70" y="600" font-family="Inter,sans-serif" font-size="14" fill="#566860" text-anchor="start">Зелёное: принято · синее: у исполнителя · жёлтое: можно выдавать · серое: ждёт</text>
+<text x="70" y="630" font-family="Inter,sans-serif" font-size="14" fill="#566860" text-anchor="start">Линии A и B идут параллельно: стрелок между ними нет, зоны файлов не пересекаются.</text>
+</svg>

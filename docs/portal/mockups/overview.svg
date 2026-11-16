@@ -1,0 +1,71 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1440" height="900" viewBox="0 0 1440 900">
+<rect width="1440" height="900" fill="#EDF1EA"/>
+<rect x="0" y="0" width="1440" height="64" rx="0" fill="#FFFFFF" stroke="#D2DBD3" stroke-width="1.5"/>
+<text x="40" y="40" font-family="Inter,sans-serif" font-size="18" fill="#13201A" text-anchor="start" font-weight="700">CreatePortal</text>
+<text x="190" y="40" font-family="Inter,sans-serif" font-size="15" fill="#566860" text-anchor="start">/ Проекты</text>
+<text x="1400" y="40" font-family="Inter,sans-serif" font-size="14" fill="#566860" text-anchor="end">Справка   Тема   Выйти</text>
+<text x="40" y="110" font-family="Inter,sans-serif" font-size="28" fill="#13201A" text-anchor="start" font-weight="700">Мои проекты</text>
+<rect x="40" y="140" width="430" height="230" rx="16" fill="#FFFFFF" stroke="#D2DBD3" stroke-width="1.5"/>
+<text x="60" y="178" font-family="Inter,sans-serif" font-size="18" fill="#13201A" text-anchor="start" font-weight="700">Башкирия: Мёд и Нефть</text>
+<rect x="60" y="192" width="68" height="24" rx="12" fill="#DAF0E3"/>
+<text x="94" y="209" font-family="Inter,sans-serif" font-size="12" fill="#13201A" text-anchor="middle" font-weight="600">в работе</text>
+<rect x="60" y="240" width="390" height="10" rx="5" fill="#D2DBD3"/>
+<rect x="60" y="240" width="54" height="10" rx="5" fill="#2B7A52"/>
+<text x="60" y="275" font-family="Inter,sans-serif" font-size="14" fill="#566860" text-anchor="start">Принято 14 %</text>
+<text x="60" y="302" font-family="Inter,sans-serif" font-size="14" fill="#566860" text-anchor="start">Скорость: 2,5 задачи в неделю</text>
+<text x="60" y="326" font-family="Inter,sans-serif" font-size="14" fill="#566860" text-anchor="start">Следующее: A1, B1</text>
+<rect x="60" y="336" width="140" height="40" rx="10" fill="#2B7A52"/>
+<text x="130" y="361" font-family="Inter,sans-serif" font-size="14" fill="#FFFFFF" text-anchor="middle" font-weight="600">Открыть доску</text>
+<rect x="500" y="140" width="430" height="230" rx="16" fill="#FFFFFF" stroke="#D2DBD3" stroke-width="1.5"/>
+<text x="520" y="178" font-family="Inter,sans-serif" font-size="18" fill="#13201A" text-anchor="start" font-weight="700">Новый проект</text>
+<rect x="520" y="192" width="75" height="24" rx="12" fill="#FBEED2"/>
+<text x="557" y="209" font-family="Inter,sans-serif" font-size="12" fill="#13201A" text-anchor="middle" font-weight="600">нужен GDD</text>
+<rect x="520" y="240" width="390" height="10" rx="5" fill="#D2DBD3"/>
+<rect x="520" y="240" width="4" height="10" rx="5" fill="#2B7A52"/>
+<text x="520" y="275" font-family="Inter,sans-serif" font-size="14" fill="#566860" text-anchor="start">Принято 0 %</text>
+<text x="520" y="302" font-family="Inter,sans-serif" font-size="14" fill="#566860" text-anchor="start">Скорость: нет данных</text>
+<text x="520" y="326" font-family="Inter,sans-serif" font-size="14" fill="#566860" text-anchor="start">Следующее: GDD</text>
+<rect x="520" y="336" width="140" height="40" rx="10" fill="#2B7A52"/>
+<text x="590" y="361" font-family="Inter,sans-serif" font-size="14" fill="#FFFFFF" text-anchor="middle" font-weight="600">Открыть доску</text>
+<rect x="960" y="140" width="430" height="230" rx="16" fill="#FFFFFF" stroke="#D2DBD3" stroke-width="1.5"/>
+<text x="980" y="178" font-family="Inter,sans-serif" font-size="18" fill="#13201A" text-anchor="start" font-weight="700">Портал CreatePortal</text>
+<rect x="980" y="192" width="54" height="24" rx="12" fill="#DAF0E3"/>
+<text x="1007" y="209" font-family="Inter,sans-serif" font-size="12" fill="#13201A" text-anchor="middle" font-weight="600">готово</text>
+<rect x="980" y="240" width="390" height="10" rx="5" fill="#D2DBD3"/>
+<rect x="980" y="240" width="390" height="10" rx="5" fill="#2B7A52"/>
+<text x="980" y="275" font-family="Inter,sans-serif" font-size="14" fill="#566860" text-anchor="start">Принято 100 %</text>
+<text x="980" y="302" font-family="Inter,sans-serif" font-size="14" fill="#566860" text-anchor="start">Скорость: —</text>
+<text x="980" y="326" font-family="Inter,sans-serif" font-size="14" fill="#566860" text-anchor="start">Следующее: GDD</text>
+<rect x="980" y="336" width="140" height="40" rx="10" fill="#2B7A52"/>
+<text x="1050" y="361" font-family="Inter,sans-serif" font-size="14" fill="#FFFFFF" text-anchor="middle" font-weight="600">Открыть доску</text>
+<rect x="40" y="400" width="1360" height="210" rx="16" fill="#FFFFFF" stroke="#D2DBD3" stroke-width="1.5"/>
+<text x="60" y="430" font-family="Inter,sans-serif" font-size="17" fill="#13201A" text-anchor="start" font-weight="600">Требует вашего внимания</text>
+<rect x="60" y="440" width="30" height="24" rx="12" fill="#DFEBF9"/>
+<text x="75" y="457" font-family="Inter,sans-serif" font-size="12" fill="#13201A" text-anchor="middle" font-weight="600">●</text>
+<text x="104" y="458" font-family="Inter,sans-serif" font-size="15" fill="#13201A" text-anchor="start">Башкирия · A1 сдано, ждёт приёмки (2 ч)</text>
+<rect x="1230" y="436" width="130" height="40" rx="10" fill="#FFFFFF" stroke="#D2DBD3" stroke-width="1.5"/>
+<text x="1295" y="461" font-family="Inter,sans-serif" font-size="14" fill="#13201A" text-anchor="middle" font-weight="600">Открыть</text>
+<rect x="60" y="490" width="30" height="24" rx="12" fill="#DAF0E3"/>
+<text x="75" y="507" font-family="Inter,sans-serif" font-size="12" fill="#13201A" text-anchor="middle" font-weight="600">●</text>
+<text x="104" y="508" font-family="Inter,sans-serif" font-size="15" fill="#13201A" text-anchor="start">Башкирия · B1 можно выдавать исполнителю №2</text>
+<rect x="1230" y="486" width="130" height="40" rx="10" fill="#FFFFFF" stroke="#D2DBD3" stroke-width="1.5"/>
+<text x="1295" y="511" font-family="Inter,sans-serif" font-size="14" fill="#13201A" text-anchor="middle" font-weight="600">Открыть</text>
+<rect x="60" y="540" width="30" height="24" rx="12" fill="#FBEED2"/>
+<text x="75" y="557" font-family="Inter,sans-serif" font-size="12" fill="#13201A" text-anchor="middle" font-weight="600">●</text>
+<text x="104" y="558" font-family="Inter,sans-serif" font-size="15" fill="#13201A" text-anchor="start">Новый проект · стартовые промпты не выполнены</text>
+<rect x="1230" y="536" width="130" height="40" rx="10" fill="#FFFFFF" stroke="#D2DBD3" stroke-width="1.5"/>
+<text x="1295" y="561" font-family="Inter,sans-serif" font-size="14" fill="#13201A" text-anchor="middle" font-weight="600">Открыть</text>
+<rect x="40" y="630" width="1360" height="240" rx="16" fill="#FFFFFF" stroke="#D2DBD3" stroke-width="1.5"/>
+<text x="60" y="660" font-family="Inter,sans-serif" font-size="17" fill="#13201A" text-anchor="start" font-weight="600">Скорость и здоровье (по всем проектам)</text>
+<rect x="70" y="780" width="44" height="60" rx="6" fill="#D2DBD3"/>
+<rect x="140" y="750" width="44" height="90" rx="6" fill="#D2DBD3"/>
+<rect x="210" y="760" width="44" height="80" rx="6" fill="#D2DBD3"/>
+<rect x="280" y="716" width="44" height="124" rx="6" fill="#D2DBD3"/>
+<rect x="350" y="730" width="44" height="110" rx="6" fill="#D2DBD3"/>
+<rect x="420" y="700" width="44" height="140" rx="6" fill="#D2DBD3"/>
+<rect x="490" y="712" width="44" height="128" rx="6" fill="#D2DBD3"/>
+<rect x="560" y="680" width="44" height="160" rx="6" fill="#2B7A52"/>
+<text x="660" y="700" font-family="Inter,sans-serif" font-size="14" fill="#566860" text-anchor="start">Принято задач по неделям</text>
+<text x="660" y="740" font-family="Inter,sans-serif" font-size="15" fill="#13201A" text-anchor="start">Среднее время от выдачи до приёмки: 1,8 суток</text>
+<text x="660" y="770" font-family="Inter,sans-serif" font-size="15" fill="#13201A" text-anchor="start">Доля задач, вернувшихся на доработку: 12 %</text>
+</svg>
