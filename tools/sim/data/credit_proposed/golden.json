@@ -1,0 +1,42 @@
+{
+ "variants": [
+  {
+   "id": "no_expansion",
+   "net_cash_end": 563400,
+   "interest_total": 0,
+   "tax_total": 876600,
+   "arrears_end": 0,
+   "seized_month": 0
+  },
+  {
+   "id": "expand_with_cash",
+   "net_cash_end": 1213000,
+   "interest_total": 0,
+   "tax_total": 1107000,
+   "arrears_end": 0,
+   "seized_month": 0
+  },
+  {
+   "id": "expand_with_loan",
+   "net_cash_end": 1176412,
+   "interest_total": 45744,
+   "tax_total": 1097844,
+   "arrears_end": 0,
+   "seized_month": 0
+  },
+  {
+   "id": "loan_income_shock",
+   "net_cash_end": 838246,
+   "interest_total": 23176,
+   "tax_total": 799133,
+   "arrears_end": 0,
+   "seized_month": 5
+  }
+ ],
+ "rates_bp_month": {
+  "A": 158,
+  "B": 183,
+  "C": 225,
+  "D": 300
+ }
+}
