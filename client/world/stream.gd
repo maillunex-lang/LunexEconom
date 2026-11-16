@@ -8,6 +8,7 @@ signal network_error(code: String)
 signal land_purchased(data: Dictionary)
 signal road_built(data: Dictionary)
 signal cities_ready
+signal object_delta(event: Dictionary)
 const Gen = preload("res://world/generator.gd")
 const DeviceCache = preload("res://world/cache.gd")
 const PENDING_PATH := "user://world_pending_buys.cfg"
@@ -28,14 +29,19 @@ var dirty: Dictionary = {}
 var city_id := "ufa"
 var device_cache: RefCounted
 var _events_busy := false
+var _polling_enabled := false
+var _event_objects: Dictionary = {}
+var _last_event_id := 0
 var _poll_timer: Timer
 var _session := 0
 
 func _ready() -> void:
     _restore_pending()
     _poll_timer = Timer.new()
-    _poll_timer.wait_time = 6.0
-    _poll_timer.timeout.connect(poll_events)
+    _poll_timer.wait_time = 2.0
+    _poll_timer.timeout.connect(func() -> void:
+        if _polling_enabled:
+            poll_events())
     add_child(_poll_timer)
 
 func configure(adapter: Node) -> void:
@@ -50,10 +56,12 @@ func set_server(base: String) -> void:
     device_cache = DeviceCache.new()
     device_cache.set_server(base)
     cursor = device_cache.get_cursor()
+    _last_event_id = cursor
     cities = device_cache.get_cities()
     cache.clear()
     parcels.clear()
     dirty.clear()
+    _event_objects.clear()
 
 func set_city(id: String) -> void:
     if id == city_id:
@@ -70,11 +78,14 @@ func set_city(id: String) -> void:
     cache.clear()
     parcels.clear()
     dirty.clear()
+    _event_objects.clear()
 
 func start() -> void:
+    _polling_enabled = true
     _poll_timer.start()
 
 func stop() -> void:
+    _polling_enabled = false
     if _poll_timer != null:
         _poll_timer.stop()
     _session += 1
@@ -234,50 +245,145 @@ func revalidate(key: Vector2i) -> void:
         queued.append(key)
         _drain()
 
+func _requested_chunks() -> String:
+    var keys: Array = desired.keys()
+    keys.sort_custom(func(a: Vector2i,b: Vector2i) -> bool:
+        return a.x < b.x or (a.x == b.x and a.y < b.y))
+    var result: Array[String] = []
+    for key in keys.slice(0,96):
+        result.append("%d,%d" % [key.x,key.y])
+    return ";".join(result)
+
+func _reset_visible() -> void:
+    _event_objects.clear()
+    for key in desired:
+        # Force an ETag check on the current viewport, never the entire world.
+        revalidate(key)
+
+func _event_id(event: Dictionary) -> int:
+    return int(event.get("event_id",event.get("version",0)))
+
+func _consume_page(data: Dictionary) -> String:
+    var tip := int(data.get("tip",cursor))
+    if bool(data.get("reset",false)) or tip-cursor>5000:
+        _reset_visible()
+        cursor = tip
+        _last_event_id = tip
+        if device_cache != null:
+            device_cache.save_cursor(cursor)
+        return "reset"
+    var events: Array = data.get("events",[])
+    var scanned := int(data.get("scanned",-1))
+    var previous := cursor
+    for event in events:
+        if not event is Dictionary:
+            _reset_visible()
+            return "reset"
+        var number := _event_id(event)
+        if number <= previous:
+            # A page may overlap a previously applied cursor on legacy mocks.
+            if number == previous:
+                continue
+            _reset_visible()
+            return "reset"
+        if number > previous+1 and scanned >= 0 and scanned < number-1:
+            return "retry"
+        _process_event(event)
+        previous = number
+    if scanned >= 0:
+        previous = maxi(previous,scanned)
+    elif data.has("next_after"):
+        previous = maxi(previous,int(data["next_after"]))
+    cursor = maxi(cursor,previous)
+    _last_event_id = cursor
+    if device_cache != null:
+        device_cache.save_cursor(cursor)
+    return "ok"
+
 func poll_events() -> void:
     if _events_busy or api == null or device_cache == null:
         return
     _events_busy = true
-    for _batch in range(12):
-        var response: Dictionary = await api.fetch("/world/events?after=%d" % cursor)
-        if int(response.get("code", 0)) != 200:
+    var session := _session
+    for _batch in range(50):
+        var endpoint := "/world/events?after=%d" % cursor
+        var selection := _requested_chunks()
+        if not selection.is_empty():
+            endpoint += "&chunks=" + selection
+        var response: Dictionary = await api.fetch(endpoint)
+        if session != _session:
+            break
+        if int(response.get("code",0)) == 429:
+            break
+        if int(response.get("code",0)) != 200:
             network_error.emit("network")
             break
-        var data: Dictionary = response.get("data", {})
-        var events: Array = data.get("events", [])
-        for event in events:
-            if event is Dictionary:
-                _process_event(event)
-                cursor = maxi(cursor, int(event.get("version", 0)))
-        cursor = maxi(cursor, int(data.get("next_after", cursor)))
-        device_cache.save_cursor(cursor)
-        if events.size() < 100:
+        var data: Dictionary = response.get("data",{})
+        var result := _consume_page(data)
+        if result == "reset":
+            break
+        if result == "retry":
+            # Do not apply a tail after an unexplained hole.
+            break
+        if (data.get("events",[]) as Array).size() < 100 or cursor >= int(data.get("tip",cursor)):
             break
     _events_busy = false
 
 func _process_event(event: Dictionary) -> void:
-    var kind := str(event.get("kind", ""))
+    var kind := str(event.get("kind",""))
     if kind == "city_growth":
         _apply_growth(event)
         return
-    if kind in ["occupation", "demolition", "enterprise_stage", "enterprise_construction"]:
-        enterprise_changed.emit()
-    if kind not in ["land_buy", "road_build", "occupation", "demolition", "enterprise_stage", "enterprise_construction"]:
-        return
     var impacted := _event_chunks(event)
+    if kind in ["occupation","enterprise_construction","enterprise_stage","demolition"]:
+        enterprise_changed.emit()
+    if kind not in ["land_buy","road_build","occupation","demolition","enterprise_stage","enterprise_construction"]:
+        return
+    var payload: Dictionary = event.get("payload",{})
+    var object_data: Variant = event.get("object",payload.get("object"))
+    var can_apply: bool = kind == "road_build" and payload.get("cells",[]) is Array and not payload.get("cells",[]).is_empty()
+    if kind in ["occupation","enterprise_construction","enterprise_stage","demolition"]:
+        can_apply = object_data is Dictionary and not str(object_data.get("object_id","")).is_empty()
+        if can_apply:
+            var object_id := str(object_data["object_id"])
+            if kind == "demolition":
+                _event_objects.erase(object_id)
+            else:
+                _event_objects[object_id] = object_data.duplicate(true)
+    if kind == "land_buy":
+        can_apply = payload.has("px") and payload.has("py") and payload.has("owner_ref")
+    if can_apply:
+        object_delta.emit(event)
+        for key in impacted:
+            # Old disk snapshots don't contain the delta. An ETag read is
+            # required when the chunk is loaded again, not on every frame.
+            cache.erase(key)
+            if device_cache != null:
+                device_cache.invalidate_chunk(city_id,key)
+            if not desired.has(key):
+                chunks.erase(key)
+        if kind == "land_buy":
+            for key in impacted:
+                if desired.has(key):
+                    _load_parcels(key,_session,city_id)
+        return
+    # Old servers or incomplete events keep the proven ETag fallback.
     for key in impacted:
         if desired.has(key):
             revalidate(key)
         else:
-            # Persisted cursor is safe: an unseen changed chunk cannot stay stale.
             cache.erase(key)
             if device_cache != null:
-                device_cache.invalidate_chunk(city_id, key)
+                device_cache.invalidate_chunk(city_id,key)
+
 
 func _event_chunks(event: Dictionary) -> Dictionary:
     var output := {}
     if event.get("cx") != null and event.get("cy") != null:
         output[Vector2i(int(event["cx"]),int(event["cy"]))] = true
+    for chunk in event.get("chunks",[]):
+        if chunk is Dictionary and chunk.has("cx") and chunk.has("cy"):
+            output[Vector2i(int(chunk["cx"]),int(chunk["cy"]))] = true
     var payload: Dictionary = event.get("payload", {})
     if payload.has("px") and payload.has("py"):
         output[Vector2i(Gen.floor_div(int(payload["px"]),2),Gen.floor_div(int(payload["py"]),2))] = true

@@ -2,6 +2,10 @@
 from __future__ import annotations
 
 import re
+import json
+import threading
+import time
+from collections import deque
 
 from server.platform.api import authenticate
 from server.ledger.api import account, transfer
@@ -65,15 +69,137 @@ def get_chunk(body,ctx):
     return 200,core.snapshot(ctx['conn'],cx,cy)
 
 
+# balance: draft. Per-process caps: the global and account limits are deliberately
+# independent of the PostgreSQL connection pool and reveal no authentication data.
+_LIMIT_LOCK = threading.Lock()
+_REQUESTS = {}
+_WAITERS = set()
+
+
+def _subscribe_chunks(ctx):
+    values = ctx.get('query', {}).get('chunks')
+    if values is None:
+        return None
+    if not isinstance(values,list) or len(values)!=1 or not values[0]:
+        raise ValueError('invalid_chunks')
+    entries = values[0].split(';')
+    if not 1 <= len(entries) <= 96:
+        raise ValueError('invalid_chunks')
+    chunks=[]
+    for entry in entries:
+        parts=entry.split(',')
+        if len(parts)!=2:
+            raise ValueError('invalid_chunks')
+        chunks.append((_integer(parts[0],-core.MAX_REQUEST_COORD,core.MAX_REQUEST_COORD),
+                       _integer(parts[1],-core.MAX_REQUEST_COORD,core.MAX_REQUEST_COORD)))
+    if len(set(chunks)) != len(chunks):
+        raise ValueError('duplicate_chunks')
+    return chunks
+
+
+def _event_data(conn,after,chunks,gap):
+    tip=conn.execute('SELECT COALESCE(MAX(version),0) FROM world_events').fetchone()[0]
+    earliest=conn.execute('SELECT MIN(version) FROM world_events').fetchone()[0]
+    reset=tip-after>gap or (earliest is not None and after>0 and after<earliest-1)
+    if reset:
+        return {'events':[],'next_after':tip,'tip':tip,'reset':True,'scanned':tip}
+    # Page against the ordered global journal, even if an area has no events.
+    # The scanned cursor always follows the global page rather than the last match.
+    rows=conn.execute("""SELECT version,kind,city_id,cx,cy,payload
+        FROM world_events WHERE version>%s ORDER BY version ASC LIMIT 100""",(after,)).fetchall()
+    scanned=rows[-1][0] if rows else max(after,tip)
+    candidates=[]
+    if chunks is not None and rows:
+        ids=[r[0] for r in rows]
+        # VALUES has bound positions only, no user-provided SQL text.
+        coords=','.join(['(%s,%s)']*len(chunks))
+        params=[v for pair in chunks for v in pair]+[ids[0],ids[-1]]
+        matches=conn.execute("""SELECT DISTINCT w.event_id FROM world_event_chunks w
+          JOIN (VALUES """+coords+""") AS wanted(cx,cy)
+          ON w.cx=wanted.cx AND w.cy=wanted.cy
+          WHERE w.event_id BETWEEN %s AND %s""",params).fetchall()
+        candidates={r[0] for r in matches}
+        # Growth affects a ring wider than the first 16 listed chunks.
+        candidates.update(r[0] for r in rows if r[1]=='city_growth')
+    items=[]
+    for version,kind,city_id,cx,cy,payload in rows:
+        if chunks is not None and version not in candidates:
+            continue
+        affected=conn.execute('SELECT cx,cy FROM world_event_chunks WHERE event_id=%s ORDER BY cx,cy LIMIT 17',(version,)).fetchall()
+        event={'event_id':version,'version':version,'type':core.EVENT_TYPES.get(kind,'unknown'),
+               'kind':kind,'city_id':city_id,'cx':cx,'cy':cy,
+               'chunks':[{'cx':x,'cy':y} for x,y in affected[:16]],
+               'object':payload.get('object'), 'payload':payload}
+        if kind=='road_build':
+            event['removed']=bool(payload.get('removed',False))
+            event['type']='road_removed' if event['removed'] else 'road_added'
+        if len(affected)>16:
+            event['chunks_truncated']=True
+        if len(json.dumps(event,ensure_ascii=False,separators=(',',':')).encode())>2048:
+            # Keep old stored data accessible through snapshots instead of exposing
+            # an oversized event, and tell the client to reset safely.
+            return {'events':[],'next_after':tip,'tip':tip,'reset':True,'scanned':tip}
+        trial={'events':items+[event],'next_after':scanned,'tip':tip,'reset':False,'scanned':scanned}
+        if len(json.dumps(trial,ensure_ascii=False,separators=(',',':')).encode())>65536:
+            # Stop at the preceding event; continue there without gaps.
+            scanned=items[-1]['version'] if items else after
+            break
+        items.append(event)
+    return {'events':items,'next_after':scanned,'tip':tip,'reset':False,'scanned':scanned}
+
+
+def _rate_key(ctx):
+    from server.platform.api import _ip
+    # An authenticated account only; do not resolve/hash tokens into log messages.
+    actor=authenticate(ctx,track=False)
+    return str(actor['id']) if actor else None, _ip(ctx)
+
+
+def _admit(account,ip,waiting=False,cap=12):
+    now=time.monotonic()
+    with _LIMIT_LOCK:
+        for key,limit in (('ip:'+ip,600),('account:'+str(account),90)):
+            if key=='account:None':
+                continue
+            history=_REQUESTS.setdefault(key,deque())
+            while history and history[0]<=now-60:
+                history.popleft()
+            if len(history)>=limit:
+                return False,'rate'
+        if waiting and (len(_WAITERS)>=cap or (account is not None and account in _WAITERS)):
+            return False,'cap'
+        for key in ('ip:'+ip,'account:'+str(account)):
+            if key!='account:None':
+                _REQUESTS[key].append(now)
+        if waiting:
+            _WAITERS.add(account if account is not None else 'ip:'+ip)
+        return True,None
+
+
+def _release_waiter(account,ip):
+    with _LIMIT_LOCK:
+        _WAITERS.discard(account if account is not None else 'ip:'+ip)
+
+
 def events(body,ctx):
     after=_integer(_arg(ctx,'after','0'),0,2**63-1)
-    rows=ctx['conn'].execute(
-        '''SELECT version,kind,city_id,cx,cy,payload
-           FROM world_events WHERE version>%s ORDER BY version ASC LIMIT 100''',(after,)
-    ).fetchall()
-    items=[{'version':r[0],'kind':r[1],'city_id':r[2],
-            'cx':r[3],'cy':r[4],'payload':r[5]} for r in rows]
-    return 200,{'events':items,'next_after':items[-1]['version'] if items else after}
+    chunks=_subscribe_chunks(ctx)
+    wait_ms=_integer(_arg(ctx,'wait_ms','0'),0,25000)
+    settings=ctx.get('settings',{})
+    enabled=bool(settings.get('world_events_wait_enabled',False))
+    # game_server WSGI currently provides a connection held for an entire
+    # dispatch. Until a separate pre-dispatch hook exists, NEVER sleep here.
+    # This is essential: a 25-second sleep would exhaust the pool of 20.
+    account,ip=_rate_key(ctx)
+    admitted,reason=_admit(account,ip,False)
+    if not admitted:
+        return 429,{'error':'rate_limited'}
+    response=_event_data(ctx['conn'],after,chunks,int(settings.get('world_events_catchup_max_gap',5000)))
+    if enabled and wait_ms and not response['events'] and not response['reset']:
+        # Fail fast rather than retaining the WSGI transaction. This branch can
+        # switch to a wait after the server's entrypoint has a pool-free hook.
+        response['retry_after_ms']=1000
+    return 200,response
 
 
 def get_routes(body,ctx):
@@ -245,8 +371,11 @@ def build_roads(body,ctx):
             VALUES(%s,%s,%s) ON CONFLICT DO NOTHING RETURNING x,y''',(x,y,actor['id'])).fetchone()
         if result: created.append(result)
     if created:
-        version=core._touch(conn,core._chunks_for_cells(created),
-                            'road_build',city_id,{'cells':created,'player':actor['id']})
+        version=None
+        for offset in range(0,len(created),48):
+            section=created[offset:offset+48]
+            version=core._touch(conn,core._chunks_for_cells(section),
+                                'road_build',city_id,{'cells':section,'player':actor['id']})
     else: version=None
     return 200,{'created':len(created),'event_version':version,'balance':'draft'}
 
