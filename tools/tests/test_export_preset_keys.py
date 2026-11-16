@@ -17,6 +17,14 @@ class ExportPresetKeys(unittest.TestCase):
             self.assertTrue((ROOT / "client" / key).is_file(), key)
             self.assertTrue(any(fnmatch(key, p) for p in patterns), f"{key} is not exported: {patterns}")
 
+    def test_models_are_packaged(self):
+        cfg = (ROOT / "client" / "export_presets.cfg").read_text(encoding="utf-8")
+        patterns = [p.strip() for p in re.findall(r'^include_filter="([^"]*)"', cfg, flags=re.M)[0].split(",")]
+        for path in (ROOT / "client" / "models").rglob("*"):
+            if path.suffix in (".glb", ".json"):
+                rel = path.relative_to(ROOT / "client").as_posix()
+                self.assertTrue(any(fnmatch(rel, p) for p in patterns), rel)
+
 
 if __name__ == "__main__":
     unittest.main()
