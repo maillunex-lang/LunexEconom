@@ -219,7 +219,7 @@
       <div class="list">${entries.map(([key, value]) => {
         const bounds = data.metadata?.[key]?.bounds;
         return `<form class="row setting-form" data-setting="${escapeHtml(key)}">
-          <div class="row-main"><b>${escapeHtml(key)}</b><div class="hint">${escapeHtml(data.metadata?.[key]?.description || '')} ${bounds ? `Границы: ${escapeHtml(bounds.join('…'))}` : ''}</div></div>
+          <div class="row-main"><b>${escapeHtml(key)}</b>${window.ADMIN_HELP?.setting(key,value,data.defaults?.[key],bounds) || ''}</div>
           <div class="actions"><input name="value" value="${escapeHtml(value)}" aria-label="Значение ${escapeHtml(key)}"><button class="button secondary" type="submit">Сохранить</button></div>
         </form>`;
       }).join('')}</div></div><div id="revisions" class="panel"><h3>Ревизии</h3><p class="muted">Загрузка…</p></div>`;
@@ -357,6 +357,8 @@
         }
       }
     } catch (error) { $('#content').innerHTML = `<p class="error">${escapeHtml(error.message)}</p>`; }
+    const guide = window.ADMIN_HELP?.section(name);
+    if (guide) $('#content').insertAdjacentHTML('afterbegin', guide);
   }
 
   $('#login-form').onsubmit = async (event) => {
