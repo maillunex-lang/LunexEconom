@@ -160,7 +160,7 @@
   "buildings": {
     "field": {
       "build_cost": 11000,
-      "upkeep_month": 39700,
+      "upkeep_month": 39600,
       "jobs": 5,
       "old": {
         "build_cost": 39000,
@@ -170,7 +170,7 @@
     },
     "apiary": {
       "build_cost": 31000,
-      "upkeep_month": 123000,
+      "upkeep_month": 122800,
       "jobs": 17,
       "old": {
         "build_cost": 26000,
@@ -179,9 +179,9 @@
       }
     },
     "mill": {
-      "build_cost": 8000,
-      "upkeep_month": 5200,
-      "jobs": 5,
+      "build_cost": 10000,
+      "upkeep_month": 17700,
+      "jobs": 6,
       "old": {
         "build_cost": 65000,
         "upkeep_month": 4000,
@@ -189,9 +189,9 @@
       }
     },
     "bakery": {
-      "build_cost": 43000,
-      "upkeep_month": 245200,
-      "jobs": 22,
+      "build_cost": 89000,
+      "upkeep_month": 241300,
+      "jobs": 26,
       "old": {
         "build_cost": 78000,
         "upkeep_month": 4000,
@@ -199,8 +199,8 @@
       }
     },
     "oil_well": {
-      "build_cost": 929000,
-      "upkeep_month": 2343900,
+      "build_cost": 1167000,
+      "upkeep_month": 2106000,
       "jobs": 113,
       "old": {
         "build_cost": 104000,
@@ -231,9 +231,9 @@
       }
     },
     "slaughter": {
-      "build_cost": 73000,
-      "upkeep_month": 321500,
-      "jobs": 32,
+      "build_cost": 139000,
+      "upkeep_month": 327600,
+      "jobs": 38,
       "old": {
         "build_cost": 104000,
         "upkeep_month": 4000,
@@ -241,8 +241,8 @@
       }
     },
     "quarry": {
-      "build_cost": 28000,
-      "upkeep_month": 111200,
+      "build_cost": 30000,
+      "upkeep_month": 108000,
       "jobs": 17,
       "storage_capacity": 60000,
       "old": {
@@ -277,8 +277,8 @@
       }
     },
     "steel_mill": {
-      "build_cost": 855000,
-      "upkeep_month": 1424700,
+      "build_cost": 1260000,
+      "upkeep_month": 1251000,
       "jobs": 140,
       "storage_capacity": 32000,
       "old": {
@@ -289,9 +289,9 @@
       }
     },
     "textile": {
-      "build_cost": 238000,
-      "upkeep_month": 586800,
-      "jobs": 127,
+      "build_cost": 244000,
+      "upkeep_month": 604100,
+      "jobs": 131,
       "old": {
         "build_cost": 156000,
         "upkeep_month": 6000,
@@ -299,8 +299,8 @@
       }
     },
     "electronics_plant": {
-      "build_cost": 4322000,
-      "upkeep_month": 6894500,
+      "build_cost": 5203000,
+      "upkeep_month": 6542200,
       "jobs": 1086,
       "old": {
         "build_cost": 234000,
@@ -309,8 +309,8 @@
       }
     },
     "logging_camp": {
-      "build_cost": 20000,
-      "upkeep_month": 306000,
+      "build_cost": 47000,
+      "upkeep_month": 252000,
       "jobs": 35,
       "storage_capacity": 10000,
       "old": {
@@ -321,8 +321,8 @@
       }
     },
     "gas_well": {
-      "build_cost": 100000,
-      "upkeep_month": 300500,
+      "build_cost": 126000,
+      "upkeep_month": 270000,
       "jobs": 14,
       "storage_capacity": 10000,
       "old": {
@@ -345,9 +345,9 @@
       }
     },
     "feed_plant": {
-      "build_cost": 26000,
-      "upkeep_month": 116900,
-      "jobs": 14,
+      "build_cost": 25000,
+      "upkeep_month": 76200,
+      "jobs": 10,
       "old": {
         "build_cost": 27040,
         "upkeep_month": 4000,
@@ -409,9 +409,9 @@
       }
     },
     "spinning_mill": {
-      "build_cost": 51000,
-      "upkeep_month": 158400,
-      "jobs": 31,
+      "build_cost": 52000,
+      "upkeep_month": 164500,
+      "jobs": 32,
       "old": {
         "build_cost": 27040,
         "upkeep_month": 4000,
@@ -419,8 +419,8 @@
       }
     },
     "malthouse": {
-      "build_cost": 19000,
-      "upkeep_month": 64200,
+      "build_cost": 22000,
+      "upkeep_month": 61200,
       "jobs": 9,
       "old": {
         "build_cost": 27040,
@@ -429,8 +429,8 @@
       }
     },
     "beverage_plant": {
-      "build_cost": 175000,
-      "upkeep_month": 561600,
+      "build_cost": 273000,
+      "upkeep_month": 477500,
       "jobs": 40,
       "old": {
         "build_cost": 27040,
@@ -439,8 +439,8 @@
       }
     },
     "glass_plant": {
-      "build_cost": 130000,
-      "upkeep_month": 314300,
+      "build_cost": 188000,
+      "upkeep_month": 279400,
       "jobs": 35,
       "old": {
         "build_cost": 40560,
@@ -481,8 +481,8 @@
       }
     },
     "auto_plant": {
-      "build_cost": 5092000,
-      "upkeep_month": 23045000,
+      "build_cost": 20521000,
+      "upkeep_month": 17902000,
       "jobs": 2426,
       "old": {
         "build_cost": 60840,
@@ -491,20 +491,18 @@
       }
     },
     "grocery_store": {
-      "build_cost": 27000,
-      "upkeep_month": 72400,
-      "jobs": 8,
+      "build_cost": 31000,
+      "upkeep_month": 85000,
       "old": {
         "build_cost": 52000,
-        "upkeep_month": 4000,
-        "jobs": 10
+        "upkeep_month": 4000
       }
     },
     "supermarket": {
-      "build_cost": 236000,
-      "upkeep_month": 369300,
-      "jobs": 42,
-      "storage_capacity": 19000,
+      "build_cost": 258000,
+      "upkeep_month": 401100,
+      "jobs": 45,
+      "storage_capacity": 20000,
       "old": {
         "build_cost": 234000,
         "upkeep_month": 9000,
@@ -513,9 +511,9 @@
       }
     },
     "clothing_store": {
-      "build_cost": 649000,
-      "upkeep_month": 1164600,
-      "jobs": 131,
+      "build_cost": 476000,
+      "upkeep_month": 854100,
+      "jobs": 96,
       "old": {
         "build_cost": 104000,
         "upkeep_month": 4000,
@@ -555,8 +553,8 @@
       }
     },
     "car_dealer": {
-      "build_cost": 1843000,
-      "upkeep_month": 6999100,
+      "build_cost": 3146000,
+      "upkeep_month": 6021800,
       "jobs": 788,
       "old": {
         "build_cost": 40560,
@@ -565,53 +563,59 @@
       }
     },
     "warehouse": {
-      "build_cost": 38000,
-      "upkeep_month": 1100,
+      "build_cost": 48000,
+      "upkeep_month": 1400,
       "old": {
         "build_cost": 104000,
         "upkeep_month": 4000
       }
     },
     "office": {
-      "build_cost": 56000,
-      "upkeep_month": 1700,
+      "build_cost": 72000,
+      "upkeep_month": 2200,
       "old": {
         "build_cost": 104000,
         "upkeep_month": 4000
       }
     },
     "housing": {
-      "build_cost": 169000,
-      "upkeep_month": 5100,
+      "build_cost": 216000,
+      "upkeep_month": 6500,
       "old": {
         "build_cost": 234000,
         "upkeep_month": 9000
       }
     },
     "hardware_store": {
-      "build_cost": 27000,
-      "upkeep_month": 72400,
-      "jobs": 8,
+      "build_cost": 31000,
+      "upkeep_month": 85000,
       "storage_capacity": 26000,
       "old": {
         "build_cost": 27040,
         "upkeep_month": 4000,
-        "jobs": 10,
         "storage_capacity": 4000
       }
     }
   },
   "recipes": {
+    "field_grain": {
+      "workers": 5,
+      "old": {
+        "workers": 4
+      }
+    },
     "field_vegetables": {
       "inputs": {},
       "outputs": {
         "vegetables": 40
       },
+      "workers": 5,
       "old": {
         "inputs": {},
         "outputs": {
           "vegetables": 80
-        }
+        },
+        "workers": 4
       }
     },
     "field_sugar_beet": {
@@ -619,11 +623,13 @@
       "outputs": {
         "sugar_beet": 360
       },
+      "workers": 5,
       "old": {
         "inputs": {},
         "outputs": {
           "sugar_beet": 120
-        }
+        },
+        "workers": 4
       }
     },
     "field_flax": {
@@ -631,11 +637,13 @@
       "outputs": {
         "flax": 50
       },
+      "workers": 5,
       "old": {
         "inputs": {},
         "outputs": {
           "flax": 70
-        }
+        },
+        "workers": 4
       }
     },
     "apiary_honey": {
@@ -643,43 +651,37 @@
       "outputs": {
         "honey": 5
       },
+      "workers": 17,
       "old": {
         "inputs": {},
         "outputs": {
           "honey": 12
-        }
+        },
+        "workers": 2
       }
     },
     "mill_flour": {
-      "inputs": {
-        "grain": 100
-      },
-      "outputs": {
-        "flour": 68
-      },
+      "workers": 6,
       "old": {
-        "inputs": {
-          "grain": 100
-        },
-        "outputs": {
-          "flour": 80
-        }
+        "workers": 7
       }
     },
     "bakery_bread": {
       "inputs": {
-        "flour": 68
+        "flour": 80
       },
       "outputs": {
-        "bread": 230
+        "bread": 270
       },
+      "workers": 26,
       "old": {
         "inputs": {
           "flour": 80
         },
         "outputs": {
           "bread": 100
-        }
+        },
+        "workers": 9
       }
     },
     "oil_well_oil": {
@@ -687,11 +689,13 @@
       "outputs": {
         "oil": 10
       },
+      "workers": 113,
       "old": {
         "inputs": {},
         "outputs": {
           "oil": 40
-        }
+        },
+        "workers": 5
       }
     },
     "refinery_fuel": {
@@ -701,13 +705,15 @@
       "outputs": {
         "fuel": 1500
       },
+      "workers": 44,
       "old": {
         "inputs": {
           "oil": 40
         },
         "outputs": {
           "fuel": 300
-        }
+        },
+        "workers": 18
       }
     },
     "refinery_chemicals": {
@@ -717,29 +723,39 @@
       "outputs": {
         "chemicals": 1000
       },
+      "workers": 44,
       "old": {
         "inputs": {
           "oil": 2
         },
         "outputs": {
           "chemicals": 40
-        }
+        },
+        "workers": 12
+      }
+    },
+    "dairy_milk": {
+      "workers": 19,
+      "old": {
+        "workers": 6
       }
     },
     "slaughter_meat": {
       "inputs": {
-        "feed": 120
+        "feed": 143
       },
       "outputs": {
-        "meat": 27
+        "meat": 32
       },
+      "workers": 38,
       "old": {
         "inputs": {
           "feed": 40
         },
         "outputs": {
           "meat": 35
-        }
+        },
+        "workers": 7
       }
     },
     "quarry_sand": {
@@ -747,11 +763,13 @@
       "outputs": {
         "sand": 6000
       },
+      "workers": 17,
       "old": {
         "inputs": {},
         "outputs": {
           "sand": 150
-        }
+        },
+        "workers": 8
       }
     },
     "quarry_stone": {
@@ -759,11 +777,13 @@
       "outputs": {
         "stone": 6000
       },
+      "workers": 17,
       "old": {
         "inputs": {},
         "outputs": {
           "stone": 100
-        }
+        },
+        "workers": 8
       }
     },
     "sawmill_wood": {
@@ -773,13 +793,15 @@
       "outputs": {
         "boards": 600
       },
+      "workers": 75,
       "old": {
         "inputs": {
           "wood": 70
         },
         "outputs": {
           "boards": 50
-        }
+        },
+        "workers": 8
       }
     },
     "cement_plant_cement": {
@@ -791,6 +813,7 @@
       "outputs": {
         "cement": 2000
       },
+      "workers": 53,
       "old": {
         "inputs": {
           "stone": 70,
@@ -799,7 +822,8 @@
         },
         "outputs": {
           "cement": 55
-        }
+        },
+        "workers": 12
       }
     },
     "steel_mill_steel": {
@@ -810,6 +834,7 @@
       "outputs": {
         "steel": 1000
       },
+      "workers": 140,
       "old": {
         "inputs": {
           "iron_ore": 80,
@@ -817,39 +842,44 @@
         },
         "outputs": {
           "steel": 35
-        }
+        },
+        "workers": 18
       }
     },
     "textile_fabric": {
       "inputs": {
-        "yarn": 37
+        "yarn": 38
       },
       "outputs": {
-        "fabric": 35
+        "fabric": 36
       },
+      "workers": 131,
       "old": {
         "inputs": {
           "yarn": 50
         },
         "outputs": {
           "fabric": 65
-        }
+        },
+        "workers": 9
       }
     },
     "textile_clothes": {
       "inputs": {
-        "fabric": 7
+        "fabric": 12
       },
       "outputs": {
-        "clothes": 9
+        "clothes": 11
       },
+      "workers": 131,
       "old": {
         "inputs": {
           "fabric": 40
         },
         "outputs": {
           "clothes": 25
-        }
+        },
+        "workers": 11
       }
     },
     "electronics_plant_electronics": {
@@ -862,6 +892,7 @@
       "outputs": {
         "electronics": 10
       },
+      "workers": 1086,
       "old": {
         "inputs": {
           "steel": 8,
@@ -871,7 +902,8 @@
         },
         "outputs": {
           "electronics": 12
-        }
+        },
+        "workers": 16
       }
     },
     "mine_iron": {
@@ -879,11 +911,13 @@
       "outputs": {
         "iron_ore": 1500
       },
+      "workers": 32,
       "old": {
         "inputs": {},
         "outputs": {
           "iron_ore": 90
-        }
+        },
+        "workers": 10
       }
     },
     "mine_coal": {
@@ -891,11 +925,13 @@
       "outputs": {
         "coal": 800
       },
+      "workers": 32,
       "old": {
         "inputs": {},
         "outputs": {
           "coal": 110
-        }
+        },
+        "workers": 10
       }
     },
     "logging_wood": {
@@ -903,11 +939,13 @@
       "outputs": {
         "wood": 1000
       },
+      "workers": 35,
       "old": {
         "inputs": {},
         "outputs": {
           "wood": 70
-        }
+        },
+        "workers": 8
       }
     },
     "gas_well_gas": {
@@ -915,27 +953,31 @@
       "outputs": {
         "gas": 1000
       },
+      "workers": 14,
       "old": {
         "inputs": {},
         "outputs": {
           "gas": 200
-        }
+        },
+        "workers": 6
       }
     },
     "feed_plant_feed": {
       "inputs": {
-        "grain": 140
+        "grain": 100
       },
       "outputs": {
-        "feed": 200
+        "feed": 143
       },
+      "workers": 10,
       "old": {
         "inputs": {
           "grain": 80
         },
         "outputs": {
           "feed": 70
-        }
+        },
+        "workers": 8
       }
     },
     "sugar_plant_sugar": {
@@ -945,13 +987,15 @@
       "outputs": {
         "sugar": 135
       },
+      "workers": 22,
       "old": {
         "inputs": {
           "sugar_beet": 100
         },
         "outputs": {
           "sugar": 40
-        }
+        },
+        "workers": 10
       }
     },
     "creamery_butter": {
@@ -961,13 +1005,15 @@
       "outputs": {
         "butter": 9
       },
+      "workers": 20,
       "old": {
         "inputs": {
           "milk": 50
         },
         "outputs": {
           "butter": 18
-        }
+        },
+        "workers": 8
       }
     },
     "creamery_cheese": {
@@ -977,13 +1023,15 @@
       "outputs": {
         "cheese": 10
       },
+      "workers": 20,
       "old": {
         "inputs": {
           "milk": 50
         },
         "outputs": {
           "cheese": 12
-        }
+        },
+        "workers": 8
       }
     },
     "creamery_kefir": {
@@ -993,13 +1041,15 @@
       "outputs": {
         "kefir": 90
       },
+      "workers": 20,
       "old": {
         "inputs": {
           "milk": 40
         },
         "outputs": {
           "kefir": 50
-        }
+        },
+        "workers": 6
       }
     },
     "poultry_eggs": {
@@ -1009,13 +1059,15 @@
       "outputs": {
         "eggs": 1500
       },
+      "workers": 41,
       "old": {
         "inputs": {
           "feed": 20
         },
         "outputs": {
           "eggs": 80
-        }
+        },
+        "workers": 6
       }
     },
     "fishery_fish": {
@@ -1023,11 +1075,19 @@
       "outputs": {
         "fish": 20
       },
+      "workers": 28,
       "old": {
         "inputs": {},
         "outputs": {
           "fish": 25
-        }
+        },
+        "workers": 6
+      }
+    },
+    "smokehouse_smoked": {
+      "workers": 32,
+      "old": {
+        "workers": 5
       }
     },
     "spinning_yarn": {
@@ -1035,15 +1095,17 @@
         "flax": 50
       },
       "outputs": {
-        "yarn": 37
+        "yarn": 38
       },
+      "workers": 32,
       "old": {
         "inputs": {
           "flax": 60
         },
         "outputs": {
           "yarn": 45
-        }
+        },
+        "workers": 8
       }
     },
     "malthouse_malt": {
@@ -1053,13 +1115,15 @@
       "outputs": {
         "malt": 80
       },
+      "workers": 9,
       "old": {
         "inputs": {
           "grain": 50
         },
         "outputs": {
           "malt": 40
-        }
+        },
+        "workers": 6
       }
     },
     "beverage_kvass": {
@@ -1070,6 +1134,7 @@
       "outputs": {
         "kvass": 200
       },
+      "workers": 40,
       "old": {
         "inputs": {
           "malt": 30,
@@ -1077,7 +1142,8 @@
         },
         "outputs": {
           "kvass": 80
-        }
+        },
+        "workers": 8
       }
     },
     "beverage_mead": {
@@ -1088,6 +1154,7 @@
       "outputs": {
         "mead": 150
       },
+      "workers": 40,
       "old": {
         "inputs": {
           "honey": 8,
@@ -1095,7 +1162,8 @@
         },
         "outputs": {
           "mead": 20
-        }
+        },
+        "workers": 6
       }
     },
     "glass_plant_glass": {
@@ -1106,6 +1174,7 @@
       "outputs": {
         "glass": 200
       },
+      "workers": 35,
       "old": {
         "inputs": {
           "sand": 80,
@@ -1113,7 +1182,8 @@
         },
         "outputs": {
           "glass": 50
-        }
+        },
+        "workers": 12
       }
     },
     "polymer_plastic": {
@@ -1123,13 +1193,15 @@
       "outputs": {
         "plastic": 970
       },
+      "workers": 325,
       "old": {
         "inputs": {
           "chemicals": 30
         },
         "outputs": {
           "plastic": 35
-        }
+        },
+        "workers": 12
       }
     },
     "furniture_workshop_furniture": {
@@ -1140,6 +1212,7 @@
       "outputs": {
         "furniture": 2
       },
+      "workers": 196,
       "old": {
         "inputs": {
           "boards": 12,
@@ -1147,7 +1220,8 @@
         },
         "outputs": {
           "furniture": 6
-        }
+        },
+        "workers": 10
       }
     },
     "appliance_plant_appliances": {
@@ -1159,6 +1233,7 @@
       "outputs": {
         "appliances": 10
       },
+      "workers": 1564,
       "old": {
         "inputs": {
           "steel": 6,
@@ -1167,7 +1242,8 @@
         },
         "outputs": {
           "appliances": 4
-        }
+        },
+        "workers": 16
       }
     },
     "auto_plant_car": {
@@ -1180,6 +1256,7 @@
       "outputs": {
         "car": 1
       },
+      "workers": 2426,
       "old": {
         "inputs": {
           "steel": 20,
@@ -1189,7 +1266,8 @@
         },
         "outputs": {
           "car": 1
-        }
+        },
+        "workers": 18
       }
     }
   },
