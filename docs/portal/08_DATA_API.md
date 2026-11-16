@@ -13,6 +13,8 @@
 | GET `/` | страница портала |
 | POST `/api/login`, `/api/logout`; GET `/api/me` | вход, выход, текущий пользователь и CSRF |
 | GET `/api/protocol` | текст протокола для ИИ |
+| GET `/api/master-prompt` | мастер-промпт для ИИ-директора (главная страница) |
+| GET `/api/skeleton.zip` | универсальный скелет репозитория |
 | GET/POST `/api/projects` | список и создание проекта (ответ содержит два промпта) |
 | GET `/api/projects/{slug}` | проект, план с промптами, состояние, идеи, старт |
 | GET `/api/projects/{slug}/bootstrap`, `/bootstrap.zip` | промпты и скелет |
