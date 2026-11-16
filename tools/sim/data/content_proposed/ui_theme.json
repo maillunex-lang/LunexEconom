@@ -1,0 +1,18 @@
+{
+  "schema": 1,
+  "release": 2,
+  "packs": [
+    {
+      "name": "ui_theme",
+      "kind": "ui_theme",
+      "version": "2",
+      "size": 3145728,
+      "sha256": "b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2",
+      "url": "https://rikagro.ru/lunexeconom/v2/packs/ui_theme-2.pck",
+      "priority": "required",
+      "dependencies": [],
+      "min_version_code": 1001,
+      "label": "Оформление интерфейса"
+    }
+  ]
+}

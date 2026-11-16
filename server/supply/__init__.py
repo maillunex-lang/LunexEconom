@@ -3,10 +3,12 @@ from pathlib import Path
 from . import core, api
 
 def migrations():
-    return [Path(__file__).resolve().parents[1] / 'migrations' / filename for filename in ('202611152200_supply_core.sql', '202611152210_supply_seller_policy.sql')]
+    return [Path(__file__).resolve().parents[1] / 'migrations' / filename for filename in ('202611152200_supply_core.sql', '202611152210_supply_seller_policy.sql', '202611160830_supply_fuel_failures.sql')]
 
 def register(registry):
     registry.flag('supply_enabled', True)
+    registry.flag('logistics_fuel_required', False)
+    registry.flag('logistics_fuel_autobuy', True)
     registry.flag('supply_transport_rub_per_km_unit_draft', 1, 0, 100000)
     registry.flag('supply_port_city_draft', 'ufa')
     registry.flag('supply_port_price_permille_draft', 1000, 250, 2500)
