@@ -269,3 +269,71 @@ account.delete.confirm | Подтвердить удаление
 account.delete.cancel | Отмена
 account.delete.error | Не удалось запросить удаление. Проверьте пароль и подтверждение.
 account.delete.scheduled | Удаление запланировано. Для отмены войдите в течение 7 суток.
+
+# GDD 30, этап 1. Интерфейс продаж, цен и поставщиков
+caplab.brief | Кратко
+caplab.details | Подробно
+caplab.stock | Склад готовой продукции
+caplab.product | Товар
+caplab.quantity | Запас
+caplab.price | Цена, ₽
+caplab.mode | Режим продажи
+caplab.go.sales | Куда продавать
+caplab.sales.title | Куда продавать
+caplab.sales.private | Только своим
+caplab.sales.public | Для всех
+caplab.sales.mixed | Смешанный
+caplab.sales.invited | По приглашению
+caplab.sales.reserve | Резерв для своих, %
+caplab.sales.invites | Приглашённые: ID владельцев через запятую
+caplab.sales.check | Проверить
+caplab.sales.apply | Применить завтра
+caplab.sales.ready | Проверка пройдена. Изменение вступит в силу завтра
+caplab.sales.saved | Изменение принято. Вступит в силу завтра
+caplab.sales.conflict | Данные изменились. Обновите настройки и повторите
+caplab.sales.pending | Изменение уже запланировано на завтра
+caplab.sales.contracts | Сначала завершите активные договоры
+caplab.sales.invalid | Проверьте цену, резерв и список приглашённых
+caplab.sales.unavailable | Функция скоро будет доступна
+caplab.sales.no.bounds | Сервер пока не сообщил допустимые границы цены
+caplab.sales.no.data | Нет данных о продажах
+caplab.sales.version | Версия настроек: {version}
+caplab.sales.no.permission | Нет прав на изменение продаж
+caplab.sales.error | Не удалось загрузить данные. Повторите попытку
+caplab.sales.mode.row | {product} · {quantity} · {price} · {mode}
+caplab.store.rating | Рейтинг
+caplab.store.stock | Остаток
+caplab.store.price.factor | Цена
+caplab.store.quality.factor | Качество
+caplab.store.brand.factor | Бренд
+caplab.store.no.rating | Рейтинг пока недоступен
+caplab.store.no.stock | Нет данных об остатке
+caplab.supply.choose | Выбор поставщика
+caplab.supply.offers | Предложения поставщиков
+caplab.supply.empty | Нет предложений
+caplab.supply.unavailable | Предложения пока недоступны
+caplab.supply.ai | Управляется ИИ
+caplab.supply.market | Рынок
+caplab.supply.port | Порт
+caplab.supply.enterprise | Предприятие №{id}
+caplab.supply.supplier | Поставщик
+caplab.supply.quality | Качество
+caplab.supply.reliability | Надёжность
+caplab.supply.distance | Расстояние
+caplab.supply.score | Оценка
+caplab.supply.select | Выбрать
+caplab.supply.map | Показать на карте
+caplab.supply.map.later | Просмотр на карте появится позже
+caplab.supply.selected | Поставщик добавлен в слот {slot}
+caplab.supply.full | Все три слота заняты
+caplab.supply.no.inputs | Нет входных товаров
+caplab.supply.no.permission | Нет прав на выбор поставщика
+caplab.supply.row | {supplier} · {price} · {quality} · {reliability}
+caplab.common.loading | Загрузка…
+caplab.common.empty | Пока нет данных
+caplab.common.error | Не удалось загрузить данные. Повторите попытку
+caplab.common.permission | Нет прав для просмотра данных
+caplab.common.retry | Повторить
+caplab.common.back | Назад
+caplab.common.save | Сохранить
+caplab.common.saved | Сохранено

@@ -5,6 +5,12 @@ const Catalog = preload("res://enterprises/catalog.gd")
 const Words = preload("res://enterprises/strings.gd")
 const Format = preload("res://i18n/format.gd")
 const Forest = preload("res://theme/forest_glass.gd")
+const Strings = preload("res://i18n/strings.gd")
+const Components = preload("res://ui/components.gd")
+const Columns = preload("res://ui/two_columns.gd")
+var _columns: Control
+var _detail_panel: VBoxContainer
+var _stock_data: Dictionary = {}
 
 var api: Node
 var catalog: Node
@@ -48,9 +54,14 @@ func _ready() -> void:
     var scroll := ScrollContainer.new()
     scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
     root_box.add_child(scroll)
-    rows = VBoxContainer.new()
-    rows.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-    scroll.add_child(rows)
+    _columns = Columns.new()
+    scroll.add_child(_columns)
+    _columns.custom_minimum_size = Vector2(0, 300)
+    rows = _columns.list_area
+    _detail_panel = VBoxContainer.new()
+    _columns.detail_area.add_child(_detail_panel)
+    _columns.back_button.text = Strings.get_text("caplab.common.back")
+    _columns.refresh_size(get_viewport_rect().size)
     message = Label.new()
     message.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
     root_box.add_child(message)
@@ -66,17 +77,20 @@ func open(adapter: Node, id: int) -> void:
 func _load() -> void:
     row_controls.clear()
     save_button.disabled = false
+    message.text = Strings.get_text("caplab.common.loading")
     for child in rows.get_children():
         child.queue_free()
     var detail: Dictionary = await api.detail(enterprise_id)
     if int(detail.get("code", 0)) != 200:
         _fail(detail)
+        save_button.disabled = true
         return
     var data: Dictionary = detail.get("data", {})
     city = str(data.get("city", data.get("city_id", "ufa")))
     var cells_response: Dictionary = await api.cells(enterprise_id)
     if int(cells_response.get("code", 0)) != 200:
         _fail(cells_response)
+        save_button.disabled = true
         return
     var payload: Dictionary = cells_response.get("data", {})
     var capacity := int(payload.get("capacity", payload.get("retail_cells", 0)))
@@ -88,11 +102,18 @@ func _load() -> void:
             var good_id := str(item.get("id", "") if item is Dictionary else item)
             return good_id in server_allowed)
     var current: Array = payload.get("cells", [])
+    _stock_data = data.get("inventory", {}) if data.get("inventory", {}) is Dictionary else {}
+    for extra in _detail_panel.get_children():
+        if extra is Label:
+            extra.queue_free()
     if capacity <= 0 or allowed.is_empty():
+        message.text = Strings.get_text("caplab.common.empty")
         _label(Words.get_text("store.no_cells"))
+        save_button.disabled = true
         return
     for cell_index in range(capacity):
-        _add_cell(cell_index, allowed, current)
+        await _add_cell(cell_index, allowed, current)
+    message.text = ""
 
 func _add_cell(index: int, allowed: Array, current: Array) -> void:
     var panel := PanelContainer.new()
@@ -104,7 +125,11 @@ func _add_cell(index: int, allowed: Array, current: Array) -> void:
     heading.text = Words.get_text("store.cell", {"index": index + 1})
     box.add_child(heading)
     var fields := HBoxContainer.new()
-    box.add_child(fields)
+    var horizontal := ScrollContainer.new()
+    horizontal.custom_minimum_size = Vector2(0, 72)
+    horizontal.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_AUTO
+    box.add_child(horizontal)
+    horizontal.add_child(fields)
     var product := OptionButton.new()
     product.custom_minimum_size = Vector2(220, 48)
     for good in allowed:
@@ -136,9 +161,14 @@ func _add_cell(index: int, allowed: Array, current: Array) -> void:
     fields.add_child(price)
     fields.add_child(min_stock)
     fields.add_child(source)
-    var competitor := Label.new()
-    competitor.text = Words.get_text("store.competitors.loading")
-    box.add_child(competitor)
+    var rating_bar := ProgressBar.new()
+    rating_bar.custom_minimum_size = Vector2(0,48)
+    rating_bar.max_value = 100
+    rating_bar.show_percentage = false
+    box.add_child(rating_bar)
+    var rating_text := Label.new()
+    rating_text.text = Strings.get_text("caplab.store.no.rating")
+    box.add_child(rating_text)
     var sales_label := Label.new()
     sales_label.text = Words.get_text("store.sales.loading")
     box.add_child(sales_label)
@@ -151,6 +181,9 @@ func _add_cell(index: int, allowed: Array, current: Array) -> void:
     var initial_id := str(selected.get("product_id", ""))
     if initial_id.is_empty() and product.item_count > 0:
         initial_id = str(product.get_item_metadata(0))
+    var stock_label := Label.new()
+    stock_label.text = Strings.get_text("caplab.store.stock") + ": " + Format.number(_stock_data[initial_id].get("quantity",0)) if _stock_data.has(initial_id) and _stock_data[initial_id] is Dictionary else Strings.get_text("caplab.store.no.stock")
+    box.add_child(stock_label)
     var ref_price := int(catalog.product(initial_id).get("reference_price", 0))
     price.value = int(selected.get("price", ref_price if ref_price > 0 else 1))
     var reference := Label.new()
@@ -163,8 +196,12 @@ func _add_cell(index: int, allowed: Array, current: Array) -> void:
         reference.text = Words.get_text("store.reference", {"price": Format.money(new_price)}) if new_price > 0 else ""
         if new_price > 0 and selected.is_empty():
             price.value = new_price)
+    if selected.has("min_price") and selected.has("max_price"):
+        price.min_value = maxf(1.0,float(selected["min_price"]))
+        price.max_value = maxf(price.min_value,float(selected["max_price"]))
+        price.value = clampf(price.value,price.min_value,price.max_value)
     min_stock.value = int(selected.get("min_stock", 0))
-    _set_source(source, int(selected.get("supply_link_slot", 0)))
+    _set_source(source, int(selected.get("supply_link_slot") if selected.get("supply_link_slot") != null else 0))
     row_controls.append({"index": index, "product": product, "price": price, "min_stock": min_stock, "source": source})
     var good := initial_id
     if good.is_empty() and product.item_count > 0:
@@ -173,13 +210,15 @@ func _add_cell(index: int, allowed: Array, current: Array) -> void:
         var rating: Dictionary = await api.ratings(city, good)
         if int(rating.get("code", 0)) == 200:
             var items: Array = rating.get("data", {}).get("items", rating.get("data", {}).get("ratings", []))
-            var values: Array[int] = []
             for item in items:
-                values.append(int(item.get("price", 0)))
-            var hint := Words.get_text("store.competitors.none") if values.is_empty() else Words.get_text("store.competitors", {"price": Format.money(_average(values))})
-            competitor.text = hint
-        else:
-            competitor.text = Words.get_text("store.competitors.unavailable")
+                if int(item.get("enterprise_id",-1)) == enterprise_id and int(item.get("cell_index",-1)) == index:
+                    if item.has("rating"):
+                        rating_bar.value = clampf(float(item["rating"]),0,100)
+                        rating_text.text = Strings.get_text("caplab.store.rating") + ": " + str(item["rating"])
+                    break
+            for contribution in ["price_factor","quality_factor","brand_factor"]:
+                if rating.get("data",{}).has(contribution):
+                    _rating_part(contribution, rating.get("data",{})[contribution])
     var sales: Dictionary = await api.sales(enterprise_id, 0, 1)
     if int(sales.get("code", 0)) == 200:
         var sale_items: Array = sales.get("data", {}).get("sales", sales.get("data", {}).get("items", []))
@@ -229,7 +268,7 @@ func _save() -> void:
     save_button.disabled = false
 
 func _fail(response: Dictionary) -> void:
-    message.text = Words.error(response)
+    message.text = Strings.get_text("caplab.common.permission") if int(response.get("code",0)) in [401,403] else Strings.get_text("caplab.common.error")
 
 func _label(value: String) -> void:
     var label := Label.new()
@@ -239,3 +278,12 @@ func _label(value: String) -> void:
 
 func resize_ui(view_size: Vector2) -> void:
     Forest.apply_touch(self, view_size)
+    if _columns != null:
+        _columns.refresh_size(view_size)
+
+func _rating_part(key: String, value: Variant) -> void:
+    var label := Label.new()
+    var name := "caplab.store.price.factor" if key == "price_factor" else "caplab.store.quality.factor" if key == "quality_factor" else "caplab.store.brand.factor"
+    label.text = Strings.get_text(name) + ": " + str(value)
+    label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+    _detail_panel.add_child(label)

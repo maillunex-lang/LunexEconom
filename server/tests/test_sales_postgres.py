@@ -195,6 +195,21 @@ class SalesPostgresTests(unittest.TestCase):
         with patch('server.sales.api.authenticate',return_value=mine):
             self.assertEqual(api.policy_get({},ctx)[0],404)
 
+    def test_policy_get_exposes_price_limits(self):
+        mine=self.owner();eid=self.enterprise(mine,'field',recipe='field_grain')
+        ctx=self.ctx(mine,eid)
+        with patch('server.sales.api.authenticate',return_value=mine):
+            status,data=api.policy_get({},ctx)
+        self.assertEqual(status,200,data)
+        lim=data['price_limits']
+        ref=enterprises.catalog().index['products']['grain']['reference_price']
+        self.assertEqual(lim['reference_price'],ref)
+        self.assertGreaterEqual(lim['min_price'],1)
+        self.assertLessEqual(lim['min_price'],lim['max_price'])
+        for price in (lim['min_price'],lim['max_price']):
+            self.assertEqual(price%lim['step_rub'],0)
+            self.assertTrue(api.price_valid(price,ref,self.flags['sales_price_min_bp'],self.flags['sales_price_max_bp'],lim['step_rub']))
+
     def test_reliability_neutral(self):
         mine=self.owner();eid=self.enterprise(mine,'field',recipe='field_grain')
         self.assertEqual(core.reliability(self.conn,eid,'grain',0),700)

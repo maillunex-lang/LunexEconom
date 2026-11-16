@@ -14,6 +14,7 @@ const EnterprisesScreen = preload("res://screens/enterprises.tscn")
 const BuildScreen = preload("res://screens/build.tscn")
 const SupplyScreen = preload("res://screens/supply.tscn")
 const StoreScreen = preload("res://screens/store.tscn")
+const SalesPolicyScreen = preload("res://screens/sales_policy.tscn")
 const MoreScreen = preload("res://screens/more.tscn")
 const ModelViewerScreen = preload("res://screens/model_viewer.tscn")
 const FinanceScreen = preload("res://screens/finance.tscn")
@@ -37,6 +38,7 @@ var enterprises_screen: Control
 var build_screen: Control
 var supply_screen: Control
 var store_screen: Control
+var sales_policy_screen: Control
 var more_screen: Control
 var model_viewer_screen: Control
 var finance_screen: Control
@@ -86,6 +88,7 @@ func _ready() -> void:
     build_screen = BuildScreen.instantiate()
     supply_screen = SupplyScreen.instantiate()
     store_screen = StoreScreen.instantiate()
+    sales_policy_screen = SalesPolicyScreen.instantiate()
     more_screen = MoreScreen.instantiate()
     model_viewer_screen = ModelViewerScreen.instantiate()
     finance_screen = FinanceScreen.instantiate()
@@ -97,6 +100,7 @@ func _ready() -> void:
     router.register_screen("build",build_screen)
     router.register_screen("supply",supply_screen)
     router.register_screen("store",store_screen)
+    router.register_screen("sales_policy",sales_policy_screen)
     router.register_screen("more",more_screen)
     router.register_screen("model_viewer",model_viewer_screen)
     router.register_screen("finance",finance_screen)
@@ -120,9 +124,11 @@ func _ready() -> void:
     enterprises_screen.wallet_changed.connect(_load_hq)
     enterprises_screen.supply_requested.connect(_on_supply_requested)
     enterprises_screen.store_requested.connect(_on_store_requested)
+    enterprises_screen.sales_policy_requested.connect(_on_sales_policy_requested)
     build_screen.back_requested.connect(func(): router.back())
     supply_screen.back_requested.connect(func(): router.back())
     store_screen.back_requested.connect(func(): router.back())
+    sales_policy_screen.back_requested.connect(func(): router.back())
     more_screen.navigate.connect(_navigate)
     more_screen.logout_requested.connect(_logout)
     navigation_bar = NavBar.new()
@@ -219,6 +225,10 @@ func _on_supply_requested(id: int) -> void:
     router.go("supply")
     supply_screen.open(_enterprise_transport(), id)
 
+func _on_sales_policy_requested(id: int, product: String) -> void:
+    router.go("sales_policy")
+    sales_policy_screen.open(_enterprise_transport(), id, product)
+
 func _on_store_requested(id: int) -> void:
     router.go("store")
     store_screen.open(_enterprise_transport(), id)
@@ -285,6 +295,7 @@ func _on_viewport_resized() -> void:
     build_screen.resize_ui(size_now)
     supply_screen.resize_ui(size_now)
     store_screen.resize_ui(size_now)
+    sales_policy_screen.resize_ui(size_now)
     update_screen.resize_panel(size_now)
     if tutorial_guide != null:
         tutorial_guide.set_anchors_and_offsets_preset(Control.PRESET_TOP_RIGHT)

@@ -3,6 +3,13 @@ signal back_requested
 signal wallet_changed
 signal supply_requested(enterprise_id: int)
 signal store_requested(enterprise_id: int)
+signal sales_policy_requested(enterprise_id: int, product: String)
+const Strings = preload("res://i18n/strings.gd")
+const Components = preload("res://ui/components.gd")
+const ChainApi = preload("res://enterprises/chain_api.gd")
+var detail_mode := false
+var _detail_toggle: Button
+var _inventory_panel: VBoxContainer
 const Service = preload("res://enterprises/api.gd")
 const Catalog = preload("res://enterprises/catalog.gd")
 const Words = preload("res://enterprises/strings.gd")
@@ -111,7 +118,7 @@ func refresh_list() -> void:
         var progress := mini(100, stage*25)
         var stage_text := Words.get_text("construction", {"stage":Words.get_text("stage."+str(entry.get("stage", "foundation"))),"progress":progress}) if stage < 4 else Words.get_text("running" if entry.get("running", false) else "stopped")
         button.text = "%s  |  %s  |  %s" % [catalog.building_name(str(entry.get("building_id", ""))),stage_text,Words.get_text("load",{"percent":int(entry.get("load_bp",0))/100})]
-        button.pressed.connect(show_detail.bind(int(id)))
+        button.pressed.connect(func(): detail_mode = false; show_detail(int(id)))
         body.add_child(button)
 
 func show_detail(id: int) -> void:
@@ -125,28 +132,58 @@ func show_detail(id: int) -> void:
     message.text = ""
     var list_button := Button.new()
     list_button.text = Words.get_text("title")
-    list_button.pressed.connect(func(): current_id = -1; refresh_list())
+    list_button.pressed.connect(func(): current_id = -1; detail_mode = false; refresh_list())
     body.add_child(list_button)
     _label(catalog.building_name(str(current.get("building_id", ""))))
     var stage := int(current.get("stage_index", 0))
     _label(Words.get_text("construction", {"stage":Words.get_text("stage."+str(current.get("stage", "foundation"))),"progress":mini(100,stage*25)}) if stage < 4 else Words.get_text("running" if current.get("running",false) else "stopped"))
+    var mode_button := Components.button("caplab.details" if not detail_mode else "caplab.brief", "secondary")
+    mode_button.custom_minimum_size = Vector2(150,48)
+    mode_button.name = "DetailModeToggle"
+    mode_button.pressed.connect(func():
+        detail_mode = not detail_mode
+        show_detail(current_id))
+    body.add_child(mode_button)
+    _detail_toggle = mode_button
     _render_materials(current.get("materials_required", null))
-    _label(Words.get_text("staff",{"percent":int(current.get("staffing_bp",0))/100}))
-    _label(Words.get_text("load",{"percent":int(current.get("load_bp",0))/100}))
-    _label(Words.get_text("wear",{"wear":current.get("wear",0)}))
-    _label(Words.get_text("salary",{"amount":Format.money(current.get("salary", current.get("salary_month", 0)))}))
-    _label(Words.get_text("upkeep",{"amount":Format.money(current.get("upkeep", current.get("upkeep_month", 0)))}))
+    if detail_mode and current.has("staffing_bp"):
+        _label(Words.get_text("staff",{"percent":int(current.get("staffing_bp",0))/100}))
+    if detail_mode and current.has("load_bp"):
+        _label(Words.get_text("load",{"percent":int(current.get("load_bp",0))/100}))
+    if detail_mode and current.has("wear"):
+        _label(Words.get_text("wear",{"wear":current.get("wear",0)}))
+    if detail_mode and (current.has("salary") or current.has("salary_month")):
+        _label(Words.get_text("salary",{"amount":Format.money(current.get("salary", current.get("salary_month", 0)))}))
+    if detail_mode and (current.has("upkeep") or current.has("upkeep_month")):
+        _label(Words.get_text("upkeep",{"amount":Format.money(current.get("upkeep", current.get("upkeep_month", 0)))}))
     var idle_reason := str(current.get("idle_reason", current.get("stop_reason", "")))
     if not idle_reason.is_empty():
         _label(Words.get_text("idle_reason",{"reason":Words.get_text("idle."+idle_reason)}))
-    _label(Words.get_text("inventory"))
+    _label(Strings.get_text("caplab.stock") if str(catalog.building(str(current.get("building_id", ""))).get("role", "")) != "retail" else Words.get_text("inventory"))
     var inventory: Dictionary = current.get("inventory", {})
     if inventory.is_empty():
         _label(Words.get_text("inventory.empty"))
     for product in inventory:
         var stock: Dictionary = inventory[product]
         var product_name: String = catalog.product_name(str(product))
-        _label("%s: %s" % [product_name,Words.get_text("quantity",{"quantity":stock.get("quantity",0),"quality":stock.get("quality",0)})])
+        var line := HBoxContainer.new()
+        body.add_child(line)
+        var stock_label := Label.new()
+        stock_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+        stock_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+        var policy: Dictionary = stock.get("sales_policy", {}) if stock.get("sales_policy", {}) is Dictionary else {}
+        var mode := str(policy.get("mode", stock.get("sales_mode", "")))
+        var mode_label := Strings.get_text("caplab.sales." + mode) if mode in ["private","public","mixed","invited"] else ""
+        stock_label.text = Strings.get_text("caplab.sales.mode.row", {
+            "product":product_name, "quantity":Format.number(stock.get("quantity",0)),
+            "price":Format.money(policy.get("price",stock.get("price",0))) if policy.has("price") or stock.has("price") else "",
+            "mode":mode_label})
+        line.add_child(stock_label)
+        if str(catalog.building(str(current.get("building_id", ""))).get("role", "")) != "retail":
+            var policy_button := Components.button("caplab.go.sales", "secondary")
+            policy_button.custom_minimum_size = Vector2(170,48)
+            line.add_child(policy_button)
+            policy_button.pressed.connect(func(): sales_policy_requested.emit(current_id,str(product)))
     running_toggle = CheckButton.new()
     running_toggle.text = Words.get_text("running")
     running_toggle.button_pressed = bool(current.get("running", false))
@@ -187,15 +224,16 @@ func show_detail(id: int) -> void:
         store_button.custom_minimum_size = Vector2(0, 48)
         store_button.pressed.connect(func(): store_requested.emit(current_id))
         chain_actions.add_child(store_button)
-    _label(Words.get_text("report"))
-    var report: Dictionary = await service.report(id)
-    if int(report.get("code", 0)) == 200:
+    if detail_mode:
+        _label(Words.get_text("report"))
+    var report: Dictionary = await service.report(id) if detail_mode else {}
+    if detail_mode and int(report.get("code", 0)) == 200:
         var reports: Array = report.get("data", {}).get("reports", [])
         if reports.is_empty():
             _label(Words.get_text("report.empty"))
         for item in reports:
             _label(Words.get_text("report.row",{"month":item.get("month_index",0),"revenue":Format.money(item.get("revenue",0)),"expenses":Format.money(item.get("expenses",0)),"profit":Format.money(item.get("profit",0))}))
-    else:
+    elif detail_mode:
         _label(Words.error(report))
     var sell_button := Button.new()
     sell_button.text = Words.get_text("sell")
