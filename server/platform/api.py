@@ -7,7 +7,7 @@ from uuid import uuid4
 from .security import hash_password, verify_password, new_token, token_hash
 
 USERNAME = re.compile(r'^[A-Za-z0-9_]{3,24}$')
-EMAIL = re.compile(r'^[A-Za-z0-9.!#$%&\'*+/=?^_`{|}~-]+@[A-Za-z0-9](?:[A-Za-z0-9.-]*[A-Za-z0-9])?\.[A-Za-z]{2,63}$')
+EMAIL = re.compile(r'^[A-Za-z0-9.!#$%&\'*+/=?^_`{|}~-]+@[A-Za-z0-9](?:[A-Za-z0-9.-]*[A-Za-z0-9]*)?\.[A-Za-z]{2,63}$')
 STARTED = time.monotonic()
 
 
@@ -93,9 +93,10 @@ def register(body, ctx):
         return 201, {'id':row[0],'username':username,'email':email,'role':'player'}
 
 
-def _tokens(conn,account_id):
+def _tokens(conn,account_id,family_id=None):
     access,refresh = new_token(),new_token()
-    conn.execute("INSERT INTO sessions(token_hash,refresh_hash,account_id,expires_at,refresh_expires_at) VALUES(%s,%s,%s,now()+interval '30 minutes',now()+interval '30 days')", (token_hash(access),token_hash(refresh),account_id))
+    family_id = family_id or uuid4()
+    conn.execute("INSERT INTO sessions(token_hash,refresh_hash,account_id,expires_at,refresh_expires_at,refresh_family_id) VALUES(%s,%s,%s,now()+interval '30 minutes',now()+interval '30 days',%s)", (token_hash(access),token_hash(refresh),account_id,family_id))
     return access,refresh
 
 
@@ -119,14 +120,20 @@ def refresh(body, ctx):
     if not isinstance(value,str) or len(value)>256 or len(value)<30:
         return 401, {'error':'invalid_refresh'}
     with ctx['conn'].transaction():
-        row = ctx['conn'].execute('SELECT s.account_id,s.refresh_expires_at,s.revoked_at,a.is_blocked,a.role FROM sessions s JOIN accounts a ON a.id=s.account_id WHERE s.refresh_hash=%s FOR UPDATE OF s', (token_hash(value),)).fetchone()
-        if not row or row[2] or row[3] or row[1] is None:
+        row = ctx['conn'].execute('SELECT s.account_id,s.refresh_expires_at,s.revoked_at,a.is_blocked,a.role,s.refresh_family_id FROM sessions s JOIN accounts a ON a.id=s.account_id WHERE s.refresh_hash=%s FOR UPDATE OF s', (token_hash(value),)).fetchone()
+        if not row or row[3] or row[1] is None:
+            return 401, {'error':'invalid_refresh'}
+        if row[2] is not None:
+            # Reuse of a rotated refresh credential invalidates the entire
+            # session family, not independent sign-ins on the same account.
+            if row[5] is not None:
+                ctx['conn'].execute('UPDATE sessions SET revoked_at=now() WHERE refresh_family_id=%s AND revoked_at IS NULL', (row[5],))
             return 401, {'error':'invalid_refresh'}
         valid = ctx['conn'].execute('SELECT %s>now()', (row[1],)).fetchone()[0]
         if not valid:
             return 401, {'error':'refresh_expired'}
         ctx['conn'].execute('UPDATE sessions SET revoked_at=now() WHERE refresh_hash=%s', (token_hash(value),))
-        access,new_refresh = _tokens(ctx['conn'],row[0])
+        access,new_refresh = _tokens(ctx['conn'],row[0],row[5])
     return 200, {'token':access,'access_token':access,'refresh_token':new_refresh,'expires_in':1800,'role':row[4]}
 
 
