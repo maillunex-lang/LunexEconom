@@ -1,0 +1,50 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1920" height="1080" viewBox="0 0 1920 1080">
+<rect width="1920" height="1080" fill="#0A201B"/>
+<rect x="0" y="0" width="1920" height="80" rx="0" fill="#173A30"/>
+<text x="40" y="50" font-family="sans-serif" font-size="22" fill="#EEF5E8" text-anchor="start">Реклама и бренд</text>
+<text x="1500" y="50" font-family="sans-serif" font-size="16" fill="#B7EFA5" text-anchor="start">Баланс: 300 000 ₽ · Год 2027 · Месяц 2 · День 7</text>
+<rect x="0" y="980" width="1920" height="100" rx="0" fill="#22483B"/>
+<text x="200" y="1040" font-family="sans-serif" font-size="15" fill="#EEF5E8" text-anchor="middle">Штаб</text>
+<text x="560" y="1040" font-family="sans-serif" font-size="15" fill="#EEF5E8" text-anchor="middle">Карта</text>
+<text x="920" y="1040" font-family="sans-serif" font-size="15" fill="#EEF5E8" text-anchor="middle">Предприятия</text>
+<text x="1280" y="1040" font-family="sans-serif" font-size="15" fill="#B7EFA5" text-anchor="middle">Финансы</text>
+<text x="1640" y="1040" font-family="sans-serif" font-size="15" fill="#EEF5E8" text-anchor="middle">Ещё</text>
+<rect x="40" y="110" width="900" height="840" rx="18" fill="#173A30"/>
+<text x="64" y="150" font-family="sans-serif" font-size="20" fill="#B7EFA5" text-anchor="start">Каналы рекламы</text>
+<rect x="64" y="180" width="852" height="130" rx="14" fill="#22483B"/>
+<text x="88" y="220" font-family="sans-serif" font-size="18" fill="#EEF5E8" text-anchor="start">Местная пресса</text>
+<text x="88" y="256" font-family="sans-serif" font-size="15" fill="#A1B9AD" text-anchor="start">30 000 ₽/мес · охват 12 %</text>
+<rect x="700" y="210" width="190" height="56" rx="12" fill="#B7EFA5"/>
+<text x="795" y="244" font-family="sans-serif" font-size="16" fill="#0A201B" text-anchor="middle">Включить</text>
+<rect x="64" y="330" width="852" height="130" rx="14" fill="#22483B"/>
+<text x="88" y="370" font-family="sans-serif" font-size="18" fill="#EEF5E8" text-anchor="start">Радио города</text>
+<text x="88" y="406" font-family="sans-serif" font-size="15" fill="#A1B9AD" text-anchor="start">60 000 ₽/мес · охват 25 %</text>
+<rect x="700" y="360" width="190" height="56" rx="12" fill="#22483B" stroke="#2E5A4B" stroke-width="2"/>
+<text x="795" y="394" font-family="sans-serif" font-size="16" fill="#EEF5E8" text-anchor="middle">Выключено</text>
+<rect x="64" y="480" width="852" height="130" rx="14" fill="#22483B"/>
+<text x="88" y="520" font-family="sans-serif" font-size="18" fill="#EEF5E8" text-anchor="start">Реклама в интернете</text>
+<text x="88" y="556" font-family="sans-serif" font-size="15" fill="#A1B9AD" text-anchor="start">90 000 ₽/мес · охват 35 %</text>
+<rect x="700" y="510" width="190" height="56" rx="12" fill="#B7EFA5"/>
+<text x="795" y="544" font-family="sans-serif" font-size="16" fill="#0A201B" text-anchor="middle">Включить</text>
+<rect x="64" y="630" width="852" height="130" rx="14" fill="#22483B"/>
+<text x="88" y="670" font-family="sans-serif" font-size="18" fill="#EEF5E8" text-anchor="start">Билборды у магазина</text>
+<text x="88" y="706" font-family="sans-serif" font-size="15" fill="#A1B9AD" text-anchor="start">45 000 ₽/мес · охват 18 %</text>
+<rect x="700" y="660" width="190" height="56" rx="12" fill="#22483B" stroke="#2E5A4B" stroke-width="2"/>
+<text x="795" y="694" font-family="sans-serif" font-size="16" fill="#EEF5E8" text-anchor="middle">Выключено</text>
+<rect x="960" y="110" width="920" height="420" rx="18" fill="#173A30"/>
+<text x="984" y="150" font-family="sans-serif" font-size="20" fill="#B7EFA5" text-anchor="start">Бренд: Хлеб батон</text>
+<rect x="984" y="190" width="600" height="18" rx="9" fill="#0A201B"/>
+<rect x="984" y="190" width="228" height="18" rx="9" fill="#F2C14E"/>
+<text x="984" y="182" font-family="sans-serif" font-size="14" fill="#A1B9AD" text-anchor="start">Известность бренда</text>
+<rect x="984" y="260" width="600" height="18" rx="9" fill="#0A201B"/>
+<rect x="984" y="260" width="372" height="18" rx="9" fill="#7BD88F"/>
+<text x="984" y="252" font-family="sans-serif" font-size="14" fill="#A1B9AD" text-anchor="start">Лояльность</text>
+<text x="984" y="340" font-family="sans-serif" font-size="16" fill="#EEF5E8" text-anchor="start">Рейтинг товара = цена + качество + бренд</text>
+<text x="984" y="380" font-family="sans-serif" font-size="15" fill="#A1B9AD" text-anchor="start">Бренд сейчас даёт +4 пункта к рейтингу из 100</text>
+<rect x="960" y="550" width="920" height="400" rx="18" fill="#173A30"/>
+<text x="984" y="590" font-family="sans-serif" font-size="20" fill="#B7EFA5" text-anchor="start">Бюджет и эффект</text>
+<text x="984" y="630" font-family="sans-serif" font-size="16" fill="#EEF5E8" text-anchor="start">Бюджет: 135 000 ₽/мес   Ожидаемый рост бренда: +2 за месяц</text>
+<text x="984" y="680" font-family="sans-serif" font-size="15" fill="#A1B9AD" text-anchor="start">Стоимость растёт с числом городов и населением</text>
+<rect x="984" y="850" width="320" height="56" rx="12" fill="#B7EFA5"/>
+<text x="1144" y="884" font-family="sans-serif" font-size="16" fill="#0A201B" text-anchor="middle">Применить бюджет</text>
+</svg>

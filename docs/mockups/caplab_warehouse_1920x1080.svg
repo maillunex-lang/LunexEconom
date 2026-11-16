@@ -1,0 +1,46 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1920" height="1080" viewBox="0 0 1920 1080">
+<rect width="1920" height="1080" fill="#0A201B"/>
+<rect x="0" y="0" width="1920" height="80" rx="0" fill="#173A30"/>
+<text x="40" y="50" font-family="sans-serif" font-size="22" fill="#EEF5E8" text-anchor="start">Склад · Уфа (центральный)</text>
+<text x="1500" y="50" font-family="sans-serif" font-size="16" fill="#B7EFA5" text-anchor="start">Баланс: 300 000 ₽ · Год 2027 · Месяц 2 · День 7</text>
+<rect x="0" y="980" width="1920" height="100" rx="0" fill="#22483B"/>
+<text x="200" y="1040" font-family="sans-serif" font-size="15" fill="#EEF5E8" text-anchor="middle">Штаб</text>
+<text x="560" y="1040" font-family="sans-serif" font-size="15" fill="#EEF5E8" text-anchor="middle">Карта</text>
+<text x="920" y="1040" font-family="sans-serif" font-size="15" fill="#B7EFA5" text-anchor="middle">Предприятия</text>
+<text x="1280" y="1040" font-family="sans-serif" font-size="15" fill="#EEF5E8" text-anchor="middle">Финансы</text>
+<text x="1640" y="1040" font-family="sans-serif" font-size="15" fill="#EEF5E8" text-anchor="middle">Ещё</text>
+<rect x="40" y="110" width="1180" height="840" rx="18" fill="#173A30"/>
+<text x="64" y="150" font-family="sans-serif" font-size="20" fill="#B7EFA5" text-anchor="start">Запасы</text>
+<rect x="64" y="190" width="600" height="18" rx="9" fill="#0A201B"/>
+<rect x="64" y="190" width="408" height="18" rx="9" fill="#F2C14E"/>
+<text x="64" y="182" font-family="sans-serif" font-size="14" fill="#A1B9AD" text-anchor="start">Заполнение: 3 400 из 5 000 м³</text>
+<text x="64" y="250" font-family="sans-serif" font-size="14" fill="#A1B9AD" text-anchor="start">Товар</text>
+<text x="384" y="250" font-family="sans-serif" font-size="14" fill="#A1B9AD" text-anchor="start">Количество</text>
+<text x="584" y="250" font-family="sans-serif" font-size="14" fill="#A1B9AD" text-anchor="start">Качество</text>
+<text x="744" y="250" font-family="sans-serif" font-size="14" fill="#A1B9AD" text-anchor="start">Срок хранения</text>
+<text x="64" y="300" font-family="sans-serif" font-size="16" fill="#EEF5E8" text-anchor="start">Зерно</text>
+<text x="384" y="300" font-family="sans-serif" font-size="16" fill="#EEF5E8" text-anchor="start">1 200 кг</text>
+<text x="584" y="300" font-family="sans-serif" font-size="16" fill="#EEF5E8" text-anchor="start">70</text>
+<text x="744" y="300" font-family="sans-serif" font-size="16" fill="#EEF5E8" text-anchor="start">180 дн.</text>
+<text x="64" y="356" font-family="sans-serif" font-size="16" fill="#F2C14E" text-anchor="start">Молоко</text>
+<text x="384" y="356" font-family="sans-serif" font-size="16" fill="#F2C14E" text-anchor="start">820 л</text>
+<text x="584" y="356" font-family="sans-serif" font-size="16" fill="#F2C14E" text-anchor="start">78</text>
+<text x="744" y="356" font-family="sans-serif" font-size="16" fill="#F2C14E" text-anchor="start">6 дн.</text>
+<text x="64" y="412" font-family="sans-serif" font-size="16" fill="#EEF5E8" text-anchor="start">Бутылка</text>
+<text x="384" y="412" font-family="sans-serif" font-size="16" fill="#EEF5E8" text-anchor="start">90 шт</text>
+<text x="584" y="412" font-family="sans-serif" font-size="16" fill="#EEF5E8" text-anchor="start">60</text>
+<text x="744" y="412" font-family="sans-serif" font-size="16" fill="#EEF5E8" text-anchor="start">—</text>
+<text x="64" y="468" font-family="sans-serif" font-size="16" fill="#EEF5E8" text-anchor="start">Сахар</text>
+<text x="384" y="468" font-family="sans-serif" font-size="16" fill="#EEF5E8" text-anchor="start">400 кг</text>
+<text x="584" y="468" font-family="sans-serif" font-size="16" fill="#EEF5E8" text-anchor="start">65</text>
+<text x="744" y="468" font-family="sans-serif" font-size="16" fill="#EEF5E8" text-anchor="start">365 дн.</text>
+<rect x="1240" y="110" width="640" height="840" rx="18" fill="#173A30"/>
+<text x="1264" y="150" font-family="sans-serif" font-size="20" fill="#B7EFA5" text-anchor="start">Маршруты</text>
+<text x="1264" y="190" font-family="sans-serif" font-size="15" fill="#EEF5E8" text-anchor="start">Входящие: Ферма №1 → склад (бесплатно, свои)</text>
+<text x="1264" y="230" font-family="sans-serif" font-size="15" fill="#EEF5E8" text-anchor="start">Исходящие: склад → Магазин (3 км, топливо 40 л/сут)</text>
+<text x="1264" y="270" font-family="sans-serif" font-size="15" fill="#A1B9AD" text-anchor="start">Автозакупка топлива: включена</text>
+<rect x="1264" y="330" width="280" height="56" rx="12" fill="#B7EFA5"/>
+<text x="1404" y="364" font-family="sans-serif" font-size="16" fill="#0A201B" text-anchor="middle">Расширить склад</text>
+<rect x="1564" y="330" width="280" height="56" rx="12" fill="#22483B" stroke="#2E5A4B" stroke-width="2"/>
+<text x="1704" y="364" font-family="sans-serif" font-size="16" fill="#EEF5E8" text-anchor="middle">Настроить маршруты</text>
+</svg>
