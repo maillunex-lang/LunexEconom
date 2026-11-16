@@ -85,7 +85,8 @@ def login(body,ctx):
     row=ctx['conn'].execute('SELECT id,username,password_hash,role,is_blocked,blocked_until FROM accounts WHERE lower(username)=lower(%s) OR email=%s',(identifier,identifier.lower())).fetchone()
     # Deliberately identical for unknown, blocked and wrong password.
     if not row or (row[4] and not (row[5] is not None and row[5] <= __import__('datetime').datetime.now(__import__('datetime').timezone.utc))) or row[3] not in ROLES or not verify_password(password,row[2]): return 401,{'error':'invalid_credentials'}
-    if len(password)<14: return 400,{'error':'admin_password_too_short','message':'задайте пароль не короче 14 символов'}
+    # Existing accounts may have passwords shorter than the admin password-change policy.
+    # Authenticate against the stored hash; enforce 14+ only when setting a new admin password.
     token=new_token()
     with ctx['conn'].transaction():
         ctx['conn'].execute('INSERT INTO admin_sessions(token_hash,account_id,ip,expires_at,absolute_expires_at) VALUES(%s,%s,%s,now()+interval \'60 minutes\',now()+interval \'8 hours\')',(token_hash(token),row[0],ip))
