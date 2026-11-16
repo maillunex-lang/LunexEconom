@@ -5,7 +5,7 @@ from . import api, admin, admin_economy, admin_world, admin_server, admin_catalo
 
 def migrations():
     base=Path(__file__).resolve().parents[1] / 'migrations'
-    return [base / '202611150900_platform_accounts.sql',base / '202611151000_platform_v201.sql',base / '202611160010_admin_a1.sql',base / '202611160200_admin_a2.sql',base / '202611160201_admin_a2_production.sql',base / '202611160300_platform_refresh_family.sql',base / '202611161100_admin_a3.sql',base / '202611161200_admin_password_change.sql']
+    return [base / '202611150900_platform_accounts.sql',base / '202611151000_platform_v201.sql',base / '202611160010_admin_a1.sql',base / '202611160200_admin_a2.sql',base / '202611160201_admin_a2_production.sql',base / '202611160300_platform_refresh_family.sql',base / '202611161100_admin_a3.sql',base / '202611161200_admin_password_change.sql',base / '202611161800_platform_consent.sql']
 
 
 def register(registry):
@@ -13,12 +13,15 @@ def register(registry):
     registry.route('GET', '/health', api.health)
     registry.route('POST', '/auth/register', api.register)
     registry.route('POST', '/auth/login', api.login)
+    registry.route('POST', '/auth/consent', api.accept_consent)
+    registry.route('POST', '/account/delete', api.delete_account)
     registry.route('GET', '/auth/me', api.me)
     registry.route('GET', '/me', api.me)
     registry.route('POST', '/auth/refresh', api.refresh)
     registry.route('POST', '/auth/logout', api.logout)
     registry.route('GET', '/config', api.config)
     registry.flag('registration_enabled', True)
+    registry.flag('consent_version', '2026-11-16')
     registry.flag('support_compensation_limit', 100000, 0, 1000000000)
     registry.route('POST','/admin/login',admin.login)
     registry.route('POST','/admin/logout',admin.logout)
@@ -67,6 +70,8 @@ def register(registry):
     registry.route('GET','/announcements',admin_content.public)
     registry.route('GET','/admin/releases',admin_releases.releases)
     registry.route('GET','/admin/audit/export',admin_audit.export)
+    from .consent import finalize_pending
+    registry.tick('daily','account_deletion_finalize',lambda conn, *_a, **_kw: finalize_pending(conn),order=5)
     registry.tick('daily','admin_production',admin_economy.capture_production,order=41)
     registry.tick('daily','admin_daily_stats',admin_economy.snapshot,order=1000)
     registry.tick('daily','admin_error_sync',admin_server.record_tick_errors,order=1001)

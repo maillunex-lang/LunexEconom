@@ -249,3 +249,23 @@ model.viewer.stage | Стадия {stage} из 4
 model.viewer.statistics | Треугольников: {triangles} · Размер: {kib} КиБ
 model.viewer.failed | Не удалось загрузить модель. Показана запасная коробка.
 model.viewer.gestures | Поверните одним пальцем, измените масштаб двумя пальцами.
+
+# Согласие и удаление аккаунта (V2-CONSENT1)
+auth.consent.checkbox | Согласен на обработку персональных данных
+auth.consent.policy | Политика обработки данных
+auth.consent.terms | Пользовательское соглашение
+auth.consent.required | Для регистрации требуется согласие на обработку персональных данных.
+auth.consent.update.title | Обновлено согласие на обработку данных
+auth.consent.update.description | Ознакомьтесь с документами и подтвердите согласие, чтобы продолжить.
+auth.consent.update.accept | Подтвердить согласие
+auth.consent.update.decline | Выйти
+auth.consent.update.error | Не удалось сохранить согласие. Попробуйте ещё раз.
+account.delete.button | Удалить аккаунт
+account.delete.title | Удаление аккаунта
+account.delete.description | После подтверждения доступ закроется. В течение 7 суток можно отменить удаление повторным входом. Затем аккаунт будет обезличен, восстановление невозможно.
+account.delete.password | Пароль аккаунта
+account.delete.phrase | Введите УДАЛИТЬ АККАУНТ
+account.delete.confirm | Подтвердить удаление
+account.delete.cancel | Отмена
+account.delete.error | Не удалось запросить удаление. Проверьте пароль и подтверждение.
+account.delete.scheduled | Удаление запланировано. Для отмены войдите в течение 7 суток.

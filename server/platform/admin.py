@@ -236,7 +236,11 @@ def player_detail(body,ctx):
     actions=[{'id':r[0],'actor':r[1],'role':r[2],'action':r[3],
               'at':r[4].isoformat()} for r in conn.execute('''SELECT id,actor,actor_role,action,created_at FROM audit
               WHERE target_account_id=%s ORDER BY id DESC LIMIT 20''',(pid,)).fetchall()]
+    consent=conn.execute('SELECT consent_version,consent_at,delete_requested_at,deleted_at FROM accounts WHERE id=%s',(pid,)).fetchone()
     return 200,{'id':row[0],'username':row[1],'role':row[2],'blocked':row[3],
+                'consent_version':consent[0],'consent_at':consent[1].isoformat() if consent[1] else None,
+                'delete_requested_at':consent[2].isoformat() if consent[2] else None,
+                'deleted_at':consent[3].isoformat() if consent[3] else None,
                 'registered_at':row[4].isoformat(),'wallet':int(wallet[1]) if wallet else 0,
                 'enterprises':enterprises,
                 'parcels':[{'px':r[0],'py':r[1],'city_id':r[2]} for r in parcels],

@@ -79,6 +79,8 @@ def register(body, ctx):
     email = email.lower()
     if not isinstance(password,str) or not 6 <= len(password) <= 256:
         return 400, {'error':'invalid_password'}
+    if body.get('consent_personal_data') is not True:
+        return 400, {'error':'consent_required'}
     if not ctx['settings'].get('registration_enabled'):
         return 403, {'error':'registration_disabled'}
     if not _attempt(ctx['conn'],'register',email,_ip(ctx),10):
@@ -88,6 +90,8 @@ def register(body, ctx):
         row = ctx['conn'].execute('INSERT INTO accounts(username,email,password_hash,role) VALUES(%s,%s,%s,%s) ON CONFLICT DO NOTHING RETURNING id', (username,email,hashed,'player')).fetchone()
         if row is None:
             return 409, {'error':'account_exists'}
+        from .consent import record, version
+        record(ctx['conn'],row[0],version(ctx))
         from server.ledger.api import initial_capital
         initial_capital(ctx['conn'],row[0],username)
         return 201, {'id':row[0],'username':username,'email':email,'role':'player'}
@@ -106,13 +110,17 @@ def login(body, ctx):
         return 400, {'error':'invalid_credentials'}
     if not _attempt(ctx['conn'],'login',identifier,_ip(ctx),8):
         return 429, {'error':'rate_limited'}
-    row = ctx['conn'].execute('SELECT id,password_hash,role,is_blocked,blocked_until FROM accounts WHERE (lower(username)=lower(%s) OR email=%s)', (identifier,identifier.lower())).fetchone()
-    if not row or (row[3] and not (row[4] is not None and row[4] <= __import__('datetime').datetime.now(__import__('datetime').timezone.utc))) or not verify_password(password,row[1]):
+    row = ctx['conn'].execute('SELECT id,password_hash,role,is_blocked,blocked_until,delete_requested_at,deleted_at FROM accounts WHERE (lower(username)=lower(%s) OR email=%s)', (identifier,identifier.lower())).fetchone()
+    if not row or row[6] is not None or (row[3] and not (row[4] is not None and row[4] <= __import__('datetime').datetime.now(__import__('datetime').timezone.utc))) or not verify_password(password,row[1]):
         return 401, {'error':'invalid_credentials'}
     with ctx['conn'].transaction():
         _clear_failures(ctx['conn'],'login',identifier,_ip(ctx))
+        if row[5] is not None:
+            ctx['conn'].execute('UPDATE accounts SET delete_requested_at=NULL WHERE id=%s',(row[0],))
+            ctx['conn'].execute("INSERT INTO audit(actor,actor_role,target_account_id,action,payload) VALUES(%s,%s,%s,%s,%s::jsonb)",('account:'+str(row[0]),row[2],row[0],'account.delete_cancelled','{}'))
         access,refresh = _tokens(ctx['conn'],row[0])
-    return 200, {'token':access,'access_token':access,'refresh_token':refresh,'expires_in':1800,'role':row[2],'account_id':row[0]}
+    from .consent import required,version
+    return 200, {'token':access,'access_token':access,'refresh_token':refresh,'expires_in':1800,'role':row[2],'account_id':row[0],'consent_required_version':required(ctx['conn'],row[0],version(ctx))}
 
 
 def refresh(body, ctx):
@@ -134,7 +142,8 @@ def refresh(body, ctx):
             return 401, {'error':'refresh_expired'}
         ctx['conn'].execute('UPDATE sessions SET revoked_at=now() WHERE refresh_hash=%s', (token_hash(value),))
         access,new_refresh = _tokens(ctx['conn'],row[0],row[5])
-    return 200, {'token':access,'access_token':access,'refresh_token':new_refresh,'expires_in':1800,'role':row[4]}
+    from .consent import required,version
+    return 200, {'token':access,'access_token':access,'refresh_token':new_refresh,'expires_in':1800,'role':row[4],'consent_required_version':required(ctx['conn'],row[0],version(ctx))}
 
 
 def logout(body, ctx):
@@ -151,7 +160,9 @@ def logout(body, ctx):
 
 def me(body, ctx):
     actor=authenticate(ctx)
-    return (200,actor) if actor else (401,{'error':'unauthorized'})
+    if not actor: return 401,{'error':'unauthorized'}
+    from .consent import required,version
+    return 200,dict(actor,consent_required_version=required(ctx['conn'],actor['id'],version(ctx)))
 
 
 def config(body,ctx):
@@ -159,3 +170,12 @@ def config(body,ctx):
     if row is None:
         return 503, {'error':'config_not_signed'}
     return 200, {'schema':1,'revision':row[0],'payload_b64':row[1],'signature':row[2]}
+
+
+def accept_consent(body,ctx):
+    from .consent import accept
+    return accept(body,ctx)
+
+def delete_account(body,ctx):
+    from .consent import delete
+    return delete(body,ctx)
