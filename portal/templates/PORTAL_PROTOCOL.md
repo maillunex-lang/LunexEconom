@@ -14,7 +14,7 @@
 ```json
 {
   "updated": "2026-01-01",
-  "rules": {"shared_files_director_only": ["README.md", "docs/PROGRESS.md", "docs/work_plan.json", "docs/WORK_PLAN.md", "docs/gdd/**"], "branch_pattern": "v2/<id>-<slug>", "merge": "только директор"},
+  "rules": {"shared_files_director_only": ["README.md", "docs/PROGRESS.md", "docs/work_plan.json", "docs/WORK_PLAN.md", "docs/gdd/**"], "branch_pattern": "<префикс>/<id>-<slug>", "merge": "только директор"},
   "lanes": {"A": {"name": "...", "who": "...", "zone": ["папки и файлы линии"], "note": "..."}, "B": {...}},
   "packages": [{
     "id": "A1", "title": "короткое название", "lane": "A", "step": 1, "depends_on": [],
