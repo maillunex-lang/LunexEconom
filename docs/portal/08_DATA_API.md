@@ -2,7 +2,7 @@
 
 ## Таблицы SQLite [v1]
 `users(id, username, pw_hash, created)`; `sessions(token_hash, user_id, csrf, expires)`; `attempts(ip, ts)`; `projects(slug, name, repo, description, plan_json, plan_updated, created)`; `task_state(project_slug, pkg_id, status, issued_at, submitted_at, accepted_at, merged, sha, note)`; `ideas(id, project_slug, text, created, done)`; `start_state(project_slug, prompt_id, done, ts)`; `audit(id, ts, action, payload)`.
-**[v2]:** `events(id, project_slug, pkg_id, ts, kind, source, payload)`, `pr_links(project_slug, pkg_id, pr_number, branch, sha, state, ci_state, updated)`, `reports(project_slug, pkg_id, text, ts)`, `review_checks(project_slug, pkg_id, item, done, ts)`, `settings(key, value)`, `notify_log(kind, key, ts)`, `webhook_deliveries(delivery_id, ts)`.
+**[v2]:** `events(id, project_slug, pkg_id, ts, kind, source, payload)`, `pr_links(project_slug, pkg_id, pr_number, branch, sha, state, ci_state, updated)`, `reports(project_slug, pkg_id, text, ts)`, `review_checks(project_slug, pkg_id, item, done, ts)`, `settings(key, value)`, `notify_channels(channel, chat_id, bound_at)` (идентификатор чата владельца, токены не хранятся в базе), `notify_codes(code_hash, channel, expires)`, `notify_log(kind, key, ts, channel, ok)`, `webhook_deliveries(delivery_id, ts)`.
 **[v3]:** `users` с ролями, `memberships(user_id, project_slug, role)`, `invites`, `comments`.
 Миграции: `CREATE TABLE IF NOT EXISTS` и таблица версий схемы [v2]; данные не теряются при обновлении.
 
