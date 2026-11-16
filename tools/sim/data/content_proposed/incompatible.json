@@ -1,0 +1,30 @@
+{
+  "schema": 1,
+  "release": 9,
+  "packs": [
+    {
+      "name": "season_bad",
+      "kind": "season",
+      "version": "9",
+      "size": 1000,
+      "sha256": "f6f6f6f6f6f6f6f6f6f6f6f6f6f6f6f6f6f6f6f6f6f6f6f6f6f6f6f6f6f6f6f6",
+      "url": "https://evil.example/packs/season_bad-9.pck",
+      "priority": "background",
+      "dependencies": ["ui_theme"],
+      "min_version_code": 1,
+      "label": "Чужой сезон"
+    },
+    {
+      "name": "ui_theme",
+      "kind": "ui_theme",
+      "version": "9",
+      "size": 1000,
+      "sha256": "a7a7a7a7a7a7a7a7a7a7a7a7a7a7a7a7a7a7a7a7a7a7a7a7a7a7a7a7a7a7a7a7",
+      "url": "https://rikagro.ru/lunexeconom/v2/packs/ui_theme-9.pck",
+      "priority": "required",
+      "dependencies": ["season_bad"],
+      "min_version_code": 1,
+      "label": "Тема"
+    }
+  ]
+}
