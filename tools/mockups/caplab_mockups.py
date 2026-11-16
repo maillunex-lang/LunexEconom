@@ -287,8 +287,35 @@ def store_report():
     g.save("caplab_store_report")
 
 
+def research():
+    g = Page("Исследования · Пищевая отрасль", "Предприятия")
+    g.card(40, 110, 1180, 840, "Дерево технологий")
+    for i, (n, lv, st) in enumerate([("Качество пищи 2", 400, "готово"), ("Качество пищи 3", 1200, "готово"), ("Качество пищи 4", 3200, "в работе"), ("Качество пищи 5", 8000, "закрыто")]):
+        x = 80 + i * 280
+        col = OK if st == "готово" else (WARN if st == "в работе" else S3)
+        g.rect(x, 220, 240, 150, S2, 14, col)
+        g.text(x + 20, 262, n, 17, TXT)
+        g.text(x + 20, 296, f"{lv} очков", 14, SEC)
+        g.text(x + 20, 336, st, 15, col if st != "закрыто" else SEC)
+        if i:
+            g.rect(x - 40, 292, 40, 4, S3)
+    g.bar(80, 440, 640, 62, "Прогресс «Качество пищи 4»: 1 984 из 3 200 очков", WARN)
+    g.text(80, 520, "Очки в месяц: 160 (бюджет 20 000 ₽, персонал уровня 2)", 16, TXT)
+    g.button(80, 560, 340, "Изменить бюджет", True)
+    g.button(440, 560, 340, "Лицензии у игроков")
+    g.text(80, 680, "Итог: потолок качества растёт, цена выше на 25 %, но бренд и конкуренты тоже влияют.", 15, SEC)
+    g.card(1240, 110, 640, 840, "Мои модели товаров")
+    g.row(1264, 190, ["Товар", "Качество", "Цена"], [260, 160, 160], SEC, 14)
+    for i, r in enumerate([("Хлеб «Батон+»", "87", "46 ₽"), ("Хлеб «Дарницкий»", "75", "43 ₽")]):
+        g.row(1264, 240 + i * 56, r, [260, 160, 160], TXT, 16)
+    g.button(1264, 400, 360, "Новая модель товара", True)
+    g.text(1264, 520, "Покупка лицензии: «Качество пищи 3» 150 000 ₽ + 3 % роялти", 14, SEC)
+    g.text(1264, 560, "Поколения товаров: через 24 мес. спрос на старые модели снижается", 14, SEC)
+    g.save("caplab_research")
+
+
 def main():
-    for f in (factory, store, suppliers, hr, advertising, warehouse, hq, condition, automation, store_report):
+    for f in (factory, store, suppliers, hr, advertising, warehouse, hq, condition, automation, store_report, research):
         f()
 
 
