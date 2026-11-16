@@ -305,3 +305,22 @@ class RealServerThreadingTest(unittest.TestCase):
                 self.assertIn(e.code, (400, 401, 403, 429))
         finally:
             srv.shutdown()
+
+
+class PlanSeedStatusTest(Portal):
+    def test_done_packages_become_accepted_on_import_and_do_not_override_started(self):
+        cookie, csrf = self.login()
+        base = "/createportal/api/projects"
+        call(self.app, "POST", base, {"slug": "seed-demo", "name": "Seed", "repo": "o/seed"}, cookie=cookie, csrf=csrf)
+        plan = json.loads((ROOT / "docs" / "portal" / "work_plan.json").read_text(encoding="utf-8"))
+        ids_done = {p["id"] for p in plan["packages"] if p["status"] == "done"}
+        self.assertTrue(ids_done)
+        r = call(self.app, "POST", base + "/seed-demo/plan", {"plan": plan}, cookie=cookie, csrf=csrf)
+        self.assertEqual(r["status"], 200, r)
+        st = call(self.app, "GET", base + "/seed-demo", cookie=cookie)["json"]["state"]
+        for pid in ids_done:
+            self.assertEqual(st[pid]["status"], "accepted", pid)
+        # повторная загрузка не ломает уже изменённое состояние
+        call(self.app, "POST", base + "/seed-demo/plan", {"plan": plan}, cookie=cookie, csrf=csrf)
+        st2 = call(self.app, "GET", base + "/seed-demo", cookie=cookie)["json"]["state"]
+        self.assertEqual({k: v["status"] for k, v in st.items() if k in ids_done}, {k: v["status"] for k, v in st2.items() if k in ids_done})
