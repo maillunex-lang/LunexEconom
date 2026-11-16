@@ -34,7 +34,8 @@ def main():
                      webhook_secret_file=os.environ.get("PORTAL_WEBHOOK_SECRET_FILE"),
                      reports_enabled=enabled("reports","PORTAL_REPORTS_ENABLED"),
                      notifications_enabled=enabled("notifications","PORTAL_NOTIFICATIONS_ENABLED"),
-                     notify_token_files=tokens,ops_enabled=enabled("ops","PORTAL_OPS_ENABLED"),backup_dir=os.environ.get("PORTAL_BACKUP_DIR"))
+                     notify_token_files=tokens,ops_enabled=enabled("ops","PORTAL_OPS_ENABLED"),backup_dir=os.environ.get("PORTAL_BACKUP_DIR"),
+                     launch_enabled=enabled("launch","PORTAL_LAUNCH_ENABLED"))
     stop=threading.Event()
     def worker():
         while not stop.is_set():

@@ -52,6 +52,7 @@ CREATE TABLE IF NOT EXISTS notify_devices(fingerprint TEXT PRIMARY KEY,created R
     (6, """ALTER TABLE projects ADD COLUMN sync_mode TEXT NOT NULL DEFAULT 'both';
 ALTER TABLE projects ADD COLUMN poll_minutes INTEGER NOT NULL DEFAULT 5;
 CREATE TABLE IF NOT EXISTS project_sync(project_slug TEXT PRIMARY KEY,last_poll REAL,last_webhook REAL,etag TEXT,error TEXT NOT NULL DEFAULT '');"""),
+    (7, """ALTER TABLE projects ADD COLUMN wish TEXT NOT NULL DEFAULT '';"""),
 
 )
 
@@ -72,6 +73,8 @@ def migrate(conn, webhook=False, reports=False, notifications=False):
             if version == 5 and not (notifications or webhook):
                 continue
             if version == 6 and not webhook:
+                continue
+            if version == 7 and not webhook:
                 continue
             if version in versions:
                 continue

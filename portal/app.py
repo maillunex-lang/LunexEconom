@@ -18,6 +18,7 @@ from http.cookies import SimpleCookie
 from pathlib import Path
 
 from . import auth, bootstrap, db
+from . import launch
 from .hooks import github
 from . import notify
 from .backup import core as backup_core
@@ -34,8 +35,8 @@ def _prompted(plan):
     return [dict(p, prompt=wp.prompt(plan, p["id"])) for p in plan["packages"]]
 
 
-def create_app(db_path, base="", secure_cookie=True, fetch=None, github_token_file=None, security_v2=True, webhook_enabled=False, webhook_secret_file=None, reports_enabled=False, notifications_enabled=False, notify_token_files=None, notify_client=None, notify_clock=None, ops_enabled=False, backup_dir=None, github_api=None):
-    conn = db.connect(db_path, webhook=webhook_enabled or reports_enabled or ops_enabled, reports=reports_enabled or ops_enabled, notifications=notifications_enabled or ops_enabled)
+def create_app(db_path, base="", secure_cookie=True, fetch=None, github_token_file=None, security_v2=True, webhook_enabled=False, webhook_secret_file=None, reports_enabled=False, notifications_enabled=False, notify_token_files=None, notify_client=None, notify_clock=None, ops_enabled=False, backup_dir=None, github_api=None, launch_enabled=False, launch_check_repo=None):
+    conn = db.connect(db_path, webhook=webhook_enabled or reports_enabled or ops_enabled or launch_enabled, reports=reports_enabled or ops_enabled or launch_enabled, notifications=notifications_enabled or ops_enabled or launch_enabled)
     notify_token_files = notify_token_files or {}
     notify_client = notify_client or notify.http_json
     clock = notify_clock or time.time
@@ -421,6 +422,8 @@ def create_app(db_path, base="", secure_cookie=True, fetch=None, github_token_fi
             return respond(start, "200 OK", {"metrics": metrics()})
         if path == "/api/me" and method == "GET":
             return respond(start, "200 OK", {"user": sess["username"], "csrf": sess["csrf"]})
+        if path == "/api/portal-dev-guide" and method == "GET":
+            return respond(start, "200 OK", {"markdown": (bootstrap.TPL / "PORTAL_DEV_GUIDE.md").read_text(encoding="utf-8")})
         if path == "/api/master-prompt" and method == "GET":
             return respond(start, "200 OK", {"markdown": (bootstrap.TPL / "MASTER_PROMPT.md").read_text(encoding="utf-8")})
         if path == "/api/skeleton.zip" and method == "GET":
@@ -434,15 +437,39 @@ def create_app(db_path, base="", secure_cookie=True, fetch=None, github_token_fi
             body = read_body(environ)
             if body is None:
                 return respond(start, "400 Bad Request", {"error": "bad_request"})
-            slug, name = str(body.get("slug", "")), str(body.get("name", "")).strip()
-            repo, desc = str(body.get("repo", "")).strip()[:120], str(body.get("description", "")).strip()[:500]
-            if not bootstrap.SLUG.match(slug) or not 1 <= len(name) <= 80 or (repo and not re.fullmatch(r"[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+", repo)):
+            slug, name = body.get("slug", ""), body.get("name", "")
+            repo, desc, wish = body.get("repo", ""), body.get("description", ""), body.get("wish", "")
+            if not all(isinstance(v, str) for v in (slug, name, repo, desc, wish)):
                 return respond(start, "400 Bad Request", {"error": "invalid_project"})
+            name, desc = name.strip(), desc.strip()
+            if (not bootstrap.SLUG.fullmatch(slug) or not 1 <= len(name) <= 80 or len(desc) > 500
+                    or len(wish) > 4000 or any(ord(c) < 32 and c not in "\n\t" for c in name + desc + wish)):
+                return respond(start, "400 Bad Request", {"error": "invalid_project"})
+            if repo:
+                try:
+                    repo = launch.normalize_repo(repo) if launch_enabled else repo.strip()
+                except ValueError:
+                    return respond(start, "400 Bad Request", {"error": "invalid_repo"})
+            if repo and not re.fullmatch(r"[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+", repo):
+                return respond(start, "400 Bad Request", {"error": "invalid_repo"})
+            if not launch_enabled and wish:
+                return respond(start, "404 Not Found", {"error": "launch_disabled"})
             if project_row(slug):
                 return respond(start, "409 Conflict", {"error": "exists"})
-            conn.execute("INSERT INTO projects(slug,name,repo,description,created) VALUES(?,?,?,?,?)", (slug, name, repo, desc, time.time()))
+            # Network check is advisory: a missing/expired read-only token must never block creation.
+            repo_visible = None
+            if launch_enabled and repo and launch_check_repo:
+                try:
+                    repo_visible = bool(launch_check_repo(repo))
+                except (ValueError, OSError, TimeoutError, TypeError):
+                    repo_visible = None
+            if launch_enabled:
+                conn.execute("INSERT INTO projects(slug,name,repo,description,wish,created) VALUES(?,?,?,?,?,?)", (slug, name, repo, desc, wish, time.time()))
+            else:
+                conn.execute("INSERT INTO projects(slug,name,repo,description,created) VALUES(?,?,?,?,?)", (slug, name, repo, desc, time.time()))
             db.audit(conn, "project.create", {"slug": slug})
-            return respond(start, "201 Created", {"ok": True, "slug": slug, "prompt": bootstrap.director_prompt(name, repo, desc),
+            return respond(start, "201 Created", {"ok": True, "slug": slug, "repo": repo, "repo_visible": repo_visible,
+                                                  "prompt": bootstrap.director_prompt(name, repo, desc),
                                                   "start": bootstrap.start_prompts(name, repo, desc)})
         if reports_enabled:
             task_match = re.fullmatch(r"/api/projects/([a-z][a-z0-9-]{1,38}[a-z0-9])/tasks/([A-Za-z][A-Za-z0-9_-]{0,39})/(report|review)", path)
@@ -581,6 +608,26 @@ def create_app(db_path, base="", secure_cookie=True, fetch=None, github_token_fi
                              (slug, int(cfg['auto_accept']), int(cfg['auto_accept_require_checklist']), json.dumps(checks)))
                 github.event(conn, slug, None, 'settings.changed', source='portal')
                 return respond(start, "200 OK", github.settings(conn, slug))
+        if launch_enabled and sub == "/launch" and method == "GET":
+            steps = launch.steps(row["plan_json"])
+            confirmed = {r["prompt_id"] for r in conn.execute("SELECT prompt_id FROM start_state WHERE project_slug=? AND done=1",(slug,))}
+            for step in steps:
+                step["done"] = step["done"] or f'launch-{step["number"]}' in confirmed
+            first_pending = next((s["number"] for s in steps if not s["done"]), 4)
+            for step in steps:
+                step["current"] = step["number"] == first_pending and not step["done"]
+            return respond(start,"200 OK",{"prompt":launch.render_prompt(row["name"],row["repo"],row["wish"]),
+                                             "steps":steps,"repo":row["repo"],"name":row["name"],
+                                             "has_plan":bool(row["plan_json"]),
+                                             "has_tasks":bool(row["plan_json"] and json.loads(row["plan_json"]).get("packages",[]))})
+        if launch_enabled and sub == "/launch-step" and method == "POST":
+            data=read_body(environ)
+            if data is None or set(data)!={"number","done"} or type(data["number"]) is not int or data["number"] not in (1,2,3) or type(data["done"]) is not bool:
+                return respond(start,"400 Bad Request",{"error":"invalid_launch_step"})
+            # Manual milestones are owner's acknowledgments, never infer that GitHub PR merged.
+            conn.execute("INSERT INTO start_state(project_slug,prompt_id,done,ts) VALUES(?,?,?,?) ON CONFLICT(project_slug,prompt_id) DO UPDATE SET done=excluded.done,ts=excluded.ts",
+                         (slug, f'launch-{data["number"]}',int(data["done"]),time.time()))
+            return respond(start,"200 OK",{"ok":True})
         if sub == "/bootstrap" and method == "GET":
             files = bootstrap.files_for(row["name"], row["repo"], row["description"])
             return respond(start, "200 OK", {"prompt": bootstrap.director_prompt(row["name"], row["repo"], row["description"]), "files": sorted(files),
