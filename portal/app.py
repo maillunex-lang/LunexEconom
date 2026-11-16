@@ -2,6 +2,8 @@
 from __future__ import annotations
 
 import json
+import hmac
+import hashlib
 import os
 import re
 import secrets
@@ -11,6 +13,7 @@ from http.cookies import SimpleCookie
 from pathlib import Path
 
 from . import auth, bootstrap, db
+from .hooks import github
 from tools import work_plan as wp  # общие проверка плана и генерация промптов
 
 MAX_BODY = 1_000_000
@@ -23,8 +26,8 @@ def _prompted(plan):
     return [dict(p, prompt=wp.prompt(plan, p["id"])) for p in plan["packages"]]
 
 
-def create_app(db_path, base="", secure_cookie=True, fetch=None, github_token_file=None, security_v2=True):
-    conn = db.connect(db_path)
+def create_app(db_path, base="", secure_cookie=True, fetch=None, github_token_file=None, security_v2=True, webhook_enabled=False, webhook_secret_file=None):
+    conn = db.connect(db_path, webhook=webhook_enabled)
     base = base.rstrip("/")
 
     def respond(start, status, body, headers=None, nonce=None):
@@ -57,8 +60,16 @@ def create_app(db_path, base="", secure_cookie=True, fetch=None, github_token_fi
         return conn.execute("SELECT * FROM projects WHERE slug=?", (slug,)).fetchone()
 
     def states(slug):
-        return {r["pkg_id"]: {k: r[k] for k in ("status", "issued_at", "submitted_at", "accepted_at", "merged", "sha", "note")}
-                for r in conn.execute("SELECT * FROM task_state WHERE project_slug=?", (slug,))}
+        result = {r["pkg_id"]: {k: r[k] for k in ("status", "issued_at", "submitted_at", "accepted_at", "merged", "sha", "note")}
+                  for r in conn.execute("SELECT * FROM task_state WHERE project_slug=?", (slug,))}
+        if webhook_enabled:
+            for link in conn.execute('SELECT * FROM pr_links WHERE project_slug=? ORDER BY updated', (slug,)):
+                result.setdefault(link['pkg_id'], {'status': 'planned', 'issued_at': None, 'submitted_at': None,
+                                                     'accepted_at': None, 'merged': 0, 'sha': '', 'note': ''})
+                result[link['pkg_id']]['pr'] = {'number': link['pr_number'], 'branch': link['branch'], 'state': link['state'],
+                                                'sha': link['sha'], 'merged': link['state'] == 'merged'}
+                result[link['pkg_id']]['ci'] = {'state': link['ci_state'], 'sha': link['sha']}
+        return result
 
     def start_list(row):
         done = {r["prompt_id"]: r["done"] for r in conn.execute("SELECT prompt_id,done FROM start_state WHERE project_slug=?", (row["slug"],))}
@@ -102,6 +113,34 @@ def create_app(db_path, base="", secure_cookie=True, fetch=None, github_token_fi
         except Exception:
             cookies = SimpleCookie()
         token = cookies[COOKIE].value if COOKIE in cookies else ""
+        if path == "/hook/github" and method == "POST":
+            if not webhook_enabled:
+                return respond(start, "404 Not Found", {"error": "not_found"})
+            try:
+                secret = Path(webhook_secret_file).read_bytes().strip() if webhook_secret_file else b''
+            except OSError:
+                secret = b''
+            try:
+                length = int(environ.get('CONTENT_LENGTH', '0'))
+            except (ValueError, TypeError):
+                length = -1
+            if length < 0 or length > MAX_BODY:
+                return respond(start, "413 Payload Too Large", {"error": "body_size"})
+            raw = environ['wsgi.input'].read(length)
+            if len(raw) != length:
+                return respond(start, '400 Bad Request', {'error': 'incomplete_body'})
+            if not secret or not github.verified(raw, environ.get('HTTP_X_HUB_SIGNATURE_256'), secret):
+                return respond(start, "401 Unauthorized", {"error": "invalid_signature"})
+            delivery = environ.get('HTTP_X_GITHUB_DELIVERY', '')
+            kind = environ.get('HTTP_X_GITHUB_EVENT', '')
+            if not github.DELIVERY.fullmatch(delivery) or kind not in ('push', 'pull_request', 'check_suite', 'workflow_run'):
+                return respond(start, "400 Bad Request", {"error": "invalid_event"})
+            try:
+                payload = json.loads(raw)
+                result = github.process(conn, kind, payload, delivery, fetch_plan=fetch_plan)
+            except (ValueError, TypeError, KeyError):
+                return respond(start, "400 Bad Request", {"error": "invalid_payload"})
+            return respond(start, "200 OK", {"ok": True, "result": result})
         if path == "/health" and method == "GET":
             healthy = db.check_health(conn)
             return respond(start, "200 OK" if healthy else "503 Service Unavailable", {"ok": healthy})
@@ -213,6 +252,30 @@ def create_app(db_path, base="", secure_cookie=True, fetch=None, github_token_fi
             return respond(start, "200 OK", {"project": summary(row), "lanes": plan["lanes"] if plan else {}, "packages": _prompted(plan) if plan else [],
                                              "state": states(slug), "plan_updated": row["plan_updated"],
                                              "start": start_list(row), "ideas": ideas_list(slug)})
+        if webhook_enabled and sub == "/events" and method == "GET":
+            entries = []
+            for e in conn.execute('SELECT id,pkg_id,ts,kind,source,payload FROM events WHERE project_slug=? ORDER BY id DESC LIMIT 200', (slug,)):
+                entries.append({'id': e['id'], 'pkg_id': e['pkg_id'], 'ts': e['ts'], 'kind': e['kind'],
+                                'source': e['source'], 'payload': json.loads(e['payload'])})
+            return respond(start, "200 OK", {"events": entries})
+        if webhook_enabled and sub == "/settings":
+            if method == "GET":
+                return respond(start, "200 OK", github.settings(conn, slug))
+            if method == "POST":
+                body = read_body(environ)
+                if body is None or not body or not set(body) <= {'auto_accept', 'auto_accept_require_checklist', 'required_checks'}:
+                    return respond(start, "400 Bad Request", {"error": "invalid_settings"})
+                if any(type(v) is not bool for k,v in body.items() if k != 'required_checks'):
+                    return respond(start, "400 Bad Request", {"error": "invalid_settings"})
+                checks = body.get('required_checks', github.settings(conn, slug)['required_checks'])
+                if not isinstance(checks, list) or len(checks) > 30 or any(not isinstance(x, str) or not 1 <= len(x) <= 100 for x in checks):
+                    return respond(start, "400 Bad Request", {"error": "invalid_settings"})
+                cfg = github.settings(conn, slug)
+                cfg.update(body)
+                conn.execute('INSERT INTO project_settings(project_slug,auto_accept,auto_accept_require_checklist,required_checks) VALUES(?,?,?,?) ON CONFLICT(project_slug) DO UPDATE SET auto_accept=excluded.auto_accept,auto_accept_require_checklist=excluded.auto_accept_require_checklist,required_checks=excluded.required_checks',
+                             (slug, int(cfg['auto_accept']), int(cfg['auto_accept_require_checklist']), json.dumps(checks)))
+                github.event(conn, slug, None, 'settings.changed', source='portal')
+                return respond(start, "200 OK", github.settings(conn, slug))
         if sub == "/bootstrap" and method == "GET":
             files = bootstrap.files_for(row["name"], row["repo"], row["description"])
             return respond(start, "200 OK", {"prompt": bootstrap.director_prompt(row["name"], row["repo"], row["description"]), "files": sorted(files),
