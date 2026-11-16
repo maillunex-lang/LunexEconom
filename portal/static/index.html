@@ -14,6 +14,7 @@
 <link rel="apple-touch-icon" href="__BASE__/icons/icon-192.png">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Space+Grotesk:wght@500;600;700&display=swap">
 <style>
+.a9-link{overflow-wrap:anywhere;word-break:break-word}
 /* Liquid glass: полупрозрачные поверхности, размытие фона, блики по краю */
 :root{--bg:#DDE8DF;--ink:#0F1C16;--muted:#4A5E54;--line:rgba(255,255,255,.55);--edge:rgba(255,255,255,.75);--hair:rgba(15,28,22,.12);
 --glass:rgba(255,255,255,.52);--glass2:rgba(255,255,255,.34);--glass-strong:rgba(255,255,255,.72);
@@ -325,7 +326,23 @@ function drawTabs(){
     var b=btn(x[0],tab===x[0]?'on':'',x[2],{icon:x[1],tip:'Открыть раздел «'+x[0]+'»'});b.setAttribute('aria-current',tab===x[0]?'page':'false');nav.appendChild(b)});
 }
 function openB6Board(){var sl=current?current.slug:lastSlug();if(sl)return showBoard(sl);return api('/api/projects').then(function(r){if(r.projects&&r.projects.length)return showBoard(r.projects[0].slug);showProjects()}).catch(function(){showProjects()})}
-function showMore(){activeB6Tab='Ещё';drawBar('Ещё');app.textContent='';app.appendChild(el('h1','','Ещё'));
+function showMemory(slug){if(!slug){api('/api/projects').then(function(r){if(r.projects.length)showMemory(r.projects[0].slug);else showProjects()});return}
+drawBar('Память');app.textContent='';app.appendChild(el('h1','','Память проекта'));app.appendChild(el('p','help','Вставьте этот контекст новому ИИ, чтобы он сразу вошёл в курс дела.'));
+var c=cardB2('Контекст для ИИ');app.appendChild(c);var role=el('select');role.setAttribute('aria-label','Роль ИИ');['director','executor','reviewer'].forEach(function(v){var o=el('option','',({director:'Директор',executor:'Исполнитель',reviewer:'Проверяющий'})[v]);o.value=v;role.appendChild(o)});c.appendChild(role);
+var preview=el('textarea');preview.rows=11;preview.readOnly=true;preview.setAttribute('aria-label','Предпросмотр контекста для ИИ');c.appendChild(preview);
+function load(){api('/api/projects/'+slug+'/context?role='+role.value).then(function(r){preview.value=r.text}).catch(function(e){preview.value=String(e)})}role.addEventListener('change',load);load();
+c.appendChild(btn('Скопировать','',function(){copy(preview.value)}));
+c.appendChild(btn('Поделиться','',function(){if(navigator.share)navigator.share({text:preview.value}).catch(function(){});else copy(preview.value)}));
+var link=el('p','muted a9-link');c.appendChild(link);
+c.appendChild(btn('Ссылка на 24 часа','',function(){api('/api/projects/'+slug+'/context-link','POST',{role:role.value}).then(function(r){var url=location.origin+r.url;link.textContent=url;copy(url);c.appendChild(btn('Отозвать ссылку','',function(){api('/api/projects/'+slug+'/context-link','POST',{revoke:r.token}).then(function(){link.textContent='Ссылка отозвана'})}))}).catch(function(e){link.textContent=String(e)})}));
+var searchCard=cardB2('Поиск по памяти');app.appendChild(searchCard);var q=el('input');q.placeholder='Поиск документов и решений';searchCard.appendChild(q);var kind=el('select');kind.setAttribute('aria-label','Фильтр по видам');[['','Все виды'],['document','Документы'],['decision','Решения'],['report','Отчёты'],['idea','Идеи']].forEach(function(v){var o=el('option','',v[1]);o.value=v[0];kind.appendChild(o)});searchCard.appendChild(kind);var results=el('div');searchCard.appendChild(results);
+function run(){if(q.value.trim().length<2)return;api('/api/projects/'+slug+'/search?q='+encodeURIComponent(q.value)+'&kind='+kind.value).then(function(r){results.textContent='';r.results.forEach(function(v){var e=el('p','',v.title+': '+v.snippet);results.appendChild(e)})}).catch(function(e){results.textContent=String(e)})}q.addEventListener('change',run);kind.addEventListener('change',run);searchCard.appendChild(btn('Найти','',run));
+var dc=cardB2('Журнал решений');app.appendChild(dc);var dt=el('input');dt.placeholder='Заголовок решения';dt.setAttribute('aria-label','Заголовок решения');dc.appendChild(dt);var body=el('textarea');body.placeholder='Текст решения';body.setAttribute('aria-label','Текст решения');dc.appendChild(body);var dl=el('div');dc.appendChild(dl);
+function refresh(){api('/api/projects/'+slug+'/decisions').then(function(r){dl.textContent='';r.decisions.forEach(function(v){dl.appendChild(el('p','',v.date+' · '+v.title+': '+v.text))})})}refresh();dc.appendChild(btn('Добавить решение','',function(){api('/api/projects/'+slug+'/decisions','POST',{title:dt.value,text:body.value}).then(refresh)}));
+var map=cardB2('Карта репозитория');app.appendChild(map);api('/api/projects/'+slug+'/repo-map').then(function(r){var groups={};r.items.forEach(function(v){var dir=v.path.split('/')[0];groups[dir]=(groups[dir]||0)+1});Object.keys(groups).sort().forEach(function(v){map.appendChild(el('p','',v+' · '+groups[v]+' файлов'))})});
+}
+function showAIContext(){showMemory(current?current.slug:lastSlug())}
+function showMore(){activeB6Tab='Ещё';drawBar('Ещё');app.textContent='';app.appendChild(el('h1','','Ещё'));app.appendChild(btn('Память','',showAIContext));app.appendChild(btn('Контекст для ИИ','',showAIContext));
   var grid=el('div','b6-more');app.appendChild(grid);
   [['Развитие портала','book',showPortalDevGuide],['Идеи','inbox',function(){var sl=current?current.slug:lastSlug();if(sl)showBoard(sl).then(function(){focusIdeas()});else showProjects()}],['Настройки','work',showSettings],['Уведомления','flag',showNotifications],['Поиск','book',function(){showSearch()}],['Граф','map',function(){openB6Board().then(function(){if(current)showGraph(current.slug)})}],['Новая идея','plus',function(){openB6Board().then(function(){focusIdeas()})}],['Справка','help',showHelp],['Мастер-промпт','book',function(){showProjects();var m=document.querySelector('.master');if(m){m.scrollIntoView();m.querySelector('details').open=true}}],['Протокол для ИИ','book',showProtocol],['Планы и проекты','map',showProjects],['Сменить тему','moon',toggleTheme],['Установить PWA','upload',function(){if(deferredInstall){deferredInstall.prompt();deferredInstall=null}else toast('Установка доступна через меню браузера')}],['Версия и функции','help',showVersion],['Выйти','out',function(){api('/api/logout','POST',{}).finally(function(){CSRF='';ME='';showLogin()})}]].forEach(function(x){grid.appendChild(btn(x[0],'card',x[2],{icon:x[1],tip:'Перейти: '+x[0]}))});
 }
@@ -524,6 +541,7 @@ function drawBoard(){
   tb.appendChild(sync);tb.appendChild(btn('Загрузить план','',showImport,{icon:'upload',tip:'Вставить содержимое work_plan.json вручную, если синхронизация не настроена'}));
   tb.appendChild(btn('Граф','',function(){showGraph(current.slug)},{icon:'map',tip:'Открыть граф зависимостей и критический путь'}));tb.appendChild(btn('Поиск','',function(){showSearch(current.slug)},{icon:'book',tip:'Найти задачу или идею'}));tb.appendChild(btn('Настройки проекта','',function(){showProjectSettings(current.slug)},{icon:'work',tip:'Автоприёмка, чек-лист и данные проекта'}));
   tb.appendChild(btn('Знания проекта','',function(){showA7Lessons(current.slug)},{icon:'book'}));
+  tb.appendChild(btn('Контекст для ИИ','',function(){showMemory(current.slug)},{icon:'book',tip:'Сводка проекта, поиск, решения и ссылка на 24 часа'}));
   tb.appendChild(btn('Протокол для ИИ','',showProtocol,{icon:'book',tip:'Инструкция для ИИ-директора: как добавлять этапы и промпты'}));head.appendChild(tb);head.classList.add('board-heading');app.appendChild(head);
   if(P.length){var before=app.children.length;drawSummary(d,P);Array.from(app.children).slice(before).forEach(function(x){x.classList.add('desktop-board-summary')})}
   if(!P.length){drawA6EmptyPlan(d);drawStart(d);var n=el('div','card empty');n.appendChild(ic('map'));n.appendChild(el('h2','','План ещё не загружен'));n.appendChild(el('div','muted','Вы можете выбрать файл JSON с телефона, вставить текст JSON или синхронизировать план из GitHub. После проверки появятся задачи.'));app.appendChild(n);drawIdeas(d,app);return}
