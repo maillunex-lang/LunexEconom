@@ -117,6 +117,7 @@ details{border-top:1px solid var(--hair);padding-top:8px}summary{cursor:pointer;
 .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:14px}
 .pair{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}@media(max-width:780px){.pair{grid-template-columns:minmax(0,1fr)}}
 .stp{display:flex;flex-direction:column;gap:10px}
+.master{border-color:var(--accent)}
 .mini{border-radius:20px;padding:12px 14px;cursor:pointer;display:flex;flex-direction:column;gap:4px;min-width:0;background:var(--glass);backdrop-filter:var(--blur);border:1px solid var(--edge);box-shadow:var(--shadow)}
 .mini .mt{font-weight:600;font-size:14px;line-height:1.3}.mini.locked{opacity:.8}
 @media(max-width:560px){.bar button span{display:none}.brand span{display:none}.crumb b{max-width:34vw}.bar-in{gap:4px}}
@@ -248,6 +249,7 @@ function showProjects(){
   current=null;drawBar('Проекты');app.textContent='';
   var top=el('div','row spread');var l=el('div');l.appendChild(el('h1','','Мои проекты'));l.appendChild(el('div','muted','Здесь все ваши проекты. Откройте проект, чтобы увидеть задачи и промпты для исполнителей.'));top.appendChild(l);
   top.appendChild(btn('Новый проект','primary',showNew,{icon:'plus',tip:'Мастер создаст проект и выдаст стартовые промпты для ИИ-директора'}));app.appendChild(top);
+  drawMaster();
   var g=el('div','grid');app.appendChild(g);
   api('/api/projects').then(function(r){
     if(!r.projects.length){var e=el('div','card empty');e.appendChild(ic('map'));e.appendChild(el('h2','','Пока нет ни одного проекта'));e.appendChild(el('div','muted','Нажмите «Новый проект». Портал выдаст два готовых промпта: как организовать репозиторий и как разработать полный GDD (описание игры или продукта). Дальше работа идёт по задачам на доске.'));
@@ -258,6 +260,19 @@ function showProjects(){
       c.appendChild(el('div','small',p.has_plan?('Принято '+p.accepted+' из '+p.total+' задач'):'План ещё не загружен: сначала «Старт проекта»'));
       c.appendChild(btn('Открыть доску','primary',function(){showBoard(p.slug)},{icon:'next',tip:'Задачи проекта: что выдавать, что в работе, что ждёт приёмки'}));g.appendChild(c)});
   }).catch(function(){showLogin()});
+}
+
+function drawMaster(){
+  var c=el('div','card master');var h=el('div','row');h.appendChild(ic('book'));h.appendChild(el('h2','','Мастер-промпт для ИИ-директора'));c.appendChild(h);
+  c.appendChild(el('div','muted','Вставьте этот текст новому ИИ-директору один раз: он научится работать с порталом, узнает порядок работы и как структурировать репозиторий. Дальше вы только копируете готовые задания с доски.'));
+  var steps=el('div','row');['1 Интервью','2 Репозиторий','3 GDD','4 План','5 Задачи','6 Приёмка'].forEach(function(x){steps.appendChild(el('span','tag',x))});c.appendChild(steps);
+  var det=el('details');det.appendChild(el('summary','','Показать текст мастер-промпта'));var pre=el('pre','','Загрузка…');det.appendChild(pre);c.appendChild(det);
+  var row=el('div','row'),text='';
+  var cp=btn('Скопировать мастер-промпт','primary',function(){if(text)copy(text);else toast('Текст ещё загружается')},{icon:'copy',tip:'Скопировать текст и вставить его ИИ-директору в начале работы'});row.appendChild(cp);
+  var sh=shareBtn('', 'Мастер-промпт ИИ-директора');if(sh){sh.onclick=function(){if(text)navigator.share({title:'Мастер-промпт ИИ-директора',text:text}).catch(function(){})};row.appendChild(sh)}
+  var a=el('a','lnk');a.href=BASE+'/api/skeleton.zip';a.appendChild(ic('upload'));a.appendChild(el('span','','Скачать скелет репозитория'));a.title='Заготовка репозитория: правила для ИИ, протокол, шаблон плана, инструменты';row.appendChild(a);
+  c.appendChild(row);app.appendChild(c);
+  api('/api/master-prompt').then(function(r){text=r.markdown;pre.textContent=r.markdown}).catch(function(){pre.textContent='Не удалось загрузить текст.'});
 }
 /* ---------- новый проект ---------- */
 function showNew(){

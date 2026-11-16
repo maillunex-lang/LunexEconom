@@ -144,6 +144,11 @@ def create_app(db_path, base="", secure_cookie=True, fetch=None, github_token_fi
             return respond(start, "200 OK", {"ok": True})
         if path == "/api/me" and method == "GET":
             return respond(start, "200 OK", {"user": sess["username"], "csrf": sess["csrf"]})
+        if path == "/api/master-prompt" and method == "GET":
+            return respond(start, "200 OK", {"markdown": (bootstrap.TPL / "MASTER_PROMPT.md").read_text(encoding="utf-8")})
+        if path == "/api/skeleton.zip" and method == "GET":
+            files = bootstrap.files_for("Мой проект", "", "Описание проекта.")
+            return respond(start, "200 OK", bootstrap.zip_bytes(files), [("Content-Type", "application/zip"), ("Content-Disposition", 'attachment; filename="project-skeleton.zip"')])
         if path == "/api/protocol" and method == "GET":
             return respond(start, "200 OK", {"markdown": (bootstrap.TPL / "PORTAL_PROTOCOL.md").read_text(encoding="utf-8")})
         if path == "/api/projects" and method == "GET":

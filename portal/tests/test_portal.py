@@ -257,6 +257,19 @@ class Portal(unittest.TestCase):
         self.assertIn("worker-src 'self'", csp)
         self.assertEqual(call(self.app, "GET", "/createportal/health")["headers"]["Cache-Control"], "no-store")
 
+    def test_master_prompt_and_generic_skeleton(self):
+        self.assertEqual(call(self.app, "GET", "/createportal/api/master-prompt")["status"], 401)
+        cookie, _ = self.login()
+        md = call(self.app, "GET", "/createportal/api/master-prompt", cookie=cookie)["json"]["markdown"]
+        for need in ("work_plan.json", "Интервью", "Структура репозитория", "docs/gdd/DECISIONS_APPROVED.md", "две независимые линии", "python tools/work_plan.py check", "автоприёмка", "Секреты"):
+            self.assertIn(need, md)
+        self.assertNotIn("LunexEconom", md)
+        z = call(self.app, "GET", "/createportal/api/skeleton.zip", cookie=cookie)
+        self.assertEqual(z["headers"]["Content-Type"], "application/zip")
+        names = zipfile.ZipFile(io.BytesIO(z["body"])).namelist()
+        self.assertIn("docs/work_plan.json", names)
+        self.assertEqual(call(self.app, "GET", "/createportal/api/skeleton.zip")["status"], 401)
+
 
 if __name__ == "__main__":
     unittest.main()
