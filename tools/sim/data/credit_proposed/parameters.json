@@ -1,0 +1,13 @@
+{
+  "version": "draft-1",
+  "key_rate_bp_year": 1600,
+  "spread_bp_year": {"A": 300, "B": 600, "C": 1100, "D": 2000},
+  "rating_bounds": {"A": 800, "B": 600, "C": 400},
+  "ltv_bp": {"building": 6000, "land": 5000, "inventory": 3000},
+  "max_debt_to_assets_bp": 6000,
+  "arrears_penalty_bp_month": 150,
+  "seize_after_arrears_months": 3,
+  "profit_tax_bp": 2000,
+  "property_tax_bp_month": 20,
+  "payroll_tax_bp": 3000
+}
