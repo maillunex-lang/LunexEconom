@@ -847,11 +847,21 @@ def create_app(db_path, base="", secure_cookie=True, fetch=None, github_token_fi
             db.audit(conn, "plan.import", {"slug": slug, "packages": len(plan["packages"])})
             return respond(start, "200 OK", {"ok": True, "packages": len(plan["packages"])})
         if sub == "/sync" and method == "POST":
-            try:
-                plan = json.loads(fetch_plan(row["repo"], row["plan_path"] if launch_enabled else launch.DEFAULT_PLAN_PATH))
-                errs = wp.validate(plan)
-            except Exception as e:
-                return respond(start, "502 Bad Gateway", {"error": "sync_failed", "detail": str(e)[:120]})
+            first = row["plan_path"] if launch_enabled else launch.DEFAULT_PLAN_PATH
+            plan, errs, last_error, used_path = None, [], None, first
+            for candidate in [first] + [x for x in launch.VALID_PLAN_PATHS if x != first]:
+                try:
+                    plan = json.loads(fetch_plan(row["repo"], candidate))
+                    errs = wp.validate(plan)
+                    used_path = candidate
+                    break
+                except Exception as e:  # пробуем следующий известный путь, запоминаем причину первого сбоя
+                    plan = None
+                    last_error = last_error or e
+            if plan is None:
+                return respond(start, "502 Bad Gateway", {"error": "sync_failed", "detail": str(last_error)[:120]})
+            if launch_enabled and used_path != first and not errs:
+                conn.execute("UPDATE projects SET plan_path=? WHERE slug=?", (used_path, slug))
             if errs:
                 return respond(start, "422 Unprocessable Entity", {"error": "plan_errors", "details": errs[:20]})
             conn.execute("UPDATE projects SET plan_json=?, plan_updated=? WHERE slug=?", (json.dumps(plan, ensure_ascii=False), time.time(), slug))
