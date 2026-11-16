@@ -1,0 +1,53 @@
+{
+  "balance": "draft",
+  "cases": [
+    {
+      "building_id": "mall_small",
+      "city": "ufa",
+      "zone": "center",
+      "assumed_occupancy_permille": 800,
+      "rented_m2": 960,
+      "rate_rub_per_m2_month": 28,
+      "gross_rent_month_rub": 26880,
+      "utilities_month_rub": 2150,
+      "upkeep_month_rub": 12000,
+      "property_tax_month_rub": 1008,
+      "land_price_rub": 24000,
+      "investment_rub": 504000,
+      "net_month_rub": 11722,
+      "payback_months": 43
+    },
+    {
+      "building_id": "mall_medium",
+      "city": "ufa",
+      "zone": "center",
+      "assumed_occupancy_permille": 800,
+      "rented_m2": 2400,
+      "rate_rub_per_m2_month": 28,
+      "gross_rent_month_rub": 67200,
+      "utilities_month_rub": 5376,
+      "upkeep_month_rub": 26000,
+      "property_tax_month_rub": 2448,
+      "land_price_rub": 24000,
+      "investment_rub": 1224000,
+      "net_month_rub": 33376,
+      "payback_months": 37
+    },
+    {
+      "building_id": "mall_large",
+      "city": "ufa",
+      "zone": "center",
+      "assumed_occupancy_permille": 800,
+      "rented_m2": 4800,
+      "rate_rub_per_m2_month": 28,
+      "gross_rent_month_rub": 134400,
+      "utilities_month_rub": 10752,
+      "upkeep_month_rub": 50000,
+      "property_tax_month_rub": 4848,
+      "land_price_rub": 24000,
+      "investment_rub": 2424000,
+      "net_month_rub": 68800,
+      "payback_months": 36
+    }
+  ]
+}

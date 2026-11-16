@@ -1,0 +1,48 @@
+{
+  "balance": "draft",
+  "base_retail_rub_per_m2_month": 20,
+  "min_rate_rub_per_m2_month": 5,
+  "max_rate_rub_per_m2_month": 150,
+  "zones": {
+    "center": {
+      "factor_permille": 1400,
+      "land_zone_bp": 16000
+    },
+    "residential": {
+      "factor_permille": 1000,
+      "land_zone_bp": 10000
+    },
+    "industrial": {
+      "factor_permille": 750,
+      "land_zone_bp": 11500
+    }
+  },
+  "cities": {
+    "ufa": {
+      "land_index_bp": 10000,
+      "rent_index_bp": 10000
+    },
+    "sterlitamak": {
+      "land_index_bp": 8800,
+      "rent_index_bp": 8800
+    },
+    "salavat": {
+      "land_index_bp": 8500,
+      "rent_index_bp": 8500
+    },
+    "neftekamsk": {
+      "land_index_bp": 8500,
+      "rent_index_bp": 8500
+    }
+  },
+  "other_use_factors_permille": {
+    "office": 700,
+    "residential": 500
+  },
+  "formula": "clamp(base*zone_factor_permille*city_rent_index_bp//10000000, min_rate, max_rate)",
+  "minimum_term_months": 3,
+  "deposit_months": 1,
+  "max_indexation_bp_12_months": 1000,
+  "late_penalty_bp_month": 500,
+  "eviction_after_full_unpaid_months": 2
+}

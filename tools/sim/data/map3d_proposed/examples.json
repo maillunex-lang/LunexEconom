@@ -1,0 +1,277 @@
+{
+  "balance": "draft",
+  "events": [
+    {
+      "event_id": 501,
+      "version": 501,
+      "type": "building_added",
+      "kind": "enterprise_construction",
+      "city_id": "ufa",
+      "cx": 0,
+      "cy": 0,
+      "chunks": [{"cx": 0, "cy": 0}],
+      "object": {
+        "object_id": "enterprise:88",
+        "catalog_id": "bakery",
+        "owner_ref": "17",
+        "stage_index": 0,
+        "x": 4,
+        "y": 5,
+        "w": 2,
+        "h": 2,
+        "color_rgb": 10855585
+      },
+      "payload": {
+        "enterprise_id": 88,
+        "stage_index": 0,
+        "stage": "foundation",
+        "cells": [[4, 5], [5, 5], [4, 6], [5, 6]]
+      }
+    },
+    {
+      "event_id": 502,
+      "version": 502,
+      "type": "building_stage_changed",
+      "kind": "enterprise_stage",
+      "city_id": "ufa",
+      "cx": 0,
+      "cy": 0,
+      "chunks": [{"cx": 0, "cy": 0}],
+      "object": {
+        "object_id": "enterprise:88",
+        "catalog_id": "bakery",
+        "owner_ref": "17",
+        "stage_index": 1,
+        "x": 4,
+        "y": 5,
+        "w": 2,
+        "h": 2,
+        "color_rgb": 10855585
+      },
+      "payload": {
+        "enterprise_id": 88,
+        "stage_index": 1,
+        "stage": "frame",
+        "cells": [[4, 5], [5, 5], [4, 6], [5, 6]]
+      }
+    },
+    {
+      "event_id": 503,
+      "version": 503,
+      "type": "road_added",
+      "kind": "road_build",
+      "city_id": "ufa",
+      "cx": 0,
+      "cy": 0,
+      "removed": false,
+      "chunks": [{"cx": 0, "cy": 0}],
+      "object": null,
+      "payload": {
+        "cells": [[6, 8], [7, 8], [8, 8]],
+        "player": 17,
+        "auto": true
+      }
+    },
+    {
+      "event_id": 504,
+      "version": 504,
+      "type": "parcel_owner_changed",
+      "kind": "land_buy",
+      "city_id": "ufa",
+      "cx": 0,
+      "cy": 0,
+      "chunks": [{"cx": 0, "cy": 0}],
+      "object": null,
+      "payload": {
+        "px": 1,
+        "py": 0,
+        "owner_kind": "player",
+        "owner_ref": "17",
+        "buyer_id": 17,
+        "price": 15000,
+        "seller": "city"
+      }
+    },
+    {
+      "event_id": 505,
+      "version": 505,
+      "type": "city_growth",
+      "kind": "city_growth",
+      "city_id": "ufa",
+      "cx": null,
+      "cy": null,
+      "chunks_truncated": true,
+      "chunks": [{"cx": 0, "cy": 0}, {"cx": 1, "cy": 0}],
+      "object": null,
+      "payload": {
+        "city": "ufa",
+        "month_index": 4,
+        "old_level": 1,
+        "new_level": 2,
+        "old_radius": 12,
+        "new_radius": 15
+      }
+    },
+    {
+      "event_id": 506,
+      "version": 506,
+      "type": "terrain_edit",
+      "kind": "terrain_edit",
+      "city_id": "ufa",
+      "cx": 0,
+      "cy": 0,
+      "chunks": [{"cx": 0, "cy": 0}],
+      "object": null,
+      "payload": {
+        "x": 3,
+        "y": 3,
+        "terrain": "ground",
+        "cells": [[3, 3]]
+      }
+    },
+    {
+      "event_id": 507,
+      "version": 507,
+      "type": "road_removed",
+      "kind": "road_build",
+      "city_id": "ufa",
+      "cx": 0,
+      "cy": 0,
+      "removed": true,
+      "chunks": [{"cx": 0, "cy": 0}],
+      "object": null,
+      "payload": {
+        "removed": true,
+        "cells": [[8, 8]]
+      }
+    },
+    {
+      "event_id": 508,
+      "version": 508,
+      "type": "building_removed",
+      "kind": "demolition",
+      "city_id": "ufa",
+      "cx": 0,
+      "cy": 0,
+      "chunks": [{"cx": 0, "cy": 0}],
+      "object": {
+        "object_id": "enterprise:88",
+        "catalog_id": "bakery",
+        "owner_ref": "17",
+        "stage_index": 1,
+        "x": 4,
+        "y": 5,
+        "w": 2,
+        "h": 2,
+        "color_rgb": 10855585
+      },
+      "payload": {
+        "enterprise_id": 88,
+        "building_ref": "enterprise:88",
+        "cell_count": 4,
+        "cells": [[4, 5], [5, 5], [4, 6], [5, 6]]
+      }
+    }
+  ],
+  "sequences": [
+    {
+      "id": "build_stage_road_remove",
+      "expect": "apply",
+      "steps": [501, 502, 503, 504, 505, 506, 507, 508]
+    },
+    {
+      "id": "remove_missing_building",
+      "expect": "missing_object",
+      "steps": [508]
+    },
+    {
+      "id": "replay_same_event",
+      "expect": "apply",
+      "steps": [501, 501]
+    },
+    {
+      "id": "out_of_order",
+      "expect": "out_of_order",
+      "steps": [502, 501]
+    },
+    {
+      "id": "remove_missing_road",
+      "expect": "missing_road",
+      "steps": [507]
+    }
+  ],
+  "catchup": [
+    {
+      "id": "contiguous",
+      "last": 10,
+      "tip": 12,
+      "reset": false,
+      "scanned": 12,
+      "events": [11, 12],
+      "expect": "apply"
+    },
+    {
+      "id": "filtered_hole",
+      "last": 10,
+      "tip": 12,
+      "reset": false,
+      "scanned": 12,
+      "events": [12],
+      "expect": "apply"
+    },
+    {
+      "id": "unexplained_hole",
+      "last": 10,
+      "tip": 20,
+      "reset": false,
+      "scanned": 0,
+      "events": [12],
+      "expect": "catchup"
+    },
+    {
+      "id": "too_far",
+      "last": 1,
+      "tip": 5002,
+      "reset": false,
+      "scanned": 5002,
+      "events": [],
+      "expect": "snapshot"
+    },
+    {
+      "id": "reset_flag",
+      "last": 5,
+      "tip": 9,
+      "reset": true,
+      "scanned": 9,
+      "events": [],
+      "expect": "snapshot"
+    },
+    {
+      "id": "replay_only",
+      "last": 12,
+      "tip": 12,
+      "reset": false,
+      "scanned": 12,
+      "events": [12],
+      "expect": "ignore"
+    },
+    {
+      "id": "filtered_page",
+      "last": 10,
+      "tip": 30,
+      "reset": false,
+      "scanned": 30,
+      "events": [],
+      "expect": "advance"
+    },
+    {
+      "id": "page_backwards",
+      "last": 10,
+      "tip": 12,
+      "reset": false,
+      "scanned": 12,
+      "events": [12, 11],
+      "expect": "protocol_error"
+    }
+  ]
+}
