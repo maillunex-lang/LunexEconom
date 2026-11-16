@@ -216,3 +216,14 @@ ui.empty.action | Добавить
 ui.auth.tagline | Создайте компанию. Развивайте экономику Башкортостана.
 ui.auth.password.show | Показать пароль
 ui.auth.password.hide | Скрыть пароль
+
+model.viewer.title | Просмотр 3D-моделей
+model.viewer.back | Назад
+model.viewer.filter | Категория объектов
+model.viewer.all | Все модели
+model.viewer.buildings | Предприятия и здания
+model.viewer.city | Городские объекты
+model.viewer.stage | Стадия {stage} из 4
+model.viewer.statistics | Треугольников: {triangles} · Размер: {kib} КиБ
+model.viewer.failed | Не удалось загрузить модель. Показана запасная коробка.
+model.viewer.gestures | Поверните одним пальцем, измените масштаб двумя пальцами.
