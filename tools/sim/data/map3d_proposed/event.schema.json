@@ -1,0 +1,83 @@
+{
+  "$schema": "https://json-schema.org/draft-07/schema#",
+  "$id": "map3d-event",
+  "title": "Map3D world event",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["event_id", "version", "type", "kind", "city_id", "cx", "cy", "chunks", "object", "payload"],
+  "properties": {
+    "event_id": {"type": "integer", "minimum": 1},
+    "version": {"type": "integer", "minimum": 1},
+    "type": {
+      "type": "string",
+      "enum": [
+        "building_added",
+        "building_removed",
+        "road_added",
+        "road_removed",
+        "parcel_owner_changed",
+        "city_growth",
+        "building_stage_changed",
+        "terrain_edit"
+      ]
+    },
+    "kind": {
+      "type": "string",
+      "enum": [
+        "enterprise_construction",
+        "occupation",
+        "demolition",
+        "enterprise_stage",
+        "road_build",
+        "land_buy",
+        "city_growth",
+        "terrain_edit"
+      ]
+    },
+    "city_id": {"type": ["string", "null"], "minLength": 1, "maxLength": 32},
+    "cx": {"type": ["integer", "null"]},
+    "cy": {"type": ["integer", "null"]},
+    "chunks_truncated": {"type": "boolean"},
+    "removed": {"type": "boolean"},
+    "chunks": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 16,
+      "items": {"$ref": "#/definitions/chunk"}
+    },
+    "object": {
+      "oneOf": [
+        {"type": "null"},
+        {"$ref": "#/definitions/building"}
+      ]
+    },
+    "payload": {"type": "object"}
+  },
+  "definitions": {
+    "chunk": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["cx", "cy"],
+      "properties": {
+        "cx": {"type": "integer"},
+        "cy": {"type": "integer"}
+      }
+    },
+    "building": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["object_id", "catalog_id", "owner_ref", "stage_index", "x", "y", "w", "h", "color_rgb"],
+      "properties": {
+        "object_id": {"type": "string", "minLength": 3, "maxLength": 64},
+        "catalog_id": {"type": "string", "minLength": 1, "maxLength": 64},
+        "owner_ref": {"type": "string", "minLength": 1, "maxLength": 32},
+        "stage_index": {"type": "integer", "minimum": 0, "maximum": 4},
+        "x": {"type": "integer"},
+        "y": {"type": "integer"},
+        "w": {"type": "integer", "minimum": 1, "maximum": 6},
+        "h": {"type": "integer", "minimum": 1, "maximum": 6},
+        "color_rgb": {"type": "integer", "minimum": 0, "maximum": 16777215}
+      }
+    }
+  }
+}
