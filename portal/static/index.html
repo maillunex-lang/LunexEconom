@@ -122,6 +122,51 @@ details{border-top:1px solid var(--hair);padding-top:8px}summary{cursor:pointer;
 .mini .mt{font-weight:600;font-size:14px;line-height:1.3}.mini.locked{opacity:.8}
 @media(max-width:560px){.bar button span{display:none}.brand span{display:none}.crumb b{max-width:34vw}.bar-in{gap:4px}}
 
+/* B1: мобильная лесенка по макету v4 */
+.phone-board{display:none}
+.phone-switch{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:3px;border-radius:999px;padding:4px}
+.phone-switch button{min-width:0;min-height:46px;justify-content:center;padding:8px 3px;font-size:12.5px;white-space:nowrap}
+.phone-switch button.on{background:var(--accent);color:var(--accent-ink)}
+.phone-parallel{display:flex;align-items:center;gap:8px;border-radius:20px;padding:8px 10px;min-width:0}
+.phone-parallel .parallel-copy{min-width:0;flex:1;font-size:12.5px;overflow-wrap:anywhere}
+.phone-parallel button{min-height:44px;padding:8px 10px;font-size:12px;color:var(--laneB)}
+.phone-lane-title{font-size:12px;color:var(--muted);padding:2px 4px}
+.phone-step{display:grid;grid-template-columns:30px minmax(0,1fr);gap:10px;min-width:0}
+.phone-rail{position:relative;display:flex;justify-content:center}
+.phone-rail:before{content:'';position:absolute;top:0;bottom:-12px;left:14px;width:3px;background:var(--hair)}
+.phone-step:last-child .phone-rail:before{bottom:50%}
+.phone-dot{position:relative;z-index:1;display:grid;place-items:center;width:30px;height:30px;border-radius:50%;border:2px solid var(--line);background:var(--glass-strong);font-size:12px;font-weight:700}
+.phone-step.done .phone-dot{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.phone-step.active .phone-dot{border-color:var(--accent);box-shadow:0 0 0 4px color-mix(in srgb,var(--accent) 18%,transparent)}
+.phone-step.future{opacity:.64}
+.phone-step-content{min-width:0;min-height:39px;padding-bottom:10px}
+.phone-step-summary{display:flex;gap:5px;align-items:baseline;flex-wrap:wrap;padding:4px 0;font-size:13px}
+.phone-step-summary .pid{margin:0;font-size:14px}
+.phone-step-summary .small{color:var(--muted)}
+.phone-step-card{padding:12px;border-radius:22px;gap:8px}
+.phone-step-card .row{align-items:stretch}
+.phone-step-card button{flex:1;justify-content:center;min-width:0;padding:8px}
+.phone-bottom-actions{position:fixed;z-index:25;bottom:calc(84px + env(safe-area-inset-bottom,0px));left:12px;right:12px;max-width:440px;margin:auto;display:flex;gap:8px;padding:8px;border:1px solid var(--edge);border-radius:22px;background:var(--glass-strong);backdrop-filter:var(--blur);box-shadow:var(--shadow)}
+.phone-bottom-actions button{flex:1;min-width:0;justify-content:center;padding:8px;font-size:12px;min-height:48px}
+.phone-pair{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}
+.phone-pair .phone-step{grid-template-columns:22px minmax(0,1fr);gap:5px}
+.phone-pair .phone-rail:before{left:10px}
+.phone-pair .phone-dot{width:22px;height:22px;font-size:10px}
+.phone-pair .phone-step-summary{font-size:11px}
+.phone-pair .phone-step-card{padding:9px;gap:7px}
+.phone-pair .phone-step-card .row{flex-direction:column}
+.phone-pair .phone-step-card button{font-size:11px;min-height:44px}
+.phone-pair .pill{font-size:10px;white-space:normal}
+@media(max-width:720px){
+ .phone-board{display:flex;flex-direction:column;gap:12px;min-width:0}
+ .desktop-board,.desktop-board-summary,.board-heading .toolbar{display:none!important}
+ .phone-board>*{min-width:0}
+ main{padding-left:max(14px,env(safe-area-inset-left,0px));padding-right:max(14px,env(safe-area-inset-right,0px));gap:12px}
+ body{padding-bottom:calc(180px + env(safe-area-inset-bottom,0px));overflow-x:hidden}
+ .phone-board .card{min-width:0}
+ .board-heading{min-width:0}
+ .board-heading h1{overflow-wrap:anywhere}
+}
 /* мобильное управление */
 .tabs{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(10px + env(safe-area-inset-bottom,0px));z-index:30;display:none;gap:2px;padding:6px;border-radius:26px;background:var(--glass-strong);backdrop-filter:var(--blur);-webkit-backdrop-filter:var(--blur);border:1px solid var(--edge);box-shadow:var(--shadow);width:min(440px,calc(100% - 24px))}
 .tabs button{flex:1;flex-direction:column;gap:2px;min-height:54px;border-radius:20px;border:0;background:transparent;box-shadow:none;font-size:11.5px;padding:6px 4px;color:var(--muted);backdrop-filter:none}
@@ -202,7 +247,7 @@ function drawTabs(){
   nav.hidden=false;nav.classList.add('show');
   var onBoard=!!current&&lastCrumb!=='Проекты';
   [['Проекты','book',showProjects,!onBoard],['Доска','next',function(){var sl=current?current.slug:lastSlug();if(sl)showBoard(sl);else showProjects()},onBoard],['Идеи','inbox',focusIdeas,false],['Справка','help',showHelp,false]].forEach(function(x){
-    var b=el('button',x[3]?'on':'');b.type='button';b.appendChild(ic(x[1]));b.appendChild(el('span','',x[0]));b.onclick=x[2];nav.appendChild(b)});
+    var b=el('button',x[3]?'on':'');b.type='button';b.appendChild(ic(x[1]));b.appendChild(el('span','',x[0]));b.onclick=x[2];b.title=x[0];b.setAttribute('aria-label',x[0]);nav.appendChild(b)});
 }
 function showOffline(){drawBar('');app.textContent='';var c=el('div','card empty');c.appendChild(ic('help'));c.appendChild(el('h2','','Нет связи с порталом'));c.appendChild(el('div','muted','Проверьте интернет. Данные не сохраняются на устройстве, чтобы они не попали в чужие руки.'));c.appendChild(btn('Повторить','primary',function(){location.reload()},{icon:'sync'}));app.appendChild(c)}
 /* ---------- верхняя панель ---------- */
@@ -299,6 +344,7 @@ function showBoard(slug){rememberSlug(slug);drawBar('…');app.textContent='';ap
 function st(id){var s=current.d.state[id];return s?s.status:'planned'}
 function ready(p){return st(p.id)==='planned'&&p.depends_on.every(function(x){return st(x)==='accepted'})}
 function refresh(then){return api('/api/projects/'+current.slug).then(function(d){current.d=d;confirmId=null;drawBoard();if(then)then()})}
+var phoneLane='A';
 var view=(function(){try{var v=localStorage.getItem('portalView');return v==='steps'?'steps':'lanes'}catch(e){return 'lanes'}})();
 function ttl(p){return p.short||(p.title.length>46?p.title.slice(0,44)+'…':p.title)}
 function setView(v){view=v;try{localStorage.setItem('portalView',v)}catch(e){}drawBoard()}
@@ -310,15 +356,85 @@ function drawBoard(){
   var seg=el('div','seg');var b1=btn('Дорожки','',function(){setView('lanes')},{tip:'Две линии рядом по шагам: видно, что идёт параллельно'});var b2=btn('По шагам','',function(){setView('steps')},{tip:'Задачи по порядку шагов, линии рядом'});b1.className=view==='lanes'?'on':'';b2.className=view==='steps'?'on':'';seg.appendChild(b1);seg.appendChild(b2);tb.appendChild(seg);
   var sync;sync=btn('Синхронизировать','',function(){sync.disabled=true;api('/api/projects/'+current.slug+'/sync','POST',{}).then(function(){toast('План обновлён из репозитория');showBoard(current.slug)}).catch(function(e){toast(e.status===422?'План в репозитории содержит ошибки':'Не удалось получить план: проверьте репозиторий и токен');sync.disabled=false})},{icon:'sync',tip:'Загрузить свежий docs/work_plan.json из репозитория GitHub'});
   tb.appendChild(sync);tb.appendChild(btn('Загрузить план','',showImport,{icon:'upload',tip:'Вставить содержимое work_plan.json вручную, если синхронизация не настроена'}));
-  tb.appendChild(btn('Протокол для ИИ','',showProtocol,{icon:'book',tip:'Инструкция для ИИ-директора: как добавлять этапы и промпты'}));head.appendChild(tb);app.appendChild(head);
-  if(P.length)drawSummary(d,P);
+  tb.appendChild(btn('Протокол для ИИ','',showProtocol,{icon:'book',tip:'Инструкция для ИИ-директора: как добавлять этапы и промпты'}));head.appendChild(tb);head.classList.add('board-heading');app.appendChild(head);
+  if(P.length){var before=app.children.length;drawSummary(d,P);Array.from(app.children).slice(before).forEach(function(x){x.classList.add('desktop-board-summary')})}
   if(!P.length)drawStart(d);
   if(!P.length){var n=el('div','card empty');n.appendChild(ic('map'));n.appendChild(el('h2','','План ещё не загружен'));n.appendChild(el('div','muted','Сначала выполните «Старт проекта»: ИИ-директор организует репозиторий и разработает GDD, после этого появится файл docs/work_plan.json. Тогда нажмите «Синхронизировать» (или «Загрузить план») и здесь появятся задачи с готовыми промптами.'));app.appendChild(n);drawIdeas(d,app);return}
+  var desktopStart=app.children.length;
   if(view==='lanes'){drawLanes(d,P);var rowb=el('div','row');rowb.style.alignItems='flex-start';drawIdeas(d,app)}else drawSteps(d,P);
-  drawStart(d);
+  Array.from(app.children).slice(desktopStart).forEach(function(x){x.classList.add('desktop-board')});
+  drawPhoneBoard(d,P);
+  var afterPhone=app.children.length;drawStart(d);
   drawLog(d,P);
+  Array.from(app.children).slice(afterPhone).forEach(function(x){x.classList.add('desktop-board')});
   if(openId)drawDrawer(openId);
 }
+
+/* Мобильная доска B1. Состояния и API всегда берутся из уже загруженного проекта. */
+function drawPhoneBoard(d,P){
+  var root=el('section','phone-board');root.setAttribute('aria-label','Мобильная доска');
+  var switcher=el('div','phone-switch seg');switcher.setAttribute('role','group');switcher.setAttribute('aria-label','Выбор линии');
+  [['A','Сервер · A'],['B','Клиент · B'],['both','Обе']].forEach(function(x){
+    var b=btn(x[1],phoneLane===x[0]?'on':'',function(){phoneLane=x[0];drawBoard()},{tip:'Показать '+(x[0]==='both'?'обе линии': 'линию '+x[0])});
+    b.setAttribute('aria-pressed',String(phoneLane===x[0]));switcher.appendChild(b);
+  });root.appendChild(switcher);
+  var others=P.filter(function(p){return phoneLane==='both'||p.lane!==phoneLane});
+  var parallel=others.filter(function(p){return st(p.id)==='submitted'})[0]||others.filter(function(p){return st(p.id)==='issued'})[0]||others.filter(ready)[0];
+  if(parallel){
+    var banner=el('div','phone-parallel card');
+    var line=el('div','parallel-copy');line.appendChild(el('b','','Параллельно: '));
+    line.appendChild(document.createTextNode(parallel.id+' · '+(LABEL[st(parallel.id)]||'Можно выдавать').toLowerCase()));banner.appendChild(line);
+    banner.appendChild(btn('Открыть','ghost',function(){phoneLane=parallel.lane;drawBoard()},{tip:'Перейти к задаче '+parallel.id+' в линии '+parallel.lane}));root.appendChild(banner);
+  }
+  if(phoneLane==='both'){
+    var steps=Array.from(new Set(P.map(function(p){return p.step}))).sort(function(a,b){return a-b});
+    var names=el('div','phone-pair phone-lane-title');
+    ['A','B'].forEach(function(l){names.appendChild(el('b','','Линия '+l+' · '+(d.lanes[l]?d.lanes[l].name:l)))});root.appendChild(names);
+    steps.forEach(function(step){var pair=el('div','phone-pair');['A','B'].forEach(function(l){
+      var cell=el('div');P.filter(function(p){return p.step===step&&p.lane===l}).forEach(function(p){drawPhoneStep(cell,p,true)});pair.appendChild(cell);
+    });root.appendChild(pair)});
+  }else{
+    var own=P.filter(function(p){return p.lane===phoneLane}).sort(function(a,b){return a.step-b.step});
+    var L=d.lanes[phoneLane]||{};
+    root.appendChild(el('div','phone-lane-title',(L.who||'Исполнитель')+' · шаги 1–'+own.length));
+    own.forEach(function(p){drawPhoneStep(root,p,false)});
+  }
+  var active=laneCurrent(d,P,phoneLane==='both'?'A':phoneLane);
+  if(!active&&phoneLane==='both')active=laneCurrent(d,P,'B');
+  if(active){
+    var sticky=el('div','phone-bottom-actions');sticky.setAttribute('aria-label','Быстрые действия');
+    var status=st(active.id),allowed=ready(active);
+    function change(next){api('/api/projects/'+current.slug+'/status','POST',{id:active.id,status:next}).then(function(){refresh()}).catch(function(){toast('Не удалось сохранить статус')})}
+    if(status==='issued')sticky.appendChild(btn('Исполнитель сдал','primary',function(){change('submitted')},{tip:'Отметить получение отчёта по '+active.id}));
+    else if(status==='submitted')sticky.appendChild(btn('Принять','primary',function(){openId=active.id;drawBoard()},{tip:'Открыть задачу '+active.id+' для подтверждения приёмки'}));
+    else if(status==='planned'&&allowed)sticky.appendChild(btn('Отдал исполнителю','primary',function(){change('issued')},{tip:'Отметить передачу задачи '+active.id}));
+    sticky.appendChild(btn('Промпт '+active.id,'',function(){openId=active.id;drawBoard()},{tip:'Открыть текст задания '+active.id+' и действия'}));root.appendChild(sticky);
+  }
+  app.appendChild(root);
+}
+function drawPhoneStep(host,p,compact){
+  var status=st(p.id),isReady=ready(p),kind=status==='accepted'?'done':(status!=='planned'||isReady?'active':'future');
+  var line=el('div','phone-step '+kind);line.setAttribute('data-task',p.id);
+  var rail=el('div','phone-rail'),dot=el('span','phone-dot',kind==='done'?'✓':kind==='active'?'●':String(p.step));rail.appendChild(dot);line.appendChild(rail);
+  var content=el('div','phone-step-content');
+  if(kind==='active'){
+    var card=el('div','phone-step-card card');
+    var title=el('div','phone-step-summary');title.appendChild(el('b','pid',p.id));title.appendChild(el('b','',ttl(p)));card.appendChild(title);
+    card.appendChild(pill(status==='planned'?'ready':status,status==='planned'?LABEL.ready:LABEL[status]));
+    if(!compact)card.appendChild(el('div','muted small',status==='issued'?'Исполнитель работает. Когда пришлёт отчёт, нажмите «Исполнитель сдал».':status==='submitted'?'Сдано. Директор проверяет работу.':'Можно передавать исполнителю.'));
+    var actions=el('div','row');actions.appendChild(btn(status==='issued'?'Исполнитель сдал':status==='submitted'?'Принять':'Взять промпт','primary',function(){
+      if(status==='issued')api('/api/projects/'+current.slug+'/status','POST',{id:p.id,status:'submitted'}).then(function(){refresh()}).catch(function(){toast('Не удалось сохранить статус')});
+      else{openId=p.id;drawBoard()}
+    },{tip:'Главное действие задачи '+p.id}));
+    actions.appendChild(btn('Подробнее','ghost',function(){openId=p.id;drawBoard()},{tip:'Открыть подробности задачи '+p.id}));card.appendChild(actions);content.appendChild(card);
+  }else{
+    var summary=el('div','phone-step-summary');summary.appendChild(el('b','pid',p.id));summary.appendChild(el('span','',ttl(p)));
+    if(kind==='done')summary.appendChild(el('span','small','Принято'));
+    content.appendChild(summary);
+  }
+  line.appendChild(content);host.appendChild(line);
+}
+
 function drawSummary(d,P){
   var cnt={accepted:0,submitted:0,issued:0,ready:0};P.forEach(function(p){var s=st(p.id);if(s==='planned'&&ready(p))cnt.ready++;else if(cnt[s]!==undefined)cnt[s]++});
   var hero=el('div','card hero');hero.appendChild(ring(100*cnt.accepted/P.length,96));
