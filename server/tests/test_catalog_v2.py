@@ -28,9 +28,9 @@ class CatalogTests(unittest.TestCase):
 
     def test_full_catalog_and_m1(self):
         catalog=Catalog()
-        self.assertEqual(len(catalog.data['products']),25)
-        self.assertEqual(len(catalog.data['buildings']),20)
-        self.assertEqual(len(catalog.data['recipes']),17)
+        self.assertEqual(len(catalog.data['products']),41)
+        self.assertEqual(len(catalog.data['buildings']),42)
+        self.assertEqual(len(catalog.data['recipes']),41)
         self.assertEqual(len(catalog.version),64)
         self.assertEqual(canonical(catalog.data),canonical(load_all()))
 
