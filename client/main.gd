@@ -364,13 +364,40 @@ func _restore_session() -> void:
         _load_hq()
         _identify_tutorial()
 
+func _auth_error_text(mode: String, response: Dictionary) -> String:
+    var code := ""
+    if response.get("data") is Dictionary:
+        code = str((response.data as Dictionary).get("error", ""))
+    if code == "service_unavailable" or code == "connection_failed":
+        return "Сервер временно недоступен. Попробуйте позже."
+    match code:
+        "account_exists":
+            return Strings.get_text("auth.register.error.exists")
+        "invalid_username":
+            return Strings.get_text("auth.register.error.name")
+        "invalid_email":
+            return Strings.get_text("auth.register.error.email")
+        "invalid_password":
+            return Strings.get_text("auth.register.error.weak")
+        "registration_disabled":
+            return Strings.get_text("auth.register.error.closed")
+        "rate_limited":
+            return Strings.get_text("auth.register.error.limit")
+        "invalid_credentials":
+            return Strings.get_text("auth.login.error.invalid")
+    if int(response.get("code", 0)) == 429:
+        return Strings.get_text("auth.register.error.limit")
+    if mode == "login" and int(response.get("code", 0)) in [400, 401, 403]:
+        return Strings.get_text("auth.login.error.invalid")
+    return Strings.get_text("error.generic")
+
 func _send_auth(mode: String) -> void:
     if _auth_busy:
         return
     var username := login_username.text.strip_edges()
     var email := login_email.text.strip_edges()
     var password := login_password.text
-    if username.length() < 3 or username.length() > 24 or password.length() < 10 or (mode == "register" and not email.contains("@")):
+    if username.length() < 3 or username.length() > 24 or password.length() < 6 or (mode == "register" and not email.contains("@")):
         status_label.text = Strings.get_text("auth.register.error.weak")
         return
     _auth_busy = true
@@ -381,7 +408,7 @@ func _send_auth(mode: String) -> void:
     var response: Dictionary = await _api("/auth/" + mode,HTTPClient.METHOD_POST,data)
     _auth_busy = false
     if response.code != 200 and response.code != 201:
-        status_label.text = "Сервер временно недоступен. Попробуйте позже." if response.data.get("error", "") == "service_unavailable" else (Strings.get_text("error.auth") if response.code in [401, 403] else Strings.get_text("error.generic"))
+        status_label.text = _auth_error_text(mode, response)
         return
     if mode == "register":
         status_label.text = Strings.get_text("auth.login.title")

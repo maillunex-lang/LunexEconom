@@ -77,7 +77,7 @@ def register(body, ctx):
     if not isinstance(email,str) or len(email)>254 or not EMAIL.fullmatch(email):
         return 400, {'error':'invalid_email'}
     email = email.lower()
-    if not isinstance(password,str) or not 10 <= len(password) <= 256:
+    if not isinstance(password,str) or not 6 <= len(password) <= 256:
         return 400, {'error':'invalid_password'}
     if not ctx['settings'].get('registration_enabled'):
         return 403, {'error':'registration_disabled'}
