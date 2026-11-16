@@ -75,7 +75,8 @@
     "server/data/schema.json"
    ],
    "status": "planned",
-   "size": "L"
+   "size": "L",
+   "short": "Глубокие цепочки"
   },
   {
    "id": "B1",
@@ -96,7 +97,8 @@
    ],
    "zone_extra": [],
    "status": "planned",
-   "size": "L"
+   "size": "L",
+   "short": "Экраны объектов"
   },
   {
    "id": "A2",
@@ -120,7 +122,8 @@
     "server/data/schema.json"
    ],
    "status": "planned",
-   "size": "L"
+   "size": "L",
+   "short": "Управление объектами"
   },
   {
    "id": "B2",
@@ -142,7 +145,8 @@
    ],
    "zone_extra": [],
    "status": "planned",
-   "size": "L"
+   "size": "L",
+   "short": "Экраны цепочек"
   },
   {
    "id": "A3",
@@ -164,7 +168,8 @@
    ],
    "zone_extra": [],
    "status": "planned",
-   "size": "L"
+   "size": "L",
+   "short": "Кредиты и налоги"
   },
   {
    "id": "B3",
@@ -185,7 +190,8 @@
    ],
    "zone_extra": [],
    "status": "planned",
-   "size": "L"
+   "size": "L",
+   "short": "Экран «Финансы»"
   },
   {
    "id": "A4",
@@ -208,7 +214,8 @@
    ],
    "zone_extra": [],
    "status": "planned",
-   "size": "L"
+   "size": "L",
+   "short": "Слои населения"
   },
   {
    "id": "B4",
@@ -229,7 +236,8 @@
    ],
    "zone_extra": [],
    "status": "planned",
-   "size": "L"
+   "size": "L",
+   "short": "Состав населения"
   },
   {
    "id": "A5",
@@ -251,7 +259,8 @@
    ],
    "zone_extra": [],
    "status": "planned",
-   "size": "L"
+   "size": "L",
+   "short": "Персонал и R&D"
   },
   {
    "id": "B5",
@@ -273,7 +282,8 @@
    ],
    "zone_extra": [],
    "status": "planned",
-   "size": "L"
+   "size": "L",
+   "short": "Экраны персонала"
   },
   {
    "id": "A6",
@@ -297,7 +307,8 @@
     "tools/loadtest/**"
    ],
    "status": "planned",
-   "size": "L"
+   "size": "L",
+   "short": "Надёжность и long poll"
   },
   {
    "id": "B6",
@@ -318,7 +329,8 @@
    ],
    "zone_extra": [],
    "status": "planned",
-   "size": "L"
+   "size": "L",
+   "short": "Ожидание событий"
   },
   {
    "id": "A7",
@@ -340,7 +352,8 @@
    ],
    "zone_extra": [],
    "status": "planned",
-   "size": "L"
+   "size": "L",
+   "short": "ИИ-игроки"
   },
   {
    "id": "B7",
@@ -362,7 +375,8 @@
    ],
    "zone_extra": [],
    "status": "planned",
-   "size": "L"
+   "size": "L",
+   "short": "Реклама и бренд"
   },
   {
    "id": "A8",
@@ -383,7 +397,8 @@
    ],
    "zone_extra": [],
    "status": "planned",
-   "size": "L"
+   "size": "L",
+   "short": "Бренд и торговля"
   },
   {
    "id": "B8",
@@ -402,7 +417,8 @@
    ],
    "zone_extra": [],
    "status": "planned",
-   "size": "L"
+   "size": "L",
+   "short": "Порт и торговля"
   },
   {
    "id": "A9",
@@ -422,7 +438,8 @@
    ],
    "zone_extra": [],
    "status": "planned",
-   "size": "L"
+   "size": "L",
+   "short": "Биржа"
   },
   {
    "id": "B9",
@@ -441,7 +458,8 @@
    ],
    "zone_extra": [],
    "status": "planned",
-   "size": "L"
+   "size": "L",
+   "short": "Экраны биржи"
   },
   {
    "id": "A10",
@@ -463,7 +481,8 @@
    ],
    "zone_extra": [],
    "status": "planned",
-   "size": "L"
+   "size": "L",
+   "short": "События и услуги"
   },
   {
    "id": "B10",
@@ -484,7 +503,8 @@
    ],
    "zone_extra": [],
    "status": "planned",
-   "size": "L"
+   "size": "L",
+   "short": "Экраны событий"
   },
   {
    "id": "A11",
@@ -504,7 +524,8 @@
    ],
    "zone_extra": [],
    "status": "planned",
-   "size": "L"
+   "size": "L",
+   "short": "Монетизация"
   },
   {
    "id": "B11",
@@ -526,7 +547,8 @@
    ],
    "zone_extra": [],
    "status": "planned",
-   "size": "L"
+   "size": "L",
+   "short": "3D-карта и подписки"
   }
  ],
  "project": {
