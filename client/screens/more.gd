@@ -17,6 +17,7 @@ func _ready() -> void:
     for entry in [
         ["nav.more.settings", "settings"],
         ["nav.more.updates", "updates"],
+        ["model.viewer.title", "model_viewer"],
         ["nav.more.logout", "logout"]
     ]:
         var button := Button.new()

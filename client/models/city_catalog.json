@@ -1,0 +1,156 @@
+[
+  {
+    "id": "city_hall",
+    "name": "Администрация города",
+    "category": "civic",
+    "width": 2,
+    "height": 2
+  },
+  {
+    "id": "school",
+    "name": "Школа",
+    "category": "civic",
+    "width": 2,
+    "height": 2
+  },
+  {
+    "id": "hospital",
+    "name": "Больница",
+    "category": "civic",
+    "width": 2,
+    "height": 2
+  },
+  {
+    "id": "clinic",
+    "name": "Поликлиника",
+    "category": "civic",
+    "width": 2,
+    "height": 1
+  },
+  {
+    "id": "park",
+    "name": "Парк",
+    "category": "public_green",
+    "width": 2,
+    "height": 2
+  },
+  {
+    "id": "sports_ground",
+    "name": "Спортплощадка",
+    "category": "public_green",
+    "width": 1,
+    "height": 2
+  },
+  {
+    "id": "bus_stop",
+    "name": "Остановка",
+    "category": "transport",
+    "width": 1,
+    "height": 1
+  },
+  {
+    "id": "station",
+    "name": "Вокзал",
+    "category": "transport",
+    "width": 2,
+    "height": 2
+  },
+  {
+    "id": "fire_station",
+    "name": "Пожарное депо",
+    "category": "industrial_civic",
+    "width": 2,
+    "height": 2
+  },
+  {
+    "id": "police_station",
+    "name": "Отдел полиции",
+    "category": "civic",
+    "width": 2,
+    "height": 1
+  },
+  {
+    "id": "market",
+    "name": "Городской рынок",
+    "category": "commercial",
+    "width": 2,
+    "height": 2
+  },
+  {
+    "id": "mosque",
+    "name": "Мечеть",
+    "category": "cultural",
+    "width": 1,
+    "height": 2
+  },
+  {
+    "id": "temple",
+    "name": "Храм",
+    "category": "cultural",
+    "width": 1,
+    "height": 2
+  },
+  {
+    "id": "culture_center",
+    "name": "Дом культуры",
+    "category": "civic",
+    "width": 2,
+    "height": 2
+  },
+  {
+    "id": "housing_block",
+    "name": "Жилой квартал",
+    "category": "residential",
+    "width": 2,
+    "height": 2
+  },
+  {
+    "id": "water_works",
+    "name": "Водоканал",
+    "category": "industrial_civic",
+    "width": 2,
+    "height": 2
+  },
+  {
+    "id": "power_substation",
+    "name": "Электроподстанция",
+    "category": "industrial_civic",
+    "width": 2,
+    "height": 1
+  },
+  {
+    "id": "gas_station_utility",
+    "name": "Газораспределительный узел",
+    "category": "industrial_civic",
+    "width": 2,
+    "height": 1
+  },
+  {
+    "id": "bridge",
+    "name": "Мост",
+    "category": "transport",
+    "width": 1,
+    "height": 3
+  },
+  {
+    "id": "embankment",
+    "name": "Набережная",
+    "category": "public_green",
+    "width": 3,
+    "height": 1
+  },
+  {
+    "id": "office_block",
+    "name": "Городской офисный квартал",
+    "category": "commercial",
+    "width": 2,
+    "height": 2
+  },
+  {
+    "id": "shopping_center",
+    "name": "Муниципальный торговый пассаж",
+    "category": "commercial",
+    "width": 2,
+    "height": 2
+  }
+]

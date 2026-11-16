@@ -239,3 +239,13 @@ ui2.hq.hint.land | Выберите участок на карте и приоб
 ui2.hq.hint.production | Создайте производственную цепочку: поле, мельница и пекарня.
 ui2.hq.hint.retail | Организуйте поставки и продажи в магазине.
 ui2.hq.hint.done | Развивайте компанию: изучайте рынок и расширяйте производство.
+model.viewer.title | Просмотр 3D-моделей
+model.viewer.back | Назад
+model.viewer.filter | Категория объектов
+model.viewer.all | Все модели
+model.viewer.buildings | Предприятия и здания
+model.viewer.city | Городские объекты
+model.viewer.stage | Стадия {stage} из 4
+model.viewer.statistics | Треугольников: {triangles} · Размер: {kib} КиБ
+model.viewer.failed | Не удалось загрузить модель. Показана запасная коробка.
+model.viewer.gestures | Поверните одним пальцем, измените масштаб двумя пальцами.

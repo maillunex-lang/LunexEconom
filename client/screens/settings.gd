@@ -1,6 +1,7 @@
 extends Control
 signal back_requested
 signal reset_tutorial_requested
+signal model_viewer_requested
 const Strings = preload("res://i18n/strings.gd")
 const Forest = preload("res://theme/forest_glass.gd")
 var stack: VBoxContainer
@@ -25,6 +26,12 @@ func _ready() -> void:
     reset.custom_minimum_size = Vector2(220, 48)
     reset.pressed.connect(func(): reset_tutorial_requested.emit())
     stack.add_child(reset)
+    var viewer := Button.new()
+    viewer.name = "OpenModelViewer"
+    viewer.text = Strings.get_text("model.viewer.title")
+    viewer.custom_minimum_size = Vector2(220,48)
+    viewer.pressed.connect(func(): model_viewer_requested.emit())
+    stack.add_child(viewer)
     for key in ["settings.language","settings.sound","settings.music","settings.graphics"]:
         var entry := Label.new()
         entry.text = Strings.get_text(key)

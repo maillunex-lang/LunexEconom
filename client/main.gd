@@ -15,6 +15,7 @@ const BuildScreen = preload("res://screens/build.tscn")
 const SupplyScreen = preload("res://screens/supply.tscn")
 const StoreScreen = preload("res://screens/store.tscn")
 const MoreScreen = preload("res://screens/more.tscn")
+const ModelViewerScreen = preload("res://screens/model_viewer.tscn")
 const FinanceScreen = preload("res://screens/finance.tscn")
 const NavBar = preload("res://ui/navigation_bar.gd")
 const TutorialState = preload("res://tutorial/state.gd")
@@ -37,6 +38,7 @@ var build_screen: Control
 var supply_screen: Control
 var store_screen: Control
 var more_screen: Control
+var model_viewer_screen: Control
 var finance_screen: Control
 var navigation_bar: Control
 var tutorial_state: RefCounted
@@ -79,6 +81,7 @@ func _ready() -> void:
     supply_screen = SupplyScreen.instantiate()
     store_screen = StoreScreen.instantiate()
     more_screen = MoreScreen.instantiate()
+    model_viewer_screen = ModelViewerScreen.instantiate()
     finance_screen = FinanceScreen.instantiate()
     router.register_screen("login",login_screen)
     router.register_screen("headquarters",headquarters_screen)
@@ -89,6 +92,7 @@ func _ready() -> void:
     router.register_screen("supply",supply_screen)
     router.register_screen("store",store_screen)
     router.register_screen("more",more_screen)
+    router.register_screen("model_viewer",model_viewer_screen)
     router.register_screen("finance",finance_screen)
     # Existing V2-01b implementation stays untouched.
     update_screen = UpdatesPanel.instantiate()
@@ -99,6 +103,8 @@ func _ready() -> void:
     headquarters_screen.navigate.connect(_navigate)
     headquarters_screen.logout_requested.connect(_logout)
     settings_screen.back_requested.connect(func(): router.back())
+    settings_screen.model_viewer_requested.connect(_navigate.bind("model_viewer"))
+    model_viewer_screen.back_requested.connect(func(): router.back())
     map_screen.back_requested.connect(func(): router.back())
     map_screen.wallet_changed.connect(_load_hq)
     map_screen.stream.land_purchased.connect(func(_data: Dictionary): _refresh_tutorial())
