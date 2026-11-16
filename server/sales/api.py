@@ -53,9 +53,16 @@ def policy_get(body,ctx):
     product=_product(ctx)
     if product is None or not _output(row,product):return 404,{'error':'unknown_output'}
     day=enterprises.today(ctx['conn'])
+    flags=ctx['settings'];ref=enterprises.catalog().index['products'][product]['reference_price']
+    step=flags['sales_price_step_rub']
+    low=ref*flags['sales_price_min_bp']//10000
+    high=ref*flags['sales_price_max_bp']//10000
+    low=-(-low//step)*step
+    high=high//step*step
     return 200,{'enterprise_id':row[0], 'product_id':product,
                 'day_index':day,'active':core.current_policy(ctx['conn'],row[0],product,day),
-                'pending':core.pending_policy(ctx['conn'],row[0],product)}
+                'pending':core.pending_policy(ctx['conn'],row[0],product),
+                'price_limits':{'min_price':max(1,low),'max_price':max(1,high),'step_rub':step,'reference_price':ref}}
 
 
 def policy_put(body,ctx):
