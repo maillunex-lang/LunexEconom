@@ -1,6 +1,6 @@
 """План работ: проверка, отчёт, следующий пакет и генерация текста задачи (docs/work_plan.json).
 
-python tools/work_plan.py check            проверка плана (зависимости, зоны, параллельность)
+python tools/work_plan.py [--plan файл.json] check   проверка плана (по умолчанию docs/work_plan.json) (зависимости, зоны, параллельность)
 python tools/work_plan.py render           пересобрать docs/WORK_PLAN.md
 python tools/work_plan.py next             что можно выдавать исполнителям (по линиям A и B)
 python tools/work_plan.py prompt A1        текст задания исполнителю
@@ -9,12 +9,13 @@ python tools/work_plan.py set A1 wip|done|planned
 from __future__ import annotations
 
 import json
+import os
 import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-PLAN = ROOT / "docs" / "work_plan.json"
-OUT = ROOT / "docs" / "WORK_PLAN.md"
+PLAN = Path(os.environ["WORK_PLAN_FILE"]) if os.environ.get("WORK_PLAN_FILE") else ROOT / "docs" / "work_plan.json"
+OUT = PLAN.with_name("WORK_PLAN.md")
 STATUSES = ("planned", "wip", "done")
 SHARED_OK = ("docs/qa/",)  # отчёты называются по пакету, пересечения нет
 
@@ -141,12 +142,13 @@ def prompt(plan, pid):
     lane = plan["lanes"][p["lane"]]
     zone = zones(plan, p)
     gdds = ", ".join(f"docs/gdd/{g}_*.md" for g in p["gdd"])
+    report = (lane.get("report") or "docs/qa/{id}.md").format(id=pid)
     proj = plan.get("project", {})
     repo = proj.get("repo") or "репозиторий проекта"
     branch = proj.get("branch") or "main"
     pattern = plan["rules"].get("branch_pattern", "<id>-<кратко>").replace("<id>", pid.lower()).replace("<slug>", "<кратко>")
     rules = [
-        "Один большой заход, вопросов не задавать: при неясности выбери простейший безопасный вариант и запиши в docs/qa/%s.md (раздел «Допущения»)." % pid,
+        "Один большой заход, вопросов не задавать: при неясности выбери простейший безопасный вариант и запиши в %s (раздел «Допущения»)." % report,
         "Репозиторий %s, ветка %s. Работай в ветке %s от свежего main, создай pull request; слияние делает директор." % (repo, branch, pattern),
         "Проект и контракты: " + gdds + " (читать полностью), docs/gdd/DECISIONS_APPROVED.md, docs/AI_RULES.md; макеты в docs/mockups; эталонные данные и тесты проекта читать, не менять.",
         "Зона файлов (только это): " + ", ".join(zone) + ". Общие файлы не менять: " + ", ".join(plan["rules"]["shared_files_director_only"]) + ".",
@@ -161,6 +163,11 @@ def prompt(plan, pid):
 
 
 def main(argv):
+    global PLAN, OUT
+    if len(argv) > 2 and argv[1] == "--plan":
+        PLAN = Path(argv[2]).resolve()
+        OUT = PLAN.with_name("WORK_PLAN.md")
+        argv = [argv[0]] + argv[3:]
     plan = load()
     cmd = argv[1] if len(argv) > 1 else "check"
     if cmd == "check":
@@ -169,7 +176,7 @@ def main(argv):
         return 1 if errs else 0
     if cmd == "render":
         OUT.write_text(render(plan), encoding="utf-8")
-        print("docs/WORK_PLAN.md обновлён")
+        print(f"{OUT.relative_to(ROOT) if OUT.is_relative_to(ROOT) else OUT} обновлён")
         return 0
     if cmd == "next":
         r = ready(plan)

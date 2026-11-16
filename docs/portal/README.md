@@ -21,4 +21,6 @@
 | [DECISIONS.md](DECISIONS.md) | решения и вопросы владельцу |
 | [mockups/](mockups/) | макеты экранов v2 (SVG) |
 
+**План работ портала (активный):** [WORK_PLAN.md](WORK_PLAN.md), источник [work_plan.json](work_plan.json); команды `python tools/work_plan.py --plan docs/portal/work_plan.json next|prompt <id>|check|render`.
+
 Код: [`portal/`](../../portal/), тесты `python -m unittest portal.tests.test_portal`, развёртывание: [`portal/DEPLOY.md`](../../portal/DEPLOY.md).
