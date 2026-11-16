@@ -1,0 +1,28 @@
+{
+  "id": "m2_income_layers",
+  "days": 2,
+  "city": "ufa",
+  "districts_file": "tools/sim/data/districts_ufa.json",
+  "players": [
+    {"id": "mira", "capital": 1000000}
+  ],
+  "layer_shifts": [
+    {
+      "day": 2,
+      "district": "medovy_kvartal",
+      "layers_permille": {"low": 200, "mid": 350, "high": 200, "premium": 250}
+    }
+  ],
+  "fixtures": [
+    {
+      "player": "mira",
+      "enterprise": "store_med",
+      "building": "grocery_store",
+      "district": "medovy_kvartal",
+      "stock": {"bread": {"quantity": 5000000, "quality": 50}}
+    }
+  ],
+  "cells": [
+    {"enterprise": "store_med", "slot": 1, "product": "bread", "price": 90}
+  ]
+}

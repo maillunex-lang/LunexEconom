@@ -1,0 +1,786 @@
+{
+  "city": "ufa",
+  "days": [
+    {
+      "day": 1,
+      "demand": [
+        {
+          "ad_factor_permille": 1000,
+          "base_population": 1150000,
+          "competition_s": 2,
+          "demand": 2074555,
+          "districts": [
+            {
+              "appeal_permille": 1200,
+              "demand": 397836,
+              "floor_demand": 397836,
+              "floor_population": 207000,
+              "id": "belaya_naberezhnaya",
+              "layers": [
+                {
+                  "demand": 63292,
+                  "floor_demand": 63292,
+                  "id": "low",
+                  "income_index_permille": 600,
+                  "population": 41400,
+                  "share_permille": 200
+                },
+                {
+                  "demand": 150696,
+                  "floor_demand": 150696,
+                  "id": "mid",
+                  "income_index_permille": 1000,
+                  "population": 82800,
+                  "share_permille": 400
+                },
+                {
+                  "demand": 131105,
+                  "floor_demand": 131105,
+                  "id": "high",
+                  "income_index_permille": 1400,
+                  "population": 62100,
+                  "share_permille": 300
+                },
+                {
+                  "demand": 52743,
+                  "floor_demand": 52743,
+                  "id": "premium",
+                  "income_index_permille": 2000,
+                  "population": 20700,
+                  "share_permille": 100
+                }
+              ],
+              "name": "Белая набережная",
+              "pop_permille": 180,
+              "population": 207000,
+              "price": 90,
+              "rating": 70,
+              "revenue": 0,
+              "sold": 0,
+              "stores": [],
+              "traffic": 80,
+              "type": "центр",
+              "unmet": 397836
+            },
+            {
+              "appeal_permille": 1000,
+              "demand": 938081,
+              "floor_demand": 938081,
+              "floor_population": 517500,
+              "id": "medovy_kvartal",
+              "layers": [
+                {
+                  "demand": 276903,
+                  "floor_demand": 276903,
+                  "id": "low",
+                  "income_index_permille": 600,
+                  "population": 181125,
+                  "share_permille": 350
+                },
+                {
+                  "demand": 376740,
+                  "floor_demand": 376740,
+                  "id": "mid",
+                  "income_index_permille": 1000,
+                  "population": 207000,
+                  "share_permille": 400
+                },
+                {
+                  "demand": 218509,
+                  "floor_demand": 218509,
+                  "id": "high",
+                  "income_index_permille": 1400,
+                  "population": 103500,
+                  "share_permille": 200
+                },
+                {
+                  "demand": 65929,
+                  "floor_demand": 65929,
+                  "id": "premium",
+                  "income_index_permille": 2000,
+                  "population": 25875,
+                  "share_permille": 50
+                }
+              ],
+              "name": "Медовый квартал",
+              "pop_permille": 450,
+              "population": 517500,
+              "price": 90,
+              "rating": 70,
+              "revenue": 84427290,
+              "sold": 938081,
+              "stores": [
+                {
+                  "appeal": 98,
+                  "appeal_permille": 1000,
+                  "district": "medovy_kvartal",
+                  "enterprise": "store_med",
+                  "player": "mira",
+                  "price": 90,
+                  "rating": 70,
+                  "revenue": 84427290,
+                  "share": 938081,
+                  "slot": 1,
+                  "sold": 938081,
+                  "traffic": 40,
+                  "vat": 7675209,
+                  "weight": 9604
+                }
+              ],
+              "traffic": 40,
+              "type": "жилой",
+              "unmet": 0
+            },
+            {
+              "appeal_permille": 900,
+              "demand": 397166,
+              "floor_demand": 397166,
+              "floor_population": 230000,
+              "id": "neftyanoy_holm",
+              "layers": [
+                {
+                  "demand": 175812,
+                  "floor_demand": 175812,
+                  "id": "low",
+                  "income_index_permille": 600,
+                  "population": 115000,
+                  "share_permille": 500
+                },
+                {
+                  "demand": 146510,
+                  "floor_demand": 146510,
+                  "id": "mid",
+                  "income_index_permille": 1000,
+                  "population": 80500,
+                  "share_permille": 350
+                },
+                {
+                  "demand": 63124,
+                  "floor_demand": 63124,
+                  "id": "high",
+                  "income_index_permille": 1400,
+                  "population": 29900,
+                  "share_permille": 130
+                },
+                {
+                  "demand": 11720,
+                  "floor_demand": 11720,
+                  "id": "premium",
+                  "income_index_permille": 2000,
+                  "population": 4600,
+                  "share_permille": 20
+                }
+              ],
+              "name": "Нефтяной холм",
+              "pop_permille": 200,
+              "population": 230000,
+              "price": 90,
+              "rating": 70,
+              "revenue": 0,
+              "sold": 0,
+              "stores": [],
+              "traffic": 30,
+              "type": "промзона",
+              "unmet": 397166
+            },
+            {
+              "appeal_permille": 800,
+              "demand": 235486,
+              "floor_demand": 235486,
+              "floor_population": 138000,
+              "id": "yuzhnaya_okraina",
+              "layers": [
+                {
+                  "demand": 116035,
+                  "floor_demand": 116035,
+                  "id": "low",
+                  "income_index_permille": 600,
+                  "population": 75900,
+                  "share_permille": 550
+                },
+                {
+                  "demand": 80371,
+                  "floor_demand": 80371,
+                  "id": "mid",
+                  "income_index_permille": 1000,
+                  "population": 44160,
+                  "share_permille": 320
+                },
+                {
+                  "demand": 32048,
+                  "floor_demand": 32048,
+                  "id": "high",
+                  "income_index_permille": 1400,
+                  "population": 15180,
+                  "share_permille": 110
+                },
+                {
+                  "demand": 7032,
+                  "floor_demand": 7032,
+                  "id": "premium",
+                  "income_index_permille": 2000,
+                  "population": 2760,
+                  "share_permille": 20
+                }
+              ],
+              "name": "Южная окраина",
+              "pop_permille": 120,
+              "population": 138000,
+              "price": 90,
+              "rating": 70,
+              "revenue": 0,
+              "sold": 0,
+              "stores": [],
+              "traffic": 15,
+              "type": "окраина",
+              "unmet": 235486
+            },
+            {
+              "appeal_permille": 1500,
+              "demand": 63793,
+              "floor_demand": 63793,
+              "floor_population": 34500,
+              "id": "centralny_rynok",
+              "layers": [
+                {
+                  "demand": 15823,
+                  "floor_demand": 15823,
+                  "id": "low",
+                  "income_index_permille": 600,
+                  "population": 10350,
+                  "share_permille": 300
+                },
+                {
+                  "demand": 26371,
+                  "floor_demand": 26371,
+                  "id": "mid",
+                  "income_index_permille": 1000,
+                  "population": 14490,
+                  "share_permille": 420
+                },
+                {
+                  "demand": 14567,
+                  "floor_demand": 14567,
+                  "id": "high",
+                  "income_index_permille": 1400,
+                  "population": 6900,
+                  "share_permille": 200
+                },
+                {
+                  "demand": 7032,
+                  "floor_demand": 7032,
+                  "id": "premium",
+                  "income_index_permille": 2000,
+                  "population": 2760,
+                  "share_permille": 80
+                }
+              ],
+              "name": "Центральный рынок",
+              "pop_permille": 30,
+              "population": 34500,
+              "price": 90,
+              "rating": 70,
+              "revenue": 0,
+              "sold": 0,
+              "stores": [],
+              "traffic": 100,
+              "type": "рынок",
+              "unmet": 63793
+            },
+            {
+              "appeal_permille": 1100,
+              "demand": 42193,
+              "floor_demand": 42193,
+              "floor_population": 23000,
+              "id": "vokzalny_krug",
+              "layers": [
+                {
+                  "demand": 11251,
+                  "floor_demand": 11251,
+                  "id": "low",
+                  "income_index_permille": 600,
+                  "population": 7360,
+                  "share_permille": 320
+                },
+                {
+                  "demand": 16744,
+                  "floor_demand": 16744,
+                  "id": "mid",
+                  "income_index_permille": 1000,
+                  "population": 9200,
+                  "share_permille": 400
+                },
+                {
+                  "demand": 10682,
+                  "floor_demand": 10682,
+                  "id": "high",
+                  "income_index_permille": 1400,
+                  "population": 5060,
+                  "share_permille": 220
+                },
+                {
+                  "demand": 3516,
+                  "floor_demand": 3516,
+                  "id": "premium",
+                  "income_index_permille": 2000,
+                  "population": 1380,
+                  "share_permille": 60
+                }
+              ],
+              "name": "Вокзальный круг",
+              "pop_permille": 20,
+              "population": 23000,
+              "price": 90,
+              "rating": 70,
+              "revenue": 0,
+              "sold": 0,
+              "stores": [],
+              "traffic": 70,
+              "type": "вокзал",
+              "unmet": 42193
+            }
+          ],
+          "elasticity": 1,
+          "floor_demand": 2074555,
+          "floor_population_sum": 1150000,
+          "growth_bp": 0,
+          "growth_months": 0,
+          "per_capita": 2,
+          "population": 1150000,
+          "population_remainder": 0,
+          "product": "bread",
+          "reference_price": 90,
+          "remainder": 0
+        }
+      ],
+      "enterprises": {
+        "store_med": {
+          "arrears": 0,
+          "building": "grocery_store",
+          "district": "medovy_kvartal",
+          "load_bp": 0,
+          "player": "mira",
+          "stage": 4,
+          "stalled": false,
+          "stock": {
+            "bread": 4061919
+          }
+        }
+      },
+      "ledger_sum": 0,
+      "market": [],
+      "month_closed": 0,
+      "players": {
+        "mira": {
+          "money": 85427290,
+          "output": {},
+          "revenue": 84427290,
+          "sales": 938081,
+          "tax": 7675209,
+          "tax_due": 0,
+          "tax_paid": 0,
+          "wages_paid": 0
+        }
+      }
+    },
+    {
+      "day": 2,
+      "demand": [
+        {
+          "ad_factor_permille": 1000,
+          "base_population": 1150000,
+          "competition_s": 2,
+          "demand": 2172507,
+          "districts": [
+            {
+              "appeal_permille": 1200,
+              "demand": 397836,
+              "floor_demand": 397836,
+              "floor_population": 207000,
+              "id": "belaya_naberezhnaya",
+              "layers": [
+                {
+                  "demand": 63292,
+                  "floor_demand": 63292,
+                  "id": "low",
+                  "income_index_permille": 600,
+                  "population": 41400,
+                  "share_permille": 200
+                },
+                {
+                  "demand": 150696,
+                  "floor_demand": 150696,
+                  "id": "mid",
+                  "income_index_permille": 1000,
+                  "population": 82800,
+                  "share_permille": 400
+                },
+                {
+                  "demand": 131105,
+                  "floor_demand": 131105,
+                  "id": "high",
+                  "income_index_permille": 1400,
+                  "population": 62100,
+                  "share_permille": 300
+                },
+                {
+                  "demand": 52743,
+                  "floor_demand": 52743,
+                  "id": "premium",
+                  "income_index_permille": 2000,
+                  "population": 20700,
+                  "share_permille": 100
+                }
+              ],
+              "name": "Белая набережная",
+              "pop_permille": 180,
+              "population": 207000,
+              "price": 90,
+              "rating": 70,
+              "revenue": 0,
+              "sold": 0,
+              "stores": [],
+              "traffic": 80,
+              "type": "центр",
+              "unmet": 397836
+            },
+            {
+              "appeal_permille": 1000,
+              "demand": 1036033,
+              "floor_demand": 1036033,
+              "floor_population": 517500,
+              "id": "medovy_kvartal",
+              "layers": [
+                {
+                  "demand": 158230,
+                  "floor_demand": 158230,
+                  "id": "low",
+                  "income_index_permille": 600,
+                  "population": 103500,
+                  "share_permille": 200
+                },
+                {
+                  "demand": 329647,
+                  "floor_demand": 329647,
+                  "id": "mid",
+                  "income_index_permille": 1000,
+                  "population": 181125,
+                  "share_permille": 350
+                },
+                {
+                  "demand": 218509,
+                  "floor_demand": 218509,
+                  "id": "high",
+                  "income_index_permille": 1400,
+                  "population": 103500,
+                  "share_permille": 200
+                },
+                {
+                  "demand": 329647,
+                  "floor_demand": 329647,
+                  "id": "premium",
+                  "income_index_permille": 2000,
+                  "population": 129375,
+                  "share_permille": 250
+                }
+              ],
+              "name": "Медовый квартал",
+              "pop_permille": 450,
+              "population": 517500,
+              "price": 90,
+              "rating": 70,
+              "revenue": 93242970,
+              "sold": 1036033,
+              "stores": [
+                {
+                  "appeal": 98,
+                  "appeal_permille": 1000,
+                  "district": "medovy_kvartal",
+                  "enterprise": "store_med",
+                  "player": "mira",
+                  "price": 90,
+                  "rating": 70,
+                  "revenue": 93242970,
+                  "share": 1036033,
+                  "slot": 1,
+                  "sold": 1036033,
+                  "traffic": 40,
+                  "vat": 8476634,
+                  "weight": 9604
+                }
+              ],
+              "traffic": 40,
+              "type": "жилой",
+              "unmet": 0
+            },
+            {
+              "appeal_permille": 900,
+              "demand": 397166,
+              "floor_demand": 397166,
+              "floor_population": 230000,
+              "id": "neftyanoy_holm",
+              "layers": [
+                {
+                  "demand": 175812,
+                  "floor_demand": 175812,
+                  "id": "low",
+                  "income_index_permille": 600,
+                  "population": 115000,
+                  "share_permille": 500
+                },
+                {
+                  "demand": 146510,
+                  "floor_demand": 146510,
+                  "id": "mid",
+                  "income_index_permille": 1000,
+                  "population": 80500,
+                  "share_permille": 350
+                },
+                {
+                  "demand": 63124,
+                  "floor_demand": 63124,
+                  "id": "high",
+                  "income_index_permille": 1400,
+                  "population": 29900,
+                  "share_permille": 130
+                },
+                {
+                  "demand": 11720,
+                  "floor_demand": 11720,
+                  "id": "premium",
+                  "income_index_permille": 2000,
+                  "population": 4600,
+                  "share_permille": 20
+                }
+              ],
+              "name": "Нефтяной холм",
+              "pop_permille": 200,
+              "population": 230000,
+              "price": 90,
+              "rating": 70,
+              "revenue": 0,
+              "sold": 0,
+              "stores": [],
+              "traffic": 30,
+              "type": "промзона",
+              "unmet": 397166
+            },
+            {
+              "appeal_permille": 800,
+              "demand": 235486,
+              "floor_demand": 235486,
+              "floor_population": 138000,
+              "id": "yuzhnaya_okraina",
+              "layers": [
+                {
+                  "demand": 116035,
+                  "floor_demand": 116035,
+                  "id": "low",
+                  "income_index_permille": 600,
+                  "population": 75900,
+                  "share_permille": 550
+                },
+                {
+                  "demand": 80371,
+                  "floor_demand": 80371,
+                  "id": "mid",
+                  "income_index_permille": 1000,
+                  "population": 44160,
+                  "share_permille": 320
+                },
+                {
+                  "demand": 32048,
+                  "floor_demand": 32048,
+                  "id": "high",
+                  "income_index_permille": 1400,
+                  "population": 15180,
+                  "share_permille": 110
+                },
+                {
+                  "demand": 7032,
+                  "floor_demand": 7032,
+                  "id": "premium",
+                  "income_index_permille": 2000,
+                  "population": 2760,
+                  "share_permille": 20
+                }
+              ],
+              "name": "Южная окраина",
+              "pop_permille": 120,
+              "population": 138000,
+              "price": 90,
+              "rating": 70,
+              "revenue": 0,
+              "sold": 0,
+              "stores": [],
+              "traffic": 15,
+              "type": "окраина",
+              "unmet": 235486
+            },
+            {
+              "appeal_permille": 1500,
+              "demand": 63793,
+              "floor_demand": 63793,
+              "floor_population": 34500,
+              "id": "centralny_rynok",
+              "layers": [
+                {
+                  "demand": 15823,
+                  "floor_demand": 15823,
+                  "id": "low",
+                  "income_index_permille": 600,
+                  "population": 10350,
+                  "share_permille": 300
+                },
+                {
+                  "demand": 26371,
+                  "floor_demand": 26371,
+                  "id": "mid",
+                  "income_index_permille": 1000,
+                  "population": 14490,
+                  "share_permille": 420
+                },
+                {
+                  "demand": 14567,
+                  "floor_demand": 14567,
+                  "id": "high",
+                  "income_index_permille": 1400,
+                  "population": 6900,
+                  "share_permille": 200
+                },
+                {
+                  "demand": 7032,
+                  "floor_demand": 7032,
+                  "id": "premium",
+                  "income_index_permille": 2000,
+                  "population": 2760,
+                  "share_permille": 80
+                }
+              ],
+              "name": "Центральный рынок",
+              "pop_permille": 30,
+              "population": 34500,
+              "price": 90,
+              "rating": 70,
+              "revenue": 0,
+              "sold": 0,
+              "stores": [],
+              "traffic": 100,
+              "type": "рынок",
+              "unmet": 63793
+            },
+            {
+              "appeal_permille": 1100,
+              "demand": 42193,
+              "floor_demand": 42193,
+              "floor_population": 23000,
+              "id": "vokzalny_krug",
+              "layers": [
+                {
+                  "demand": 11251,
+                  "floor_demand": 11251,
+                  "id": "low",
+                  "income_index_permille": 600,
+                  "population": 7360,
+                  "share_permille": 320
+                },
+                {
+                  "demand": 16744,
+                  "floor_demand": 16744,
+                  "id": "mid",
+                  "income_index_permille": 1000,
+                  "population": 9200,
+                  "share_permille": 400
+                },
+                {
+                  "demand": 10682,
+                  "floor_demand": 10682,
+                  "id": "high",
+                  "income_index_permille": 1400,
+                  "population": 5060,
+                  "share_permille": 220
+                },
+                {
+                  "demand": 3516,
+                  "floor_demand": 3516,
+                  "id": "premium",
+                  "income_index_permille": 2000,
+                  "population": 1380,
+                  "share_permille": 60
+                }
+              ],
+              "name": "Вокзальный круг",
+              "pop_permille": 20,
+              "population": 23000,
+              "price": 90,
+              "rating": 70,
+              "revenue": 0,
+              "sold": 0,
+              "stores": [],
+              "traffic": 70,
+              "type": "вокзал",
+              "unmet": 42193
+            }
+          ],
+          "elasticity": 1,
+          "floor_demand": 2172507,
+          "floor_population_sum": 1150000,
+          "growth_bp": 0,
+          "growth_months": 0,
+          "per_capita": 2,
+          "population": 1150000,
+          "population_remainder": 0,
+          "product": "bread",
+          "reference_price": 90,
+          "remainder": 0
+        }
+      ],
+      "enterprises": {
+        "store_med": {
+          "arrears": 0,
+          "building": "grocery_store",
+          "district": "medovy_kvartal",
+          "load_bp": 0,
+          "player": "mira",
+          "stage": 4,
+          "stalled": false,
+          "stock": {
+            "bread": 3025886
+          }
+        }
+      },
+      "ledger_sum": 0,
+      "market": [],
+      "month_closed": 0,
+      "players": {
+        "mira": {
+          "money": 178670260,
+          "output": {},
+          "revenue": 93242970,
+          "sales": 1036033,
+          "tax": 8476634,
+          "tax_due": 0,
+          "tax_paid": 0,
+          "wages_paid": 0
+        }
+      }
+    }
+  ],
+  "days_run": 2,
+  "salary_index_bp": 10000,
+  "salary_worker": 100,
+  "scenario": "m2_income_layers",
+  "sim_version": 1,
+  "totals": {
+    "mira": {
+      "min_money": 1000000,
+      "money": 178670260,
+      "output": {},
+      "revenue": 177670260,
+      "sales": 1974114,
+      "tax_paid": 0,
+      "wages_paid": 0
+    }
+  },
+  "verdict": null
+}

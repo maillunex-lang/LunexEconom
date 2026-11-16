@@ -1,0 +1,101 @@
+{
+  "balance": "draft",
+  "city_id": "ufa",
+  "ad_factor_permille": 1000,
+  "competition_s": 2,
+  "growth_bp": 0,
+  "layers": [
+    {
+      "id": "low",
+      "name": "Низкий",
+      "income_index_permille": 600,
+      "basket_food_permille": 550,
+      "basket_clothes_permille": 100,
+      "basket_fuel_permille": 150,
+      "basket_electronics_permille": 20
+    },
+    {
+      "id": "mid",
+      "name": "Средний",
+      "income_index_permille": 1000,
+      "basket_food_permille": 400,
+      "basket_clothes_permille": 150,
+      "basket_fuel_permille": 120,
+      "basket_electronics_permille": 80
+    },
+    {
+      "id": "high",
+      "name": "Высокий",
+      "income_index_permille": 1400,
+      "basket_food_permille": 250,
+      "basket_clothes_permille": 200,
+      "basket_fuel_permille": 100,
+      "basket_electronics_permille": 150
+    },
+    {
+      "id": "premium",
+      "name": "Премиум",
+      "income_index_permille": 2000,
+      "basket_food_permille": 150,
+      "basket_clothes_permille": 250,
+      "basket_fuel_permille": 80,
+      "basket_electronics_permille": 250
+    }
+  ],
+  "districts": [
+    {
+      "id": "belaya_naberezhnaya",
+      "name": "Белая набережная",
+      "type": "центр",
+      "pop_permille": 180,
+      "traffic": 80,
+      "appeal_permille": 1200,
+      "layers_permille": {"low": 200, "mid": 400, "high": 300, "premium": 100}
+    },
+    {
+      "id": "medovy_kvartal",
+      "name": "Медовый квартал",
+      "type": "жилой",
+      "pop_permille": 450,
+      "traffic": 40,
+      "appeal_permille": 1000,
+      "layers_permille": {"low": 350, "mid": 400, "high": 200, "premium": 50}
+    },
+    {
+      "id": "neftyanoy_holm",
+      "name": "Нефтяной холм",
+      "type": "промзона",
+      "pop_permille": 200,
+      "traffic": 30,
+      "appeal_permille": 900,
+      "layers_permille": {"low": 500, "mid": 350, "high": 130, "premium": 20}
+    },
+    {
+      "id": "yuzhnaya_okraina",
+      "name": "Южная окраина",
+      "type": "окраина",
+      "pop_permille": 120,
+      "traffic": 15,
+      "appeal_permille": 800,
+      "layers_permille": {"low": 550, "mid": 320, "high": 110, "premium": 20}
+    },
+    {
+      "id": "centralny_rynok",
+      "name": "Центральный рынок",
+      "type": "рынок",
+      "pop_permille": 30,
+      "traffic": 100,
+      "appeal_permille": 1500,
+      "layers_permille": {"low": 300, "mid": 420, "high": 200, "premium": 80}
+    },
+    {
+      "id": "vokzalny_krug",
+      "name": "Вокзальный круг",
+      "type": "вокзал",
+      "pop_permille": 20,
+      "traffic": 70,
+      "appeal_permille": 1100,
+      "layers_permille": {"low": 320, "mid": 400, "high": 220, "premium": 60}
+    }
+  ]
+}
