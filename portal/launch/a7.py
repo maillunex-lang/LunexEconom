@@ -196,7 +196,9 @@ def skeleton_for(project):
     files=bootstrap.files_for(name,repo,project['description'])
     kind=project['project_type']
     plan=project_types.starter_plan(kind,name,repo)
-    files['docs/work_plan.json']=json.dumps(plan,ensure_ascii=False,indent=1)+'\n'
+    path=project['plan_path']
+    if path!='docs/work_plan.json':files.pop('docs/work_plan.json',None)
+    files[path]=json.dumps(plan,ensure_ascii=False,indent=1)+'\n'
     files['docs/gdd/01_OVERVIEW.md']=project_types.gdd_outline(name)
     # Never modify the immutable templates; adapt the generated skeleton only.
     return files
