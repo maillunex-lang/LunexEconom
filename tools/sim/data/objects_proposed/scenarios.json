@@ -1,0 +1,60 @@
+{
+  "wear": {
+    "building": {
+      "category": "factory",
+      "build_cost": 78000,
+      "upkeep_month": 4000,
+      "jobs": 25,
+      "wage_month": 100,
+      "units_month_base": 8100,
+      "price": 38,
+      "input_cost_per_unit": 14,
+      "months": 24,
+      "demand_units_month": 9000
+    },
+    "variants": [
+      {
+        "id": "no_repair",
+        "repair_at_bp": null,
+        "level": 1
+      },
+      {
+        "id": "repair_at_6000",
+        "repair_at_bp": 6000,
+        "level": 1
+      },
+      {
+        "id": "repair_at_3000",
+        "repair_at_bp": 3000,
+        "level": 1
+      },
+      {
+        "id": "level2_repair_at_3000",
+        "repair_at_bp": 3000,
+        "level": 2
+      }
+    ]
+  },
+  "deposit": {
+    "initial_reserve": 120000,
+    "extract_month_base": 6000,
+    "price": 12,
+    "months": 24,
+    "wage_upkeep_month": 13000
+  },
+  "automation": {
+    "months": 12,
+    "stock_start": 5000,
+    "use_per_month": 4000,
+    "delivery_per_month": 4000,
+    "interrupted_months": [
+      5,
+      6,
+      7
+    ],
+    "input_ref_price": 14,
+    "output_per_input": 3,
+    "output_price": 38,
+    "min_stock_months": 1
+  }
+}

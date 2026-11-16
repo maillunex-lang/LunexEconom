@@ -1,0 +1,61 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1920" height="1080" viewBox="0 0 1920 1080">
+<rect width="1920" height="1080" fill="#0A201B"/>
+<rect x="0" y="0" width="1920" height="80" rx="0" fill="#173A30"/>
+<text x="40" y="50" font-family="sans-serif" font-size="22" fill="#EEF5E8" text-anchor="start">Отчёт магазина «Продукты у дома»</text>
+<text x="1500" y="50" font-family="sans-serif" font-size="16" fill="#B7EFA5" text-anchor="start">Баланс: 300 000 ₽ · Год 2027 · Месяц 2 · День 7</text>
+<rect x="0" y="980" width="1920" height="100" rx="0" fill="#22483B"/>
+<text x="200" y="1040" font-family="sans-serif" font-size="15" fill="#EEF5E8" text-anchor="middle">Штаб</text>
+<text x="560" y="1040" font-family="sans-serif" font-size="15" fill="#EEF5E8" text-anchor="middle">Карта</text>
+<text x="920" y="1040" font-family="sans-serif" font-size="15" fill="#EEF5E8" text-anchor="middle">Предприятия</text>
+<text x="1280" y="1040" font-family="sans-serif" font-size="15" fill="#B7EFA5" text-anchor="middle">Финансы</text>
+<text x="1640" y="1040" font-family="sans-serif" font-size="15" fill="#EEF5E8" text-anchor="middle">Ещё</text>
+<rect x="40" y="110" width="1180" height="840" rx="18" fill="#173A30"/>
+<text x="64" y="150" font-family="sans-serif" font-size="20" fill="#B7EFA5" text-anchor="start">Продажи за последние 7 суток</text>
+<text x="64" y="190" font-family="sans-serif" font-size="14" fill="#A1B9AD" text-anchor="start">Товар</text>
+<text x="364" y="190" font-family="sans-serif" font-size="14" fill="#A1B9AD" text-anchor="start">Спрос</text>
+<text x="524" y="190" font-family="sans-serif" font-size="14" fill="#A1B9AD" text-anchor="start">Продано</text>
+<text x="684" y="190" font-family="sans-serif" font-size="14" fill="#A1B9AD" text-anchor="start">Выручка</text>
+<text x="884" y="190" font-family="sans-serif" font-size="14" fill="#A1B9AD" text-anchor="start">Потеряно</text>
+<text x="64" y="240" font-family="sans-serif" font-size="16" fill="#EEF5E8" text-anchor="start">Хлеб батон</text>
+<text x="364" y="240" font-family="sans-serif" font-size="16" fill="#EEF5E8" text-anchor="start">620</text>
+<text x="524" y="240" font-family="sans-serif" font-size="16" fill="#EEF5E8" text-anchor="start">540</text>
+<text x="684" y="240" font-family="sans-serif" font-size="16" fill="#EEF5E8" text-anchor="start">20 520 ₽</text>
+<text x="884" y="240" font-family="sans-serif" font-size="16" fill="#EEF5E8" text-anchor="start">80</text>
+<text x="64" y="300" font-family="sans-serif" font-size="16" fill="#EEF5E8" text-anchor="start">Молоко 1 л</text>
+<text x="364" y="300" font-family="sans-serif" font-size="16" fill="#EEF5E8" text-anchor="start">410</text>
+<text x="524" y="300" font-family="sans-serif" font-size="16" fill="#EEF5E8" text-anchor="start">410</text>
+<text x="684" y="300" font-family="sans-serif" font-size="16" fill="#EEF5E8" text-anchor="start">25 420 ₽</text>
+<text x="884" y="300" font-family="sans-serif" font-size="16" fill="#EEF5E8" text-anchor="start">0</text>
+<text x="64" y="360" font-family="sans-serif" font-size="16" fill="#F2C14E" text-anchor="start">Масло 180 г</text>
+<text x="364" y="360" font-family="sans-serif" font-size="16" fill="#F2C14E" text-anchor="start">180</text>
+<text x="524" y="360" font-family="sans-serif" font-size="16" fill="#F2C14E" text-anchor="start">90</text>
+<text x="684" y="360" font-family="sans-serif" font-size="16" fill="#F2C14E" text-anchor="start">17 010 ₽</text>
+<text x="884" y="360" font-family="sans-serif" font-size="16" fill="#F2C14E" text-anchor="start">90</text>
+<text x="64" y="500" font-family="sans-serif" font-size="14" fill="#A1B9AD" text-anchor="start">Выручка по дням (график)</text>
+<rect x="64" y="610" width="90" height="150" rx="6" fill="#2E5A4B"/>
+<rect x="214" y="574" width="90" height="186" rx="6" fill="#2E5A4B"/>
+<rect x="364" y="586" width="90" height="174" rx="6" fill="#2E5A4B"/>
+<rect x="514" y="550" width="90" height="210" rx="6" fill="#2E5A4B"/>
+<rect x="664" y="562" width="90" height="198" rx="6" fill="#2E5A4B"/>
+<rect x="814" y="520" width="90" height="240" rx="6" fill="#2E5A4B"/>
+<rect x="964" y="532" width="90" height="228" rx="6" fill="#B7EFA5"/>
+<rect x="1240" y="110" width="640" height="840" rx="18" fill="#173A30"/>
+<text x="1264" y="150" font-family="sans-serif" font-size="20" fill="#B7EFA5" text-anchor="start">Почему не купили</text>
+<text x="1264" y="200" font-family="sans-serif" font-size="16" fill="#EEF5E8" text-anchor="start">Нет товара на полке</text>
+<rect x="1264" y="220" width="592" height="18" rx="9" fill="#0A201B"/>
+<rect x="1264" y="220" width="272" height="18" rx="9" fill="#F28B82"/>
+<text x="1264" y="264" font-family="sans-serif" font-size="14" fill="#A1B9AD" text-anchor="start">46 % потерянных продаж</text>
+<text x="1264" y="320" font-family="sans-serif" font-size="16" fill="#EEF5E8" text-anchor="start">Цена выше, чем у соседей</text>
+<rect x="1264" y="340" width="592" height="18" rx="9" fill="#0A201B"/>
+<rect x="1264" y="340" width="189" height="18" rx="9" fill="#F2C14E"/>
+<text x="1264" y="384" font-family="sans-serif" font-size="14" fill="#A1B9AD" text-anchor="start">32 % потерянных продаж</text>
+<text x="1264" y="440" font-family="sans-serif" font-size="16" fill="#EEF5E8" text-anchor="start">Рейтинг ниже конкурента</text>
+<rect x="1264" y="460" width="592" height="18" rx="9" fill="#0A201B"/>
+<rect x="1264" y="460" width="82" height="18" rx="9" fill="#F2C14E"/>
+<text x="1264" y="504" font-family="sans-serif" font-size="14" fill="#A1B9AD" text-anchor="start">14 % потерянных продаж</text>
+<text x="1264" y="560" font-family="sans-serif" font-size="16" fill="#EEF5E8" text-anchor="start">Касса не успела</text>
+<rect x="1264" y="580" width="592" height="18" rx="9" fill="#0A201B"/>
+<rect x="1264" y="580" width="47" height="18" rx="9" fill="#A1B9AD"/>
+<text x="1264" y="624" font-family="sans-serif" font-size="14" fill="#A1B9AD" text-anchor="start">8 % потерянных продаж</text>
+<text x="1264" y="720" font-family="sans-serif" font-size="15" fill="#B7EFA5" text-anchor="start">Подсказка: «Масло 180 г» закончилось в среду. Включите автозакупку.</text>
+</svg>
