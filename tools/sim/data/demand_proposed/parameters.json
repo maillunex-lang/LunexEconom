@@ -1,0 +1,22 @@
+{
+  "balance": "draft",
+  "goods_available_min_permille": 450,
+  "monthly_migration_cap_bp": 90,
+  "monthly_population_change_cap_bp": 20,
+  "months": 24,
+  "outside_option_weight": 1000,
+  "poor_safety_floor_bp": 600,
+  "price_multiplier_max_permille": 1450,
+  "price_multiplier_min_permille": 750,
+  "price_response_max_monthly_bp": 80,
+  "quantity_per_1000_goods_budget_rub": 1000,
+  "reference_inflation_monthly_bp": 35,
+  "retail_capture_permille": 650,
+  "salary_per_job_rub": 100,
+  "schema_version": 1,
+  "stock_growth_per_month_permille": 1010,
+  "stocks_cover_permille": 900,
+  "store_capacity_units_per_1000_people": 1600,
+  "store_weight": 2000,
+  "wage_anchor_rub": 100
+}
