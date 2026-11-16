@@ -91,7 +91,7 @@ def recent_audit(conn, limit=200):
 
 
 def connect(path):
-    conn = sqlite3.connect(path, isolation_level=None, timeout=10)
+    conn = sqlite3.connect(path, isolation_level=None, timeout=10, check_same_thread=False)
     try:
         conn.row_factory = sqlite3.Row
         conn.execute("PRAGMA journal_mode=WAL")
