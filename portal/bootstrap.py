@@ -78,6 +78,7 @@ def files_for(name, repo, description):
         "README.md": README.format(name=name, repo=repo or "(укажите)", description=description or "Описание проекта."),
         "docs/AI_RULES.md": AI_RULES.format(name=name),
         "docs/PORTAL_PROTOCOL.md": (TPL / "PORTAL_PROTOCOL.md").read_text(encoding="utf-8"),
+        "docs/PORTAL_DEV_GUIDE.md": (TPL / "PORTAL_DEV_GUIDE.md").read_text(encoding="utf-8"),
         "docs/DIRECTOR_HANDOVER.md": HANDOVER.format(name=name),
         "docs/work_plan.json": plan,
         "docs/gdd/DECISIONS_APPROVED.md": f"# Утверждённые решения владельца ({name})\n\n(пока пусто)\n",

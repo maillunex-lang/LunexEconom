@@ -122,6 +122,31 @@ details{border-top:1px solid var(--hair);padding-top:8px}summary{cursor:pointer;
 .mini .mt{font-weight:600;font-size:14px;line-height:1.3}.mini.locked{opacity:.8}
 @media(max-width:560px){.bar button span{display:none}.brand span{display:none}.crumb b{max-width:34vw}.bar-in{gap:4px}}
 
+/* A6: проектный мастер и запуск */
+.a6-form{max-width:740px;padding:24px;display:flex;flex-direction:column;gap:16px}
+.a6-form label{display:flex;flex-direction:column;gap:7px;font-weight:650}
+.a6-form input,.a6-form textarea{width:100%;box-sizing:border-box;min-height:46px;padding:12px 14px;background:var(--glass-strong);color:var(--ink);border:1px solid var(--edge);border-radius:13px;font:inherit}
+.a6-form textarea{min-height:160px;resize:vertical}
+.a6-steps{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;margin:18px 0}
+.a6-step{border:2px solid var(--edge);border-radius:20px;padding:22px;display:flex;flex-direction:column;gap:12px;background:var(--glass-strong);min-width:0}
+.a6-step.current{border-color:var(--accent);box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 13%,transparent)}
+.a6-step.done{border-color:var(--ok)}
+.a6-step-head{display:flex;align-items:center;gap:12px}
+.a6-step-num{width:38px;height:38px;border-radius:13px;flex:none;display:grid;place-items:center;font-weight:800;background:var(--glass);color:var(--accent)}
+.a6-step.done .a6-step-num{background:var(--ok);color:white}
+.a6-step pre,.a6-guide pre{white-space:pre-wrap;overflow-wrap:anywhere;max-height:350px;overflow:auto;font-size:12px;line-height:1.6}
+.a6-guide{margin-top:20px;display:flex;flex-direction:column;gap:12px}
+.a6-guide .row{flex-wrap:wrap}
+.a6-muted{padding:12px;border-radius:12px;background:var(--glass-strong);border:1px solid var(--edge)}
+@media(max-width:720px){.a6-steps{grid-template-columns:minmax(0,1fr)}.a6-step{padding:18px}.a6-form{padding:16px}.bar .brand span{display:inline!important;font-size:16px;max-width:calc(100vw - 118px);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}}
+.a6-quick{width:100%;max-width:100%;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin:18px 0 28px}
+.a6-quick>button{min-width:0;min-height:68px;font-weight:700;white-space:normal;overflow-wrap:anywhere;justify-content:center}
+.a6-paste{width:100%;display:flex;flex-direction:column;gap:10px}
+.a6-paste textarea{width:100%;min-height:140px;resize:vertical;font:13px/1.45 monospace}
+.a6-invalid{border-color:var(--err)!important;outline:2px solid color-mix(in srgb,var(--err) 40%,transparent)}
+.a6-path-label{display:flex;flex-direction:column;gap:5px;font-weight:600}
+.a6-path-label select{width:100%;min-height:48px;border-radius:12px;padding:9px 12px;background:var(--glass-strong);color:var(--ink);border:1px solid var(--edge)}
+@media(max-width:720px){body{padding-bottom:calc(168px + env(safe-area-inset-bottom,0px))!important}main{padding-bottom:calc(112px + env(safe-area-inset-bottom,0px))!important}.a6-quick{grid-template-columns:1fr;margin-bottom:20px}.a6-quick>button{min-height:60px;width:100%}}
 /* B3: отчёт, приёмка и обзор */
 .b3-review{min-width:0;max-width:100%;box-sizing:border-box;overflow-wrap:anywhere;border:1px solid var(--edge);border-radius:18px;padding:16px;display:flex;flex-direction:column;gap:12px;margin:14px 0;background:var(--glass2)}
 .b3-review textarea{width:100%;min-height:112px;box-sizing:border-box}
@@ -257,6 +282,7 @@ var IC={
  copy:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V6a2 2 0 0 1 2-2h9"/></svg>',
  help:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M9.5 9a2.5 2.5 0 1 1 3.5 2.3c-.7.4-1 1-1 1.7M12 17h.01"/></svg>',
  sync:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 0 0-15-6.7L3 8M3 3v5h5M3 12a9 9 0 0 0 15 6.7L21 16M21 21v-5h-5"/></svg>',
+ download:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12m0 0 5-5m-5 5-5-5M4 17v3h16v-3"/></svg>',
  upload:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 16V4m0 0l-4 4m4-4l4 4M4 16v3a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-3"/></svg>',
  book:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5a2 2 0 0 1 2-2h13v16H6a2 2 0 0 0-2 2z"/><path d="M4 19V5"/></svg>',
  plus:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>',
@@ -295,7 +321,18 @@ function drawTabs(){
 function openB6Board(){var sl=current?current.slug:lastSlug();if(sl)return showBoard(sl);return api('/api/projects').then(function(r){if(r.projects&&r.projects.length)return showBoard(r.projects[0].slug);showProjects()}).catch(function(){showProjects()})}
 function showMore(){activeB6Tab='Ещё';drawBar('Ещё');app.textContent='';app.appendChild(el('h1','','Ещё'));
   var grid=el('div','b6-more');app.appendChild(grid);
-  [['Идеи','inbox',function(){var sl=current?current.slug:lastSlug();if(sl)showBoard(sl).then(function(){focusIdeas()});else showProjects()}],['Настройки','work',showSettings],['Уведомления','flag',showNotifications],['Поиск','book',function(){showSearch()}],['Граф','map',function(){openB6Board().then(function(){if(current)showGraph(current.slug)})}],['Новая идея','plus',function(){openB6Board().then(function(){focusIdeas()})}],['Справка','help',showHelp],['Мастер-промпт','book',function(){showProjects();var m=document.querySelector('.master');if(m){m.scrollIntoView();m.querySelector('details').open=true}}],['Протокол для ИИ','book',showProtocol],['Планы и проекты','map',showProjects],['Сменить тему','moon',toggleTheme],['Установить PWA','upload',function(){if(deferredInstall){deferredInstall.prompt();deferredInstall=null}else toast('Установка доступна через меню браузера')}],['Версия и функции','help',showVersion],['Выйти','out',function(){api('/api/logout','POST',{}).finally(function(){CSRF='';ME='';showLogin()})}]].forEach(function(x){grid.appendChild(btn(x[0],'card',x[2],{icon:x[1],tip:'Перейти: '+x[0]}))});
+  [['Развитие портала','book',showPortalDevGuide],['Идеи','inbox',function(){var sl=current?current.slug:lastSlug();if(sl)showBoard(sl).then(function(){focusIdeas()});else showProjects()}],['Настройки','work',showSettings],['Уведомления','flag',showNotifications],['Поиск','book',function(){showSearch()}],['Граф','map',function(){openB6Board().then(function(){if(current)showGraph(current.slug)})}],['Новая идея','plus',function(){openB6Board().then(function(){focusIdeas()})}],['Справка','help',showHelp],['Мастер-промпт','book',function(){showProjects();var m=document.querySelector('.master');if(m){m.scrollIntoView();m.querySelector('details').open=true}}],['Протокол для ИИ','book',showProtocol],['Планы и проекты','map',showProjects],['Сменить тему','moon',toggleTheme],['Установить PWA','upload',function(){if(deferredInstall){deferredInstall.prompt();deferredInstall=null}else toast('Установка доступна через меню браузера')}],['Версия и функции','help',showVersion],['Выйти','out',function(){api('/api/logout','POST',{}).finally(function(){CSRF='';ME='';showLogin()})}]].forEach(function(x){grid.appendChild(btn(x[0],'card',x[2],{icon:x[1],tip:'Перейти: '+x[0]}))});
+}
+function showPortalDevGuide(){
+  activeB6Tab='Ещё';drawBar('Развитие портала');app.textContent='';
+  var host=el('section','card a6-guide');app.appendChild(host);host.appendChild(el('h1','','Развитие портала'));
+  host.appendChild(el('p','muted','Вставьте новому ИИ-директору, чтобы он продолжил развивать сам портал.'));
+  var state=el('p','a6-muted','Загружаем инструкцию…');host.appendChild(state);
+  var actions=el('div','row');host.appendChild(actions);var text='';
+  var cp=btn('Скопировать инструкцию директору','primary',function(){if(text)copy(text)},{icon:'copy'});cp.disabled=true;actions.appendChild(cp);
+  var share=btn('Поделиться','',function(){if(text&&navigator.share)navigator.share({title:'Развитие портала',text:text}).catch(function(){})},{icon:'upload'});share.disabled=true;actions.appendChild(share);
+  var det=el('details');det.appendChild(el('summary','','Показать текст'));var pre=el('pre');det.appendChild(pre);host.appendChild(det);
+  api('/api/portal-dev-guide').then(function(r){text=r.markdown||'';pre.textContent=text;cp.disabled=!text;share.disabled=!text||!navigator.share;state.textContent='Инструкция загружена.'}).catch(function(){state.textContent='Сервер недоступен. Инструкция не загружена, повторите запрос позже.'});
 }
 /* B4: безопасные экраны интеграций и маршруты с деградацией при 404. */
 var B4_EVENTS={'task.submitted':'Исполнитель сдал','ci.failed':'CI завершился ошибкой','review.overdue':'Приёмка просрочена','plan.sync_failed':'Ошибка обновления плана','login.new_device':'Вход с нового устройства','backup.missing':'Нет свежей копии'};
@@ -338,6 +375,7 @@ function showOffline(){drawBar('');app.textContent='';var c=el('div','card empty
 function drawBar(crumb){
   lastCrumb=crumb;barEl.textContent='';var l=el('div','row');
   var brand=btn(crumb&&crumb!=='Сегодня'&&crumb!=='Проекты'&&crumb!=='Ещё'&&crumb!=='Доска'?'← '+crumb:crumb||'CreatePortal','brand',function(){showToday()},{tip:'Вернуться на экран «Сегодня»'});l.appendChild(brand);barEl.appendChild(l);
+  brand.querySelector('span').setAttribute('data-screen-title','true');
   if(ME){var avatar=btn(String(ME).slice(0,1).toUpperCase(),'b6-avatar',showMore,{tip:'Открыть меню пользователя и настройки'});barEl.appendChild(avatar)}
   drawTabs();
 }
@@ -375,13 +413,13 @@ function showProjects(){
   drawMaster();
   var g=el('div','grid');app.appendChild(g);
   api('/api/projects').then(function(r){
-    if(!r.projects.length){var e=el('div','card empty');e.appendChild(ic('map'));e.appendChild(el('h2','','Пока нет ни одного проекта'));e.appendChild(el('div','muted','Нажмите «Новый проект». Портал выдаст два готовых промпта: как организовать репозиторий и как разработать полный GDD (описание игры или продукта). Дальше работа идёт по задачам на доске.'));
+    if(!r.projects.length){var e=el('div','card empty');e.appendChild(ic('map'));e.appendChild(el('h2','','Пока нет ни одного проекта'));e.appendChild(el('div','muted','Нажмите «Новый проект». Портал выдаст единый промпт для ИИ-директора: от интервью и GDD до плана работ (описание игры или продукта). Дальше работа идёт по задачам на доске.'));
       e.appendChild(btn('Создать первый проект','primary',showNew,{icon:'plus'}));app.appendChild(e);return}
     r.projects.forEach(function(p){
       var c=el('div','card');var h=el('div','row spread');var t=el('div');t.appendChild(el('h3','',p.name));t.appendChild(el('div','muted small',p.repo||'репозиторий не указан'));h.appendChild(t);h.appendChild(ring(p.total?100*p.accepted/p.total:0,56));c.appendChild(h);
       if(p.description)c.appendChild(el('div','small muted',p.description));
       c.appendChild(el('div','small',p.has_plan?('Принято '+p.accepted+' из '+p.total+' задач'):'План ещё не загружен: сначала «Старт проекта»'));
-      c.appendChild(btn('Открыть доску','primary',function(){showBoard(p.slug)},{icon:'next',tip:'Задачи проекта: что выдавать, что в работе, что ждёт приёмки'}));g.appendChild(c)});
+      c.appendChild(btn(p.has_plan?'Открыть доску':'Продолжить запуск проекта','primary',function(){if(p.has_plan)showBoard(p.slug);else showLaunch(p.slug)},{icon:'next',tip:'Открыть проект или мастер запуска'}));g.appendChild(c)});
   }).catch(function(){showLogin()});
 }
 
@@ -393,30 +431,72 @@ function drawMaster(){
   var row=el('div','row'),text='';
   var cp=btn('Скопировать мастер-промпт','primary',function(){if(text)copy(text);else toast('Текст ещё загружается')},{icon:'copy',tip:'Скопировать текст и вставить его ИИ-директору в начале работы'});row.appendChild(cp);
   var sh=shareBtn('', 'Мастер-промпт ИИ-директора');if(sh){sh.onclick=function(){if(text)navigator.share({title:'Мастер-промпт ИИ-директора',text:text}).catch(function(){})};row.appendChild(sh)}
-  var a=el('a','lnk');a.href=BASE+'/api/skeleton.zip';a.appendChild(ic('upload'));a.appendChild(el('span','','Скачать скелет репозитория'));a.title='Заготовка репозитория: правила для ИИ, протокол, шаблон плана, инструменты';row.appendChild(a);
+  var a=el('a','lnk');a.href=BASE+'/api/skeleton.zip';a.appendChild(ic('download'));a.appendChild(el('span','','Скачать скелет репозитория'));a.title='Заготовка репозитория: правила для ИИ, протокол, шаблон плана, инструменты';row.appendChild(a);
   c.appendChild(row);app.appendChild(c);
   api('/api/master-prompt').then(function(r){text=r.markdown;pre.textContent=r.markdown}).catch(function(){pre.textContent='Не удалось загрузить текст.'});
 }
 /* ---------- новый проект ---------- */
-function showNew(){
-  drawBar('Новый проект');app.textContent='';
-  var hd=el('div');hd.appendChild(el('h1','','Новый проект'));hd.appendChild(el('div','muted','Три шага: заполните форму, скачайте скелет репозитория, отдайте директору два промпта.'));app.appendChild(hd);
-  var c=el('div','card');
-  function field(id,label,ph,help,area){var l=el('label','',label);var i=el(area?'textarea':'input');i.id=id;i.placeholder=ph||'';if(area)i.rows=3;l.appendChild(i);if(help)l.appendChild(el('span','help',help));c.appendChild(l);return i}
-  var name=field('n','Название проекта','Например: Моя игра','Как проект будет называться в списке.'),slug=field('s','Короткий адрес','my-game','Только строчные латинские буквы, цифры и дефис, не короче 3 знаков.'),repo=field('r','Репозиторий GitHub (по желанию)','владелец/репозиторий','Если указать, промпты и задания будут ссылаться на него.'),desc=field('d','О чём проект','Что это за проект, для кого','Пара предложений: директор использует это как стартовый контекст.',true);
-  var out=el('div'),err=el('div','err small');var go;
-  go=btn('Создать проект','primary',function(){
-    err.textContent='';go.disabled=true;
-    api('/api/projects','POST',{name:name.value,slug:slug.value,repo:repo.value,description:desc.value}).then(function(r){
-      out.textContent='';var ok=el('div','card');ok.appendChild(el('h2','','Проект создан. Что дальше'));
-      [['1','Скачайте скелет репозитория и положите его в корень нового репозитория.'],['2','Отдайте ИИ-директору по порядку два промпта ниже: сначала организация репозитория, затем разработка полного GDD.'],['3','Когда в репозитории появится docs/work_plan.json, нажмите «Синхронизировать» на доске проекта.']].forEach(function(x){var s=el('div','row');s.style.flexWrap='nowrap';var n=el('b','pill ready',x[0]);n.style.cssText='min-width:26px;justify-content:center';n.className='tag';s.appendChild(n);s.appendChild(el('span','',x[1]));ok.appendChild(s)});
-      var row=el('div','row');var a=el('a','lnk primary');a.href=BASE+'/api/projects/'+r.slug+'/bootstrap.zip';a.appendChild(ic('upload'));a.appendChild(el('span','','Скачать скелет репозитория'));a.title='Архив с README, правилами для ИИ, планом работ и инструментами';row.appendChild(a);
-      row.appendChild(btn('Открыть доску','',function(){showBoard(r.slug)},{icon:'next'}));ok.appendChild(row);out.appendChild(ok);
-      (r.start||[]).forEach(function(x){var b=el('div','card');b.appendChild(el('h3','',x.title));b.appendChild(btn('Скопировать промпт','primary',function(){copy(x.prompt)},{icon:'copy',tip:'Скопировать текст и вставить его ИИ-директору'}));var pd=el('details');pd.appendChild(el('summary','','Показать текст'));pd.appendChild(el('pre','',x.prompt));b.appendChild(pd);out.appendChild(b)});go.hidden=true;
-    }).catch(function(x){err.textContent=x.message==='exists'?'Такой адрес уже занят.':'Проверьте поля: адрес из латиницы и цифр, репозиторий в виде владелец/имя.';go.disabled=false});
-  },{icon:'plus',tip:'Создать запись проекта и получить стартовые промпты'});
-  c.appendChild(go);c.appendChild(err);app.appendChild(c);app.appendChild(out);
+function a6Repo(raw){
+  var v=(raw||'').trim();if(!v)return '';
+  if(v!==raw||/[\\%\s?#]/.test(v))return null;
+  if(v.startsWith('https://')){
+    try{var url=new URL(v);if(url.protocol!=='https:'||url.hostname!=='github.com'||url.port||url.username||url.password||url.search||url.hash)return null;v=url.pathname.replace(/^\//,'')}
+    catch(e){return null}
+  }else if(v.includes('://')||v.startsWith('/'))return null;
+  var parts=v.split('/');if(parts.length<2)return null;
+  var owner=parts[0],repo=parts[1].replace(/\.git$/,'');
+  if(!/^[A-Za-z0-9][A-Za-z0-9_.-]*$/.test(owner)||!/^[A-Za-z0-9][A-Za-z0-9_.-]*$/.test(repo)||owner.includes('..')||repo.includes('..')||owner.endsWith('.')||repo.endsWith('.'))return null;
+  var tail=parts.slice(2);if(tail[tail.length-1]==='')tail.pop();if(tail.some(function(x){return !/^[A-Za-z0-9][A-Za-z0-9_.-]*$/.test(x)}))return null;
+  return owner+'/'+repo;
 }
+function a6PlanPath(value){
+  var select=el('select');['docs/work_plan.json','docs/portal/work_plan.json'].forEach(function(path){var o=el('option','',path);o.value=path;select.appendChild(o)});
+  if(value)select.value=value;
+  return select;
+}
+function a6Slug(name){return name.toLocaleLowerCase('en-US').normalize('NFKD').replace(/[^a-z0-9-]+/g,'-').replace(/^-+|-+$/g,'').slice(0,40)}
+function showNew(){
+  activeB6Tab='Проекты';drawBar('Новый проект');app.textContent='';
+  app.appendChild(el('h1','','Создать проект'));app.appendChild(el('p','muted','Один промпт для ИИ-директора, затем готовая дорожная карта.'));
+  var c=el('form','card a6-form');app.appendChild(c);c.onsubmit=function(e){e.preventDefault();create()};
+  function field(title,id,placeholder,multiline){var l=el('label','',title),i=el(multiline?'textarea':'input');i.id=id;i.placeholder=placeholder;i.required=true;if(multiline){i.maxLength=4000;i.rows=6};l.appendChild(i);c.appendChild(l);return i}
+  var repo=field('Ссылка на GitHub','a6-repo','https://github.com/owner/repo');
+  var note=el('div','small muted','Поддерживаются github.com/owner/repo и owner/repo.');note.setAttribute('role','status');c.appendChild(note);
+  var name=field('Название проекта','a6-name','Название проекта');
+  var projectSlug=field('Адрес проекта','a6-slug','например, my-project');projectSlug.maxLength=40;
+  var wish=field('Что вы хотите получить','a6-wish','Опишите идею, механику, платформы и ваши пожелания…',true);
+  var planLabel=el('label','a6-path-label','Путь к плану в репозитории'),planPath=a6PlanPath();planPath.id='a6-plan-path';planLabel.appendChild(planPath);c.appendChild(planLabel);
+  var err=el('div','err small');err.setAttribute('role','alert');c.appendChild(err);
+  repo.addEventListener('input',function(){var parsed=a6Repo(repo.value);repo.classList.toggle('a6-invalid',parsed===null);repo.setAttribute('aria-invalid',String(parsed===null));note.textContent=parsed===null?'Неверная ссылка. Укажите github.com/владелец/репозиторий.':parsed?'Репозиторий: '+parsed:'Введите адрес GitHub.';note.style.color=parsed===null?'var(--warn)':'';if(parsed&&(!name.dataset.edited||!name.value.trim()))name.value=parsed.split('/')[1];if(parsed&&!projectSlug.dataset.edited)projectSlug.value=a6Slug(parsed.split('/')[1]);});
+  projectSlug.addEventListener('input',function(){projectSlug.dataset.edited='1';var lower=projectSlug.value.toLowerCase();if(lower!==projectSlug.value)projectSlug.value=lower;a6ValidateSlug()});
+  function a6ValidateSlug(){var ok=/^[a-z][a-z0-9-]{1,38}[a-z0-9]$/.test(projectSlug.value);projectSlug.classList.toggle('a6-invalid',!ok);projectSlug.setAttribute('aria-invalid',String(!ok));return ok}
+  name.addEventListener('input',function(){name.dataset.edited='1'});
+  var go=btn('Создать проект','primary',function(){c.requestSubmit()},{icon:'plus'});c.appendChild(go);
+  function create(){var parsed=a6Repo(repo.value);if(parsed===null||!parsed){repo.classList.add('a6-invalid');repo.setAttribute('aria-invalid','true');err.textContent='Проверьте формат ссылки на GitHub.';return}if(!name.value.trim()||!wish.value.trim()){err.textContent='Заполните название и пожелания.';return}go.disabled=true;err.textContent='';
+    if(!a6ValidateSlug()){err.textContent='Адрес проекта: от 3 до 40 символов, только строчные латинские буквы, цифры и дефисы.';return}
+    var slug=projectSlug.value;
+    api('/api/projects','POST',{name:name.value.trim(),slug:slug,repo:repo.value.trim(),description:'',wish:wish.value.trim(),plan_path:planPath.value}).then(function(r){rememberSlug(r.slug);showLaunch(r.slug)}).catch(function(e){go.disabled=false;err.textContent=e.status===409?'Проект с таким адресом уже существует.':e.status===404?'Мастер пока отключён на сервере. Обратитесь к администратору.':e.message==='invalid_repo'?'Неверная ссылка на GitHub.':'Не удалось создать проект. Проверьте поля и связь с сервером.'})}
+}
+function showLaunch(slug){
+  activeB6Tab='Проекты';rememberSlug(slug);drawBar('Запуск проекта');app.textContent='';app.appendChild(el('h1','','Запуск проекта'));
+  var info=el('p','muted','Шаг за шагом подготовьте репозиторий, GDD и план задач.');app.appendChild(info);
+  var status=el('p','a6-muted','Загрузка данных запуска…');app.appendChild(status);
+  var grid=el('div','a6-steps');app.appendChild(grid);
+  api('/api/projects/'+encodeURIComponent(slug)+'/launch').then(function(data){
+    status.textContent=(data.has_tasks?'План загружен, задачи готовы.':data.has_plan?'План загружен. Проверьте задачи.':'План ещё не загружен. Начните с промпта для директора.')+' Путь: '+(data.plan_path||'docs/work_plan.json');
+    var prompt=data.prompt||'';
+    (data.steps||[]).forEach(function(s){
+      var c=el('section','a6-step '+(s.done?'done':s.current?'current':''));c.setAttribute('data-step',String(s.number));
+      var heading=el('div','a6-step-head');heading.appendChild(el('span','a6-step-num',s.done?'✓':String(s.number)));heading.appendChild(el('h2','',s.title));c.appendChild(heading);c.appendChild(el('p','muted',s.description));
+      if(s.number===1){var actions=el('div','row');actions.appendChild(btn('Скопировать','primary',function(){copy(prompt)},{icon:'copy'}));actions.appendChild(btn('Поделиться','',function(){if(navigator.share)navigator.share({title:'Запуск проекта',text:prompt}).catch(function(){});else copy(prompt)},{icon:'upload'}));c.appendChild(actions);var det=el('details');det.appendChild(el('summary','','Показать текст'));det.appendChild(el('pre','',prompt));c.appendChild(det);
+        c.appendChild(btn(s.done?'Отменить отметку':'Отметить как отправленный','',function(){a6Mark(slug,1,!s.done)}))}
+      if(s.number===2){c.appendChild(el('p','small','ИИ-директор сначала уточнит требования, затем создаст GDD и дорожную карту.'));c.appendChild(btn(s.done?'Снять отметку':'Директор открыл PR','',function(){a6Mark(slug,2,!s.done)}))}
+      if(s.number===3)c.appendChild(btn(s.done?'Снять отметку':'PR слит в main','',function(){a6Mark(slug,3,!s.done)}));
+      if(s.number===4){var sync=btn('Синхронизировать план','primary',function(){sync.disabled=true;api('/api/projects/'+encodeURIComponent(slug)+'/sync','POST',{}).then(function(){toast('План синхронизирован');showLaunch(slug)}).catch(function(e){sync.disabled=false;status.textContent=e.status===422?'План не прошёл проверку. Исправьте его с директором.':'План пока не загружен. Проверьте PR, репозиторий и доступ к GitHub.'})},{icon:'sync'});c.appendChild(sync);if(s.done)c.appendChild(btn('Перейти к задачам','',function(){showBoard(slug)}))}
+      grid.appendChild(c)})
+  }).catch(function(){status.textContent='Нет соединения с сервером мастера. Данные не изменены. Проверьте подключение и повторите.';grid.appendChild(btn('Повторить','primary',function(){showLaunch(slug)}))});
+}
+function a6Mark(slug,number,done){api('/api/projects/'+encodeURIComponent(slug)+'/launch-step','POST',{number:number,done:done}).then(function(){showLaunch(slug)}).catch(function(){toast('Не удалось сохранить отметку')})}
 /* ---------- доска ---------- */
 function showBoard(slug){rememberSlug(slug);drawBar('…');app.textContent='';return api('/api/projects/'+slug).then(function(d){current={slug:slug,d:d};drawBoard()}).catch(function(){showLogin()})}
 function st(id){var s=current.d.state[id];return s?s.status:'planned'}
@@ -428,17 +508,16 @@ function ttl(p){return p.short||(p.title.length>46?p.title.slice(0,44)+'…':p.t
 function setView(v){view=v;try{localStorage.setItem('portalView',v)}catch(e){}drawBoard()}
 function byId(id){return current.d.packages.filter(function(x){return x.id===id})[0]}
 function drawBoard(){
-  activeB6Tab='Доска';var d=current.d,P=d.packages;drawBar(d.project.name);app.textContent='';
+  activeB6Tab='Доска';var d=current.d,P=d.packages;drawBar('Доска');app.textContent='';
   var head=el('div','row spread');var l=el('div');l.appendChild(el('h1','',d.project.name));l.appendChild(el('div','muted',d.project.repo?d.project.repo:'Репозиторий не указан'));head.appendChild(l);
   var tb=el('div','toolbar');
   var seg=el('div','seg');var b1=btn('Дорожки','',function(){setView('lanes')},{tip:'Две линии рядом по шагам: видно, что идёт параллельно'});var b2=btn('По шагам','',function(){setView('steps')},{tip:'Задачи по порядку шагов, линии рядом'});b1.className=view==='lanes'?'on':'';b2.className=view==='steps'?'on':'';seg.appendChild(b1);seg.appendChild(b2);tb.appendChild(seg);
-  var sync;sync=btn('Синхронизировать','',function(){sync.disabled=true;api('/api/projects/'+current.slug+'/sync','POST',{}).then(function(){toast('План обновлён из репозитория');showBoard(current.slug)}).catch(function(e){toast(e.status===422?'План в репозитории содержит ошибки':'Не удалось получить план: проверьте репозиторий и токен');sync.disabled=false})},{icon:'sync',tip:'Загрузить свежий docs/work_plan.json из репозитория GitHub'});
+  var sync;sync=btn('Синхронизировать','',function(){sync.disabled=true;api('/api/projects/'+current.slug+'/sync','POST',{}).then(function(){toast('План обновлён из репозитория');showBoard(current.slug)}).catch(function(e){toast(e.status===422?'План в репозитории содержит ошибки':'Не удалось получить план: проверьте репозиторий и токен');sync.disabled=false})},{icon:'sync',tip:'Загрузить свежий JSON-план по пути из настроек проекта'});
   tb.appendChild(sync);tb.appendChild(btn('Загрузить план','',showImport,{icon:'upload',tip:'Вставить содержимое work_plan.json вручную, если синхронизация не настроена'}));
   tb.appendChild(btn('Граф','',function(){showGraph(current.slug)},{icon:'map',tip:'Открыть граф зависимостей и критический путь'}));tb.appendChild(btn('Поиск','',function(){showSearch(current.slug)},{icon:'book',tip:'Найти задачу или идею'}));tb.appendChild(btn('Настройки проекта','',function(){showProjectSettings(current.slug)},{icon:'work',tip:'Автоприёмка, чек-лист и данные проекта'}));
   tb.appendChild(btn('Протокол для ИИ','',showProtocol,{icon:'book',tip:'Инструкция для ИИ-директора: как добавлять этапы и промпты'}));head.appendChild(tb);head.classList.add('board-heading');app.appendChild(head);
   if(P.length){var before=app.children.length;drawSummary(d,P);Array.from(app.children).slice(before).forEach(function(x){x.classList.add('desktop-board-summary')})}
-  if(!P.length)drawStart(d);
-  if(!P.length){var n=el('div','card empty');n.appendChild(ic('map'));n.appendChild(el('h2','','План ещё не загружен'));n.appendChild(el('div','muted','Сначала выполните «Старт проекта»: ИИ-директор организует репозиторий и разработает GDD, после этого появится файл docs/work_plan.json. Тогда нажмите «Синхронизировать» (или «Загрузить план») и здесь появятся задачи с готовыми промптами.'));app.appendChild(n);drawIdeas(d,app);return}
+  if(!P.length){drawA6EmptyPlan(d);drawStart(d);var n=el('div','card empty');n.appendChild(ic('map'));n.appendChild(el('h2','','План ещё не загружен'));n.appendChild(el('div','muted','Вы можете выбрать файл JSON с телефона, вставить текст JSON или синхронизировать план из GitHub. После проверки появятся задачи.'));app.appendChild(n);drawIdeas(d,app);return}
   var desktopStart=app.children.length;
   if(view==='lanes'){drawLanes(d,P);var rowb=el('div','row');rowb.style.alignItems='flex-start';drawIdeas(d,app)}else drawSteps(d,P);
   Array.from(app.children).slice(desktopStart).forEach(function(x){x.classList.add('desktop-board')});
@@ -449,6 +528,25 @@ function drawBoard(){
   if(openId){if(!byId(openId)){toast('Задача '+openId+' не найдена в этом проекте');openId=null}else drawDrawer(openId)}
 }
 
+function drawA6EmptyPlan(d){
+  var grid=el('section','a6-quick');grid.setAttribute('aria-label','Как добавить план');
+  var file=el('input');file.type='file';file.accept='.json,application/json';file.id='a6-plan-file';file.hidden=true;
+  grid.appendChild(btn('Загрузить план файлом','primary',function(){file.click()},{icon:'upload'}));
+  grid.appendChild(btn('Вставить план текстом','',function(){paste.hidden=!paste.hidden;if(!paste.hidden)text.focus()},{icon:'book'}));
+  var sync=btn('Синхронизировать','',function(){sync.disabled=true;api('/api/projects/'+current.slug+'/sync','POST',{}).then(function(){toast('План загружен');showBoard(current.slug)}).catch(function(e){sync.disabled=false;status.textContent=e.status===422?'План содержит ошибки, директор должен исправить JSON.':'Не удалось получить план по пути '+(d.project.plan_path||'docs/work_plan.json')+'. Проверьте файл и GitHub.'})},{icon:'sync'});
+  grid.appendChild(sync);app.appendChild(grid);app.appendChild(file);
+  app.appendChild(btn('Настройки проекта','',function(){showProjectSettings(current.slug)},{icon:'work',tip:'Изменить путь к файлу плана в GitHub'}));
+  var paste=el('section','card a6-paste');paste.hidden=true;paste.appendChild(el('h2','','Вставить план текстом'));
+  var text=el('textarea');text.id='a6-plan-text';text.placeholder='{"project": ..., "lanes": ..., "packages": [...]}';text.setAttribute('aria-label','Текст плана JSON');paste.appendChild(text);
+  var status=el('p','muted');status.setAttribute('role','status');paste.appendChild(status);
+  var save=btn('Проверить и сохранить план','primary',function(){importJson(text.value)},{icon:'upload'});paste.appendChild(save);app.appendChild(paste);
+  function importJson(raw){var data;try{data=JSON.parse(raw)}catch(e){status.textContent='Файл или текст не является корректным JSON.';paste.hidden=false;return}
+    save.disabled=true;status.textContent='Проверяем план…';
+    api('/api/projects/'+current.slug+'/plan','POST',{plan:data}).then(function(){toast('План сохранён');showBoard(current.slug)}).catch(function(e){save.disabled=false;status.textContent=e.status===422?'Ошибка в плане: '+((e.data&&e.data.details)||[]).join('; ').slice(0,500):'Не удалось сохранить план. Данные не изменены.';paste.hidden=false});
+  }
+  file.onchange=function(){if(!file.files||!file.files.length)return;var f=file.files[0];if(f.size>900000){status.textContent='Файл слишком большой (максимум 900 КБ).';paste.hidden=false;return}
+    f.text().then(function(raw){text.value=raw;importJson(raw)}).catch(function(){status.textContent='Не удалось прочитать файл';paste.hidden=false})};
+}
 /* Мобильная доска B1. Состояния и API всегда берутся из уже загруженного проекта. */
 function drawPhoneBoard(d,P){
   var root=el('section','phone-board b6-ladder');root.setAttribute('aria-label','Доска-лесенка');root.appendChild(btn('Настройки проекта','',function(){showProjectSettings(current.slug)},{tip:'Переключатели автоприёмки и чек-листа проекта'}));
@@ -679,7 +777,7 @@ function showToday(){activeB6Tab='Сегодня';drawBar('Сегодня');app.
     return Promise.all(projects.slice(0,12).map(function(pr){return api('/api/projects/'+encodeURIComponent(pr.slug)).then(function(d){return {project:pr,data:d}}).catch(function(){return null})})).then(function(loaded){var tasks=[];loaded.filter(Boolean).forEach(function(entry){(entry.data.packages||[]).forEach(function(p){var state=entry.data.state[p.id]||{},status=state.status||'planned',ready=status==='planned'&&(p.depends_on||[]).every(function(id){return (entry.data.state[id]||{}).status==='accepted'});tasks.push({entry:entry,p:p,status:status,ready:ready})})});
       var priority=tasks.filter(function(t){return t.status==='submitted'})[0]||tasks.filter(function(t){return t.ready})[0];
       if(priority&&!action.children.length){title.textContent=priority.p.id+' · '+priority.p.title;desc.textContent=priority.status==='submitted'?'Работа сдана и ожидает проверки':'Задание готово к выдаче исполнителю';action.appendChild(btn(priority.status==='submitted'?'Открыть проверку':'Открыть задание','primary',function(){openId=priority.p.id;showBoard(priority.entry.project.slug)},{tip:'Перейти к главному действию дня'}))}
-      else if(!action.children.length){title.textContent='Всё идёт по плану';desc.textContent='Новых действий сейчас нет. Проверьте ход работ на доске.';action.appendChild(btn('Открыть доску','primary',openB6Board,{tip:'Посмотреть задачи'}))}
+      else if(!action.children.length){var pending=projects.find(function(p){return !p.has_plan});if(pending){title.textContent='Продолжить запуск проекта';desc.textContent='Для «'+pending.name+'» ещё нет плана: отправьте промпт директору и синхронизируйте задачи.';action.appendChild(btn('Продолжить запуск проекта','primary',function(){showLaunch(pending.slug)}))}else{title.textContent='Всё идёт по плану';desc.textContent='Новых действий сейчас нет. Проверьте ход работ на доске.';action.appendChild(btn('Открыть доску','primary',openB6Board,{tip:'Посмотреть задачи'}))}}
       [['У исполнителей',tasks.filter(function(t){return t.status==='issued'}).length],['Ждёт вас',tasks.filter(function(t){return t.status==='submitted'}).length],['Принято',tasks.filter(function(t){return t.status==='accepted'}).length]].forEach(function(m){var cell=el('div');cell.appendChild(el('b','',String(m[1])));cell.appendChild(el('span','',m[0]));metrics.appendChild(cell)});
       var ongoing=tasks.filter(function(t){return t.status==='issued'||t.status==='submitted'}).slice(0,6);if(!ongoing.length)list.appendChild(el('p','muted','Активных задач пока нет.'));
       ongoing.forEach(function(t){var row=el('div','b6-running');row.appendChild(el('div','',t.p.id+' · '+t.p.title));row.appendChild(pill(t.status,t.status==='submitted'?'Ждёт проверки':'В работе'));row.appendChild(btn('Открыть','',function(){openId=t.p.id;showBoard(t.entry.project.slug)},{tip:'Открыть задачу '+t.p.id}));list.appendChild(row)})
@@ -761,7 +859,10 @@ function showProjectSettings(slug){
   var msg=el('div','b2-state','Загрузка настроек…');msg.setAttribute('role','status');c.appendChild(msg);
   var save=btn('Сохранить настройки','primary',function(){save.disabled=true;b2Message(msg,'Сохранение…');api('/api/projects/'+slug+'/settings','POST',{auto_accept:enabled.checked,auto_accept_require_checklist:check.checked}).then(function(r){if(r&&r.settings){enabled.checked=!!r.settings.auto_accept;check.checked=!!r.settings.auto_accept_require_checklist}b2Message(msg,'Настройки сохранены.')}).catch(function(e){b2Message(msg,b2Error(e),'error')}).finally(function(){save.disabled=false})},{tip:'Сохранить переключатели на сервере'});save.disabled=true;c.appendChild(save);
   api('/api/projects/'+slug+'/settings').then(function(r){var s=r.settings||r;enabled.checked=!!s.auto_accept;check.checked=!!(s.auto_accept_require_checklist||s.require_checklist);enabled.disabled=check.disabled=false;save.disabled=false;b2Message(msg,'Настройки загружены.')}).catch(function(e){b2Message(msg,b2Error(e),'error');c.appendChild(btn('Повторить','',function(){showProjectSettings(slug)},{tip:'Повторить запрос настроек проекта'}))});
-  var repo=cardB2('Репозиторий и план');grid.appendChild(repo);var proj=current&&current.slug===slug?current.d.project:null;repo.appendChild(el('div','',proj&&proj.repo?'Репозиторий: '+proj.repo:'Репозиторий не указан'));repo.appendChild(el('div','', 'Основная ветка: main'));repo.appendChild(el('div','help','Изменение основной ветки и списка обязательных проверок CI: скоро, после появления серверного контракта.'));repo.appendChild(btn('К доске','',function(){showBoard(slug)},{tip:'Вернуться к задачам проекта'}));
+  var repo=cardB2('Репозиторий и план');grid.appendChild(repo);var proj=current&&current.slug===slug?current.d.project:null;repo.appendChild(el('div','',proj&&proj.repo?'Репозиторий: '+proj.repo:'Репозиторий не указан'));repo.appendChild(el('div','', 'Основная ветка: main'));
+  var pathLabel=el('label','a6-path-label','Путь к JSON-плану'),pathSelect=a6PlanPath(proj&&proj.plan_path),pathMessage=el('p','muted','Загрузка пути…'),pathSave=btn('Сохранить путь плана','primary',function(){pathSave.disabled=true;api('/api/projects/'+slug+'/plan-settings','POST',{plan_path:pathSelect.value}).then(function(){pathMessage.textContent='Путь сохранён: '+pathSelect.value;if(proj)proj.plan_path=pathSelect.value}).catch(function(){pathMessage.textContent='Не удалось изменить путь, данные не сохранены.'}).finally(function(){pathSave.disabled=false})});
+  pathSelect.disabled=true;pathSave.disabled=true;pathLabel.appendChild(pathSelect);repo.appendChild(pathLabel);repo.appendChild(pathSave);repo.appendChild(pathMessage);
+  api('/api/projects/'+slug+'/plan-settings').then(function(data){pathSelect.value=data.plan_path;pathSelect.disabled=false;pathSave.disabled=false;pathMessage.textContent='Для GitHub-синхронизации используется этот путь.'}).catch(function(){pathMessage.textContent='Настройки пути недоступны. Попробуйте позже.'});repo.appendChild(el('div','help','Изменение основной ветки и списка обязательных проверок CI: скоро, после появления серверного контракта.'));repo.appendChild(btn('К доске','',function(){showBoard(slug)},{tip:'Вернуться к задачам проекта'}));
   drawB4ProjectTools(grid,slug);drawB4Sync(grid,slug);
 }
 function taskMeta(p){var d=current&&current.d;if(!d)return {};var state=d.state&&d.state[p.id]||{};return {pr:p.pr||state.pr,ci:p.ci||state.ci,merged:!!(state.merged||(p.pr&&p.pr.merged)||(state.pr&&state.pr.merged)),sha:state.sha||p.sha}}
