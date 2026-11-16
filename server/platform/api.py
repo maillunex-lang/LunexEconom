@@ -7,7 +7,7 @@ from uuid import uuid4
 from .security import hash_password, verify_password, new_token, token_hash
 
 USERNAME = re.compile(r'^[A-Za-z0-9_]{3,24}$')
-EMAIL = re.compile(r'^[A-Za-z0-9.!#$%&\'*+/=?^_`{|}~-]+@[A-Za-z0-9](?:[A-Za-z0-9.-]*[A-Za-z0-9]*)?\.[A-Za-z]{2,63}$')
+EMAIL = re.compile(r'^[A-Za-z0-9.!#$%&\'*+/=?^_`{|}~-]+@[A-Za-z0-9](?:[A-Za-z0-9.-]*[A-Za-z0-9])?\.[A-Za-z]{2,63}$')
 STARTED = time.monotonic()
 
 
