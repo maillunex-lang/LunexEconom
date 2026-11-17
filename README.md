@@ -119,3 +119,5 @@ python tools/work_plan.py check                           # план работ
 ### Исходники для ИИ-агентов
 
 Начните с [AGENTS.md](AGENTS.md) и [машиночитаемого каталога](docs/source_manifest.json).
+
+Готовые задания для переноса: [docs/reuse/README.md](docs/reuse/README.md).
