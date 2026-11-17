@@ -6,6 +6,8 @@
 
 Сайт и скачивание: **rikagro.ru/lunexeconom** (публичный запуск после приёмки беты).
 
+> **Для новых игр:** [библиотека исходников](docs/SOURCE_LIBRARY.md), [карта модулей](docs/MODULE_INDEX.md), [каталог идей](docs/REUSE_CATALOG.md). Это справочник по коду, а не новый GDD.
+
 ## Где мы сейчас
 
 Обновлено 2026-11-16. Подробно: [`docs/WORK_PLAN.md`](docs/WORK_PLAN.md) (этапы и две линии исполнителей), [`docs/PLAN_V2_CAPLAB.md`](docs/PLAN_V2_CAPLAB.md) (пять волн до уровня Capitalism Lab), [`web/roadmap.json`](web/roadmap.json) (дорожная карта на сайте), [`docs/PROGRESS.md`](docs/PROGRESS.md) (журнал приёмки).
