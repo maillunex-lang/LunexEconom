@@ -1,0 +1,24 @@
+name: Source library checks
+on:
+  push:
+    paths:
+      - "docs/source_manifest.json"
+      - "tools/validate_source_manifest.py"
+      - ".github/workflows/source-library-check.yml"
+  pull_request:
+    paths:
+      - "docs/source_manifest.json"
+      - "tools/validate_source_manifest.py"
+      - ".github/workflows/source-library-check.yml"
+permissions:
+  contents: read
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: python tools/validate_source_manifest.py
