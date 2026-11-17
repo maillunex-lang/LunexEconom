@@ -1,0 +1,262 @@
+{
+  "schema_version": 1,
+  "purpose": "read-only AI navigation index for reusable LunexEconom V2 sources",
+  "source_branch": "main",
+  "status_semantics": {
+    "reference-model": "autonomous simulator, not necessarily integrated",
+    "server-code": "implemented server source, integration not guaranteed",
+    "server-client-code": "server and client source, integration not guaranteed",
+    "godot-client": "Godot source, Android runtime not verified",
+    "mixed": "several kinds of implementation"
+  },
+  "test_evidence": {
+    "tools_tests": {
+      "command": "python3 -m unittest discover -s tools/tests -p 'test_*.py' -q",
+      "result": "256 passed",
+      "date": "2026-11-17"
+    },
+    "server_tests": {
+      "result": "not independently verified in local Python environment; missing psycopg"
+    },
+    "android_tests": {
+      "result": "not run"
+    }
+  },
+  "components": [
+    {
+      "id": "economy-simulator",
+      "name_ru": "Эталонный экономический симулятор",
+      "kind": "reference-model",
+      "paths": [
+        "tools/sim/engine.py",
+        "tools/sim/catalog.py",
+        "tools/sim/scenarios/"
+      ],
+      "test_paths": [
+        "tools/tests/test_sim_m2.py",
+        "tools/tests/test_sim_invariants.py"
+      ],
+      "reuse_priority": "high",
+      "integration_verified": false,
+      "warning": "Review dependencies, data contracts, licenses, and tests before extraction."
+    },
+    {
+      "id": "recipes",
+      "name_ru": "Каталоги товаров и рецептов",
+      "kind": "server-code",
+      "paths": [
+        "server/catalog/",
+        "server/data/"
+      ],
+      "test_paths": [
+        "server/tests/test_catalog_v2.py",
+        "server/tests/test_catalog_chains_materials.py"
+      ],
+      "reuse_priority": "medium",
+      "integration_verified": false,
+      "warning": "Review dependencies, data contracts, licenses, and tests before extraction."
+    },
+    {
+      "id": "ledger",
+      "name_ru": "Денежный учёт",
+      "kind": "server-code",
+      "paths": [
+        "server/ledger/"
+      ],
+      "test_paths": [
+        "server/tests/test_security_ledger.py"
+      ],
+      "reuse_priority": "medium",
+      "integration_verified": false,
+      "warning": "Review dependencies, data contracts, licenses, and tests before extraction."
+    },
+    {
+      "id": "world",
+      "name_ru": "Генерация мира и чанки",
+      "kind": "server-client-code",
+      "paths": [
+        "server/world/",
+        "client/world/"
+      ],
+      "test_paths": [
+        "server/tests/test_world_generator.py",
+        "server/tests/test_world_core.py"
+      ],
+      "reuse_priority": "medium",
+      "integration_verified": false,
+      "warning": "Review dependencies, data contracts, licenses, and tests before extraction."
+    },
+    {
+      "id": "enterprises",
+      "name_ru": "Предприятия",
+      "kind": "server-code",
+      "paths": [
+        "server/enterprises/"
+      ],
+      "test_paths": [
+        "server/tests/test_enterprises_unit.py"
+      ],
+      "reuse_priority": "medium",
+      "integration_verified": false,
+      "warning": "Review dependencies, data contracts, licenses, and tests before extraction."
+    },
+    {
+      "id": "supply",
+      "name_ru": "Поставки",
+      "kind": "server-code",
+      "paths": [
+        "server/supply/"
+      ],
+      "test_paths": [
+        "server/tests/test_supply_math.py"
+      ],
+      "reuse_priority": "medium",
+      "integration_verified": false,
+      "warning": "Review dependencies, data contracts, licenses, and tests before extraction."
+    },
+    {
+      "id": "retail",
+      "name_ru": "Розничная торговля",
+      "kind": "server-code",
+      "paths": [
+        "server/retail/"
+      ],
+      "test_paths": [
+        "server/tests/test_retail_unit.py"
+      ],
+      "reuse_priority": "medium",
+      "integration_verified": false,
+      "warning": "Review dependencies, data contracts, licenses, and tests before extraction."
+    },
+    {
+      "id": "sales",
+      "name_ru": "Режимы продаж",
+      "kind": "mixed",
+      "paths": [
+        "server/sales/",
+        "tools/sim/sales/"
+      ],
+      "test_paths": [
+        "tools/tests/test_sales_sim.py",
+        "server/tests/test_sales_math.py"
+      ],
+      "reuse_priority": "high",
+      "integration_verified": false,
+      "warning": "Review dependencies, data contracts, licenses, and tests before extraction."
+    },
+    {
+      "id": "ai-competitors",
+      "name_ru": "ИИ-конкуренты",
+      "kind": "reference-model",
+      "paths": [
+        "tools/sim/ai_engine/"
+      ],
+      "test_paths": [
+        "tools/tests/test_ai_engine_sim.py"
+      ],
+      "reuse_priority": "high",
+      "integration_verified": false,
+      "warning": "Review dependencies, data contracts, licenses, and tests before extraction."
+    },
+    {
+      "id": "deep-chains",
+      "name_ru": "Глубокие производственные цепочки",
+      "kind": "reference-model",
+      "paths": [
+        "tools/sim/chains_deep/"
+      ],
+      "test_paths": [
+        "tools/tests/test_deep_chains_sim.py"
+      ],
+      "reuse_priority": "high",
+      "integration_verified": false,
+      "warning": "Review dependencies, data contracts, licenses, and tests before extraction."
+    },
+    {
+      "id": "credit",
+      "name_ru": "Кредиты",
+      "kind": "reference-model",
+      "paths": [
+        "tools/sim/credit/"
+      ],
+      "test_paths": [
+        "tools/tests/test_credit_sim.py"
+      ],
+      "reuse_priority": "high",
+      "integration_verified": false,
+      "warning": "Review dependencies, data contracts, licenses, and tests before extraction."
+    },
+    {
+      "id": "research",
+      "name_ru": "Исследования",
+      "kind": "reference-model",
+      "paths": [
+        "tools/sim/rnd/"
+      ],
+      "test_paths": [
+        "tools/tests/test_rnd_sim.py"
+      ],
+      "reuse_priority": "high",
+      "integration_verified": false,
+      "warning": "Review dependencies, data contracts, licenses, and tests before extraction."
+    },
+    {
+      "id": "staff",
+      "name_ru": "Персонал",
+      "kind": "reference-model",
+      "paths": [
+        "tools/sim/staff/"
+      ],
+      "test_paths": [
+        "tools/tests/test_staff_sim.py"
+      ],
+      "reuse_priority": "high",
+      "integration_verified": false,
+      "warning": "Review dependencies, data contracts, licenses, and tests before extraction."
+    },
+    {
+      "id": "demand",
+      "name_ru": "Слои спроса",
+      "kind": "reference-model",
+      "paths": [
+        "tools/sim/demand_layers/"
+      ],
+      "test_paths": [
+        "tools/tests/test_demand_sim.py"
+      ],
+      "reuse_priority": "high",
+      "integration_verified": false,
+      "warning": "Review dependencies, data contracts, licenses, and tests before extraction."
+    },
+    {
+      "id": "android-ui",
+      "name_ru": "Godot Android интерфейс",
+      "kind": "godot-client",
+      "paths": [
+        "client/screens/",
+        "client/ui/"
+      ],
+      "test_paths": [
+        "client/tests/"
+      ],
+      "reuse_priority": "low",
+      "integration_verified": false,
+      "warning": "Review dependencies, data contracts, licenses, and tests before extraction."
+    },
+    {
+      "id": "update-system",
+      "name_ru": "Обновления Android",
+      "kind": "mixed",
+      "paths": [
+        "client/",
+        "web/"
+      ],
+      "test_paths": [
+        "tools/tests/test_content_manifest.py"
+      ],
+      "reuse_priority": "low",
+      "integration_verified": false,
+      "warning": "Review dependencies, data contracts, licenses, and tests before extraction."
+    }
+  ]
+}
